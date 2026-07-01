@@ -95,7 +95,7 @@ export function RefreshCountdown({
           {isRefreshing ? '↻' : remaining}
         </span>
       </div>
-      <span className="hidden sm:inline">
+      <span className="hidden tabular-nums sm:inline-block sm:min-w-[6.75rem]">
         {isRefreshing ? 'Updating…' : `Refreshing in ${remaining}s`}
       </span>
     </div>

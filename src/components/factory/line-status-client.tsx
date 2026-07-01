@@ -85,7 +85,7 @@ export function LineStatusClient({
   );
 
   return (
-    <>
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label={`Total Energy (${rangeLabel})`}
@@ -172,6 +172,6 @@ export function LineStatusClient({
           </Table>
         )}
       </Card>
-    </>
+    </div>
   );
 }

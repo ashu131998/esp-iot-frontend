@@ -507,7 +507,7 @@ export function SchedulingPanel({
 
         {deleteMutation.isError && (
           <p className="mx-4 mb-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            Couldn't delete task: {(deleteMutation.error as Error).message}
+            Couldn&apos;t delete task: {(deleteMutation.error as Error).message}
           </p>
         )}
 

@@ -164,6 +164,10 @@ function applySecurityHeaders(res: NextResponse, csp: string) {
     'Strict-Transport-Security',
     'max-age=63072000; includeSubDomains; preload',
   );
+  // Isolate our browsing context from cross-origin windows (blocks tab-nabbing
+  // and cross-window / XS-Leak side channels) and forbid cross-origin embedding.
+  res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  res.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 }
 
 export const config = {

@@ -50,7 +50,7 @@ export function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <Card className="flex flex-col gap-2">
+    <Card className="flex h-full flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted">{label}</span>
         {icon}

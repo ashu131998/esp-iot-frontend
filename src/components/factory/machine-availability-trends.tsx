@@ -2,11 +2,11 @@
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import { TableSkeleton } from '@/components/ui/page-skeletons';
+import { ChartSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 
 const AvailabilityTrendChart = dynamic(
   () => import('@/components/factory/availability-trend-chart').then(m => ({ default: m.AvailabilityTrendChart })),
-  { ssr: false, loading: () => <div className="h-96 bg-muted rounded animate-pulse" /> }
+  { ssr: false, loading: () => <ChartSkeleton /> }
 );
 
 const AvailabilityTrendTable = dynamic(
@@ -16,7 +16,7 @@ const AvailabilityTrendTable = dynamic(
 
 const MachinePerformanceTrend = dynamic(
   () => import('@/components/factory/machine-performance-trend').then(m => ({ default: m.MachinePerformanceTrend })),
-  { ssr: false, loading: () => <div className="h-96 bg-muted rounded animate-pulse" /> }
+  { ssr: false, loading: () => <ChartSkeleton /> }
 );
 
 export function MachineAvailabilityTrends({
@@ -32,7 +32,7 @@ export function MachineAvailabilityTrends({
 }) {
   return (
     <>
-      <Suspense fallback={<div className="h-96 bg-muted rounded animate-pulse" />}>
+      <Suspense fallback={<ChartSkeleton />}>
         <AvailabilityTrendChart
           factoryId={factoryId}
           machineId={machineId}
@@ -41,7 +41,7 @@ export function MachineAvailabilityTrends({
         />
       </Suspense>
 
-      <Suspense fallback={<div className="h-96 bg-muted rounded animate-pulse" />}>
+      <Suspense fallback={<ChartSkeleton />}>
         <MachinePerformanceTrend
           factoryId={factoryId}
           machineId={machineId}

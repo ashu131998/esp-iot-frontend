@@ -23,7 +23,7 @@ export function AvailabilityTrendChart({
   to?: string;
 }) {
   const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
-  const { data: liveData } = useQuery(machineLiveDaysQuery(factoryId, machineId));
+  const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   const toDate = useMemo(() => {
     if (to) return parseISO(to);
@@ -105,7 +105,7 @@ export function AvailabilityTrendChart({
     },
   }), [chartData]);
 
-  if (isFetching) {
+  if (isFetching || livePending) {
     return <ChartSkeleton />;
   }
 

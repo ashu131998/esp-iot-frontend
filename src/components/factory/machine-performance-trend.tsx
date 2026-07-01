@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 
 import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/charts/apex';
 import { Card, CardHeader } from '@/components/ui/card';
+import { ChartSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { productionDayStart } from '@/lib/date-range';
 import { formatNumber } from '@/lib/utils';
@@ -21,8 +22,8 @@ export function MachinePerformanceTrend({
   from?: string;
   to?: string;
 }) {
-  const { data } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
-  const { data: liveData } = useQuery(machineLiveDaysQuery(factoryId, machineId));
+  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
+  const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   const chartData = useMemo(() => {
     // IST calendar-day keys throughout (see availability-trend-chart for why).
@@ -85,6 +86,8 @@ export function MachinePerformanceTrend({
       y: { formatter: (v) => (typeof v === 'number' ? `${formatNumber(v, 1)}%` : '—') },
     },
   }), [chartData]);
+
+  if (isFetching || livePending) return <ChartSkeleton />;
 
   if (chartData.length === 0) {
     return (

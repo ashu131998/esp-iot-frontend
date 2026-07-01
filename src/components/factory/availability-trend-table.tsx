@@ -42,7 +42,7 @@ export function AvailabilityTrendTable({
   to?: string;
 }) {
   const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
-  const { data: liveData } = useQuery(machineLiveDaysQuery(factoryId, machineId));
+  const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   const trends = useMemo<TrendRow[]>(() => {
     const dayMap = new Map(data.days.map((d) => [d.date.slice(0, 10), { ...d, is_live: false }]));
@@ -98,7 +98,7 @@ export function AvailabilityTrendTable({
     },
   ], []);
 
-  if (isFetching) return <TableSkeleton rows={7} cols={5} />;
+  if (isFetching || livePending) return <TableSkeleton rows={7} cols={5} />;
 
   return (
     <Card>

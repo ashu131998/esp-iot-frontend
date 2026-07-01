@@ -94,6 +94,40 @@ export function PageContentSkeleton({
   );
 }
 
+/**
+ * Composite skeletons that mirror a dashboard's *final* structure exactly, so the
+ * route loading.tsx, the Suspense fallback, and each lazy section's loading state
+ * all render the identical shape — the skeleton stays put and fills in place
+ * instead of swapping between differently-shaped skeletons.
+ */
+
+/** Single full-width stat card + chart + table (energy / production / performance). */
+export function SingleStatChartTableSkeleton({
+  tableCols = 6,
+  tableRows = 5,
+}: {
+  tableCols?: number;
+  tableRows?: number;
+}) {
+  return (
+    <>
+      <StatCardSkeleton />
+      <ChartSkeleton />
+      <TableSkeleton rows={tableRows} cols={tableCols} />
+    </>
+  );
+}
+
+/** Stat-card grid + chart, no table (uptime). */
+export function StatGridChartSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <>
+      <StatGridSkeleton count={count} />
+      <ChartSkeleton />
+    </>
+  );
+}
+
 export function PlatformPageSkeleton() {
   return (
     <>

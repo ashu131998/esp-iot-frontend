@@ -7,7 +7,7 @@ import { QuerySuspense } from '@/components/ui/query-suspense';
 
 const StatusTimelineBody = dynamic(
   () => import('@/components/uptime/status-timeline-body').then((m) => m.StatusTimelineBody),
-  { ssr: false },
+  { ssr: false, loading: () => <ChartSkeleton /> },
 );
 
 export function StatusTimelineDashboard({ factoryId }: { factoryId: string }) {

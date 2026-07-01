@@ -3,17 +3,21 @@
 import dynamic from 'next/dynamic';
 
 import { ProductionCards } from '@/components/factory/production-cards';
-import { ChartSkeleton, StatCardSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
+import {
+  ChartSkeleton,
+  SingleStatChartTableSkeleton,
+  TableSkeleton,
+} from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 
 const ProductionChartSection = dynamic(
   () => import('@/components/factory/production-chart-section').then((m) => m.ProductionChartSection),
-  { ssr: false },
+  { ssr: false, loading: () => <ChartSkeleton /> },
 );
 
 const ProductionTable = dynamic(
   () => import('@/components/factory/production-table').then((m) => m.ProductionTable),
-  { ssr: false },
+  { ssr: false, loading: () => <TableSkeleton rows={5} cols={5} /> },
 );
 
 export function ProductionDashboard({
@@ -26,18 +30,10 @@ export function ProductionDashboard({
   to?: string;
 }) {
   return (
-    <>
-      <QuerySuspense fallback={<StatCardSkeleton />}>
-        <ProductionCards factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
-
-      <QuerySuspense fallback={<ChartSkeleton />}>
-        <ProductionChartSection factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
-
-      <QuerySuspense fallback={<TableSkeleton rows={5} cols={5} />}>
-        <ProductionTable factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
-    </>
+    <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={5} />}>
+      <ProductionCards factoryId={factoryId} from={from} to={to} />
+      <ProductionChartSection factoryId={factoryId} from={from} to={to} />
+      <ProductionTable factoryId={factoryId} from={from} to={to} />
+    </QuerySuspense>
   );
 }

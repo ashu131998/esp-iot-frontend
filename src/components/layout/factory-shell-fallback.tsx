@@ -41,7 +41,7 @@ export function FactoryShellFallback({
           ))}
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
         <div className="flex items-center justify-between border-b bg-white px-4 py-2.5 lg:hidden">
           <Link
             href="/overview"

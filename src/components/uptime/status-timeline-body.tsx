@@ -69,13 +69,20 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
           return (
             <div key={m.machine_id}>
               <div className="mb-2 grid grid-cols-3 items-center">
-                <p className="text-sm font-medium">{m.machine_name}</p>
-                <p className="text-center text-sm font-medium">
+                <p className="min-w-0 truncate text-sm font-medium">{m.machine_name}</p>
+                <p
+                  className="min-w-0 truncate text-center text-sm font-medium"
+                  title={
+                    operators.length > 0
+                      ? `Operator: ${operators.map((op) => op.worker_name ?? op.worker_id).join(', ')}`
+                      : undefined
+                  }
+                >
                   {operators.length > 0
                     ? `Operator: ${operators.map((op) => op.worker_name ?? op.worker_id).join(', ')}`
                     : ''}
                 </p>
-                <p className="text-right text-sm font-medium">
+                <p className="min-w-0 truncate text-right text-sm font-medium">
                   {m.line_id} · {formatPercent(m.availability_percent)} up
                 </p>
               </div>

@@ -69,29 +69,29 @@ export function RefreshCountdown({
 
   const isRefreshing = remaining === 0;
   const progress     = ((intervalSec - remaining) / intervalSec) * 100;
-  const radius       = 18;
+  const radius       = 12;
   const circumference = 2 * Math.PI * radius;
   const dashOffset   = circumference - (progress / 100) * circumference;
 
   return (
     <div className="flex items-center gap-2 text-xs text-muted" title="Auto-refresh countdown">
-      <div className="relative flex h-10 w-10 items-center justify-center">
-        <svg className="-rotate-90" width="40" height="40" viewBox="0 0 40 40" aria-hidden>
-          <circle cx="20" cy="20" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="3" />
+      <div className="relative flex h-7 w-7 items-center justify-center">
+        <svg className="-rotate-90" width="28" height="28" viewBox="0 0 28 28" aria-hidden>
+          <circle cx="14" cy="14" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
           <circle
-            cx="20"
-            cy="20"
+            cx="14"
+            cy="14"
             r={radius}
             fill="none"
             stroke={isRefreshing ? '#94a3b8' : '#3b82f6'}
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={dashOffset}
             className="transition-[stroke-dashoffset] duration-1000 ease-linear"
           />
         </svg>
-        <span className="absolute text-[11px] font-semibold tabular-nums text-foreground">
+        <span className="absolute text-[10px] font-semibold tabular-nums text-foreground">
           {isRefreshing ? '↻' : remaining}
         </span>
       </div>

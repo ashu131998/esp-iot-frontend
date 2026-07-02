@@ -1,6 +1,11 @@
 import type {
   ActiveAssignmentsResponse,
+  AlertSettings,
   AvailabilityResponse,
+  ConfigSelection,
+  DowntimeReason,
+  DowntimeReport,
+  NotificationItem,
   CreateConfigurationInput,
   CreateConfigProfileInput,
   CreateQualityInput,
@@ -100,6 +105,8 @@ function qs(
       factory_id?: string;
       worker_id?: string;
       shift?: string;
+      type?: string;
+      latest?: string;
     },
 ): string {
   if (!params) return '';
@@ -388,6 +395,78 @@ export const api = {
       method: 'DELETE',
       ...options,
     }),
+
+  alertSettings: (factoryId: string, options?: ApiRequestOptions) =>
+    request<AlertSettings>(`/v1/factories/${factoryId}/alert-settings`, options),
+
+  updateAlertSettings: (
+    factoryId: string,
+    body: Partial<Omit<AlertSettings, 'factory_id' | 'updated_at' | 'whatsapp_configured'>>,
+    options?: ApiRequestOptions,
+  ) =>
+    request<AlertSettings>(`/v1/factories/${factoryId}/alert-settings`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  notifications: (
+    factoryId: string,
+    params?: PaginationParams & { type?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; notifications: NotificationItem[] } & PaginatedMeta>(
+      `/v1/factories/${factoryId}/notifications${qs(params)}`,
+      options,
+    ),
+
+  sendTestNotification: (
+    factoryId: string,
+    body: { phone: string; message?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ ok: boolean; channel: string; error: string | null }>(
+      `/v1/factories/${factoryId}/notifications/test`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  downtimeReasons: (factoryId: string, options?: ApiRequestOptions) =>
+    request<{ reasons: DowntimeReason[] }>(
+      `/v1/factories/${factoryId}/downtime-reasons`,
+      options,
+    ),
+
+  downtimeReports: (
+    factoryId: string,
+    params?: DateRangeParams & PaginationParams & { machine_id?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; reports: DowntimeReport[] } & PaginatedMeta>(
+      `/v1/factories/${factoryId}/downtime-reports${qs(params)}`,
+      options,
+    ),
+
+  setDowntimeReason: (
+    factoryId: string,
+    reportId: string,
+    body: { reason_code: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<DowntimeReport>(`/v1/factories/${factoryId}/downtime-reports/${reportId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  configSelections: (
+    factoryId: string,
+    params?: PaginationParams & { machine_id?: string; latest?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; selections: ConfigSelection[]; total: number }>(
+      `/v1/factories/${factoryId}/config-selections${qs(params)}`,
+      options,
+    ),
 
   factoryUsers: (
     factoryId: string,

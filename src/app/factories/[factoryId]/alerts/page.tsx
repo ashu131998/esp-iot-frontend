@@ -1,5 +1,8 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
+import { DowntimeReportsCard } from '@/components/alerts/downtime-reports-card';
+import { NotificationFeed } from '@/components/alerts/notification-feed';
+import { WhatsAppSettingsCard } from '@/components/alerts/whatsapp-settings-card';
 import { FactoryAlertsDashboard } from '@/components/factory/factory-alerts-dashboard';
 import { FactoryPageSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
@@ -34,6 +37,11 @@ export default async function FactoryAlertsPage({
           <QuerySuspense fallback={<FactoryPageSkeleton statCards={3} className="pt-0" />}>
             <FactoryAlertsDashboard factoryId={factoryId} />
           </QuerySuspense>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <WhatsAppSettingsCard factoryId={factoryId} />
+            <DowntimeReportsCard factoryId={factoryId} />
+          </div>
+          <NotificationFeed factoryId={factoryId} />
         </HydrationBoundary>
       </NavDim>
     </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
+import { ArrowDownCircle, ArrowUpCircle, Settings2 } from 'lucide-react';
 
 import { StatCard, LiveStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -11,8 +12,46 @@ import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatNumber, formatPercent } from '@/lib/utils';
+import type { UptimeSegment } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
+
+function humanDuration(ms: number): string {
+  const min = Math.max(1, Math.round(ms / 60000));
+  const h = Math.floor(min / 60);
+  return h > 0 ? `${h}h ${min % 60}m` : `${min}m`;
+}
+
+function timeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Plain-language summary of the last 24h: current state + how long, plus
+ * stoppage count and total downtime, so the status is readable at a glance
+ * without decoding the timeline strip.
+ */
+function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
+  const last = timeline.at(-1);
+  if (!last) return null;
+
+  const isUp = last.status === 'up';
+  const sinceMs = Date.now() - new Date(last.from).getTime();
+  const downSegments = timeline.filter((s) => s.status === 'down');
+  const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);
+
+  const headline = isUp
+    ? `${machineName} is RUNNING — up for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+    : `${machineName} is DOWN — stopped ${humanDuration(sinceMs)} ago (at ${timeLabel(last.from)}).`;
+
+  const history =
+    downSegments.length === 0
+      ? 'No stoppages in the last 24 hours.'
+      : `${downSegments.length} stoppage${downSegments.length === 1 ? '' : 's'} in the last 24 hours, ` +
+        `totalling ${humanDuration(totalDownSec * 1000)} of downtime.`;
+
+  return { isUp, headline, history };
+}
 
 export function MachineStatusClient({
   factoryId,
@@ -53,6 +92,22 @@ export function MachineStatusClient({
 
   useSetRefreshInfo(dataUpdatedAt, REFRESH_INTERVAL_MS / 1000);
 
+  // Non-blocking context: downtime reason + selected configuration (WhatsApp).
+  const { data: reportsData } = useQuery({
+    queryKey: ['downtime-reports', factoryId, machineId],
+    queryFn: ({ signal }) =>
+      api.downtimeReports(factoryId, { machine_id: machineId, limit: 5 }, { signal }),
+    refetchInterval,
+    staleTime: 0,
+  });
+  const { data: selectionsData } = useQuery({
+    queryKey: ['config-selections', factoryId, machineId],
+    queryFn: ({ signal }) =>
+      api.configSelections(factoryId, { machine_id: machineId, limit: 1 }, { signal }),
+    refetchInterval,
+    staleTime: 0,
+  });
+
   const { availability, energy, production, uptime24h } = data;
 
   const machineAvail = availability.machines[0];
@@ -60,6 +115,14 @@ export function MachineStatusClient({
   const machineProduction = production.machines[0];
   const machineUptime = uptime24h.machines[0];
   const status = machineUptime?.timeline.at(-1)?.status ?? 'no_data';
+
+  const narrative = statusNarrative(
+    machineUptime?.machine_name ?? machineId,
+    machineUptime?.timeline ?? [],
+  );
+  const latestReport = reportsData?.reports?.[0];
+  const openReport = latestReport && !latestReport.resolved_at ? latestReport : null;
+  const currentConfig = selectionsData?.selections?.[0];
 
   return (
     <div className="space-y-6">
@@ -89,6 +152,54 @@ export function MachineStatusClient({
           description={`${rangeLabel} · timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
         />
         <div className="px-6 py-4">
+          {narrative && (
+            <div
+              className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
+                narrative.isUp
+                  ? 'border-l-emerald-500 bg-emerald-50/60'
+                  : 'border-l-red-500 bg-red-50/60'
+              }`}
+            >
+              {narrative.isUp ? (
+                <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              ) : (
+                <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+              )}
+              <div className="text-sm">
+                <p className="font-semibold">{narrative.headline}</p>
+                {!narrative.isUp && openReport && (
+                  <p className="mt-1 text-muted">
+                    {openReport.reason_label
+                      ? `Reported reason: ${openReport.reason_label}` +
+                        (openReport.reported_by_name
+                          ? ` (${openReport.reported_by_name} via ${openReport.reported_via ?? 'WhatsApp'})`
+                          : '')
+                      : 'The assigned worker has been asked for the reason on WhatsApp — no reply yet.'}
+                  </p>
+                )}
+                {narrative.isUp && latestReport?.resolved_at && latestReport.reason_label && (
+                  <p className="mt-1 text-muted">
+                    Last stoppage: {latestReport.reason_label}
+                    {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
+                    , resolved at {timeLabel(latestReport.resolved_at)}.
+                  </p>
+                )}
+                <p className="mt-1 text-muted">{narrative.history}</p>
+                {currentConfig && (
+                  <p className="mt-1 flex items-center gap-1.5 text-muted">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Running configuration:{' '}
+                    <span className="font-medium text-foreground">
+                      {currentConfig.profile_name ?? currentConfig.profile_id}
+                    </span>
+                    {currentConfig.selected_by_name
+                      ? ` — selected by ${currentConfig.selected_by_name} via ${currentConfig.selected_via}`
+                      : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
             <span className="text-sm font-medium">Status</span>
             <div className="flex justify-end"><LiveStatusBadge status={status} /></div>

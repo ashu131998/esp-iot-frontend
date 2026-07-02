@@ -106,7 +106,18 @@ function formatTimestamp(iso: string): string {
   });
 }
 
-function UptimeSegmentTooltip({ segment }: { segment: UptimeSegmentPoint }) {
+export interface SegmentDetail {
+  label: string;
+  value: string;
+}
+
+function UptimeSegmentTooltip({
+  segment,
+  details,
+}: {
+  segment: UptimeSegmentPoint;
+  details?: SegmentDetail[];
+}) {
   return (
     <div className="pointer-events-none z-20 min-w-[240px] rounded-md border bg-white px-3 py-2.5 text-xs shadow-md">
       <p
@@ -124,6 +135,12 @@ function UptimeSegmentTooltip({ segment }: { segment: UptimeSegmentPoint }) {
           <dt className="text-[10px] font-medium uppercase tracking-wide">To</dt>
           <dd className="font-mono text-[11px] text-foreground">{formatTimestamp(segment.to)}</dd>
         </div>
+        {(details ?? []).map((d) => (
+          <div key={d.label}>
+            <dt className="text-[10px] font-medium uppercase tracking-wide">{d.label}</dt>
+            <dd className="text-[11px] text-foreground">{d.value}</dd>
+          </div>
+        ))}
       </dl>
     </div>
   );
@@ -140,12 +157,15 @@ export function UptimeTimeSeriesChart({
   windowTo,
   windowLabel,
   height = 48,
+  segmentDetails,
 }: {
   segments: UptimeSegmentPoint[];
   windowFrom: string;
   windowTo: string;
   windowLabel?: string;
   height?: number;
+  /** Extra tooltip rows per segment (e.g. downtime reason, active config). */
+  segmentDetails?: (segment: UptimeSegmentPoint) => SegmentDetail[];
 }) {
   const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number } | null>(null);
 
@@ -179,7 +199,10 @@ export function UptimeTimeSeriesChart({
             className="pointer-events-none absolute bottom-full z-20 mb-2"
             style={{ left: `${hoverCenterPct}%`, transform: 'translateX(-50%)' }}
           >
-            <UptimeSegmentTooltip segment={hover.segment} />
+            <UptimeSegmentTooltip
+              segment={hover.segment}
+              details={segmentDetails?.(hover.segment)}
+            />
           </div>
         )}
         <div

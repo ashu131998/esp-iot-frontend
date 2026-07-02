@@ -352,6 +352,74 @@ export interface PlatformOverview {
   }>;
 }
 
+export interface OwnerContact {
+  name: string;
+  phone: string;
+}
+
+export interface AlertSettings {
+  factory_id: string;
+  whatsapp_enabled: boolean;
+  shift_reminder_minutes: number;
+  notify_owner_on_down: boolean;
+  owner_contacts: OwnerContact[];
+  updated_at: string | null;
+  whatsapp_configured: boolean;
+}
+
+export interface NotificationItem {
+  notification_id: string;
+  factory_id: string;
+  type: string;
+  recipient_role: string;
+  worker_id: string | null;
+  recipient_name: string | null;
+  phone: string | null;
+  machine_id: string | null;
+  message: string;
+  channel: string;
+  status: string;
+  error: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface DowntimeReason {
+  code: string;
+  title: string;
+  description?: string;
+}
+
+export interface DowntimeReport {
+  report_id: string;
+  factory_id: string;
+  machine_id: string;
+  machine_name: string | null;
+  device_id: string | null;
+  down_since: string;
+  resolved_at: string | null;
+  reason_code: string | null;
+  reason_label: string | null;
+  reported_by_worker_id: string | null;
+  reported_by_name: string | null;
+  reported_via: string | null;
+  reason_reported_at: string | null;
+  created_at: string;
+}
+
+export interface ConfigSelection {
+  selection_id: string;
+  factory_id: string;
+  machine_id: string;
+  profile_id: string;
+  profile_name: string | null;
+  selected_by_worker_id: string | null;
+  selected_by_name: string | null;
+  selected_via: string;
+  effective_from: string;
+  created_at: string;
+}
+
 export interface DateRangeParams {
   from?: string;
   to?: string;

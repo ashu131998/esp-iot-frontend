@@ -32,21 +32,29 @@ export function WorkerRoster({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreateWorkerInput>({
+  const emptyForm: CreateWorkerInput = {
     name: '',
     employee_code: '',
     role: ROLE_OPTIONS[0],
     phone: '',
-  });
+    email: '',
+    password: '',
+  };
+  const [form, setForm] = useState<CreateWorkerInput>(emptyForm);
 
   const createMutation = useMutation({
     mutationFn: () => api.createWorker(factoryId, form),
     onSuccess: () => {
       router.refresh();
       setOpen(false);
-      setForm({ name: '', employee_code: '', role: ROLE_OPTIONS[0], phone: '' });
+      setForm(emptyForm);
     },
   });
+
+  // Email + password are required: they become the worker's login for the
+  // AlertOps mobile app, where they receive their machine & shift alerts.
+  const passwordValid = (form.password ?? '').length >= 8;
+  const canSubmit = Boolean(form.name && form.email && passwordValid);
 
   const deleteMutation = useMutation({
     mutationFn: (workerId: string) => api.deleteWorker(factoryId, workerId),
@@ -82,6 +90,19 @@ export function WorkerRoster({
       header: 'Phone',
       enableSorting: false,
       cell: ({ row }) => <span className="text-muted">{row.original.phone ?? '—'}</span>,
+    },
+    {
+      accessorKey: 'email',
+      header: 'App Login',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-muted">
+          {row.original.email ?? '—'}
+          {row.original.alertops_user_id && (
+            <Badge className="ml-1 bg-emerald-50 text-emerald-700">app</Badge>
+          )}
+        </span>
+      ),
     },
     {
       accessorKey: 'status',
@@ -159,11 +180,31 @@ export function WorkerRoster({
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </Field>
+            <Field label="App Login Email">
+              <Input
+                type="email"
+                placeholder="worker@factory.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </Field>
+            <Field label="App Login Password">
+              <Input
+                type="password"
+                placeholder="min 8 characters"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
+            </Field>
           </div>
+          <p className="mt-2 text-xs text-muted">
+            Email &amp; password create the worker&apos;s login for the AlertOps mobile app, where
+            they receive their machine and shift alerts.
+          </p>
           <div className="mt-4 flex gap-2">
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.name}
+              disabled={createMutation.isPending || !canSubmit}
             >
               {createMutation.isPending ? 'Saving…' : 'Add Worker'}
             </Button>

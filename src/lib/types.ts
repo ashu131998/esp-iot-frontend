@@ -267,6 +267,8 @@ export interface Worker {
   role: string;
   skills: string[];
   phone: string | null;
+  email: string | null;
+  alertops_user_id: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -279,6 +281,9 @@ export interface CreateWorkerInput {
   skills?: string[];
   phone?: string;
   status?: string;
+  // Mobile-app login credentials — provisioned in AlertOps on creation.
+  email?: string;
+  password?: string;
 }
 
 export interface WorkerSchedule {

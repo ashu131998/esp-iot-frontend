@@ -1,12 +1,8 @@
-import Link from 'next/link';
-
+import { LinesTable } from '@/components/factory/lines-table';
 import { Card, CardHeader } from '@/components/ui/card';
 import { NavDim } from '@/lib/navigation-context';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { Badge } from '@/components/ui/badge';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { serverApi } from '@/lib/server-api';
-import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +34,7 @@ export default async function LinesPage({
               headers={['Line ID', 'Name', 'Machines', 'Last Seen', 'Created']}
               rows={lines.map((line) => [
                 line.line_id,
-                line.name,
+                line.name?.trim() || line.line_id,
                 machineCountByLine[line.line_id] ?? 0,
                 line.last_seen_at,
                 line.created_at,
@@ -50,42 +46,11 @@ export default async function LinesPage({
         {lines.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No production lines configured yet.</p>
         ) : (
-          <Table className="mt-2 border-0">
-            <THead>
-              <TR>
-                <TH>Line ID</TH>
-                <TH>Name</TH>
-                <TH>Machines</TH>
-                <TH>Last Seen</TH>
-                <TH>Created</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {lines.map((line) => (
-                <TR
-                  key={line.line_id}
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
-                >
-                  <TD className="font-mono text-xs">{line.line_id}</TD>
-                  <TD className="font-medium">
-                    <Link
-                      href={`/factories/${factoryId}/lines/${line.line_id}`}
-                      className="hover:underline text-primary"
-                    >
-                      {line.name}
-                    </Link>
-                  </TD>
-                  <TD>
-                    <Badge className="bg-blue-50 text-blue-700">
-                      {machineCountByLine[line.line_id] ?? 0}
-                    </Badge>
-                  </TD>
-                  <TD>{line.last_seen_at ? formatDate(line.last_seen_at) : '—'}</TD>
-                  <TD>{formatDate(line.created_at)}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
+          <LinesTable
+            factoryId={factoryId}
+            lines={lines}
+            machineCountByLine={machineCountByLine}
+          />
         )}
       </Card>
     </NavDim>

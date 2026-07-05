@@ -25,7 +25,7 @@ export default async function FactoryOverviewPage({
 }) {
   const { factoryId } = await params;
   const sp = await searchParams;
-  const { page, limit } = resolvePagination({ page: sp.page, limit: sp.limit });
+  const { page, limit, offset } = resolvePagination({ page: sp.page, limit: sp.limit });
 
   const factory = await serverApi.factory(factoryId);
   const range = resolveDateRange(sp, factory.created_at);
@@ -33,12 +33,22 @@ export default async function FactoryOverviewPage({
 
   const now = new Date();
   const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const total = factory.machines.length;
+  const pageMachineIds = factory.machines
+    .slice(offset, offset + limit)
+    .map((m) => m.machine_id);
 
   const [availability, energy, production, uptime24h] = await Promise.all([
     serverApi.availability(factoryId, range),
     serverApi.energy(factoryId, range),
     serverApi.production(factoryId, range),
-    serverApi.uptime(factoryId, { from: from24h, to: now.toISOString() }),
+    pageMachineIds.length > 0
+      ? serverApi.uptime(factoryId, {
+          from: from24h,
+          to: now.toISOString(),
+          machine_ids: pageMachineIds.join(','),
+        })
+      : Promise.resolve({ machines: [] }),
   ]);
 
   const windowHours = (new Date(range.to).getTime() - new Date(range.from).getTime()) / 3600000;
@@ -62,9 +72,11 @@ export default async function FactoryOverviewPage({
     return { machine: m, avail, eng, prod, uptime };
   });
 
-  const total = machineRows.length;
-  const offset = (page - 1) * limit;
   const pageRows = machineRows.slice(offset, offset + limit);
+
+  function currentStatus(uptime?: (typeof uptime24h.machines)[0], avail?: (typeof availability.machines)[0]) {
+    return statusLabel(uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data');
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -102,7 +114,7 @@ export default async function FactoryOverviewPage({
                   avail?.availability_percent,
                   eng?.energy_kwh,
                   prod?.units_produced ?? 0,
-                  statusLabel(uptime?.timeline.at(-1)?.status ?? 'no_data'),
+                  currentStatus(uptime, avail),
                 ])}
               />
               <Link href={`/factories/${factoryId}/configuration`} className="text-sm text-primary hover:underline">
@@ -137,7 +149,7 @@ export default async function FactoryOverviewPage({
                   <MiniTimeline segments={uptime?.timeline ?? []} />
                 </TD>
                 <TD>
-                  <LiveStatusBadge status={uptime?.timeline.at(-1)?.status ?? 'no_data'} />
+                  <LiveStatusBadge status={uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data'} />
                 </TD>
               </TR>
             ))}

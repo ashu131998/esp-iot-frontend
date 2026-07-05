@@ -76,12 +76,26 @@ export function StackedBarChart({ data, keys, height = 320 }: StackedBarChartPro
 
 const UPTIME_UP_COLOR = '#10b981';
 const UPTIME_DOWN_COLOR = '#ef4444';
+const UPTIME_IDLE_COLOR = '#d1d5db';
+
+type UptimeStatus = 'up' | 'down' | 'idle' | 'offline';
+
+function uptimeColor(status: UptimeStatus): string {
+  if (status === 'up') return UPTIME_UP_COLOR;
+  if (status === 'idle' || status === 'offline') return UPTIME_IDLE_COLOR;
+  return UPTIME_DOWN_COLOR;
+}
+function uptimeLabel(status: UptimeStatus): string {
+  if (status === 'up') return 'Running';
+  if (status === 'idle' || status === 'offline') return 'No signal';
+  return 'Stopped';
+}
 
 export interface UptimeSegmentPoint {
   from: string;
   to: string;
   duration_seconds: number;
-  status: 'up' | 'down';
+  status: UptimeStatus;
 }
 
 function formatDuration(seconds: number): string {
@@ -122,9 +136,9 @@ function UptimeSegmentTooltip({
     <div className="pointer-events-none z-20 min-w-[240px] rounded-md border bg-white px-3 py-2.5 text-xs shadow-md">
       <p
         className="mb-2 font-semibold"
-        style={{ color: segment.status === 'up' ? UPTIME_UP_COLOR : UPTIME_DOWN_COLOR }}
+        style={{ color: uptimeColor(segment.status) }}
       >
-        {segment.status === 'up' ? 'Up' : 'Down'} · {formatDuration(segment.duration_seconds)}
+        {uptimeLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
       </p>
       <dl className="space-y-1.5 text-muted">
         <div>
@@ -221,7 +235,7 @@ export function UptimeTimeSeriesChart({
                 style={{
                   width: `${widthPct}%`,
                   minWidth: widthPct > 0 ? 1 : 0,
-                  backgroundColor: seg.status === 'up' ? UPTIME_UP_COLOR : UPTIME_DOWN_COLOR,
+                  backgroundColor: uptimeColor(seg.status),
                 }}
                 onMouseEnter={() => setHover({ segment: seg, index: i })}
                 onMouseLeave={() => setHover(null)}
@@ -241,7 +255,7 @@ export function UptimeTimeSeriesChart({
 
 interface UptimePoint {
   label: string;
-  status: 'up' | 'down';
+  status: UptimeStatus;
 }
 
 /**
@@ -260,7 +274,7 @@ export function UptimeTimelineChart({
   }
 
   const series = [{ name: 'Status', data: data.map(() => 1) }];
-  const colors = data.map((d) => (d.status === 'up' ? UPTIME_UP_COLOR : UPTIME_DOWN_COLOR));
+  const colors = data.map((d) => uptimeColor(d.status));
 
   const options: ApexOptions = {
     ...baseChartOptions,
@@ -283,10 +297,10 @@ export function UptimeTimelineChart({
       ...baseChartOptions.tooltip,
       custom: ({ dataPointIndex }) => {
         const point = data[dataPointIndex];
-        const color = point.status === 'up' ? UPTIME_UP_COLOR : UPTIME_DOWN_COLOR;
+        const color = uptimeColor(point.status);
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
           <p class="font-medium">${point.label}</p>
-          <p style="color:${color}">${point.status === 'up' ? 'Up' : 'Down'}</p>
+          <p style="color:${color}">${uptimeLabel(point.status)}</p>
         </div>`;
       },
     },

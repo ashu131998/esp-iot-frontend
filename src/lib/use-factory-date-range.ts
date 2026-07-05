@@ -19,6 +19,7 @@ export function useFactoryDateRange() {
   const from = sp.get('from') ?? undefined;
   const to = sp.get('to') ?? undefined;
   const machineId = sp.get('machine_id') ?? undefined;
+  const lineId = sp.get('line_id') ?? undefined;
   const live = isLiveDateParams({ from, to });
 
   const range = useMemo(
@@ -32,5 +33,5 @@ export function useFactoryDateRange() {
     [live, range.from, range.to],
   );
 
-  return { from, to, machineId, range, live, rangeKey, minDate };
+  return { from, to, machineId, lineId, range, live, rangeKey, minDate };
 }

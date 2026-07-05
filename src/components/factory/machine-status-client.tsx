@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
-import { ArrowDownCircle, ArrowUpCircle, Settings2 } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Settings2, WifiOff } from 'lucide-react';
 
 import { StatCard, LiveStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatNumber, formatPercent } from '@/lib/utils';
-import type { UptimeSegment } from '@/lib/types';
+import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
 
@@ -35,14 +35,20 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
   const last = timeline.at(-1);
   if (!last) return null;
 
-  const isUp = last.status === 'up';
+  const state: UptimeStatus = last.status;
+  const isUp = state === 'up';
   const sinceMs = Date.now() - new Date(last.from).getTime();
   const downSegments = timeline.filter((s) => s.status === 'down');
   const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);
 
-  const headline = isUp
-    ? `${machineName} is RUNNING — up for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
-    : `${machineName} is DOWN — stopped ${humanDuration(sinceMs)} ago (at ${timeLabel(last.from)}).`;
+  // 'offline' is a device/link outage — the loom state is unknown, so we do NOT
+  // claim it is DOWN. It's flagged separately as a signal problem, not a stoppage.
+  const headline =
+    state === 'up'
+      ? `${machineName} is RUNNING — up for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+      : state === 'offline'
+        ? `${machineName} — NO SIGNAL from sensor for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}). Machine state unknown.`
+        : `${machineName} is DOWN — stopped ${humanDuration(sinceMs)} ago (at ${timeLabel(last.from)}).`;
 
   const history =
     downSegments.length === 0
@@ -50,7 +56,7 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
       : `${downSegments.length} stoppage${downSegments.length === 1 ? '' : 's'} in the last 24 hours, ` +
         `totalling ${humanDuration(totalDownSec * 1000)} of downtime.`;
 
-  return { isUp, headline, history };
+  return { state, isUp, headline, history };
 }
 
 export function MachineStatusClient({
@@ -155,19 +161,23 @@ export function MachineStatusClient({
           {narrative && (
             <div
               className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
-                narrative.isUp
+                narrative.state === 'up'
                   ? 'border-l-emerald-500 bg-emerald-50/60'
-                  : 'border-l-red-500 bg-red-50/60'
+                  : narrative.state === 'offline'
+                    ? 'border-l-gray-400 bg-gray-50'
+                    : 'border-l-red-500 bg-red-50/60'
               }`}
             >
-              {narrative.isUp ? (
+              {narrative.state === 'up' ? (
                 <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              ) : narrative.state === 'offline' ? (
+                <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
               ) : (
                 <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
               )}
               <div className="text-sm">
                 <p className="font-semibold">{narrative.headline}</p>
-                {!narrative.isUp && openReport && (
+                {narrative.state === 'down' && openReport && (
                   <p className="mt-1 text-muted">
                     {openReport.reason_label
                       ? `Reported reason: ${openReport.reason_label}` +

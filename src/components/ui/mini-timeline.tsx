@@ -11,17 +11,29 @@ export function MiniTimeline({ segments }: { segments: UptimeSegment[] }) {
   return (
     <div
       className="flex h-4 w-40 overflow-hidden rounded-sm"
-      title="Last 24h · green = running, red = stopped"
+      title="Last 24h · green = running, red = stopped, grey = no signal"
     >
       {segments.map((seg, i) => {
         const widthPct = (seg.duration_seconds / totalSeconds) * 100;
         const hrs = Math.round(seg.duration_seconds / 36) / 100;
+        const color =
+          seg.status === 'up'
+            ? 'bg-emerald-400'
+            : seg.status === 'down'
+              ? 'bg-red-400'
+              : 'bg-gray-300';
+        const label =
+          seg.status === 'up'
+            ? 'Running'
+            : seg.status === 'down'
+              ? 'Stopped'
+              : 'No signal';
         return (
           <div
             key={i}
-            className={seg.status === 'up' ? 'bg-emerald-400' : 'bg-red-400'}
+            className={color}
             style={{ width: `${widthPct}%`, minWidth: widthPct > 1 ? undefined : '1px' }}
-            title={`${seg.status === 'up' ? 'Running' : 'Stopped'} · ${hrs}h`}
+            title={`${label} · ${hrs}h`}
           />
         );
       })}

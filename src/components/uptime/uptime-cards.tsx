@@ -11,15 +11,16 @@ import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { formatNumber, formatPercent } from '@/lib/utils';
 
 export function UptimeCards({ factoryId }: { factoryId: string }) {
-  const { range, live, machineId } = useFactoryDateRange();
+  const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
   const displayTo = live ? new Date().toISOString() : range.to;
   const rangeLabel = formatRangeLabel(range.from, displayTo);
+  const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data } = useSuspenseQuery({
-    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to],
-    queryFn: ({ signal }) => api.uptime(factoryId, range, { signal }),
+    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, lineId ?? '', machineId ?? ''],
+    queryFn: ({ signal }) => api.uptime(factoryId, uptimeParams, { signal }),
     refetchInterval,
     staleTime: 0,
   });
@@ -28,16 +29,19 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
     ? data.machines.filter((m) => m.machine_id === machineId)
     : data.machines;
 
+  const withAvail = displayMachines.filter((m) => m.availability_percent !== null);
+  const overallAvailability =
+    withAvail.length > 0
+      ? withAvail.reduce((s, m) => s + (m.availability_percent ?? 0), 0) / withAvail.length
+      : null;
   const totalUpHours = displayMachines.reduce((s, m) => s + m.up_hours, 0);
   const totalDownHours = displayMachines.reduce((s, m) => s + m.down_hours, 0);
-  const totalHours = totalUpHours + totalDownHours;
-  const overallAvailability = totalHours > 0 ? (totalUpHours / totalHours) * 100 : null;
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       <StatCard label={`Overall Availability (${rangeLabel})`} value={formatPercent(overallAvailability)} />
-      <StatCard label="Total Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
-      <StatCard label="Total Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
+      <StatCard label="Loom Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
+      <StatCard label="Loom Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
     </div>
   );
 }

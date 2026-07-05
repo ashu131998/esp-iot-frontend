@@ -11,15 +11,16 @@ import { useRefetchInterval } from '@/lib/refresh-context';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 
 export function UptimeChartSection({ factoryId }: { factoryId: string }) {
-  const { range, live, machineId } = useFactoryDateRange();
+  const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
   const displayTo = live ? new Date().toISOString() : range.to;
   const rangeLabel = formatRangeLabel(range.from, displayTo);
+  const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data } = useSuspenseQuery({
-    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to],
-    queryFn: ({ signal }) => api.uptime(factoryId, range, { signal }),
+    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, lineId ?? '', machineId ?? ''],
+    queryFn: ({ signal }) => api.uptime(factoryId, uptimeParams, { signal }),
     refetchInterval,
     staleTime: 0,
   });
@@ -36,12 +37,12 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Uptime vs Downtime" description={`Hours per machine · ${rangeLabel}`} />
+      <CardHeader title="Loom Uptime vs Downtime" description={`Running/stopped hours per machine · ${rangeLabel}`} />
       <StackedBarChart
         data={summaryData}
         keys={[
-          { key: 'up', color: '#10b981', label: 'Up (hours)' },
-          { key: 'down', color: '#ef4444', label: 'Down (hours)' },
+          { key: 'up', color: '#10b981', label: 'Running (hours)' },
+          { key: 'down', color: '#ef4444', label: 'Stopped (hours)' },
         ]}
       />
     </Card>

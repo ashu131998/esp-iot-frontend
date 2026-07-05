@@ -37,6 +37,7 @@ export interface Machine {
   line_id: string;
   name: string;
   type: string;
+  /** ESP32 node + sensor roles — up to 4 streams on one node (current, cycle, time, …). */
   devices: Record<string, string>;
   target_cycle_time_sec: number | null;
   target_units_per_hour: number | null;
@@ -175,11 +176,15 @@ export interface ProductionResponse {
   machines: ProductionMachine[];
 }
 
+// 'idle' / 'offline' = ESP32 not reporting (excluded from availability).
+// 'down' = loom stopped. 'up' = loom running. 'idle' = no signal (can't observe loom).
+export type UptimeStatus = 'up' | 'down' | 'idle' | 'offline';
+
 export interface UptimeSegment {
   from: string;
   to: string;
   duration_seconds: number;
-  status: 'up' | 'down';
+  status: UptimeStatus;
 }
 
 export interface UptimeMachine {
@@ -189,6 +194,8 @@ export interface UptimeMachine {
   device_id: string | null;
   up_hours: number;
   down_hours: number;
+  offline_hours: number;
+  idle_hours?: number;
   availability_percent: number | null;
   timeline: UptimeSegment[];
 }
@@ -202,6 +209,13 @@ export interface UptimeResponse {
   total_up_hours: number;
   total_down_hours: number;
   machines: UptimeMachine[];
+  meta?: {
+    requires_filter?: boolean;
+    truncated?: boolean;
+    total_machines?: number;
+    returned?: number;
+    message?: string;
+  };
 }
 
 export interface QualityRecord {
@@ -430,6 +444,8 @@ export interface DateRangeParams {
   to?: string;
   line_id?: string;
   machine_id?: string;
+  /** Comma-separated machine IDs — for paginated overview mini-timelines at scale. */
+  machine_ids?: string;
 }
 
 export interface PaginationParams {

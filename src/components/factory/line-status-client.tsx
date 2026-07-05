@@ -95,7 +95,7 @@ export function LineStatusClient({
         <StatCard
           label={`Avg Availability (${rangeLabel})`}
           value={formatPercent(availability.avg_availability_percent)}
-          sub={`${formatNumber(availability.total_uptime_minutes, 0)} min up · ${formatNumber(availability.total_downtime_minutes, 0)} min down`}
+          sub={`${formatNumber(availability.total_uptime_minutes, 0)} min running · ${formatNumber(availability.total_downtime_minutes, 0)} min stopped`}
         />
         <StatCard
           label={`Units Produced (${rangeLabel})`}

@@ -65,14 +65,15 @@ function buildSegmentDetails(
 }
 
 export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
-  const { range, live, machineId } = useFactoryDateRange();
+  const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
   const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS}h window`;
+  const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to],
-    queryFn: ({ signal }) => api.uptime(factoryId, range, { signal }),
+    queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, lineId ?? '', machineId ?? ''],
+    queryFn: ({ signal }) => api.uptime(factoryId, uptimeParams, { signal }),
     refetchInterval,
     staleTime: 0,
   });
@@ -118,14 +119,23 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
         title="Status Timeline"
         description={`Last ${UPTIME_TIMELINE_HOURS} hours · ${timelineLabel}${isFetching ? ' · updating…' : ''} · hover a segment for downtime reason & configuration`}
       />
+      {data.meta?.requires_filter && (
+        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {data.meta.message ?? 'Too many machines — filter by line or machine to load timelines.'}
+        </p>
+      )}
       <div className="mb-4 flex items-center gap-6 text-xs text-muted">
         <span className="flex items-center gap-2">
           <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#10b981' }} />
-          Up
+          Running
         </span>
         <span className="flex items-center gap-2">
           <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#ef4444' }} />
-          Down
+          Stopped
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#d1d5db' }} />
+          No signal
         </span>
       </div>
 

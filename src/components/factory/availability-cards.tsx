@@ -55,8 +55,8 @@ export function AvailabilityCards({
     <>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Avg Availability" value={formatPercent(avgAvailability)} />
-        <StatCard label="Total Uptime" value={`${formatNumber(totalUptime, 0)} min`} />
-        <StatCard label="Total Downtime" value={`${formatNumber(totalDowntime, 0)} min`} />
+        <StatCard label="Loom Uptime" value={`${formatNumber(totalUptime, 0)} min`} />
+        <StatCard label="Loom Downtime" value={`${formatNumber(totalDowntime, 0)} min`} />
       </div>
 
       {data.by_shift && data.by_shift.length > 0 && !machineId && (

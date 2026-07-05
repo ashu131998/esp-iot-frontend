@@ -41,8 +41,12 @@ export function statusColor(status: string): string {
     case 'estimated':
     case 'estimated_from_latest':
       return 'text-amber-600 bg-amber-50';
+    // Device/link down → loom state unknown. Grey, not red: this is a signal
+    // gap, not a machine stoppage.
+    case 'offline':
+    case 'idle':
     case 'no_data':
-      return 'text-red-600 bg-red-50';
+      return 'text-gray-500 bg-gray-100';
     case 'no_sensor':
       return 'text-red-600 bg-red-50';
     default:
@@ -55,15 +59,20 @@ export function statusLabel(status: string): string {
     case 'computed':
     case 'on':
     case 'up':
-      return 'Live';
+      return 'Running';
     case 'estimated':
     case 'estimated_from_latest':
       return 'Estimated';
     case 'down':
+      return 'Stopped';
+    case 'idle':
+      return 'No signal';
+    case 'offline':
     case 'no_data':
+      return 'No signal';
     case 'off':
     case 'no_sensor':
-      return 'Offline';
+      return 'No sensor';
     default:
       return status.replace(/_/g, ' ');
   }

@@ -16,8 +16,12 @@ export function TBody({ children }: { children: React.ReactNode }) {
   return <tbody className="divide-y">{children}</tbody>;
 }
 
-export function TR({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <tr className={cn('hover:bg-slate-50/80', className)}>{children}</tr>;
+export function TR({ children, className, ...props }: React.ComponentPropsWithoutRef<'tr'>) {
+  return (
+    <tr className={cn('hover:bg-slate-50/80', className)} {...props}>
+      {children}
+    </tr>
+  );
 }
 
 export function TH({ children, className }: { children?: React.ReactNode; className?: string }) {

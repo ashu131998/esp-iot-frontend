@@ -37,7 +37,7 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
 
   const state: UptimeStatus = last.status;
   const isRunning = state === 'up';
-  const isNoSignal = state === 'idle' || state === 'offline' || state === 'no_data';
+  const isNoSignal = state === 'idle' || state === 'offline';
   const sinceMs = Date.now() - new Date(last.from).getTime();
   const downSegments = timeline.filter((s) => s.status === 'down');
   const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);

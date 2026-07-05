@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { formatRangeLabel, UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { formatPercent } from '@/lib/utils';
+import { formatAlertVia, formatPercent } from '@/lib/utils';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
 
 function shortTime(iso: string) {
@@ -42,18 +42,18 @@ function buildSegmentDetails(
       if (report.reported_by_name) {
         details.push({
           label: 'Reported by',
-          value: `${report.reported_by_name} via ${report.reported_via ?? 'WhatsApp'}`,
+          value: `${report.reported_by_name} via ${formatAlertVia(report.reported_via)}`,
         });
       }
     } else if (report) {
-      details.push({ label: 'Reason', value: 'Awaiting worker reply on WhatsApp' });
+      details.push({ label: 'Reason', value: 'Awaiting worker reply on mobile app' });
     }
   } else if (selection && new Date(selection.effective_from).getTime() <= segTo) {
     details.push({ label: 'Configuration', value: selection.profile_name ?? selection.profile_id });
     if (selection.selected_by_name) {
       details.push({
         label: 'Selected by',
-        value: `${selection.selected_by_name} via ${selection.selected_via} · ${shortTime(selection.effective_from)}`,
+        value: `${selection.selected_by_name} via ${formatAlertVia(selection.selected_via)} · ${shortTime(selection.effective_from)}`,
       });
     }
   }

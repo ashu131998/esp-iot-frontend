@@ -49,13 +49,13 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
     <Card>
       <CardHeader
         title="Downtime Reports"
-        description="Why machines went down — answered by workers on WhatsApp, or set here"
+        description="Why machines went down — answered by workers on the mobile app, or set here"
         action={<Wrench className="h-4 w-4 text-muted" />}
       />
       {reports.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted">
           No downtime recorded yet. When a loom stops, a report is opened here and the
-          assigned worker is asked for the reason on WhatsApp.
+          assigned worker is asked for the reason on the mobile app.
         </div>
       ) : (
         <ul className="max-h-[480px] divide-y overflow-y-auto rounded-lg border">

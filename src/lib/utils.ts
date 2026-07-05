@@ -28,6 +28,13 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Human label for how a downtime reason or config was reported (legacy values included). */
+export function formatAlertVia(via: string | null | undefined): string {
+  if (!via || via === 'whatsapp' || via === 'mobile' || via === 'app') return 'mobile app';
+  if (via === 'dashboard') return 'dashboard';
+  return via;
+}
+
 export { formatRangeLabel, rangeDurationLabel } from '@/lib/date-range';
 
 /** Owner-facing machine state — only these three labels appear in the UI. */

@@ -11,7 +11,7 @@ import { MachineAvailabilityTrends } from '@/components/factory/machine-availabi
 import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatAlertVia, formatNumber, formatPercent } from '@/lib/utils';
 import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -96,7 +96,7 @@ export function MachineStatusClient({
 
   useSetRefreshInfo(dataUpdatedAt, REFRESH_INTERVAL_MS / 1000);
 
-  // Non-blocking context: downtime reason + selected configuration (WhatsApp).
+  // Non-blocking context: downtime reason + selected configuration (mobile app).
   const { data: reportsData } = useQuery({
     queryKey: ['downtime-reports', factoryId, machineId],
     queryFn: ({ signal }) =>
@@ -180,9 +180,9 @@ export function MachineStatusClient({
                     {openReport.reason_label
                       ? `Reported reason: ${openReport.reason_label}` +
                         (openReport.reported_by_name
-                          ? ` (${openReport.reported_by_name} via ${openReport.reported_via ?? 'WhatsApp'})`
+                          ? ` (${openReport.reported_by_name} via ${formatAlertVia(openReport.reported_via)})`
                           : '')
-                      : 'The assigned worker has been asked for the reason on WhatsApp — no reply yet.'}
+                      : 'The assigned worker has been asked for the reason on the mobile app — no reply yet.'}
                   </p>
                 )}
                 {narrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (

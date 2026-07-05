@@ -28,6 +28,7 @@ const TYPE_META: Record<string, { label: string; Icon: typeof BellRing; iconClas
   downtime_reason_reply: { label: 'Reason received', Icon: Reply, iconClass: 'text-violet-500' },
   config_selection_reply: { label: 'Config selected', Icon: Reply, iconClass: 'text-violet-500' },
   test: { label: 'Test message', Icon: Send, iconClass: 'text-slate-400' },
+  test_push: { label: 'Test push', Icon: Send, iconClass: 'text-blue-500' },
 };
 
 function statusBadge(n: NotificationItem) {
@@ -51,7 +52,7 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
   return (
     <Card>
       <CardHeader
-        title="WhatsApp Message Log"
+        title="Mobile Alert Log"
         description={`Every reminder, alert and worker reply${data ? ` · ${data.total} total` : ''}`}
         action={<MessageCircle className="h-4 w-4 text-muted" />}
       />

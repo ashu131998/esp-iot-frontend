@@ -401,7 +401,7 @@ export const api = {
 
   updateAlertSettings: (
     factoryId: string,
-    body: Partial<Omit<AlertSettings, 'factory_id' | 'updated_at' | 'whatsapp_configured'>>,
+    body: Partial<Omit<AlertSettings, 'factory_id' | 'updated_at' | 'mobile_configured' | 'alertops_configured'>>,
     options?: ApiRequestOptions,
   ) =>
     request<AlertSettings>(`/v1/factories/${factoryId}/alert-settings`, {
@@ -429,6 +429,22 @@ export const api = {
       `/v1/factories/${factoryId}/notifications/test`,
       { method: 'POST', body: JSON.stringify(body), ...options },
     ),
+
+  sendTestPush: (
+    factoryId: string,
+    body: { worker_id: string; message?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{
+      ok: boolean;
+      channel: string;
+      error: string | null;
+      recipient_count: number | null;
+    }>(`/v1/factories/${factoryId}/notifications/test-push`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      ...options,
+    }),
 
   downtimeReasons: (factoryId: string, options?: ApiRequestOptions) =>
     request<{ reasons: DowntimeReason[] }>(

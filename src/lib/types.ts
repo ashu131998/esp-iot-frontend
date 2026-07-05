@@ -377,12 +377,13 @@ export interface OwnerContact {
 
 export interface AlertSettings {
   factory_id: string;
-  whatsapp_enabled: boolean;
+  mobile_enabled: boolean;
   shift_reminder_minutes: number;
   notify_owner_on_down: boolean;
   owner_contacts: OwnerContact[];
   updated_at: string | null;
-  whatsapp_configured: boolean;
+  mobile_configured: boolean;
+  alertops_configured: boolean;
 }
 
 export interface NotificationItem {

@@ -1,4 +1,5 @@
 import type { UptimeSegment } from '@/lib/types';
+import { statusLabel } from '@/lib/utils';
 
 export function MiniTimeline({ segments }: { segments: UptimeSegment[] }) {
   if (!segments || segments.length === 0) {
@@ -22,18 +23,12 @@ export function MiniTimeline({ segments }: { segments: UptimeSegment[] }) {
             : seg.status === 'down'
               ? 'bg-red-400'
               : 'bg-gray-300';
-        const label =
-          seg.status === 'up'
-            ? 'Running'
-            : seg.status === 'down'
-              ? 'Stopped'
-              : 'No signal';
         return (
           <div
             key={i}
             className={color}
             style={{ width: `${widthPct}%`, minWidth: widthPct > 1 ? undefined : '1px' }}
-            title={`${label} · ${hrs}h`}
+            title={`${statusLabel(seg.status)} · ${hrs}h`}
           />
         );
       })}

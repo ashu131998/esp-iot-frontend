@@ -128,7 +128,7 @@ export function AvailabilityTrendChart({
     <Card>
       <CardHeader
         title="Availability Trend"
-        description={`${timeRangeDescription}.${hasLive ? ' Orange dots = live / in-progress data from readings.' : ''}`}
+        description={`${timeRangeDescription}.${hasLive ? " Orange dots = today's shift (still in progress)." : ''}`}
       />
       <div className="px-6 pb-6">
         <ApexChart type="line" series={[{ name: 'Availability %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />

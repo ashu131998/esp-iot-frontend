@@ -38,7 +38,7 @@ export default async function AlertsPage() {
     <>
       <PageHeader
         title="Alerts"
-        description="Live availability monitoring across all factories · auto-refreshes every 60 s"
+        description="Machine availability monitoring across all factories · refreshes every 60 s"
       />
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <HydrationBoundary state={dehydrate(queryClient)}>

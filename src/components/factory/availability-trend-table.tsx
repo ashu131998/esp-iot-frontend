@@ -69,7 +69,7 @@ export function AvailabilityTrendTable({
       cell: ({ row }) => (
         <span className="flex items-center gap-2 font-medium">
           {row.original.dateLabel}
-          {row.original.is_live && <Badge className="bg-amber-50 text-amber-700 text-xs">Live</Badge>}
+          {row.original.is_live && <Badge className="bg-amber-50 text-amber-700 text-xs">Today</Badge>}
         </span>
       ),
     },

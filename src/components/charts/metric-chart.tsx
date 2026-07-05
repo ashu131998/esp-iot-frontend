@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { normalizeMachineStatus, statusLabel } from '@/lib/utils';
 import { ApexChart, baseChartOptions, formatAxisTick, type ApexOptions } from './apex';
 
 interface ChartData {
@@ -81,14 +82,18 @@ const UPTIME_IDLE_COLOR = '#d1d5db';
 type UptimeStatus = 'up' | 'down' | 'idle' | 'offline';
 
 function uptimeColor(status: UptimeStatus): string {
-  if (status === 'up') return UPTIME_UP_COLOR;
-  if (status === 'idle' || status === 'offline') return UPTIME_IDLE_COLOR;
-  return UPTIME_DOWN_COLOR;
+  switch (normalizeMachineStatus(status)) {
+    case 'running':
+      return UPTIME_UP_COLOR;
+    case 'stopped':
+      return UPTIME_DOWN_COLOR;
+    case 'no_signal':
+      return UPTIME_IDLE_COLOR;
+  }
 }
-function uptimeLabel(status: UptimeStatus): string {
-  if (status === 'up') return 'Running';
-  if (status === 'idle' || status === 'offline') return 'No signal';
-  return 'Stopped';
+
+function uptimeChartLabel(status: UptimeStatus): string {
+  return statusLabel(status);
 }
 
 export interface UptimeSegmentPoint {
@@ -138,7 +143,7 @@ function UptimeSegmentTooltip({
         className="mb-2 font-semibold"
         style={{ color: uptimeColor(segment.status) }}
       >
-        {uptimeLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
+        {uptimeChartLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
       </p>
       <dl className="space-y-1.5 text-muted">
         <div>
@@ -300,7 +305,7 @@ export function UptimeTimelineChart({
         const color = uptimeColor(point.status);
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
           <p class="font-medium">${point.label}</p>
-          <p style="color:${color}">${uptimeLabel(point.status)}</p>
+          <p style="color:${color}">${uptimeChartLabel(point.status)}</p>
         </div>`;
       },
     },

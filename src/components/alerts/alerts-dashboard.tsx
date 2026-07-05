@@ -222,7 +222,7 @@ export function AlertsDashboard() {
                       <span className="font-semibold">{alert.machineName}</span>
                       <Badge className={badge}>{label}</Badge>
                       {alert.type === 'offline' && (
-                        <Badge className="bg-slate-100 text-slate-600">Offline</Badge>
+                        <Badge className="bg-slate-100 text-slate-600">No signal</Badge>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted">

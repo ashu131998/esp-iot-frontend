@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
-import { StatCard, LiveStatusBadge } from '@/components/ui/badge';
+import { StatCard, MachineStatusBadge } from '@/components/ui/badge';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
@@ -149,7 +149,7 @@ export default async function FactoryOverviewPage({
                   <MiniTimeline segments={uptime?.timeline ?? []} />
                 </TD>
                 <TD>
-                  <LiveStatusBadge status={uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data'} />
+                  <MachineStatusBadge status={uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data'} />
                 </TD>
               </TR>
             ))}

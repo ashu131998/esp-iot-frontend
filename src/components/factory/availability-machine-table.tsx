@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSuspenseQueries } from '@tanstack/react-query';
 
-import { LiveStatusBadge } from '@/components/ui/badge';
+import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
@@ -117,7 +117,7 @@ export function AvailabilityMachineTable({
                 <MiniTimeline segments={uptimeByMachine[m.machine_id]?.timeline ?? []} />
               </TD>
               <TD>
-                <LiveStatusBadge status={uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'} />
+                <MachineStatusBadge status={uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'} />
               </TD>
             </TR>
           ))}

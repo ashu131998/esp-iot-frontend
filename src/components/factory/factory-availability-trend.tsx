@@ -102,14 +102,14 @@ export function FactoryAvailabilityTrend({
   const hasLive = chartData.some((d) => d.is_live);
 
   const timeRangeDescription = hasLive
-    ? `Average machine availability per day · live through ${format(now, 'h:mm a')}`
+    ? `Average machine availability per day · through ${format(now, 'h:mm a')} today`
     : 'Average machine availability per day';
 
   return (
     <Card>
       <CardHeader
         title="Factory Availability Trend"
-        description={`${timeRangeDescription}.${hasLive ? ' Orange dots = live (computed from raw readings, no completed shift yet).' : ''}`}
+        description={`${timeRangeDescription}.${hasLive ? " Orange dots = today's shift (still in progress)." : ''}`}
       />
       {chartData.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-muted">

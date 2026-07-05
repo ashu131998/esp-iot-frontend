@@ -1,4 +1,4 @@
-import { cn, statusColor, statusLabel, isLiveStatus } from '@/lib/utils';
+import { cn, normalizeMachineStatus, statusColor, statusLabel } from '@/lib/utils';
 
 import { Card } from './card';
 
@@ -21,22 +21,29 @@ export function Badge({
   );
 }
 
-export function LiveStatusBadge({ status }: { status: string }) {
-  const live = isLiveStatus(status);
+function statusDotClass(status: string): string {
+  switch (normalizeMachineStatus(status)) {
+    case 'running':
+      return 'bg-emerald-600';
+    case 'stopped':
+      return 'bg-red-600';
+    case 'no_signal':
+      return 'bg-gray-400';
+  }
+}
+
+/** Running | Stopped | No signal — the only three statuses shown to factory owners. */
+export function MachineStatusBadge({ status }: { status: string }) {
   return (
     <Badge className={statusColor(status)}>
-      {live ? (
-        <span className="mr-1.5 relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
-        </span>
-      ) : (
-        <span className="mr-1.5 inline-flex h-2 w-2 shrink-0 rounded-full bg-current opacity-50" />
-      )}
+      <span className={`mr-1.5 inline-flex h-2 w-2 shrink-0 rounded-full ${statusDotClass(status)}`} />
       {statusLabel(status)}
     </Badge>
   );
 }
+
+/** @deprecated use MachineStatusBadge */
+export const LiveStatusBadge = MachineStatusBadge;
 
 export function StatCard({
   label,

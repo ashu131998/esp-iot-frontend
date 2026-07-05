@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
 import { ArrowDownCircle, ArrowUpCircle, Settings2, WifiOff } from 'lucide-react';
 
-import { StatCard, LiveStatusBadge } from '@/components/ui/badge';
+import { StatCard, MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { MachineAvailabilityTrends } from '@/components/factory/machine-availability-trends';
@@ -36,19 +36,17 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
   if (!last) return null;
 
   const state: UptimeStatus = last.status;
-  const isUp = state === 'up';
+  const isRunning = state === 'up';
+  const isNoSignal = state === 'idle' || state === 'offline' || state === 'no_data';
   const sinceMs = Date.now() - new Date(last.from).getTime();
   const downSegments = timeline.filter((s) => s.status === 'down');
   const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);
 
-  // 'offline' is a device/link outage — the loom state is unknown, so we do NOT
-  // claim it is DOWN. It's flagged separately as a signal problem, not a stoppage.
-  const headline =
-    state === 'up'
-      ? `${machineName} is RUNNING — up for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
-      : state === 'offline'
-        ? `${machineName} — NO SIGNAL from sensor for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}). Machine state unknown.`
-        : `${machineName} is DOWN — stopped ${humanDuration(sinceMs)} ago (at ${timeLabel(last.from)}).`;
+  const headline = isRunning
+    ? `${machineName} is running — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+    : isNoSignal
+      ? `${machineName} — no signal for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+      : `${machineName} is stopped — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`;
 
   const history =
     downSegments.length === 0
@@ -56,7 +54,7 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
       : `${downSegments.length} stoppage${downSegments.length === 1 ? '' : 's'} in the last 24 hours, ` +
         `totalling ${humanDuration(totalDownSec * 1000)} of downtime.`;
 
-  return { state, isUp, headline, history };
+  return { state, isRunning, headline, history };
 }
 
 export function MachineStatusClient({
@@ -161,16 +159,16 @@ export function MachineStatusClient({
           {narrative && (
             <div
               className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
-                narrative.state === 'up'
+                narrative.isRunning
                   ? 'border-l-emerald-500 bg-emerald-50/60'
-                  : narrative.state === 'offline'
+                  : narrative.state === 'idle' || narrative.state === 'offline'
                     ? 'border-l-gray-400 bg-gray-50'
                     : 'border-l-red-500 bg-red-50/60'
               }`}
             >
-              {narrative.state === 'up' ? (
+              {narrative.isRunning ? (
                 <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-              ) : narrative.state === 'offline' ? (
+              ) : narrative.state === 'idle' || narrative.state === 'offline' ? (
                 <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
               ) : (
                 <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
@@ -187,7 +185,7 @@ export function MachineStatusClient({
                       : 'The assigned worker has been asked for the reason on WhatsApp — no reply yet.'}
                   </p>
                 )}
-                {narrative.isUp && latestReport?.resolved_at && latestReport.reason_label && (
+                {narrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (
                   <p className="mt-1 text-muted">
                     Last stoppage: {latestReport.reason_label}
                     {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
@@ -212,7 +210,7 @@ export function MachineStatusClient({
           )}
           <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
             <span className="text-sm font-medium">Status</span>
-            <div className="flex justify-end"><LiveStatusBadge status={status} /></div>
+            <div className="flex justify-end"><MachineStatusBadge status={status} /></div>
             <span className="text-sm font-medium">Timeline (Last 24h)</span>
             <MiniTimeline segments={machineUptime?.timeline ?? []} />
           </div>

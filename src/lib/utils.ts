@@ -30,54 +30,51 @@ export function formatDate(iso: string): string {
 
 export { formatRangeLabel, rangeDurationLabel } from '@/lib/date-range';
 
-export function statusColor(status: string): string {
+/** Owner-facing machine state — only these three labels appear in the UI. */
+export type MachineDisplayStatus = 'running' | 'stopped' | 'no_signal';
+
+/** Map API/internal status codes to Running | Stopped | No signal. */
+export function normalizeMachineStatus(status: string): MachineDisplayStatus {
   switch (status) {
-    case 'computed':
-    case 'on':
     case 'up':
-      return 'text-emerald-600 bg-emerald-50';
-    case 'down':
-      return 'text-red-600 bg-red-50';
+    case 'on':
+    case 'computed':
     case 'estimated':
     case 'estimated_from_latest':
-      return 'text-amber-600 bg-amber-50';
-    // Device/link down → loom state unknown. Grey, not red: this is a signal
-    // gap, not a machine stoppage.
-    case 'offline':
-    case 'idle':
-    case 'no_data':
-      return 'text-gray-500 bg-gray-100';
-    case 'no_sensor':
-      return 'text-red-600 bg-red-50';
+      return 'running';
+    case 'down':
+    case 'off':
+      return 'stopped';
     default:
+      return 'no_signal';
+  }
+}
+
+export function statusColor(status: string): string {
+  switch (normalizeMachineStatus(status)) {
+    case 'running':
+      return status === 'estimated' || status === 'estimated_from_latest'
+        ? 'text-amber-600 bg-amber-50'
+        : 'text-emerald-600 bg-emerald-50';
+    case 'stopped':
       return 'text-red-600 bg-red-50';
+    case 'no_signal':
+      return 'text-gray-500 bg-gray-100';
   }
 }
 
 export function statusLabel(status: string): string {
-  switch (status) {
-    case 'computed':
-    case 'on':
-    case 'up':
+  switch (normalizeMachineStatus(status)) {
+    case 'running':
       return 'Running';
-    case 'estimated':
-    case 'estimated_from_latest':
-      return 'Estimated';
-    case 'down':
+    case 'stopped':
       return 'Stopped';
-    case 'idle':
+    case 'no_signal':
       return 'No signal';
-    case 'offline':
-    case 'no_data':
-      return 'No signal';
-    case 'off':
-    case 'no_sensor':
-      return 'No sensor';
-    default:
-      return status.replace(/_/g, ' ');
   }
 }
 
+/** @deprecated use normalizeMachineStatus(status) === 'running' */
 export function isLiveStatus(status: string): boolean {
-  return status === 'computed' || status === 'on' || status === 'up';
+  return normalizeMachineStatus(status) === 'running';
 }

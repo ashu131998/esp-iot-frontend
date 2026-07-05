@@ -176,8 +176,7 @@ export interface ProductionResponse {
   machines: ProductionMachine[];
 }
 
-// 'idle' / 'offline' = ESP32 not reporting (excluded from availability).
-// 'down' = loom stopped. 'up' = loom running. 'idle' = no signal (can't observe loom).
+// API segment codes (up/down/idle) — UI always shows Running | Stopped | No signal.
 export type UptimeStatus = 'up' | 'down' | 'idle' | 'offline';
 
 export interface UptimeSegment {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { StatCard, LiveStatusBadge, Badge } from '@/components/ui/badge';
+import { StatCard, MachineStatusBadge, Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
@@ -132,9 +132,7 @@ export function LineStatusClient({
                 const prod = productionByMachine[machine.machine_id];
                 const uptime = uptimeByMachine[machine.machine_id];
                 const cfgCount = configsByMachine[machine.machine_id] ?? 0;
-                // Current status = most recent state from the 24h timeline, not the
-                // day's availability-computation status (which is 'computed' whenever
-                // any data exists and would wrongly show an offline loom as "Live").
+                // Current status from the 24h timeline (Running / Stopped / No signal).
                 const status = uptime?.timeline.at(-1)?.status ?? 'no_data';
 
                 return (
@@ -148,7 +146,7 @@ export function LineStatusClient({
                       </Link>
                     </TD>
                     <TD>
-                      <LiveStatusBadge status={status} />
+                      <MachineStatusBadge status={status} />
                     </TD>
                     <TD className="font-semibold">{prod?.units_produced ?? '—'}</TD>
                     <TD>

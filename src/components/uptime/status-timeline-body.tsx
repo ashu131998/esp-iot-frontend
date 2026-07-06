@@ -7,6 +7,7 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatRangeLabel, UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
+import { useLiveTimelineWindow } from '@/lib/use-live-timeline-window';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
@@ -103,15 +104,15 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
 
   useSetRefreshInfo(dataUpdatedAt, STATUS_TIMELINE_REFRESH_MS / 1000);
 
-  const detailFrom = data.detail_from ?? data.timeline_from;
-  const detailTo = data.detail_to ?? data.timeline_to;
-  const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
+  const overviewWindow = useLiveTimelineWindow(UPTIME_TIMELINE_HOURS);
+  const detailWindow = useLiveTimelineWindow(UPTIME_DETAIL_HOURS);
 
   const displayMachines = machineId
     ? data.machines.filter((m) => m.machine_id === machineId)
     : data.machines;
 
-  const timelineLabel = formatRangeLabel(data.timeline_from, data.timeline_to);
+  const timelineLabel = formatRangeLabel(overviewWindow.from, overviewWindow.to);
+  const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
   return (
     <Card>
@@ -176,10 +177,11 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               </div>
               <UptimeTimeSeriesChart
                 segments={m.timeline}
-                windowFrom={data.timeline_from}
-                windowTo={data.timeline_to}
+                windowFrom={overviewWindow.from}
+                windowTo={overviewWindow.to}
                 windowLabel={timelineWindowLabel}
                 height={36}
+                liveCapMinPct={4}
                 segmentDetails={(segment) =>
                   buildSegmentDetails(segment, machineReports, selection)
                 }
@@ -189,8 +191,8 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               </p>
               <UptimeTimeSeriesChart
                 segments={detailTimeline}
-                windowFrom={detailFrom}
-                windowTo={detailTo}
+                windowFrom={detailWindow.from}
+                windowTo={detailWindow.to}
                 windowLabel={detailLabel}
                 height={56}
                 segmentDetails={(segment) =>

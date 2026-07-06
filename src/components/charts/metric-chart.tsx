@@ -125,6 +125,19 @@ function formatTimestamp(iso: string): string {
   });
 }
 
+function formatAxisStart(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isLiveWindowEnd(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < 120_000;
+}
+
 /** Nudge the open tail to the API window end when sub-second rounding left a gap. */
 export function normalizeTimelineSegments(
   segments: UptimeSegmentPoint[],
@@ -152,9 +165,11 @@ export interface SegmentDetail {
 function UptimeSegmentTooltip({
   segment,
   details,
+  ongoing,
 }: {
   segment: UptimeSegmentPoint;
   details?: SegmentDetail[];
+  ongoing?: boolean;
 }) {
   return (
     <div className="pointer-events-none z-20 min-w-[240px] rounded-md border bg-white px-3 py-2.5 text-xs shadow-md">
@@ -163,6 +178,7 @@ function UptimeSegmentTooltip({
         style={{ color: uptimeColor(segment.status) }}
       >
         {uptimeChartLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
+        {ongoing ? ' · ongoing' : ''}
       </p>
       <dl className="space-y-1.5 text-muted">
         <div>
@@ -171,7 +187,9 @@ function UptimeSegmentTooltip({
         </div>
         <div>
           <dt className="text-[10px] font-medium uppercase tracking-wide">To</dt>
-          <dd className="font-mono text-[11px] text-foreground">{formatTimestamp(segment.to)}</dd>
+          <dd className="font-mono text-[11px] text-foreground">
+            {ongoing ? 'Now (updates each refresh)' : formatTimestamp(segment.to)}
+          </dd>
         </div>
         {(details ?? []).map((d) => (
           <div key={d.label}>
@@ -208,21 +226,15 @@ export function UptimeTimeSeriesChart({
   const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number } | null>(null);
 
   const windowMs = Math.max(new Date(windowTo).getTime() - new Date(windowFrom).getTime(), 1);
-  const spanDays = windowMs / 86400000;
-  const axisFormat =
-    spanDays > 2
-      ? { month: 'short' as const, day: 'numeric' as const }
-      : { hour: '2-digit' as const, minute: '2-digit' as const };
 
   if (segments.length === 0) {
     return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
   }
 
   const filled = normalizeTimelineSegments(segments, windowTo);
-
-  const axisLabels = [windowFrom, windowTo].map((iso) =>
-    new Date(iso).toLocaleString(undefined, axisFormat),
-  );
+  const liveEnd = isLiveWindowEnd(windowTo);
+  const axisStart = formatAxisStart(windowFrom);
+  const axisEnd = liveEnd ? 'Now' : formatAxisStart(windowTo);
 
   const hoverCenterPct = hover
     ? filled.slice(0, hover.index).reduce(
@@ -233,7 +245,7 @@ export function UptimeTimeSeriesChart({
 
   return (
     <div className="space-y-1">
-      <div className="relative">
+      <div className="relative" style={{ contain: 'layout' }}>
         {hover && (
           <div
             className="pointer-events-none absolute bottom-full z-20 mb-2"
@@ -241,13 +253,14 @@ export function UptimeTimeSeriesChart({
           >
             <UptimeSegmentTooltip
               segment={hover.segment}
+              ongoing={liveEnd && hover.index === filled.length - 1}
               details={segmentDetails?.(hover.segment)}
             />
           </div>
         )}
         <div
           className="flex w-full overflow-hidden rounded-md border border-slate-200"
-          style={{ height }}
+          style={{ height, minHeight: height }}
           role="img"
           aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
         >
@@ -256,8 +269,8 @@ export function UptimeTimeSeriesChart({
             if (widthPct <= 0) return null;
             return (
               <div
-                key={`${seg.from}-${i}`}
-                className="h-full shrink-0 transition-opacity hover:opacity-80"
+                key={`${seg.from}-${seg.to}-${seg.status}`}
+                className="h-full shrink-0 hover:opacity-80"
                 style={{
                   width: `${widthPct}%`,
                   minWidth: widthPct > 0 ? 1 : 0,
@@ -270,10 +283,10 @@ export function UptimeTimeSeriesChart({
           })}
         </div>
       </div>
-      <div className="flex justify-between text-[10px] text-muted">
-        <span>{axisLabels[0]}</span>
-        <span>{windowLabel ?? 'selected period'}</span>
-        <span>{axisLabels[1]}</span>
+      <div className="grid grid-cols-3 items-center text-[10px] text-muted tabular-nums">
+        <span className="truncate pr-2">{axisStart}</span>
+        <span className="truncate text-center">{windowLabel ?? 'selected period'}</span>
+        <span className="truncate pl-2 text-right">{axisEnd}</span>
       </div>
     </div>
   );

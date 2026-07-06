@@ -6,13 +6,13 @@ import { UptimeTimeSeriesChart, type SegmentDetail } from '@/components/charts/m
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { formatRangeLabel, UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
+import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
 
-const STATUS_TIMELINE_REFRESH_MS = 15_000;
+const STATUS_TIMELINE_REFRESH_MS = 30_000;
 const UPTIME_DETAIL_HOURS = 2;
 
 function shortTime(iso: string) {
@@ -69,7 +69,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS}h window`;
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
-  const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
+  const { data, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['uptime', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, lineId ?? '', machineId ?? ''],
     queryFn: ({ signal }) => api.uptime(factoryId, uptimeParams, { signal }),
     refetchInterval,
@@ -112,14 +112,13 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     ? data.machines.filter((m) => m.machine_id === machineId)
     : data.machines;
 
-  const timelineLabel = formatRangeLabel(overviewFrom, overviewTo);
   const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
   return (
     <Card>
       <CardHeader
         title="Status Timeline"
-        description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail with exact segment times · ${timelineLabel}${isFetching ? ' · updating…' : ''}`}
+        description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail — use detail chart for exact recent times`}
       />
       {data.meta?.requires_filter && (
         <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">

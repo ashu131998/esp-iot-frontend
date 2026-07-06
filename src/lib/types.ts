@@ -196,7 +196,12 @@ export interface UptimeMachine {
   offline_hours: number;
   idle_hours?: number;
   availability_percent: number | null;
+  /** Current loom state from the latest machine_status_event (extends to now). */
+  live_status?: UptimeStatus;
+  live_since?: string | null;
   timeline: UptimeSegment[];
+  /** Last 2h zoom — same segments, wider pixels for recent transitions. */
+  detail_timeline?: UptimeSegment[];
 }
 
 export interface UptimeResponse {
@@ -205,6 +210,8 @@ export interface UptimeResponse {
   to: string;
   timeline_from: string;
   timeline_to: string;
+  detail_from?: string;
+  detail_to?: string;
   total_up_hours: number;
   total_down_hours: number;
   machines: UptimeMachine[];

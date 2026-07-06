@@ -125,6 +125,34 @@ function formatTimestamp(iso: string): string {
   });
 }
 
+/** Extend the open tail so the bar always fills the window (guards stale poll gaps). */
+export function normalizeTimelineSegments(
+  segments: UptimeSegmentPoint[],
+  windowTo: string,
+): UptimeSegmentPoint[] {
+  if (segments.length === 0) return segments;
+  const endMs = new Date(windowTo).getTime();
+  const last = segments[segments.length - 1];
+  const lastToMs = new Date(last.to).getTime();
+  if (lastToMs >= endMs - 500) {
+    if (lastToMs >= endMs) return segments;
+    const fromMs = new Date(last.from).getTime();
+    return [
+      ...segments.slice(0, -1),
+      { ...last, to: windowTo, duration_seconds: (endMs - fromMs) / 1000 },
+    ];
+  }
+  return [
+    ...segments,
+    {
+      from: last.to,
+      to: windowTo,
+      duration_seconds: (endMs - lastToMs) / 1000,
+      status: 'idle' as UptimeStatus,
+    },
+  ];
+}
+
 export interface SegmentDetail {
   label: string;
   value: string;
@@ -199,12 +227,14 @@ export function UptimeTimeSeriesChart({
     return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
   }
 
+  const filled = normalizeTimelineSegments(segments, windowTo);
+
   const axisLabels = [windowFrom, windowTo].map((iso) =>
     new Date(iso).toLocaleString(undefined, axisFormat),
   );
 
   const hoverCenterPct = hover
-    ? segments.slice(0, hover.index).reduce(
+    ? filled.slice(0, hover.index).reduce(
         (acc, s) => acc + (s.duration_seconds * 1000 / windowMs) * 100,
         0,
       ) + (hover.segment.duration_seconds * 1000 / windowMs) * 50
@@ -230,7 +260,7 @@ export function UptimeTimeSeriesChart({
           role="img"
           aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
         >
-          {segments.map((seg, i) => {
+          {filled.map((seg, i) => {
             const widthPct = (seg.duration_seconds * 1000 / windowMs) * 100;
             if (widthPct <= 0) return null;
             return (

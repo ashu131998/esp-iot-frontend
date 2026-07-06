@@ -3,15 +3,17 @@
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
 
 import { UptimeTimeSeriesChart, type SegmentDetail } from '@/components/charts/metric-chart';
-import { UPTIME_REFRESH_MS } from '@/components/uptime/refresh-countdown';
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatRangeLabel, UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { formatAlertVia, formatPercent } from '@/lib/utils';
+import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
+
+const STATUS_TIMELINE_REFRESH_MS = 15_000;
+const UPTIME_DETAIL_HOURS = 2;
 
 function shortTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -62,7 +64,7 @@ function buildSegmentDetails(
 
 export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
-  const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
+  const refetchInterval = useRefetchInterval(STATUS_TIMELINE_REFRESH_MS);
 
   const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS}h window`;
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
@@ -99,7 +101,11 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     (selectionsData?.selections ?? []).map((s) => [s.machine_id, s]),
   );
 
-  useSetRefreshInfo(dataUpdatedAt, UPTIME_REFRESH_MS / 1000);
+  useSetRefreshInfo(dataUpdatedAt, STATUS_TIMELINE_REFRESH_MS / 1000);
+
+  const detailFrom = data.detail_from ?? data.timeline_from;
+  const detailTo = data.detail_to ?? data.timeline_to;
+  const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
   const displayMachines = machineId
     ? data.machines.filter((m) => m.machine_id === machineId)
@@ -111,7 +117,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     <Card>
       <CardHeader
         title="Status Timeline"
-        description={`Last ${UPTIME_TIMELINE_HOURS} hours · ${timelineLabel}${isFetching ? ' · updating…' : ''} · hover a segment for downtime reason & configuration`}
+        description={`Last ${UPTIME_TIMELINE_HOURS} hours (overview) + ${UPTIME_DETAIL_HOURS}h detail below · ${timelineLabel}${isFetching ? ' · updating…' : ''} · hover a segment for downtime reason & configuration`}
       />
       {data.meta?.requires_filter && (
         <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -141,7 +147,9 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
           const operators: ActiveAssignment[] = assignments[m.machine_id] ?? [];
           const machineReports = allReports.filter((r) => r.machine_id === m.machine_id);
           const selection = latestSelections.get(m.machine_id);
-          const currentStatus = m.timeline.at(-1)?.status ?? 'no_data';
+          const currentStatus = m.live_status ?? m.timeline.at(-1)?.status ?? 'idle';
+          const liveSince = m.live_since;
+          const detailTimeline = m.detail_timeline ?? m.timeline;
           const operatorNames = operators
             .map((op) => op.worker_name ?? op.worker_id)
             .filter(Boolean)
@@ -154,6 +162,9 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
                   <p className="truncate text-base font-semibold">{m.machine_name}</p>
                   <p className="mt-0.5 text-sm text-muted">
                     Operator: {operatorNames || '—'}
+                    {liveSince && (
+                      <> · {statusLabel(currentStatus)} since {shortTime(liveSince)}</>
+                    )}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-3 sm:justify-end">
@@ -168,6 +179,20 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
                 windowFrom={data.timeline_from}
                 windowTo={data.timeline_to}
                 windowLabel={timelineWindowLabel}
+                height={36}
+                segmentDetails={(segment) =>
+                  buildSegmentDetails(segment, machineReports, selection)
+                }
+              />
+              <p className="mb-1 mt-4 text-xs font-medium text-muted">
+                Recent detail · last {UPTIME_DETAIL_HOURS} hours
+              </p>
+              <UptimeTimeSeriesChart
+                segments={detailTimeline}
+                windowFrom={detailFrom}
+                windowTo={detailTo}
+                windowLabel={detailLabel}
+                height={56}
                 segmentDetails={(segment) =>
                   buildSegmentDetails(segment, machineReports, selection)
                 }

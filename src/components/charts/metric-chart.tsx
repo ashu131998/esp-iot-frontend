@@ -236,11 +236,18 @@ export function UptimeTimeSeriesChart({
   const axisStart = formatAxisStart(windowFrom);
   const axisEnd = liveEnd ? 'Now' : formatAxisStart(windowTo);
 
+  // Absolute layout (left/width in %) avoids the sub-pixel white seams that a
+  // flex row of many thin segments produces. A small overlap hides any gap.
+  let cursorPct = 0;
+  const placed = filled.map((segment, i) => {
+    const widthPct = (segment.duration_seconds * 1000 / windowMs) * 100;
+    const leftPct = cursorPct;
+    cursorPct += widthPct;
+    return { segment, i, leftPct, widthPct };
+  });
+
   const hoverCenterPct = hover
-    ? filled.slice(0, hover.index).reduce(
-        (acc, s) => acc + (s.duration_seconds * 1000 / windowMs) * 100,
-        0,
-      ) + (hover.segment.duration_seconds * 1000 / windowMs) * 50
+    ? (placed[hover.index]?.leftPct ?? 0) + (placed[hover.index]?.widthPct ?? 0) / 2
     : 0;
 
   return (
@@ -259,24 +266,30 @@ export function UptimeTimeSeriesChart({
           </div>
         )}
         <div
-          className="flex w-full overflow-hidden rounded-md border border-slate-200"
+          className="relative w-full overflow-hidden rounded-md border border-slate-200"
           style={{ height, minHeight: height }}
           role="img"
           aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
         >
-          {filled.map((seg, i) => {
-            const widthPct = (seg.duration_seconds * 1000 / windowMs) * 100;
+          {placed.map(({ segment, i, leftPct, widthPct }) => {
             if (widthPct <= 0) return null;
+            // Every segment overlaps its neighbors by ~1px on both sides so
+            // no sub-pixel rounding gap between two adjacent boxes can ever
+            // show the container background through — regardless of paint
+            // order. Harmless at bar widths of hundreds of pixels.
+            const leftPx = i === 0 ? 0 : 1;
+            const extraWidthPx = (i === 0 ? 0 : 1) + (i === placed.length - 1 ? 0 : 1);
             return (
               <div
-                key={`${seg.from}-${seg.to}-${seg.status}`}
-                className="h-full shrink-0 hover:opacity-80"
+                key={`${segment.from}-${segment.to}-${segment.status}`}
+                className="absolute top-0 bottom-0 hover:opacity-80"
                 style={{
-                  width: `${widthPct}%`,
-                  minWidth: widthPct > 0 ? 1 : 0,
-                  backgroundColor: uptimeColor(seg.status),
+                  left: `calc(${leftPct}% - ${leftPx}px)`,
+                  width: `calc(${widthPct}% + ${extraWidthPx}px)`,
+                  minWidth: 1,
+                  backgroundColor: uptimeColor(segment.status),
                 }}
-                onMouseEnter={() => setHover({ segment: seg, index: i })}
+                onMouseEnter={() => setHover({ segment, index: i })}
                 onMouseLeave={() => setHover(null)}
               />
             );

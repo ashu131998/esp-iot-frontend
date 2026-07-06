@@ -125,7 +125,7 @@ function formatTimestamp(iso: string): string {
   });
 }
 
-/** Extend the open tail so the bar always fills the window (guards stale poll gaps). */
+/** Nudge the open tail to the API window end when sub-second rounding left a gap. */
 export function normalizeTimelineSegments(
   segments: UptimeSegmentPoint[],
   windowTo: string,
@@ -134,77 +134,14 @@ export function normalizeTimelineSegments(
   const endMs = new Date(windowTo).getTime();
   const last = segments[segments.length - 1];
   const lastToMs = new Date(last.to).getTime();
-  if (lastToMs >= endMs - 500) {
-    if (lastToMs >= endMs) return segments;
+  if (lastToMs >= endMs - 500 && lastToMs < endMs) {
     const fromMs = new Date(last.from).getTime();
     return [
       ...segments.slice(0, -1),
       { ...last, to: windowTo, duration_seconds: (endMs - fromMs) / 1000 },
     ];
   }
-  return [
-    ...segments,
-    {
-      from: last.to,
-      to: windowTo,
-      duration_seconds: (endMs - lastToMs) / 1000,
-      status: 'idle' as UptimeStatus,
-    },
-  ];
-}
-
-interface SegmentLayout {
-  segment: UptimeSegmentPoint;
-  widthPct: number;
-  isLive?: boolean;
-}
-
-/**
- * Lay out segments for display. When `liveCapMinPct` is set, the open tail
- * (last segment ending at windowTo) gets a minimum width so it stays visible
- * on long (24h) overviews while history is scaled down proportionally.
- */
-function layoutTimelineSegments(
-  segments: UptimeSegmentPoint[],
-  windowFrom: string,
-  windowTo: string,
-  liveCapMinPct?: number,
-): SegmentLayout[] {
-  const windowMs = Math.max(new Date(windowTo).getTime() - new Date(windowFrom).getTime(), 1);
-  const filled = normalizeTimelineSegments(segments, windowTo);
-  if (!liveCapMinPct || filled.length === 0) {
-    return filled.map((segment) => ({
-      segment,
-      widthPct: (segment.duration_seconds * 1000 / windowMs) * 100,
-    }));
-  }
-
-  const last = filled[filled.length - 1];
-  const windowEndMs = new Date(windowTo).getTime();
-  const isOpenTail = Math.abs(new Date(last.to).getTime() - windowEndMs) < 2000;
-  if (!isOpenTail) {
-    return filled.map((segment) => ({
-      segment,
-      widthPct: (segment.duration_seconds * 1000 / windowMs) * 100,
-    }));
-  }
-
-  const openPct = Math.max(
-    (last.duration_seconds * 1000 / windowMs) * 100,
-    liveCapMinPct,
-  );
-  const historyPct = 100 - openPct;
-  const history = filled.slice(0, -1);
-  const historyMs = history.reduce((s, seg) => s + seg.duration_seconds * 1000, 0);
-
-  const layouts: SegmentLayout[] = history.map((segment) => ({
-    segment,
-    widthPct: historyMs > 0
-      ? ((segment.duration_seconds * 1000 / historyMs) * historyPct)
-      : 0,
-  }));
-  layouts.push({ segment: last, widthPct: openPct, isLive: true });
-  return layouts;
+  return segments;
 }
 
 export interface SegmentDetail {
@@ -215,11 +152,9 @@ export interface SegmentDetail {
 function UptimeSegmentTooltip({
   segment,
   details,
-  isLive,
 }: {
   segment: UptimeSegmentPoint;
   details?: SegmentDetail[];
-  isLive?: boolean;
 }) {
   return (
     <div className="pointer-events-none z-20 min-w-[240px] rounded-md border bg-white px-3 py-2.5 text-xs shadow-md">
@@ -228,7 +163,6 @@ function UptimeSegmentTooltip({
         style={{ color: uptimeColor(segment.status) }}
       >
         {uptimeChartLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
-        {isLive ? ' · live' : ''}
       </p>
       <dl className="space-y-1.5 text-muted">
         <div>
@@ -237,9 +171,7 @@ function UptimeSegmentTooltip({
         </div>
         <div>
           <dt className="text-[10px] font-medium uppercase tracking-wide">To</dt>
-          <dd className="font-mono text-[11px] text-foreground">
-            {isLive ? `${formatTimestamp(segment.to)} (now)` : formatTimestamp(segment.to)}
-          </dd>
+          <dd className="font-mono text-[11px] text-foreground">{formatTimestamp(segment.to)}</dd>
         </div>
         {(details ?? []).map((d) => (
           <div key={d.label}>
@@ -264,8 +196,6 @@ export function UptimeTimeSeriesChart({
   windowLabel,
   height = 48,
   segmentDetails,
-  /** Minimum % width for the open/live tail (makes 24h overviews readable). */
-  liveCapMinPct,
 }: {
   segments: UptimeSegmentPoint[];
   windowFrom: string;
@@ -274,9 +204,8 @@ export function UptimeTimeSeriesChart({
   height?: number;
   /** Extra tooltip rows per segment (e.g. downtime reason, active config). */
   segmentDetails?: (segment: UptimeSegmentPoint) => SegmentDetail[];
-  liveCapMinPct?: number;
 }) {
-  const [hover, setHover] = useState<{ layout: SegmentLayout; index: number } | null>(null);
+  const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number } | null>(null);
 
   const windowMs = Math.max(new Date(windowTo).getTime() - new Date(windowFrom).getTime(), 1);
   const spanDays = windowMs / 86400000;
@@ -289,14 +218,17 @@ export function UptimeTimeSeriesChart({
     return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
   }
 
-  const layouts = layoutTimelineSegments(segments, windowFrom, windowTo, liveCapMinPct);
+  const filled = normalizeTimelineSegments(segments, windowTo);
 
   const axisLabels = [windowFrom, windowTo].map((iso) =>
     new Date(iso).toLocaleString(undefined, axisFormat),
   );
 
   const hoverCenterPct = hover
-    ? layouts.slice(0, hover.index).reduce((acc, l) => acc + l.widthPct, 0) + hover.layout.widthPct / 2
+    ? filled.slice(0, hover.index).reduce(
+        (acc, s) => acc + (s.duration_seconds * 1000 / windowMs) * 100,
+        0,
+      ) + (hover.segment.duration_seconds * 1000 / windowMs) * 50
     : 0;
 
   return (
@@ -308,9 +240,8 @@ export function UptimeTimeSeriesChart({
             style={{ left: `${hoverCenterPct}%`, transform: 'translateX(-50%)' }}
           >
             <UptimeSegmentTooltip
-              segment={hover.layout.segment}
-              isLive={hover.layout.isLive}
-              details={segmentDetails?.(hover.layout.segment)}
+              segment={hover.segment}
+              details={segmentDetails?.(hover.segment)}
             />
           </div>
         )}
@@ -320,19 +251,19 @@ export function UptimeTimeSeriesChart({
           role="img"
           aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
         >
-          {layouts.map((layout, i) => {
-            const { segment, widthPct, isLive } = layout;
+          {filled.map((seg, i) => {
+            const widthPct = (seg.duration_seconds * 1000 / windowMs) * 100;
             if (widthPct <= 0) return null;
             return (
               <div
-                key={`${segment.from}-${i}`}
-                className={`h-full shrink-0 transition-opacity hover:opacity-80${isLive ? ' ring-1 ring-inset ring-white/60' : ''}`}
+                key={`${seg.from}-${i}`}
+                className="h-full shrink-0 transition-opacity hover:opacity-80"
                 style={{
                   width: `${widthPct}%`,
                   minWidth: widthPct > 0 ? 1 : 0,
-                  backgroundColor: uptimeColor(segment.status),
+                  backgroundColor: uptimeColor(seg.status),
                 }}
-                onMouseEnter={() => setHover({ layout, index: i })}
+                onMouseEnter={() => setHover({ segment: seg, index: i })}
                 onMouseLeave={() => setHover(null)}
               />
             );

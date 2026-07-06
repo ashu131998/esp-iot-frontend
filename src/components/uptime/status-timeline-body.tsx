@@ -7,7 +7,6 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatRangeLabel, UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
-import { useLiveTimelineWindow } from '@/lib/use-live-timeline-window';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
@@ -104,21 +103,23 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
 
   useSetRefreshInfo(dataUpdatedAt, STATUS_TIMELINE_REFRESH_MS / 1000);
 
-  const overviewWindow = useLiveTimelineWindow(UPTIME_TIMELINE_HOURS);
-  const detailWindow = useLiveTimelineWindow(UPTIME_DETAIL_HOURS);
+  const overviewFrom = data.timeline_from;
+  const overviewTo = data.timeline_to;
+  const detailFrom = data.detail_from ?? data.timeline_from;
+  const detailTo = data.detail_to ?? data.timeline_to;
 
   const displayMachines = machineId
     ? data.machines.filter((m) => m.machine_id === machineId)
     : data.machines;
 
-  const timelineLabel = formatRangeLabel(overviewWindow.from, overviewWindow.to);
+  const timelineLabel = formatRangeLabel(overviewFrom, overviewTo);
   const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
   return (
     <Card>
       <CardHeader
         title="Status Timeline"
-        description={`Last ${UPTIME_TIMELINE_HOURS} hours (overview) + ${UPTIME_DETAIL_HOURS}h detail below · ${timelineLabel}${isFetching ? ' · updating…' : ''} · hover a segment for downtime reason & configuration`}
+        description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail with exact segment times · ${timelineLabel}${isFetching ? ' · updating…' : ''}`}
       />
       {data.meta?.requires_filter && (
         <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -175,24 +176,26 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
                   </span>
                 </div>
               </div>
+              <p className="mb-1 text-[10px] text-muted">
+                24h overview — short transitions are proportionally tiny; use detail below for exact times.
+              </p>
               <UptimeTimeSeriesChart
                 segments={m.timeline}
-                windowFrom={overviewWindow.from}
-                windowTo={overviewWindow.to}
+                windowFrom={overviewFrom}
+                windowTo={overviewTo}
                 windowLabel={timelineWindowLabel}
                 height={36}
-                liveCapMinPct={4}
                 segmentDetails={(segment) =>
                   buildSegmentDetails(segment, machineReports, selection)
                 }
               />
               <p className="mb-1 mt-4 text-xs font-medium text-muted">
-                Recent detail · last {UPTIME_DETAIL_HOURS} hours
+                Recent detail · last {UPTIME_DETAIL_HOURS} hours (exact times)
               </p>
               <UptimeTimeSeriesChart
                 segments={detailTimeline}
-                windowFrom={detailWindow.from}
-                windowTo={detailWindow.to}
+                windowFrom={detailFrom}
+                windowTo={detailTo}
                 windowLabel={detailLabel}
                 height={56}
                 segmentDetails={(segment) =>

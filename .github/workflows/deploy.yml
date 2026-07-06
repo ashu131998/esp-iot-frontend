@@ -7,8 +7,35 @@ on:
     branches: [main]
 
 jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # Pin the exact npm the lock file was generated with, so CI resolves
+      # the dependency tree identically to local dev (see packageManager).
+      - name: Pin npm
+        run: npm install -g npm@11.12.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
   deploy:
     name: Build & Deploy
+    needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

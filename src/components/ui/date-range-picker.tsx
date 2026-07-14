@@ -12,6 +12,7 @@ import {
   startOfDay,
   startOfMonth,
   subDays,
+  subHours,
   subMonths,
 } from 'date-fns';
 import { shiftWindow } from '@/lib/shifts';
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils';
 // ── Presets ──────────────────────────────────────────────────────────────────
 
 const PRESETS = [
+  { label: 'Last 24 Hours', getDates: () => { const n = new Date(); return { from: subHours(n, 24), to: n }; } },
   { label: 'Today',         getDates: () => { const n = new Date(); return { from: startOfDay(n), to: n }; } },
   { label: 'Last 3 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 3)), to: n }; } },
   { label: 'Last 7 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 7)), to: n }; } },
@@ -227,16 +229,17 @@ export function DateRangePicker({
   };
 
   const handleClear = () => {
+    // Reset to the app default: rolling last 24 hours.
     const now   = new Date();
-    const start = startOfDay(now);
-    setDraftFrom(start);
-    setDraftTo(now);
-    setActivePreset('Today');
+    const start = subHours(now, 24);
+    setDraftFrom(startOfDay(start));
+    setDraftTo(endOfDay(now));
+    setActivePreset('Last 24 Hours');
     setSelecting('start');
     setHoverDate(null);
     setFromMonth(startOfMonth(start));
     setToMonth(addMonths(startOfMonth(start), 1));
-    setDraftFromTime('00:00');
+    setDraftFromTime(format(start, 'HH:mm'));
     setDraftToTime(format(now, 'HH:mm'));
   };
 

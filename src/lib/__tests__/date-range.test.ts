@@ -94,6 +94,18 @@ describe('resolveDateRange with no params', () => {
     const result = resolveDateRange({});
     expect(Math.abs(parseISO(result.to).getTime() - now)).toBeLessThan(5000);
   });
+
+  it('defaults to a rolling last-24h window', () => {
+    const result = resolveDateRange({});
+    const spanMs = parseISO(result.to).getTime() - parseISO(result.from).getTime();
+    expect(Math.abs(spanMs - 24 * 3600000)).toBeLessThan(5000);
+  });
+
+  it('clamps the default window start to minDate', () => {
+    const minDate = new Date(Date.now() - 2 * 3600000); // factory only 2h old
+    const result = resolveDateRange({}, minDate);
+    expect(parseISO(result.from).getTime()).toBeGreaterThanOrEqual(minDate.getTime() - 1000);
+  });
 });
 
 // ── presetRange ───────────────────────────────────────────────────────────────

@@ -61,7 +61,21 @@ export function FactoryFeaturesCard({ factories }: { factories: Factory[] }) {
       setError(null);
       setPending(`${factoryId}:${slug}`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-factories'] }),
+    onSuccess: (data) => {
+      // Apply the authoritative features from the PATCH response straight into
+      // the cache. Don't invalidate/refetch here — listFactories reads the
+      // read replica, which lags the write and would flip the switch back.
+      qc.setQueryData<{ factories: Factory[] }>(['admin-factories'], (prev) =>
+        prev
+          ? {
+              ...prev,
+              factories: prev.factories.map((f) =>
+                f.factory_id === data.factory_id ? { ...f, features: data.features } : f,
+              ),
+            }
+          : prev,
+      );
+    },
     onError: (err: Error) => setError(err.message),
     onSettled: () => setPending(null),
   });

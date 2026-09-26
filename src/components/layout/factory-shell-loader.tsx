@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { FactoryShell } from '@/components/layout/factory-shell';
 import { serverApi } from '@/lib/server-api';
 import { getFactoryConfig } from '@/lib/factory-config';
+import { filterTabsByFeatures } from '@/lib/factory-features';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 
 export async function FactoryShellLoader({
@@ -32,13 +33,16 @@ export async function FactoryShellLoader({
   const shifts = factory.shifts?.length ? factory.shifts : DEFAULT_SHIFTS;
   const shiftLabel = shifts.map((s) => s.label).join(' · ');
 
+  // Hide feature-gated tabs (energy/vibration/temperature) the factory disabled.
+  const visibleTabs = filterTabsByFeatures(tabs, factory.features);
+
   return (
     <FactoryShell
       factoryId={factoryId}
       factoryName={factory.name ?? config.name}
       location={factory.location}
       shifts={shifts}
-      tabs={tabs}
+      tabs={visibleTabs}
       description={`${factory.location ?? ''} · ${factory.machines?.length ?? 0} machines · ${shiftLabel}`}
       refs={{
         machines: factory.machines ?? [],

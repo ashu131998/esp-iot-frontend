@@ -16,6 +16,7 @@ export interface Factory {
   shifts?: Shift[];
   shifts_per_day?: number;
   shift_hours?: number;
+  features?: import('./factory-features').FactoryFeatures;
   machine_count: number;
   device_count: number;
   line_count: number;

@@ -518,6 +518,16 @@ export const api = {
       body: JSON.stringify(body),
       ...options,
     }),
+
+  adminUpdateFactoryFeatures: (
+    factoryId: string,
+    features: import('./factory-features').FactoryFeatures,
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; features: import('./factory-features').FactoryFeatures }>(
+      `/v1/admin/factories/${factoryId}/features`,
+      { method: 'PATCH', body: JSON.stringify(features), ...options },
+    ),
 };
 
 export { ApiError };

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 
+import { FactoryFeaturesCard } from '@/components/admin/factory-features-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
@@ -188,6 +189,8 @@ function AdminConsole() {
             />
           </div>
         </Card>
+
+        <FactoryFeaturesCard factories={factoriesQuery.data?.factories ?? []} />
 
         <Card className="p-6">
           <CardHeader

@@ -11,7 +11,9 @@ import {
   Gauge,
   LayoutDashboard,
   Settings,
+  Thermometer,
   Timer,
+  Waves,
   Workflow,
   Zap,
 } from 'lucide-react';
@@ -27,6 +29,8 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   'status-timeline': Timer,
   alerts: AlertTriangle,
   energy: Zap,
+  vibration: Waves,
+  temperature: Thermometer,
   performance: Gauge,
   production: Factory,
   quality: AlertTriangle,

@@ -9,6 +9,8 @@ export type FactoryTab =
   | 'availability'
   | 'status-timeline'
   | 'energy'
+  | 'vibration'
+  | 'temperature'
   | 'performance'
   | 'production'
   | 'quality'
@@ -30,12 +32,17 @@ export interface FactoryConfig {
   accentColor: string;
 }
 
+// Candidate tab order. `energy`, `vibration`, and `temperature` are feature-gated
+// (see factory-features.ts): they are filtered out in the factory shell unless the
+// factory has the flag enabled. Non-gated tabs are always shown.
 const DEFAULT_TABS: FactoryTab[] = [
   'overview',
   'availability',
   'status-timeline',
   'alerts',
   'energy',
+  'vibration',
+  'temperature',
   'performance',
   'production',
   'quality',
@@ -84,6 +91,8 @@ export function factoryTabs(factoryId: string): Array<{ slug: FactoryTab | strin
     'status-timeline': 'Status Timeline',
     alerts: 'Alerts',
     energy: 'Energy',
+    vibration: 'Vibration',
+    temperature: 'Temperature',
     performance: 'Performance',
     production: 'Production',
     quality: 'Quality',

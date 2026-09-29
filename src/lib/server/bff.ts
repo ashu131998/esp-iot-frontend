@@ -112,23 +112,46 @@ export function extractTokens(data: Record<string, unknown> | null | undefined):
   return { access, refresh };
 }
 
+// Single-flight refresh. Refresh tokens are single-use on the backend (each use
+// revokes the prior jti). When the access token expires, one page navigation
+// fires several API calls at once — each would otherwise spend the SAME refresh
+// token, and every loser after the first gets a revoked-token 401 that wipes the
+// whole session mid-flight (stranding in-flight useSuspenseQuery fetches on their
+// skeletons). Coalescing concurrent refreshes for the same token into one call
+// means they all share one rotation and one resulting token pair.
+const inflightRefresh = new Map<string, Promise<TokenPair | null>>();
+
 /** Rotates tokens via the backend refresh endpoint. Returns null on failure. */
 export async function callRefresh(
   refreshToken: string,
-  signal?: AbortSignal | null,
+  // Kept for call-site compatibility but intentionally NOT forwarded: a shared
+  // refresh must not be aborted just because one caller's request was cancelled
+  // (fetchWithSignal still applies its own timeout).
+  _signal?: AbortSignal | null,
 ): Promise<TokenPair | null> {
+  const existing = inflightRefresh.get(refreshToken);
+  if (existing) return existing;
+
+  const pending = (async (): Promise<TokenPair | null> => {
+    try {
+      const res = await fetchWithSignal(`${internalApiBase()}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+      return extractTokens(data);
+    } catch {
+      return null;
+    }
+  })();
+
+  inflightRefresh.set(refreshToken, pending);
   try {
-    const res = await fetchWithSignal(`${internalApiBase()}/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-      cache: 'no-store',
-      signal,
-    });
-    if (!res.ok) return null;
-    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-    return extractTokens(data);
-  } catch {
-    return null;
+    return await pending;
+  } finally {
+    inflightRefresh.delete(refreshToken);
   }
 }

@@ -34,15 +34,14 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
 
   const navigate = useCallback(
     (href: string) => {
-      // router.push updates the URL *and* drives the RSC navigation; wrapping it
-      // in a transition keeps the previous data on screen (isNavigating=true)
-      // until the new data resolves — the no-freeze behaviour we want.
+      // Update the URL immediately so the address bar never lags a navigation
+      // (and client dashboards reading useSearchParams react at once), then drive
+      // the RSC/data update inside a transition so the old data stays visible
+      // until the new data resolves.
       //
-      // Do NOT also call window.history.pushState here: passing null state wipes
-      // Next's internal router state (stored in history.state), which
-      // intermittently corrupts the next soft navigation — the RSC fetch is
-      // aborted/never committed and the page sticks on its loading skeleton
-      // until a hard refresh. router.push manages history itself.
+      // Preserve the existing history.state — passing `null` here wipes Next's
+      // internal router state and corrupts subsequent soft navigations.
+      window.history.pushState(window.history.state, '', href);
       startTransition(() => {
         router.push(href, { scroll: false });
       });

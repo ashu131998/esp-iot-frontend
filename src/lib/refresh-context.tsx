@@ -47,11 +47,13 @@ export function RefreshProvider({ children }: { children: React.ReactNode }) {
         const elapsed = (Date.now() - info.lastUpdatedAt) / 1000;
         if (elapsed >= info.intervalSec) {
           // Update the ref synchronously before React Query can re-evaluate
-          // refetchInterval, then cancel any in-flight background fetch it
-          // already triggered.
+          // refetchInterval, then cancel any in-flight background *refetch* it
+          // already triggered. Only touch queries that already have data —
+          // cancelling one that a useSuspenseQuery is still suspended on would
+          // strand its Suspense boundary on the skeleton until a hard refresh.
           isPausedRef.current = true;
           setPausedState(true);
-          queryClient.cancelQueries();
+          queryClient.cancelQueries({ predicate: (q) => q.state.status === 'success' });
         }
       }
     };

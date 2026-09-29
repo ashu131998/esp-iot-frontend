@@ -1,7 +1,7 @@
 /**
  * shifts.ts uses local time (setHours). Tests use getHours() not UTC equivalents.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { shiftWindow, currentShiftWindow, DEFAULT_SHIFTS } from '@/lib/shifts';
 
 function atHour(h: number, date = new Date()): Date {
@@ -134,8 +134,16 @@ describe('currentShiftWindow', () => {
   });
 
   it('from < to', () => {
-    const ref = atHour(14);
-    const { from, to } = currentShiftWindow(ref);
-    expect(from.getTime()).toBeLessThan(to.getTime());
+    // shiftWindow caps "to" at the real `now`, so pin the clock to a mid-day-shift
+    // time — otherwise this fails when the suite runs before 06:00 local (real now
+    // ends up earlier than the 06:00 shift start derived from the ref).
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 0, 10, 14, 0, 0));
+    try {
+      const { from, to } = currentShiftWindow();
+      expect(from.getTime()).toBeLessThan(to.getTime());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

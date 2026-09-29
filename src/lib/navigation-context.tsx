@@ -34,14 +34,15 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
 
   const navigate = useCallback(
     (href: string) => {
-      // Update the URL immediately so the address bar never lags a navigation
-      // (and client dashboards reading useSearchParams react at once), then drive
-      // the RSC/data update inside a transition so the old data stays visible
-      // until the new data resolves.
+      // Drive the whole navigation through router.push inside a transition: it
+      // updates the URL, refetches the server components for the new params, and
+      // keeps the previous data on screen (isNavigating=true) until they resolve.
       //
-      // Preserve the existing history.state — passing `null` here wipes Next's
-      // internal router state and corrupts subsequent soft navigations.
-      window.history.pushState(window.history.state, '', href);
+      // Do NOT also call window.history.pushState to the same URL first: that
+      // races router.push and its RSC fetch gets ERR_ABORTED, freezing the page
+      // on its loading skeleton (confirmed by browser repro — an abort on the
+      // sole RSC request never commits the navigation). router.push manages
+      // history itself.
       startTransition(() => {
         router.push(href, { scroll: false });
       });

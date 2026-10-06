@@ -21,16 +21,20 @@ export function TablePagination({
   page,
   limit,
   className,
+  /** Avoid Next router — no global "Updating…" / stuck transition on page changes. */
+  onPaginationChange,
 }: {
   total: number;
   page: number;
   limit: number;
   className?: string;
+  onPaginationChange?: (updates: Record<string, string | undefined>) => void;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const navigate = useNavigate();
   const isPending = useIsNavigating();
+  const routerless = Boolean(onPaginationChange);
 
   const safeTotal = coerceTotal(total);
   const safePage = coercePage(page);
@@ -44,6 +48,10 @@ export function TablePagination({
   const hasNext = currentPage < totalPages;
 
   const updateParams = (updates: Record<string, string | undefined>) => {
+    if (onPaginationChange) {
+      onPaginationChange(updates);
+      return;
+    }
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(updates)) {
       if (value === undefined) params.delete(key);
@@ -52,13 +60,15 @@ export function TablePagination({
     navigate(params.size ? `${pathname}?${params.toString()}` : pathname);
   };
 
+  const pending = routerless ? false : isPending;
+
   if (safeTotal <= 0) return null;
 
   return (
     <div
       className={cn(
         'flex flex-wrap items-center justify-between gap-3 border-t px-2 py-3 sm:px-4',
-        isPending && 'opacity-70',
+        pending && 'opacity-70',
         className,
       )}
     >
@@ -78,7 +88,7 @@ export function TablePagination({
                 [PAGE_PARAM]: undefined,
               })
             }
-            disabled={isPending}
+            disabled={pending}
             aria-label="Rows per page"
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
@@ -98,7 +108,7 @@ export function TablePagination({
           variant="secondary"
           size="sm"
           className="h-8 px-2 text-xs"
-          disabled={!hasPrev || isPending}
+          disabled={!hasPrev || pending}
           onClick={() =>
             updateParams({
               [PAGE_PARAM]: hasPrev ? String(currentPage - 1) : undefined,
@@ -113,7 +123,7 @@ export function TablePagination({
           variant="secondary"
           size="sm"
           className="h-8 px-2 text-xs"
-          disabled={!hasNext || isPending}
+          disabled={!hasNext || pending}
           onClick={() =>
             updateParams({
               [PAGE_PARAM]: String(currentPage + 1),

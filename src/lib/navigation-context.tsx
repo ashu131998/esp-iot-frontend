@@ -31,10 +31,15 @@ const NavContext = createContext<NavContextValue>({
 export function RouterTransitionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isNavigating, startTransition] = useTransition();
-
   const navigate = useCallback(
     (href: string) => {
-      // Drive the whole navigation through router.push inside a transition: it
+      const target = href.startsWith('http')
+        ? new URL(href).pathname + new URL(href).search
+        : href;
+      const current = window.location.pathname + window.location.search;
+      if (target === current) return;
+
+      // Drive the whole navigation through router.push/replace inside a transition: it
       // updates the URL, refetches the server components for the new params, and
       // keeps the previous data on screen (isNavigating=true) until they resolve.
       //
@@ -44,7 +49,10 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
       // sole RSC request never commits the navigation). router.push manages
       // history itself.
       startTransition(() => {
-        router.push(href, { scroll: false });
+        const pathnameOnly = target.split('?')[0] ?? target;
+        const samePath = pathnameOnly === window.location.pathname;
+        const go = samePath ? router.replace.bind(router) : router.push.bind(router);
+        go(target, { scroll: false });
       });
     },
     [router],

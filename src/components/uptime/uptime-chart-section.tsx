@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import { expandUptimeMachines } from '@/lib/uptime-streams';
 
 export function UptimeChartSection({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
@@ -25,12 +26,10 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
     staleTime: 0,
   });
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
-
-  const summaryData = displayMachines.map((m) => ({
-    name: m.machine_name,
+  const summaryData = expandUptimeMachines(
+    machineId ? data.machines.filter((m) => m.machine_id === machineId) : data.machines,
+  ).map((m) => ({
+    name: m.display_name,
     up: m.up_hours,
     down: m.down_hours,
   }));

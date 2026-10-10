@@ -17,6 +17,8 @@ export type FactoryTab =
   | 'lines'
   | 'configuration'
   | 'scheduling'
+  | 'shift-reports'
+  | 'sensor-mapping'
   | 'alerts';
 
 export interface FactoryCustomPage {
@@ -49,6 +51,8 @@ const DEFAULT_TABS: FactoryTab[] = [
   'lines',
   'configuration',
   'scheduling',
+  'shift-reports',
+  'sensor-mapping',
 ];
 
 export const FACTORY_REGISTRY: Record<string, FactoryConfig> = {
@@ -99,6 +103,8 @@ export function factoryTabs(factoryId: string): Array<{ slug: FactoryTab | strin
     lines: 'Lines',
     configuration: 'Configuration',
     scheduling: 'Scheduling',
+    'shift-reports': 'Shift reports',
+    'sensor-mapping': 'Sensor mapping',
   };
 
   const tabs = config.tabs.map((tab) => ({

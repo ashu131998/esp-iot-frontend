@@ -26,9 +26,11 @@ const ROLE_OPTIONS = [
 export function WorkerRoster({
   factoryId,
   workers,
+  readOnly = false,
 }: {
   factoryId: string;
   workers: Worker[];
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -113,22 +115,26 @@ export function WorkerRoster({
         </Badge>
       ),
     },
-    {
-      id: 'actions',
-      header: '',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-red-600"
-          onClick={() => deleteMutation.mutate(row.original.worker_id)}
-        >
-          Delete
-        </Button>
-      ),
-    },
-  ], [deleteMutation]);
+    ...(readOnly
+      ? []
+      : [
+          {
+            id: 'actions',
+            header: '',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: Worker } }) => (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600"
+                onClick={() => deleteMutation.mutate(row.original.worker_id)}
+              >
+                Delete
+              </Button>
+            ),
+          } satisfies ColumnDef<Worker, unknown>,
+        ]),
+  ], [deleteMutation, readOnly]);
 
   return (
     <Card>
@@ -136,7 +142,7 @@ export function WorkerRoster({
         title="Workers"
         description={`${workers.length} worker${workers.length === 1 ? '' : 's'} on the roster`}
         action={
-          !open ? (
+          !readOnly && !open ? (
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
               + Add Worker
             </Button>

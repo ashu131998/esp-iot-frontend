@@ -187,6 +187,25 @@ export interface UptimeSegment {
   status: UptimeStatus;
 }
 
+export interface UptimeStream {
+  binding_id: string | null;
+  label: string;
+  channel_slot?: string;
+  device_id?: string | null;
+  machine_id?: string;
+  machine_name?: string;
+  display_name?: string;
+  up_hours: number;
+  down_hours: number;
+  offline_hours?: number;
+  idle_hours?: number;
+  availability_percent: number | null;
+  live_status?: UptimeStatus;
+  live_since?: string | null;
+  timeline: UptimeSegment[];
+  detail_timeline?: UptimeSegment[];
+}
+
 export interface UptimeMachine {
   machine_id: string;
   machine_name: string;
@@ -203,6 +222,80 @@ export interface UptimeMachine {
   timeline: UptimeSegment[];
   /** Last 2h zoom — same segments, wider pixels for recent transitions. */
   detail_timeline?: UptimeSegment[];
+  /** When sensor_bindings exist — one timeline per labeled channel. */
+  streams?: UptimeStream[];
+}
+
+export interface SensorBinding {
+  binding_id?: string;
+  factory_id?: string;
+  device_id?: string;
+  channel_slot: string;
+  sensor_type: string;
+  label: string;
+  machine_id: string;
+  line_id?: string | null;
+  on_threshold_a?: number | null;
+  enabled: boolean;
+  sort_order?: number;
+}
+
+export interface NodeDetailResponse {
+  device: {
+    device_id: string;
+    factory_id: string;
+    line_id: string;
+    device_type: string | null;
+    last_seen_at: string | null;
+  };
+  bindings: SensorBinding[];
+  discovered_channels: Array<{
+    channel_slot: string;
+    sensor_type: string;
+    sample_name?: string | null;
+  }>;
+  machines: Array<{ machine_id: string; name: string; line_id: string }>;
+}
+
+export interface FactoryNodeSummary {
+  device_id: string;
+  line_id: string;
+  device_type: string | null;
+  last_seen_at: string | null;
+  binding_count: number;
+}
+
+export interface ShiftReportScheduleResponse {
+  factory_id: string;
+  enabled: boolean;
+  recipient_emails: string[];
+  last_sent: Record<string, string>;
+  updated_at: string | null;
+  shifts?: Shift[];
+  platform_scheduler_enabled?: boolean;
+  email_delivery_configured?: boolean;
+}
+
+export interface ShiftReportJobSettings {
+  job_id: string;
+  enabled: boolean;
+  tick_minutes: number;
+  last_run_at: string | null;
+  last_run_result: Record<string, unknown>;
+  updated_at: string | null;
+}
+
+export interface ShiftReportAdminOverview {
+  job: ShiftReportJobSettings;
+  email_configured: boolean;
+  factory_schedules: Array<{
+    factory_id: string;
+    factory_name?: string;
+    enabled: boolean;
+    recipient_emails: string[];
+    last_sent: Record<string, string>;
+    updated_at: string | null;
+  }>;
 }
 
 export interface UptimeResponse {

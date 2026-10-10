@@ -16,6 +16,7 @@ import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatPercent, statusLabel } from '@/lib/utils';
 
 export function AvailabilityMachineTable({
@@ -73,6 +74,9 @@ export function AvailabilityMachineTable({
   const pageRows = displayMachines.slice(offset, offset + limit);
 
   const uptimeByMachine = Object.fromEntries(uptimeData.machines.map((m) => [m.machine_id, m]));
+  const uptimeRowsByMachine = Object.fromEntries(
+    uptimeData.machines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
+  );
 
   return (
     <Card>
@@ -114,7 +118,20 @@ export function AvailabilityMachineTable({
               <TD>{m.downtime_minutes} min</TD>
               <TD>{formatPercent(m.availability_percent)}</TD>
               <TD>
-                <MiniTimeline segments={uptimeByMachine[m.machine_id]?.timeline ?? []} />
+                {(uptimeRowsByMachine[m.machine_id]?.length ?? 0) > 1 ? (
+                  <div className="flex flex-col gap-1">
+                    {uptimeRowsByMachine[m.machine_id]?.map((row) => (
+                      <div key={row.stream_key} className="flex items-center gap-2">
+                        <span className="max-w-[6rem] truncate text-[10px] text-muted">
+                          {row.label || row.display_name}
+                        </span>
+                        <MiniTimeline segments={row.timeline ?? []} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <MiniTimeline segments={uptimeByMachine[m.machine_id]?.timeline ?? []} />
+                )}
               </TD>
               <TD>
                 <MachineStatusBadge status={uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'} />

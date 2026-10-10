@@ -1,8 +1,6 @@
-import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
-
 import { SignOutButton } from '@/components/auth/sidebar-user-footer';
-import { PageHeader } from '@/components/layout/app-shell';
+import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
+import { PageHeader } from '@/components/layout/page-header';
 import { FactoryNav, FactorySidebar } from '@/components/layout/factory-sidebar';
 import { FactoryRefsProvider, type FactoryRefs } from '@/lib/factory-refs-context';
 import { RefreshProvider } from '@/lib/refresh-context';
@@ -41,13 +39,7 @@ export function FactoryShell({
       </aside>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
         <div className="flex items-center justify-between border-b bg-white px-4 py-2.5 lg:hidden">
-          <Link
-            href="/overview"
-            className="flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to Platform
-          </Link>
+          <FactoryPlatformBack factoryId={factoryId} />
           <SignOutButton factoryId={factoryId} />
         </div>
         <PageHeader title={factoryName} description={description} />

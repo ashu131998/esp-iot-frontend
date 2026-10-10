@@ -4,7 +4,12 @@ export const ACCESS_COOKIE = 'esp_access';
 export const REFRESH_COOKIE = 'esp_refresh';
 export const CSRF_COOKIE = 'esp_csrf';
 
-export type Role = 'super_admin' | 'admin' | 'employee';
+export type Role =
+  | 'super_admin'
+  | 'internal_admin'
+  | 'internal_viewer'
+  | 'admin'
+  | 'employee';
 export type UserStatus = 'active' | 'pending' | 'disabled';
 
 export interface AuthUser {
@@ -70,6 +75,12 @@ export function canAccessFactory(
   factoryId: string,
 ): boolean {
   if (!user) return false;
-  if (user.role === 'super_admin') return true;
+  if (
+    user.role === 'super_admin' ||
+    user.role === 'internal_admin' ||
+    user.role === 'internal_viewer'
+  ) {
+    return true;
+  }
   return user.factory_id === factoryId;
 }

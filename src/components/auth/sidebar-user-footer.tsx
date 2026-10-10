@@ -4,12 +4,13 @@ import { LogOut } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth-context';
 import type { AuthUser } from '@/lib/auth-types';
+import { isStaffRole } from '@/lib/internal-auth';
 
 function loginPathFor(user: AuthUser | null, factoryId?: string): string {
-  if (user?.role === 'super_admin') return '/admin/login';
+  if (user && isStaffRole(user.role)) return '/internal/login';
   if (user?.factory_id) return `/f/${user.factory_id}/login`;
   if (factoryId) return `/f/${factoryId}/login`;
-  return '/admin/login';
+  return '/internal/login';
 }
 
 function useSignOut(factoryId?: string) {

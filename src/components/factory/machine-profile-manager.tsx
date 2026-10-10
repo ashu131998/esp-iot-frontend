@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -170,6 +171,7 @@ export function MachineProfileManager({
   lastAppliedAt?: Record<string, string>;
 }) {
   const router = useRouter();
+  const { canWriteFactory } = useAuth();
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -203,7 +205,7 @@ export function MachineProfileManager({
         title="Machine Profiles"
         description="Manager-defined configuration presets. Operators select a profile when starting a shift."
         action={
-          !showNew ? (
+          canWriteFactory && !showNew ? (
             <Button size="sm" onClick={() => setShowNew(true)}>
               + New Profile
             </Button>
@@ -262,23 +264,25 @@ export function MachineProfileManager({
                       <span className="text-xs text-muted">Never applied</span>
                     )}
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingId(profile.profile_id)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600"
-                      onClick={() => deleteMutation.mutate(profile.profile_id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                  {canWriteFactory && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingId(profile.profile_id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600"
+                        onClick={() => deleteMutation.mutate(profile.profile_id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {profile.parameters.length > 0 && (

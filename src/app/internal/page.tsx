@@ -7,7 +7,8 @@ import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { serverApi } from '@/lib/server-api';
 import { formatNumber, formatPercent } from '@/lib/utils';
 import Link from 'next/link';
-import { Building2, Cpu, Zap } from 'lucide-react';
+import { Activity, Building2, Cpu, Radio, Zap } from 'lucide-react';
+import { internalApiFetch } from '@/lib/internal-api-fetch';
 
 export default async function OverviewPage({
   searchParams,
@@ -33,12 +34,18 @@ export default async function OverviewPage({
   const rangeLabel = formatRangeLabel(range.from, range.to);
 
   let overview;
+  let fleetSummary: {
+    factory_count: number;
+    device_count: number;
+    device_stale_count: number;
+    stale_threshold_minutes: number;
+  } | null = null;
   try {
     overview = await serverApi.overview(range);
   } catch (err) {
     return (
       <>
-        <PageHeader title="Platform Overview" description="Cross-factory operational summary" />
+        <PageHeader title="Internal home" description="Cross-factory operational summary" />
         <div className="p-4 sm:p-6 lg:p-8">
           <ErrorState message={`Unable to load overview. Ensure the query API is running on port 8001. (${err instanceof Error ? err.message : 'Unknown error'})`} />
         </div>
@@ -46,10 +53,17 @@ export default async function OverviewPage({
     );
   }
 
+  try {
+    const res = await internalApiFetch('/v1/admin/summary?stale_minutes=15');
+    if (res.ok) fleetSummary = await res.json();
+  } catch {
+    fleetSummary = null;
+  }
+
   return (
     <>
       <PageHeader
-        title="Platform Overview"
+        title="Internal home"
         description={`Operational summary across all connected factories · ${rangeLabel}`}
       />
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -58,6 +72,26 @@ export default async function OverviewPage({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Factories" value={String(overview.factory_count)} icon={<Building2 className="h-4 w-4 text-muted" />} />
           <StatCard label="Total Machines" value={String(overview.total_machines)} icon={<Cpu className="h-4 w-4 text-muted" />} />
+          {fleetSummary && (
+            <>
+              <StatCard
+                label="Devices (fleet)"
+                value={String(fleetSummary.device_count)}
+                icon={<Radio className="h-4 w-4 text-muted" />}
+                sub="Devices tab · cross-factory list"
+              />
+              <StatCard
+                label={`Stale devices (>${fleetSummary.stale_threshold_minutes}m)`}
+                value={String(fleetSummary.device_stale_count)}
+                icon={<Activity className="h-4 w-4 text-muted" />}
+                sub={
+                  fleetSummary.device_stale_count > 0
+                    ? 'Filter stale on Devices page'
+                    : 'All nodes seen recently'
+                }
+              />
+            </>
+          )}
           <StatCard
             label="Avg Availability"
             value={formatPercent(

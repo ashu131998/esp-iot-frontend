@@ -13,12 +13,16 @@ export function LoginForm({
   subtitle,
   factoryId,
   isSuperAdmin = false,
+  staffLogin = false,
 }: {
   title: string;
   subtitle?: string;
   factoryId?: string;
+  /** @deprecated use staffLogin */
   isSuperAdmin?: boolean;
+  staffLogin?: boolean;
 }) {
+  const platformStaff = staffLogin || isSuperAdmin;
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,17 +43,21 @@ export function LoginForm({
       const user = await login({
         username,
         password,
-        factory_id: isSuperAdmin ? null : factoryId,
+        factory_id: platformStaff ? null : factoryId,
       });
       const next = searchParams.get('next');
       if (next) {
         router.push(next);
-      } else if (user.role === 'super_admin') {
-        router.push('/admin');
+      } else if (
+        user.role === 'super_admin' ||
+        user.role === 'internal_admin' ||
+        user.role === 'internal_viewer'
+      ) {
+        router.push('/internal');
       } else if (user.factory_id) {
         router.push(`/factories/${user.factory_id}`);
       } else {
-        router.push('/overview');
+        router.push('/internal');
       }
       router.refresh();
     } catch (err) {

@@ -10,6 +10,7 @@ import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
+import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
 
 const STATUS_TIMELINE_REFRESH_MS = 30_000;
@@ -108,9 +109,9 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const detailFrom = data.detail_from ?? data.timeline_from;
   const detailTo = data.detail_to ?? data.timeline_to;
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayRows = expandUptimeMachines(
+    machineId ? data.machines.filter((m) => m.machine_id === machineId) : data.machines,
+  );
 
   const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
@@ -141,10 +142,10 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
       </div>
 
       <div className="space-y-8">
-        {displayMachines.length === 0 && (
+        {displayRows.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">No timeline data available</p>
         )}
-        {displayMachines.map((m) => {
+        {displayRows.map((m) => {
           const operators: ActiveAssignment[] = assignments[m.machine_id] ?? [];
           const machineReports = allReports.filter((r) => r.machine_id === m.machine_id);
           const selection = latestSelections.get(m.machine_id);
@@ -157,10 +158,10 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
             .join(', ');
 
           return (
-            <div key={m.machine_id}>
+            <div key={m.stream_key}>
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold">{m.machine_name}</p>
+                  <p className="truncate text-base font-semibold">{m.display_name}</p>
                   <p className="mt-0.5 text-sm text-muted">
                     Operator: {operatorNames || '—'}
                     {liveSince && (

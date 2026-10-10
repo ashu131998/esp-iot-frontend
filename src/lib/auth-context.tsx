@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import type { AuthUser } from '@/lib/auth-types';
+import { canWriteFactoryDashboard, isInternalStaff } from '@/lib/internal-auth';
 import { fetchWithSignal, isAbortError } from '@/lib/request-signal';
 
 function getCsrfFromCookie(): string {
@@ -33,6 +34,8 @@ interface AuthContextValue {
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isEmployee: boolean;
+  isInternalStaff: boolean;
+  canWriteFactory: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -97,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isSuperAdmin: user?.role === 'super_admin',
       isAdmin: user?.role === 'admin',
       isEmployee: user?.role === 'employee',
+      isInternalStaff: isInternalStaff(user),
+      canWriteFactory: canWriteFactoryDashboard(user),
     }),
     [user, loading, login, logout, refresh],
   );

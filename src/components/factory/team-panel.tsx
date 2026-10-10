@@ -9,6 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { AuthUser } from '@/lib/auth-types';
@@ -31,6 +32,7 @@ export function TeamPanel({
   limit: number;
 }) {
   const router = useRouter();
+  const { canWriteFactory } = useAuth();
 
   const approve = useMutation({
     mutationFn: (userId: string) => api.approveUser(factoryId, userId),
@@ -81,7 +83,7 @@ export function TeamPanel({
                 <TH>Username</TH>
                 <TH>Email</TH>
                 <TH>Status</TH>
-                <TH />
+                {canWriteFactory && <TH />}
               </TR>
             </THead>
             <TBody>
@@ -92,15 +94,17 @@ export function TeamPanel({
                   <TD>
                     <Badge>{u.status}</Badge>
                   </TD>
-                  <TD>
-                    <Button
-                      size="sm"
-                      onClick={() => approve.mutate(u.user_id)}
-                      disabled={approve.isPending}
-                    >
-                      Approve
-                    </Button>
-                  </TD>
+                  {canWriteFactory && (
+                    <TD>
+                      <Button
+                        size="sm"
+                        onClick={() => approve.mutate(u.user_id)}
+                        disabled={approve.isPending}
+                      >
+                        Approve
+                      </Button>
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>

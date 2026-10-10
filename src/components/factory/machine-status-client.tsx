@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatNumber, formatPercent } from '@/lib/utils';
+import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -117,13 +118,7 @@ export function MachineStatusClient({
   const machineAvail = availability.machines[0];
   const machineEnergy = energy.machines[0];
   const machineProduction = production.machines[0];
-  const machineUptime = uptime24h.machines[0];
-  const status = machineUptime?.timeline.at(-1)?.status ?? 'no_data';
-
-  const narrative = statusNarrative(
-    machineUptime?.machine_name ?? machineId,
-    machineUptime?.timeline ?? [],
-  );
+  const uptimeRows = expandUptimeMachines(uptime24h.machines);
   const latestReport = reportsData?.reports?.[0];
   const openReport = latestReport && !latestReport.resolved_at ? latestReport : null;
   const currentConfig = selectionsData?.selections?.[0];
@@ -149,73 +144,86 @@ export function MachineStatusClient({
         />
       </div>
 
-      {/* Machine status card */}
-      <Card>
-        <CardHeader
-          title="Current Status"
-          description={`${rangeLabel} · timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
-        />
-        <div className="px-6 py-4">
-          {narrative && (
-            <div
-              className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
-                narrative.isRunning
-                  ? 'border-l-emerald-500 bg-emerald-50/60'
-                  : narrative.state === 'idle' || narrative.state === 'offline'
-                    ? 'border-l-gray-400 bg-gray-50'
-                    : 'border-l-red-500 bg-red-50/60'
-              }`}
-            >
-              {narrative.isRunning ? (
-                <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-              ) : narrative.state === 'idle' || narrative.state === 'offline' ? (
-                <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
-              ) : (
-                <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+      {uptimeRows.length > 1 && (
+        <p className="text-sm text-muted">
+          This machine has {uptimeRows.length} sensor streams — each timeline is shown below.
+        </p>
+      )}
+
+      {uptimeRows.map((stream) => {
+        const streamNarrative = statusNarrative(stream.display_name, stream.timeline ?? []);
+        const streamStatus = stream.timeline.at(-1)?.status ?? 'no_data';
+        return (
+          <Card key={stream.stream_key}>
+            <CardHeader
+              title={stream.display_name}
+              description={`Current status · ${rangeLabel} · last 24h${isFetching ? ' · updating…' : ''}`}
+            />
+            <div className="px-6 py-4">
+              {streamNarrative && (
+                <div
+                  className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
+                    streamNarrative.isRunning
+                      ? 'border-l-emerald-500 bg-emerald-50/60'
+                      : streamNarrative.state === 'idle' || streamNarrative.state === 'offline'
+                        ? 'border-l-gray-400 bg-gray-50'
+                        : 'border-l-red-500 bg-red-50/60'
+                  }`}
+                >
+                  {streamNarrative.isRunning ? (
+                    <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                  ) : streamNarrative.state === 'idle' || streamNarrative.state === 'offline' ? (
+                    <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
+                  ) : (
+                    <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                  )}
+                  <div className="text-sm">
+                    <p className="font-semibold">{streamNarrative.headline}</p>
+                    {streamNarrative.state === 'down' && openReport && (
+                      <p className="mt-1 text-muted">
+                        {openReport.reason_label
+                          ? `Reported reason: ${openReport.reason_label}` +
+                            (openReport.reported_by_name
+                              ? ` (${openReport.reported_by_name} via ${formatAlertVia(openReport.reported_via)})`
+                              : '')
+                          : 'The assigned worker has been asked for the reason on the mobile app — no reply yet.'}
+                      </p>
+                    )}
+                    {streamNarrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (
+                      <p className="mt-1 text-muted">
+                        Last stoppage: {latestReport.reason_label}
+                        {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
+                        , resolved at {timeLabel(latestReport.resolved_at)}.
+                      </p>
+                    )}
+                    <p className="mt-1 text-muted">{streamNarrative.history}</p>
+                    {currentConfig && (
+                      <p className="mt-1 flex items-center gap-1.5 text-muted">
+                        <Settings2 className="h-3.5 w-3.5" />
+                        Running configuration:{' '}
+                        <span className="font-medium text-foreground">
+                          {currentConfig.profile_name ?? currentConfig.profile_id}
+                        </span>
+                        {currentConfig.selected_by_name
+                          ? ` — selected by ${currentConfig.selected_by_name} via ${currentConfig.selected_via}`
+                          : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
-              <div className="text-sm">
-                <p className="font-semibold">{narrative.headline}</p>
-                {narrative.state === 'down' && openReport && (
-                  <p className="mt-1 text-muted">
-                    {openReport.reason_label
-                      ? `Reported reason: ${openReport.reason_label}` +
-                        (openReport.reported_by_name
-                          ? ` (${openReport.reported_by_name} via ${formatAlertVia(openReport.reported_via)})`
-                          : '')
-                      : 'The assigned worker has been asked for the reason on the mobile app — no reply yet.'}
-                  </p>
-                )}
-                {narrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (
-                  <p className="mt-1 text-muted">
-                    Last stoppage: {latestReport.reason_label}
-                    {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
-                    , resolved at {timeLabel(latestReport.resolved_at)}.
-                  </p>
-                )}
-                <p className="mt-1 text-muted">{narrative.history}</p>
-                {currentConfig && (
-                  <p className="mt-1 flex items-center gap-1.5 text-muted">
-                    <Settings2 className="h-3.5 w-3.5" />
-                    Running configuration:{' '}
-                    <span className="font-medium text-foreground">
-                      {currentConfig.profile_name ?? currentConfig.profile_id}
-                    </span>
-                    {currentConfig.selected_by_name
-                      ? ` — selected by ${currentConfig.selected_by_name} via ${currentConfig.selected_via}`
-                      : ''}
-                  </p>
-                )}
+              <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
+                <span className="text-sm font-medium">Status</span>
+                <div className="flex justify-end">
+                  <MachineStatusBadge status={streamStatus} />
+                </div>
+                <span className="text-sm font-medium">Timeline (Last 24h)</span>
+                <MiniTimeline segments={stream.timeline ?? []} />
               </div>
             </div>
-          )}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
-            <span className="text-sm font-medium">Status</span>
-            <div className="flex justify-end"><MachineStatusBadge status={status} /></div>
-            <span className="text-sm font-medium">Timeline (Last 24h)</span>
-            <MiniTimeline segments={machineUptime?.timeline ?? []} />
-          </div>
-        </div>
-      </Card>
+          </Card>
+        );
+      })}
 
       {/* Lazy-loaded availability trends */}
       <MachineAvailabilityTrends

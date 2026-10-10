@@ -14,6 +14,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/badge';
 import { Select } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/data-table';
+import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useNavigate, useIsNavigating } from '@/lib/navigation-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
@@ -286,6 +287,7 @@ export function SchedulingPanel({
   schedules: WorkerSchedule[];
 }) {
   const router = useRouter();
+  const { canWriteFactory } = useAuth();
   const sp = useSearchParams();
 
   const dateFilter = sp.get('date') ?? '';
@@ -433,41 +435,50 @@ export function SchedulingPanel({
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => (
-        <>
-          <Select
-            className="py-1 text-xs"
-            value={row.original.status}
-            disabled={pendingStatus.has(row.original.schedule_id)}
-            onChange={(e) => handleStatusChange(row.original.schedule_id, e.target.value)}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{formatStatus(opt)}</option>
-            ))}
-          </Select>
-          <Badge className={`mt-1 ${statusStyle[row.original.status] ?? 'bg-slate-100 text-slate-600'}`}>
+      cell: ({ row }) =>
+        canWriteFactory ? (
+          <>
+            <Select
+              className="py-1 text-xs"
+              value={row.original.status}
+              disabled={pendingStatus.has(row.original.schedule_id)}
+              onChange={(e) => handleStatusChange(row.original.schedule_id, e.target.value)}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{formatStatus(opt)}</option>
+              ))}
+            </Select>
+            <Badge className={`mt-1 ${statusStyle[row.original.status] ?? 'bg-slate-100 text-slate-600'}`}>
+              {formatStatus(row.original.status)}
+            </Badge>
+          </>
+        ) : (
+          <Badge className={statusStyle[row.original.status] ?? 'bg-slate-100 text-slate-600'}>
             {formatStatus(row.original.status)}
           </Badge>
-        </>
-      ),
+        ),
     },
-    {
-      id: 'actions',
-      header: '',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="min-w-[5.5rem] justify-center text-red-600"
-          disabled={deletingIds.has(row.original.schedule_id)}
-          onClick={() => handleDelete(row.original.schedule_id)}
-        >
-          {deletingIds.has(row.original.schedule_id) ? 'Deleting' : 'Delete'}
-        </Button>
-      ),
-    },
-  ], [machineName, deletingIds, pendingStatus]);
+    ...(canWriteFactory
+      ? [
+          {
+            id: 'actions',
+            header: '',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: WorkerSchedule } }) => (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-w-[5.5rem] justify-center text-red-600"
+                disabled={deletingIds.has(row.original.schedule_id)}
+                onClick={() => handleDelete(row.original.schedule_id)}
+              >
+                {deletingIds.has(row.original.schedule_id) ? 'Deleting' : 'Delete'}
+              </Button>
+            ),
+          } satisfies ColumnDef<WorkerSchedule, unknown>,
+        ]
+      : []),
+  ], [machineName, deletingIds, pendingStatus, canWriteFactory]);
 
   const stats = useMemo(() => {
     const active = schedules.filter((s) => s.status !== 'cancelled' && s.status !== 'completed');
@@ -495,13 +506,15 @@ export function SchedulingPanel({
           title="Task Schedule"
           description="Assign each worker a function, shift, date, looms and a machine configuration profile"
           action={
-            <ScheduleForm
-              factoryId={factoryId}
-              workers={workers}
-              machines={machines}
-              lines={lines}
-              profiles={profiles}
-            />
+            canWriteFactory ? (
+              <ScheduleForm
+                factoryId={factoryId}
+                workers={workers}
+                machines={machines}
+                lines={lines}
+                profiles={profiles}
+              />
+            ) : undefined
           }
         />
 
@@ -528,7 +541,7 @@ export function SchedulingPanel({
         />
       </Card>
 
-      <WorkerRoster factoryId={factoryId} workers={workers} />
+      <WorkerRoster factoryId={factoryId} workers={workers} readOnly={!canWriteFactory} />
     </div>
   );
 }

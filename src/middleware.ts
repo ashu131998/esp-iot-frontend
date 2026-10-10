@@ -2,6 +2,8 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ACCESS_COOKIE, CSRF_COOKIE } from '@/lib/auth-types';
+import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
+import { isStaffRole } from '@/lib/internal-auth';
 
 /**
  * Edge middleware: route protection + RBAC redirects, per-request CSP nonce, and
@@ -10,7 +12,14 @@ import { ACCESS_COOKIE, CSRF_COOKIE } from '@/lib/auth-types';
  * it never refreshes (the BFF proxy auto-refreshes on data calls).
  */
 
-const PLATFORM_PREFIXES = ['/overview', '/factories', '/alerts', '/settings'];
+const LEGACY_PLATFORM_REDIRECTS: Record<string, string> = {
+  '/overview': '/internal',
+  '/factories': '/internal/factories',
+  '/alerts': '/internal/alerts',
+  '/settings': '/internal/health',
+  '/admin': '/internal',
+  '/admin/login': '/internal/login',
+};
 
 interface Identity {
   role: string;
@@ -35,13 +44,29 @@ async function getIdentity(req: NextRequest): Promise<Identity | null> {
 
 /** Where an authenticated user belongs when blocked from the requested route. */
 function homeFor(identity: Identity): string {
-  if (identity.role === 'super_admin') return '/overview';
+  if (isStaffRole(identity.role)) return '/internal';
   if (identity.factoryId) return `/factories/${identity.factoryId}`;
-  return '/admin/login';
+  return '/internal/login';
+}
+
+function isInternalWritePath(pathname: string): boolean {
+  return (
+    pathname === '/internal/onboard' ||
+    pathname === '/internal/features' ||
+    pathname.startsWith('/internal/onboard/') ||
+    pathname.startsWith('/internal/features/')
+  );
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  const legacyTarget = LEGACY_PLATFORM_REDIRECTS[pathname];
+  if (legacyTarget) {
+    const url = req.nextUrl.clone();
+    url.pathname = legacyTarget;
+    return NextResponse.redirect(url);
+  }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV !== 'production';
@@ -67,7 +92,6 @@ export async function middleware(req: NextRequest) {
   const secured = () => {
     const res = NextResponse.next({ request: { headers: requestHeaders } });
     applySecurityHeaders(res, csp);
-    // Ensure a readable double-submit CSRF cookie exists for client mutations.
     if (!req.cookies.get(CSRF_COOKIE)) {
       res.cookies.set(CSRF_COOKIE, crypto.randomUUID().replace(/-/g, ''), {
         httpOnly: false,
@@ -88,24 +112,21 @@ export async function middleware(req: NextRequest) {
 
   const identity = await getIdentity(req);
 
-  // --- Public auth pages ------------------------------------------------------
   const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup)\/?$/.test(pathname);
-  const isAdminLogin = pathname === '/admin/login';
-  if (isFactoryAuthPage || isAdminLogin) {
-    // Bounce already-authenticated users to their home.
+  const isInternalLogin = pathname === '/internal/login';
+  if (isFactoryAuthPage || isInternalLogin) {
     if (identity) return redirectTo(homeFor(identity));
     return secured();
   }
 
-  // --- Factory dashboards: /factories/{id}/* ---------------------------------
   const facMatch = pathname.match(/^\/factories\/([^/]+)(?:\/(.*))?$/);
   if (facMatch) {
     const factoryId = facMatch[1];
     const sub = facMatch[2] ?? '';
     if (!identity) return redirectTo(`/f/${factoryId}/login`);
-    const allowed = identity.role === 'super_admin' || identity.factoryId === factoryId;
+    const allowed =
+      isStaffRole(identity.role) || identity.factoryId === factoryId;
     if (!allowed) return redirectTo(homeFor(identity));
-    // Employee-approval / team management is admin-only within the factory.
     if (sub.startsWith('team')) {
       const isAdmin =
         identity.role === 'super_admin' ||
@@ -115,36 +136,46 @@ export async function middleware(req: NextRequest) {
     return secured();
   }
 
-  // --- Super-admin console: /admin/* -----------------------------------------
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    if (!identity) return redirectTo('/admin/login');
-    if (identity.role !== 'super_admin') return redirectTo(homeFor(identity));
+  if (pathname === '/internal/settings') {
+    return redirectTo('/internal/health');
+  }
+
+  if (pathname === '/internal/devices' || pathname === '/internal/devices/') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/internal/nodes';
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === '/internal' || pathname.startsWith('/internal/')) {
+    if (!cfAccessOk(req)) {
+      return new NextResponse(cfAccessBlockMessage(), { status: 403 });
+    }
+    if (!identity) return redirectTo('/internal/login');
+    if (!isStaffRole(identity.role)) return redirectTo(homeFor(identity));
+    if (
+      isInternalWritePath(pathname) &&
+      identity.role === 'internal_viewer'
+    ) {
+      return redirectTo('/internal');
+    }
+    if (pathname.startsWith('/internal/audit') && identity.role !== 'super_admin') {
+      return redirectTo('/internal');
+    }
     return secured();
   }
 
-  // --- Platform pages (super-admin only): /overview /factories /alerts /settings
-  const isPlatform = PLATFORM_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-  if (isPlatform) {
-    if (!identity) return redirectTo('/admin/login');
-    if (identity.role !== 'super_admin') return redirectTo(homeFor(identity));
-    return secured();
-  }
-
-  // --- Other /f/{id}/* routes (factory-scoped, non-auth pages) ---------------
   const fMatch = pathname.match(/^\/f\/([^/]+)(?:\/(.*))?$/);
   if (fMatch) {
     const factoryId = fMatch[1];
     if (!identity) return redirectTo(`/f/${factoryId}/login`);
-    const allowed = identity.role === 'super_admin' || identity.factoryId === factoryId;
+    const allowed =
+      isStaffRole(identity.role) || identity.factoryId === factoryId;
     if (!allowed) return redirectTo(homeFor(identity));
     return secured();
   }
 
-  // --- Root ------------------------------------------------------------------
   if (pathname === '/') {
-    if (!identity) return redirectTo('/admin/login');
+    if (!identity) return redirectTo('/internal/login');
     return redirectTo(homeFor(identity));
   }
 
@@ -164,13 +195,10 @@ function applySecurityHeaders(res: NextResponse, csp: string) {
     'Strict-Transport-Security',
     'max-age=63072000; includeSubDomains; preload',
   );
-  // Isolate our browsing context from cross-origin windows (blocks tab-nabbing
-  // and cross-window / XS-Leak side channels) and forbid cross-origin embedding.
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   res.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 }
 
 export const config = {
-  // Run on all routes except API handlers, Next internals, and static assets.
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.[^/]+$).*)'],
 };

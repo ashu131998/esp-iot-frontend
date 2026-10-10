@@ -26,6 +26,11 @@ import type {
   ProductionResponse,
   QualityRecord,
   UptimeResponse,
+  ShiftReportScheduleResponse,
+  ShiftReportAdminOverview,
+  NodeDetailResponse,
+  FactoryNodeSummary,
+  SensorBinding,
   Worker,
   WorkerSchedule,
   CreateWorkerInput,
@@ -107,6 +112,13 @@ function qs(
       shift?: string;
       type?: string;
       latest?: string;
+      stale_minutes?: number;
+      device_id?: string;
+      stale_only?: string | boolean;
+      q?: string;
+      line_id?: string;
+      action?: string;
+      actor?: string;
     },
 ): string {
   if (!params) return '';
@@ -167,6 +179,76 @@ export const api = {
 
   uptime: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
     request<UptimeResponse>(`/v1/factories/${factoryId}/uptime${qs(params)}`, options),
+
+  shiftReportSchedule: (factoryId: string, options?: ApiRequestOptions) =>
+    request<ShiftReportScheduleResponse>(
+      `/v1/factories/${factoryId}/shift-report-schedule`,
+      options,
+    ),
+
+  updateShiftReportSchedule: (
+    factoryId: string,
+    body: { enabled: boolean; recipient_emails: string[] },
+    options?: ApiRequestOptions,
+  ) =>
+    request<ShiftReportScheduleResponse>(
+      `/v1/factories/${factoryId}/shift-report-schedule`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  testShiftReportSchedule: (
+    factoryId: string,
+    body?: { recipient_emails?: string[] },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ ok: boolean; recipients: string[]; message_id?: string }>(
+      `/v1/factories/${factoryId}/shift-report-schedule/test`,
+      { method: 'POST', body: JSON.stringify(body ?? {}), ...options },
+    ),
+
+  factoryNodes: (factoryId: string, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; nodes: FactoryNodeSummary[] }>(
+      `/v1/factories/${factoryId}/nodes`,
+      options,
+    ),
+
+  nodeDetail: (factoryId: string, deviceId: string, options?: ApiRequestOptions) =>
+    request<NodeDetailResponse>(`/v1/factories/${factoryId}/nodes/${deviceId}`, options),
+
+  replaceNodeSensorBindings: (
+    factoryId: string,
+    deviceId: string,
+    bindings: SensorBinding[],
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; device_id: string; bindings: SensorBinding[] }>(
+      `/v1/factories/${factoryId}/nodes/${deviceId}/sensor-bindings`,
+      { method: 'PUT', body: JSON.stringify({ bindings }), ...options },
+    ),
+
+  sensorBindings: (
+    factoryId: string,
+    params?: { device_id?: string; machine_id?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; bindings: SensorBinding[] }>(
+      `/v1/factories/${factoryId}/sensor-bindings${qs(params)}`,
+      options,
+    ),
+
+  adminNodeDetail: (factoryId: string, deviceId: string, options?: ApiRequestOptions) =>
+    request<NodeDetailResponse>(`/v1/admin/nodes/${factoryId}/${deviceId}`, options),
+
+  adminReplaceNodeSensorBindings: (
+    factoryId: string,
+    deviceId: string,
+    bindings: SensorBinding[],
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; device_id: string; bindings: SensorBinding[] }>(
+      `/v1/admin/nodes/${factoryId}/${deviceId}/sensor-bindings`,
+      { method: 'PUT', body: JSON.stringify({ bindings }), ...options },
+    ),
 
   activeAssignments: (factoryId: string, options?: ApiRequestOptions) =>
     request<ActiveAssignmentsResponse>(
@@ -528,6 +610,184 @@ export const api = {
       `/v1/admin/factories/${factoryId}/features`,
       { method: 'PATCH', body: JSON.stringify(features), ...options },
     ),
+
+  adminSummary: (params?: { stale_minutes?: number }, options?: ApiRequestOptions) =>
+    request<{
+      factory_count: number;
+      device_count: number;
+      device_stale_count: number;
+      stale_threshold_minutes: number;
+    }>(`/v1/admin/summary${qs(params)}`, options),
+
+  adminShiftReportJob: (options?: ApiRequestOptions) =>
+    request<ShiftReportAdminOverview>('/v1/admin/jobs/shift-reports', options),
+
+  adminUpdateShiftReportJob: (
+    body: { enabled: boolean; tick_minutes?: number },
+    options?: ApiRequestOptions,
+  ) =>
+    request<ShiftReportAdminOverview>('/v1/admin/jobs/shift-reports', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  adminRunShiftReportJob: (options?: ApiRequestOptions) =>
+    request<{ ran_at: string; results: unknown[] }>('/v1/admin/jobs/shift-reports/run', {
+      method: 'POST',
+      body: '{}',
+      ...options,
+    }),
+
+  adminHealth: (params?: { stale_minutes?: number }, options?: ApiRequestOptions) =>
+    request<{
+      postgres: string;
+      checked_at: string;
+      error?: string;
+      summary?: {
+        factory_count: number;
+        device_count: number;
+        device_stale_count: number;
+        stale_threshold_minutes: number;
+      };
+      aggregator?: {
+        pending_failures: number;
+        failures_since: string | null;
+        last_pass_at: string | null;
+        last_stats: Record<string, unknown>;
+        updated_at: string | null;
+      } | null;
+    }>(`/v1/admin/health${qs(params)}`, options),
+
+  adminDevices: (
+    params?: PaginationParams & {
+      factory_id?: string;
+      line_id?: string;
+      machine_id?: string;
+      stale_minutes?: number;
+      stale_only?: string | boolean;
+      q?: string;
+    },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{
+      devices: Array<{
+        device_id: string;
+        factory_id: string;
+        line_id: string;
+        device_type: string;
+        last_seen_at: string | null;
+        is_stale: boolean;
+        machines?: Array<{
+          machine_id: string;
+          name: string;
+          line_id: string;
+          factory_id: string;
+        }>;
+      }>;
+      total: number;
+      limit: number;
+      offset: number;
+      stale_threshold_minutes?: number;
+    }>(`/v1/admin/devices${qs(params)}`, options),
+
+  readingsRecent: (
+    factoryId: string,
+    params?: { device_id?: string; limit?: number },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{
+      factory_id: string;
+      limit: number;
+      devices: Array<{
+        device_id: string;
+        line_id: string;
+        device_type: string;
+        last_seen_at: string | null;
+        current: Array<{
+          state?: string;
+          amps?: number | null;
+          amps_min?: number | null;
+          amps_max?: number | null;
+          occurred_at: string;
+          metadata?: Record<string, unknown>;
+        }>;
+        cycle: Array<{
+          count?: number;
+          rotations?: number | null;
+          running?: boolean | null;
+          window_s?: number | null;
+          occurred_at: string;
+          metadata?: Record<string, unknown>;
+        }>;
+      }>;
+    }>(`/v1/factories/${factoryId}/readings/recent${qs(params)}`, options),
+
+  readingsRange: (
+    factoryId: string,
+    params: { device_id: string; from: string; to: string; limit?: number },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{
+      factory_id: string;
+      device: { device_id: string; line_id: string; device_type: string; last_seen_at: string | null };
+      from: string;
+      to: string;
+      limit: number;
+      current: Array<{
+        state?: string;
+        amps?: number | null;
+        amps_min?: number | null;
+        amps_max?: number | null;
+        occurred_at: string;
+        metadata?: Record<string, unknown>;
+      }>;
+      cycle: Array<{
+        count?: number;
+        rotations?: number | null;
+        running?: boolean | null;
+        window_s?: number | null;
+        occurred_at: string;
+        metadata?: Record<string, unknown>;
+      }>;
+    }>(`/v1/factories/${factoryId}/readings/range${qs(params)}`, options),
+
+  adminAudit: (
+    params?: PaginationParams & { action?: string; actor?: string; from?: string; to?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ entries: unknown[]; total: number; limit: number; offset: number }>(
+      `/v1/admin/audit${qs(params)}`,
+      options,
+    ),
+
+  createStaff: (
+    body: { username: string; password: string; role: 'internal_admin' | 'internal_viewer'; email?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<import('./auth-types').AuthUser>('/v1/admin/staff', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  adminResetPassword: (userId: string, password: string, options?: ApiRequestOptions) =>
+    request<import('./auth-types').AuthUser>(`/v1/admin/users/${userId}/password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+      ...options,
+    }),
+
+  adminUpdateUser: (
+    userId: string,
+    body: { status?: import('./auth-types').UserStatus; role?: import('./auth-types').Role },
+    options?: ApiRequestOptions,
+  ) =>
+    request<import('./auth-types').AuthUser>(`/v1/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      ...options,
+    }),
 };
 
 export { ApiError };

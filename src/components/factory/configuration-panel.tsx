@@ -10,6 +10,7 @@ import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Button } from '@/components/ui/button';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { Machine, MachineConfiguration, ProductionLine } from '@/lib/types';
@@ -33,6 +34,7 @@ export function ConfigurationPanel({
   limit: number;
 }) {
   const router = useRouter();
+  const { canWriteFactory } = useAuth();
 
   const deleteMutation = useMutation({
     mutationFn: (configId: string) => api.deleteConfiguration(factoryId, configId),
@@ -85,7 +87,9 @@ export function ConfigurationPanel({
                 fetchRows={fetchAllRows}
                 rowCount={total}
               />
-              <ConfigurationForm factoryId={factoryId} machines={machines} lines={lines} />
+              {canWriteFactory && (
+                <ConfigurationForm factoryId={factoryId} machines={machines} lines={lines} />
+              )}
             </div>
           }
         />
@@ -106,7 +110,7 @@ export function ConfigurationPanel({
                   <TH>Description</TH>
                   <TH>Source</TH>
                   <TH>Updated</TH>
-                  <TH></TH>
+                  {canWriteFactory && <TH></TH>}
                 </TR>
               </THead>
               <TBody>
@@ -121,16 +125,18 @@ export function ConfigurationPanel({
                       <Badge className="bg-violet-50 text-violet-700">{c.source}</Badge>
                     </TD>
                     <TD>{formatDate(c.updated_at)}</TD>
-                    <TD>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600"
-                        onClick={() => deleteMutation.mutate(c.config_id)}
-                      >
-                        Delete
-                      </Button>
-                    </TD>
+                    {canWriteFactory && (
+                      <TD>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600"
+                          onClick={() => deleteMutation.mutate(c.config_id)}
+                        >
+                          Delete
+                        </Button>
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

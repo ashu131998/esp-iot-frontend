@@ -1,5 +1,15 @@
 import type { UptimeMachine, UptimeStream } from '@/lib/types';
 
+/** Avoid "Loom #1: Loom #1 · current" when the binding label already includes the machine name. */
+export function streamDisplayName(machineName: string, label?: string | null): string {
+  const t = (label ?? '').trim();
+  if (!t) return machineName;
+  if (t === machineName || t.startsWith(`${machineName} ·`) || t.startsWith(`${machineName}:`)) {
+    return t;
+  }
+  return `${machineName} · ${t}`;
+}
+
 /** One chart/table row — either a legacy single stream per machine or one binding stream. */
 export type UptimeDisplayRow = UptimeMachine &
   Partial<UptimeStream> & {
@@ -27,7 +37,7 @@ export function expandUptimeMachines(machines: UptimeMachine[]): UptimeDisplayRo
           live_since: s.live_since ?? m.live_since,
           timeline: s.timeline,
           detail_timeline: s.detail_timeline ?? s.timeline,
-          display_name: s.display_name ?? `${m.machine_name}: ${s.label}`,
+          display_name: streamDisplayName(m.machine_name, s.label ?? s.display_name),
           stream_key: `${m.machine_id}:${s.binding_id ?? s.label}`,
         });
       }

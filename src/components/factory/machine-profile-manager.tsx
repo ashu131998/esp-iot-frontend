@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
 import { MachineMultiSelect } from '@/components/factory/machine-multi-select';
 import { Field, Input } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
@@ -228,6 +229,9 @@ export function MachineProfileManager({
   const { canWriteFactory } = useAuth();
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [profilePendingDelete, setProfilePendingDelete] = useState<MachineConfigProfile | null>(
+    null,
+  );
 
   const createMutation = useMutation({
     mutationFn: (form: FormState) => saveProfilesForMachines(factoryId, form),
@@ -248,7 +252,10 @@ export function MachineProfileManager({
 
   const deleteMutation = useMutation({
     mutationFn: (profileId: string) => api.deleteConfigProfile(factoryId, profileId),
-    onSuccess: () => router.refresh(),
+    onSuccess: () => {
+      setProfilePendingDelete(null);
+      router.refresh();
+    },
   });
 
   const machineById = Object.fromEntries(machines.map((m) => [m.machine_id, m]));
@@ -334,7 +341,7 @@ export function MachineProfileManager({
                         variant="ghost"
                         size="sm"
                         className="text-red-600"
-                        onClick={() => deleteMutation.mutate(profile.profile_id)}
+                        onClick={() => setProfilePendingDelete(profile)}
                       >
                         Delete
                       </Button>
@@ -369,6 +376,46 @@ export function MachineProfileManager({
           )}
         </div>
       )}
+
+      <Modal
+        open={profilePendingDelete !== null}
+        title="Delete profile?"
+        description={
+          profilePendingDelete
+            ? `Remove "${profilePendingDelete.name}" for ${
+                machineById[profilePendingDelete.machine_id]?.name ??
+                profilePendingDelete.machine_id
+              }? Operators will no longer see this preset. Applied configuration values on the machine are not removed.`
+            : undefined
+        }
+        onClose={() => {
+          if (!deleteMutation.isPending) setProfilePendingDelete(null);
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={deleteMutation.isPending}
+            onClick={() => setProfilePendingDelete(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={deleteMutation.isPending || !profilePendingDelete}
+            onClick={() => {
+              if (profilePendingDelete) deleteMutation.mutate(profilePendingDelete.profile_id);
+            }}
+          >
+            {deleteMutation.isPending ? 'Deleting…' : 'Delete profile'}
+          </Button>
+        </div>
+        {deleteMutation.isError && (
+          <p className="mt-3 text-sm text-red-600">{deleteMutation.error.message}</p>
+        )}
+      </Modal>
     </Card>
   );
 }

@@ -9,6 +9,8 @@ import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
 
 export function ShiftReportJobPanel() {
@@ -16,10 +18,11 @@ export function ShiftReportJobPanel() {
   const canWrite = isInternalAdmin(user);
   const qc = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
+  const jobQuery = useQuery({
     queryKey: ['admin-shift-report-job'],
     queryFn: ({ signal }) => api.adminShiftReportJob({ signal }),
   });
+  const { data, error } = jobQuery;
 
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [tickMinutes, setTickMinutes] = useState<number | null>(null);
@@ -66,7 +69,14 @@ export function ShiftReportJobPanel() {
     onError: (e: Error) => setMsg(e.message),
   });
 
-  if (isLoading) return <p className="text-sm text-muted">Loading shift report job…</p>;
+  if (queryShowsTableLoading(jobQuery)) {
+    return (
+      <div className="space-y-6">
+        <TableSkeleton rows={4} cols={3} />
+        <TableSkeleton rows={6} cols={5} />
+      </div>
+    );
+  }
   if (error) return <p className="text-sm text-red-600">{(error as Error).message}</p>;
 
   return (

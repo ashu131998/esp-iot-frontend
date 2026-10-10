@@ -11,7 +11,9 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
 
 export type AuditEntry = {
@@ -163,6 +165,8 @@ function AuditInner() {
 
         {auditQuery.isError ? (
           <p className="mt-4 text-sm text-red-600">{(auditQuery.error as Error).message}</p>
+        ) : queryShowsTableLoading(auditQuery) ? (
+          <TableSkeleton rows={10} cols={5} />
         ) : entries.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No audit entries match filters.</p>
         ) : (
@@ -202,7 +206,7 @@ function AuditInner() {
 
 export function AuditLogPanel() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TableSkeleton rows={10} cols={5} />}>
       <AuditInner />
     </Suspense>
   );

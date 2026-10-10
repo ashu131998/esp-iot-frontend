@@ -18,7 +18,9 @@ import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
 
 function nodeHref(factoryId: string, deviceId: string, tab?: 'sensors') {
   const base = `/internal/devices/${encodeURIComponent(factoryId)}/${encodeURIComponent(deviceId)}`;
@@ -38,7 +40,9 @@ function NodesFleetInner() {
   const factoryFilter = searchParams.get('factory_id') ?? '';
   const lineFilter = searchParams.get('line_id') ?? '';
   const machineFilter = searchParams.get('machine_id') ?? '';
-  const staleOnly = searchParams.get('stale') === '1';
+  const statusFilter =
+    searchParams.get('status') ??
+    (searchParams.get('stale') === '1' ? 'stale' : '');
   const deviceQ = searchParams.get('q') ?? '';
 
   const factoriesQuery = useQuery({
@@ -71,7 +75,7 @@ function NodesFleetInner() {
       factoryFilter,
       lineFilter,
       machineFilter,
-      staleOnly,
+      statusFilter,
       deviceQ,
       pagination.page,
       pagination.limit,
@@ -85,7 +89,8 @@ function NodesFleetInner() {
           limit: pagination.limit,
           offset: pagination.offset,
           stale_minutes: 15,
-          stale_only: staleOnly ? '1' : undefined,
+          stale_only: statusFilter === 'stale' ? '1' : undefined,
+          fresh_only: statusFilter === 'ok' ? '1' : undefined,
           q: deviceQ || undefined,
         },
         { signal },
@@ -114,7 +119,13 @@ function NodesFleetInner() {
     } else if (patch.line_id !== undefined) {
       next.delete('machine_id');
       next.delete('page');
-    } else if (patch.machine_id !== undefined || patch.stale !== undefined || patch.q !== undefined) {
+    } else if (
+      patch.machine_id !== undefined ||
+      patch.status !== undefined ||
+      patch.stale !== undefined ||
+      patch.q !== undefined
+    ) {
+      if (patch.status !== undefined) next.delete('stale');
       next.delete('page');
     }
     router.replace(`/internal/nodes?${next.toString()}`);
@@ -130,7 +141,8 @@ function NodesFleetInner() {
           limit,
           offset,
           stale_minutes: 15,
-          stale_only: staleOnly ? '1' : undefined,
+          stale_only: statusFilter === 'stale' ? '1' : undefined,
+          fresh_only: statusFilter === 'ok' ? '1' : undefined,
           q: deviceQ || undefined,
         })
         .then((r) => ({ items: r.devices, total: r.total })),
@@ -151,7 +163,7 @@ function NodesFleetInner() {
       <Card className="p-6">
         <CardHeader
           title="All nodes"
-          description="ESP32 fleet — filter by factory, line, or linked machine"
+          description="ESP32 fleet — filter by factory, line, machine, or heartbeat status (15m threshold)"
           action={
             <div className="flex flex-wrap items-center gap-2">
               {canWrite && (
@@ -169,7 +181,7 @@ function NodesFleetInner() {
           }
         />
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Field label="Factory">
             <Select
               value={factoryFilter}
@@ -218,19 +230,22 @@ function NodesFleetInner() {
               onChange={(e) => setQuery({ q: e.target.value || null })}
             />
           </Field>
+          <Field label="Status">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setQuery({ status: e.target.value || null })}
+            >
+              <option value="">All</option>
+              <option value="ok">OK (seen in last 15m)</option>
+              <option value="stale">Stale</option>
+            </Select>
+          </Field>
         </div>
-
-        <label className="mb-4 flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={staleOnly}
-            onChange={(e) => setQuery({ stale: e.target.checked ? '1' : null })}
-          />
-          Stale only
-        </label>
 
         {nodesQuery.isError ? (
           <p className="text-sm text-red-600">{(nodesQuery.error as Error).message}</p>
+        ) : queryShowsTableLoading(nodesQuery) ? (
+          <TableSkeleton rows={8} cols={8} />
         ) : nodes.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No nodes match filters.</p>
         ) : (
@@ -321,7 +336,7 @@ function NodesFleetInner() {
 
 export function NodesFleetPanel() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TableSkeleton rows={8} cols={8} />}>
       <NodesFleetInner />
     </Suspense>
   );

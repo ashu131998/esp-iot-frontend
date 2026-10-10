@@ -12,7 +12,9 @@ import { Modal } from '@/components/ui/modal';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { isInternalAdmin } from '@/lib/internal-auth';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/lib/auth-context';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 
 export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   const { user } = useAuth();
@@ -125,7 +127,9 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
             )
           }
         />
-        {lines.length === 0 ? (
+        {queryShowsTableLoading(linesQuery) ? (
+          <TableSkeleton rows={4} cols={2} />
+        ) : lines.length === 0 ? (
           <p className="text-sm text-muted">No lines yet — add one before registering machines or nodes.</p>
         ) : (
           <Table className="mt-4 border-0">
@@ -159,7 +163,9 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
             )
           }
         />
-        {machines.length === 0 ? (
+        {queryShowsTableLoading(machinesQuery) ? (
+          <TableSkeleton rows={6} cols={4} />
+        ) : machines.length === 0 ? (
           <p className="text-sm text-muted">No machines yet.</p>
         ) : (
           <Table className="mt-4 border-0">

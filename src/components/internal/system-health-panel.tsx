@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { StatGridSkeleton } from '@/components/ui/page-skeletons';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
 
 export function SystemHealthPanel() {
@@ -25,8 +27,10 @@ export function SystemHealthPanel() {
             data?.checked_at ? `Last checked ${formatDate(data.checked_at)}` : 'Query API and fleet signals'
           }
         />
-        {healthQuery.isLoading ? (
-          <p className="mt-4 text-sm text-muted">Loading…</p>
+        {queryShowsTableLoading(healthQuery) ? (
+          <div className="mt-4">
+            <StatGridSkeleton count={3} />
+          </div>
         ) : healthQuery.isError ? (
           <p className="mt-4 text-sm text-red-600">{(healthQuery.error as Error).message}</p>
         ) : (

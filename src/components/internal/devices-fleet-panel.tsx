@@ -14,6 +14,8 @@ import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
 
 function deviceHref(factoryId: string, deviceId: string) {
@@ -151,6 +153,8 @@ function FleetInner() {
 
         {devicesQuery.isError ? (
           <p className="text-sm text-red-600">{(devicesQuery.error as Error).message}</p>
+        ) : queryShowsTableLoading(devicesQuery) ? (
+          <TableSkeleton rows={8} cols={6} />
         ) : devices.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No devices match filters.</p>
         ) : (
@@ -204,7 +208,7 @@ function FleetInner() {
 
 export function DevicesFleetPanel() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TableSkeleton rows={8} cols={6} />}>
       <FleetInner />
     </Suspense>
   );

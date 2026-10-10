@@ -116,6 +116,7 @@ function qs(
       stale_minutes?: number;
       device_id?: string;
       stale_only?: string | boolean;
+      fresh_only?: string | boolean;
       q?: string;
       line_id?: string;
       action?: string;
@@ -749,6 +750,7 @@ export const api = {
       machine_id?: string;
       stale_minutes?: number;
       stale_only?: string | boolean;
+      fresh_only?: string | boolean;
       q?: string;
     },
     options?: ApiRequestOptions,

@@ -14,7 +14,9 @@ import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { StaffCreateForm } from '@/components/internal/staff-create-form';
 import { UserAdminActions } from '@/components/internal/user-admin-actions';
 import { isPlatformOwner } from '@/lib/internal-auth';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { queryShowsTableLoading } from '@/lib/query-table-loading';
 
 function UsersPanelInner() {
   const { user } = useAuth();
@@ -49,6 +51,7 @@ function UsersPanelInner() {
 
   const staff = (usersQuery.data?.users ?? []).filter((u) => !u.factory_id);
   const factoryUsers = (usersQuery.data?.users ?? []).filter((u) => u.factory_id);
+  const usersLoading = queryShowsTableLoading(usersQuery);
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -56,7 +59,9 @@ function UsersPanelInner() {
         <Card className="p-6">
           <CardHeader title="Staff accounts" description="Platform owner creates internal_admin and internal_viewer logins" />
           <StaffCreateForm />
-          {staff.length === 0 ? (
+          {usersLoading ? (
+            <TableSkeleton rows={3} cols={4} />
+          ) : staff.length === 0 ? (
             <p className="mt-4 text-sm text-muted">No staff accounts yet besides owner.</p>
           ) : (
             <Table className="mt-4 border-0">
@@ -97,7 +102,9 @@ function UsersPanelInner() {
             />
           }
         />
-        {factoryUsers.length === 0 && staff.length === 0 ? (
+        {usersLoading ? (
+          <TableSkeleton rows={8} cols={5} />
+        ) : factoryUsers.length === 0 && staff.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No users found.</p>
         ) : (
           <>
@@ -135,7 +142,7 @@ function UsersPanelInner() {
 
 export function UsersPanel() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TableSkeleton rows={8} cols={5} />}>
       <UsersPanelInner />
     </Suspense>
   );

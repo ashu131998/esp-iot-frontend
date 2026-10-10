@@ -712,6 +712,16 @@ export const api = {
       ...options,
     }),
 
+  adminSendFactoryShiftReport: (
+    factoryId: string,
+    body?: { recipient_emails?: string[] },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ ok: boolean; factory_id: string; recipients: string[]; message_id?: string }>(
+      `/v1/admin/factories/${factoryId}/shift-reports/send-now`,
+      { method: 'POST', body: JSON.stringify(body ?? {}), ...options },
+    ),
+
   adminHealth: (params?: { stale_minutes?: number }, options?: ApiRequestOptions) =>
     request<{
       postgres: string;

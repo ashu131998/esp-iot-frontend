@@ -53,6 +53,19 @@ export function ShiftReportJobPanel() {
     onError: (e: Error) => setMsg(e.message),
   });
 
+  const [sendingFactoryId, setSendingFactoryId] = useState<string | null>(null);
+
+  const sendNowMutation = useMutation({
+    mutationFn: (factoryId: string) => api.adminSendFactoryShiftReport(factoryId),
+    onMutate: (factoryId) => setSendingFactoryId(factoryId),
+    onSettled: () => setSendingFactoryId(null),
+    onSuccess: async (result) => {
+      await qc.invalidateQueries({ queryKey: ['admin-shift-report-job'] });
+      setMsg(`Sent to ${result.recipients.join(', ')} (PDF attached).`);
+    },
+    onError: (e: Error) => setMsg(e.message),
+  });
+
   if (isLoading) return <p className="text-sm text-muted">Loading shift report job…</p>;
   if (error) return <p className="text-sm text-red-600">{(error as Error).message}</p>;
 
@@ -142,6 +155,7 @@ export function ShiftReportJobPanel() {
               <TH>Enabled</TH>
               <TH>Recipients</TH>
               <TH>Last sent</TH>
+              <TH>Send now</TH>
             </TR>
           </THead>
           <TBody>
@@ -151,20 +165,45 @@ export function ShiftReportJobPanel() {
                 <TD>—</TD>
                 <TD>—</TD>
                 <TD>—</TD>
+                <TD>—</TD>
               </TR>
             ) : (
-              data?.factory_schedules.map((s) => (
-                <TR key={s.factory_id}>
-                  <TD className="font-medium">{s.factory_name ?? s.factory_id}</TD>
-                  <TD>{s.enabled ? 'Yes' : 'No'}</TD>
-                  <TD className="font-mono text-xs">{s.recipient_emails.join(', ') || '—'}</TD>
-                  <TD className="text-xs text-muted">
-                    {s.last_sent && Object.keys(s.last_sent).length > 0
-                      ? JSON.stringify(s.last_sent)
-                      : '—'}
-                  </TD>
-                </TR>
-              ))
+              data?.factory_schedules.map((s) => {
+                const canSend =
+                  canWrite &&
+                  Boolean(data?.email_configured) &&
+                  s.recipient_emails.length > 0;
+                const sending = sendingFactoryId === s.factory_id && sendNowMutation.isPending;
+                return (
+                  <TR key={s.factory_id}>
+                    <TD className="font-medium">{s.factory_name ?? s.factory_id}</TD>
+                    <TD>{s.enabled ? 'Yes' : 'No'}</TD>
+                    <TD className="font-mono text-xs">{s.recipient_emails.join(', ') || '—'}</TD>
+                    <TD className="text-xs text-muted">
+                      {s.last_sent && Object.keys(s.last_sent).length > 0
+                        ? JSON.stringify(s.last_sent)
+                        : '—'}
+                    </TD>
+                    <TD>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!canSend || sendNowMutation.isPending}
+                        title={
+                          !data?.email_configured
+                            ? 'Configure Resend on the API server'
+                            : s.recipient_emails.length === 0
+                              ? 'Add recipients under factory → Shift reports'
+                              : undefined
+                        }
+                        onClick={() => sendNowMutation.mutate(s.factory_id)}
+                      >
+                        {sending ? 'Sending…' : 'Send now'}
+                      </button>
+                    </TD>
+                  </TR>
+                );
+              })
             )}
           </TBody>
         </Table>

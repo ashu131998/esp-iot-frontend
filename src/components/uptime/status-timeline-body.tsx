@@ -115,102 +115,98 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
 
   const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
 
+  function machineSubtitle(operatorNames: string, liveSince: string | null | undefined, currentStatus: string) {
+    const parts: string[] = [];
+    if (operatorNames) parts.push(`Operator: ${operatorNames}`);
+    if (liveSince) parts.push(`${statusLabel(currentStatus)} since ${shortTime(liveSince)}`);
+    return parts.length > 0 ? parts.join(' · ') : undefined;
+  }
+
   return (
-    <Card>
-      <CardHeader
-        title="Status Timeline"
-        description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail — use detail chart for exact recent times`}
-      />
-      {data.meta?.requires_filter && (
-        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {data.meta.message ?? 'Too many machines — filter by line or machine to load timelines.'}
-        </p>
-      )}
-      <div className="mb-4 flex flex-wrap items-center gap-6 text-xs text-muted">
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-sm bg-emerald-400" />
-          Running
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-sm bg-red-400" />
-          Stopped
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-sm bg-gray-300" />
-          No signal
-        </span>
-      </div>
-
-      <div className="space-y-8">
-        {displayRows.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">No timeline data available</p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader
+          title="Status Timeline"
+          description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail — use detail chart for exact recent times`}
+        />
+        {data.meta?.requires_filter && (
+          <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {data.meta.message ?? 'Too many machines — filter by line or machine to load timelines.'}
+          </p>
         )}
-        {displayRows.map((m) => {
-          const operators: ActiveAssignment[] = assignments[m.machine_id] ?? [];
-          const machineReports = allReports.filter((r) => r.machine_id === m.machine_id);
-          const selection = latestSelections.get(m.machine_id);
-          const currentStatus = m.live_status ?? m.timeline.at(-1)?.status ?? 'idle';
-          const liveSince = m.live_since;
-          const detailTimeline = m.detail_timeline ?? m.timeline;
-          const operatorNames = operators
-            .map((op) => op.worker_name ?? op.worker_id)
-            .filter(Boolean)
-            .join(', ');
+        <div className="flex flex-wrap items-center gap-6 text-xs text-muted">
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-sm bg-emerald-400" />
+            Running
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-sm bg-red-400" />
+            Stopped
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-sm bg-gray-300" />
+            No signal
+          </span>
+        </div>
+      </Card>
 
-          return (
-            <div key={m.stream_key}>
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold">{m.display_name}</p>
-                  {(operatorNames || liveSince) && (
-                    <p className="mt-0.5 text-sm text-muted">
-                      {operatorNames ? <>Operator: {operatorNames}</> : null}
-                      {operatorNames && liveSince ? ' · ' : null}
-                      {liveSince ? (
-                        <>
-                          {statusLabel(currentStatus)} since {shortTime(liveSince)}
-                        </>
-                      ) : null}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-3 sm:justify-end">
+      {displayRows.length === 0 && (
+        <Card>
+          <p className="py-8 text-center text-sm text-muted">No timeline data available</p>
+        </Card>
+      )}
+
+      {displayRows.map((m) => {
+        const operators: ActiveAssignment[] = assignments[m.machine_id] ?? [];
+        const machineReports = allReports.filter((r) => r.machine_id === m.machine_id);
+        const selection = latestSelections.get(m.machine_id);
+        const currentStatus = m.live_status ?? m.timeline.at(-1)?.status ?? 'idle';
+        const liveSince = m.live_since;
+        const detailTimeline = m.detail_timeline ?? m.timeline;
+        const operatorNames = operators
+          .map((op) => op.worker_name ?? op.worker_id)
+          .filter(Boolean)
+          .join(', ');
+
+        return (
+          <Card key={m.stream_key}>
+            <CardHeader
+              title={m.display_name}
+              description={machineSubtitle(operatorNames, liveSince, currentStatus)}
+              action={
+                <div className="flex flex-wrap items-center gap-3">
                   <MachineStatusBadge status={currentStatus} />
                   <span className="text-sm font-medium tabular-nums">
                     {formatPercent(m.availability_percent)} running
                   </span>
                 </div>
-              </div>
-              <p className="mb-1 text-[10px] text-muted">
-                24h overview — short transitions are proportionally tiny; use detail below for exact times.
-              </p>
-              <UptimeTimeSeriesChart
-                segments={m.timeline}
-                windowFrom={overviewFrom}
-                windowTo={overviewTo}
-                windowLabel={timelineWindowLabel}
-                height={36}
-                segmentDetails={(segment) =>
-                  buildSegmentDetails(segment, machineReports, selection)
-                }
-              />
-              <p className="mb-1 mt-4 text-xs font-medium text-muted">
-                Recent detail · last {UPTIME_DETAIL_HOURS} hours (exact times)
-              </p>
-              <UptimeTimeSeriesChart
-                segments={detailTimeline}
-                windowFrom={detailFrom}
-                windowTo={detailTo}
-                windowLabel={detailLabel}
-                height={56}
-                segmentDetails={(segment) =>
-                  buildSegmentDetails(segment, machineReports, selection)
-                }
-              />
-            </div>
-          );
-        })}
-      </div>
-    </Card>
+              }
+            />
+            <p className="mb-1 text-[10px] text-muted">
+              24h overview — short transitions are proportionally tiny; use detail below for exact times.
+            </p>
+            <UptimeTimeSeriesChart
+              segments={m.timeline}
+              windowFrom={overviewFrom}
+              windowTo={overviewTo}
+              windowLabel={timelineWindowLabel}
+              height={36}
+              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+            />
+            <p className="mb-1 mt-4 text-xs font-medium text-muted">
+              Recent detail · last {UPTIME_DETAIL_HOURS} hours (exact times)
+            </p>
+            <UptimeTimeSeriesChart
+              segments={detailTimeline}
+              windowFrom={detailFrom}
+              windowTo={detailTo}
+              windowLabel={detailLabel}
+              height={56}
+              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+            />
+          </Card>
+        );
+      })}
+    </div>
   );
 }

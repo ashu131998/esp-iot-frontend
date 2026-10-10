@@ -16,6 +16,8 @@ import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment }
 
 const STATUS_TIMELINE_REFRESH_MS = 30_000;
 const UPTIME_DETAIL_HOURS = 2;
+/** Same bar height for 24h overview and 2h detail strips. */
+const STATUS_TIMELINE_CHART_HEIGHT = 36;
 
 function shortTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -198,7 +200,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowFrom={overviewFrom}
               windowTo={overviewTo}
               windowLabel={timelineWindowLabel}
-              height={36}
+              height={STATUS_TIMELINE_CHART_HEIGHT}
               segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
             />
             <p className="mb-1 mt-4 text-xs font-medium text-muted">
@@ -209,7 +211,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowFrom={detailFrom}
               windowTo={detailTo}
               windowLabel={detailLabel}
-              height={56}
+              height={STATUS_TIMELINE_CHART_HEIGHT}
               segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
             />
           </Card>

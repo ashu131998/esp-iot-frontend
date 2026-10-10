@@ -15,7 +15,15 @@ import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
+import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
+
+function capitalizeKind(kind: string) {
+  const base = kind.split(' ')[0] ?? kind;
+  const rest = kind.slice(base.length);
+  return base.charAt(0).toUpperCase() + base.slice(1) + rest;
+}
 
 type Tab = 'overview' | 'sensors' | 'health' | 'readings';
 
@@ -110,6 +118,16 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
       {tab === 'overview' && (
         <Card className="p-6">
           <CardHeader title={deviceId} description={`Factory ${factoryId}`} />
+          {recentQuery.isLoading ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="mt-2 h-5 w-32" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-muted">Factory</dt>
@@ -132,6 +150,7 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
               <dd>{deviceMeta?.last_seen_at ? formatDate(deviceMeta.last_seen_at) : '—'}</dd>
             </div>
           </dl>
+          )}
         </Card>
       )}
 
@@ -148,7 +167,11 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
         <Card className="p-6">
           <CardHeader title="Health snapshot" description="Latest telemetry samples (not aggregated metrics)" />
           {recentQuery.isLoading ? (
-            <p className="mt-4 text-sm text-muted">Loading…</p>
+            <div className="mt-4 space-y-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-4 w-48" />
+            </div>
           ) : (
             <div className="mt-4 space-y-4 text-sm">
               <div>
@@ -161,7 +184,7 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
                 <p className="font-medium">Latest current sample</p>
                 {latestCurrent ? (
                   <p className="font-mono text-xs">
-                    {formatDate(latestCurrent.occurred_at)} · {latestCurrent.state} · {latestCurrent.amps} A
+                    {formatDate(latestCurrent.occurred_at)} · {latestCurrent.state} · {latestCurrent.amps}
                   </p>
                 ) : (
                   <p className="text-muted">None in recent window</p>
@@ -201,7 +224,7 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
             <DateRangeToolbar from={searchParams.get('from') ?? undefined} to={searchParams.get('to') ?? undefined} />
           </div>
           {rangeQuery.isLoading ? (
-            <p className="text-sm text-muted">Loading readings…</p>
+            <TableSkeleton rows={8} cols={3} />
           ) : rangeQuery.isError ? (
             <p className="text-sm text-red-600">{(rangeQuery.error as Error).message}</p>
           ) : readingRows.length === 0 ? (
@@ -220,7 +243,7 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
                   <TR key={`${r.at}-${r.kind}-${i}`}>
                     <TD className="whitespace-nowrap text-xs">{formatDate(r.at)}</TD>
                     <TD>
-                      <Badge className="bg-slate-100 text-slate-700">{r.kind}</Badge>
+                      <Badge className="bg-slate-100 text-slate-700">{capitalizeKind(r.kind)}</Badge>
                     </TD>
                     <TD className="font-mono text-xs">{r.summary}</TD>
                   </TR>
@@ -234,9 +257,19 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
   );
 }
 
+function DeviceDetailFallback() {
+  return (
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <Skeleton className="h-9 w-72" />
+      <StatGridSkeleton count={2} />
+      <TableSkeleton rows={6} cols={4} />
+    </div>
+  );
+}
+
 export function DeviceDetailPanel({ factoryId, deviceId }: { factoryId: string; deviceId: string }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<DeviceDetailFallback />}>
       <DetailInner factoryId={factoryId} deviceId={deviceId} />
     </Suspense>
   );

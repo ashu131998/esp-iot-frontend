@@ -5,11 +5,21 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
+import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import type { NodeDetailResponse, SensorBinding } from '@/lib/types';
 
 const SENSOR_TYPES = ['current', 'proximity', 'cycle', 'time'] as const;
+
+function sensorTypeLabel(type: string) {
+  if (!type) return type;
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function usesOnThreshold(type: string) {
+  return type === 'current';
+}
 
 type DraftBinding = SensorBinding & { _key: string };
 
@@ -82,7 +92,11 @@ export function NodeSensorBindingsEditor({
         sensor_type: r.sensor_type,
         label: r.label.trim(),
         machine_id: r.machine_id,
-        on_threshold_a: r.on_threshold_a != null ? Number(r.on_threshold_a) : null,
+        on_threshold_a: usesOnThreshold(r.sensor_type)
+          ? r.on_threshold_a != null
+            ? Number(r.on_threshold_a)
+            : null
+          : null,
         enabled: r.enabled !== false,
         sort_order: i,
       }));
@@ -113,7 +127,7 @@ export function NodeSensorBindingsEditor({
         sensor_type: ch.sensor_type,
         label: ch.sample_name ?? (ch.channel_slot || 'Channel'),
         machine_id: '',
-        on_threshold_a: 0.12,
+        on_threshold_a: ch.sensor_type === 'current' ? 0.12 : null,
         enabled: true,
       });
     }
@@ -127,7 +141,7 @@ export function NodeSensorBindingsEditor({
   );
 
   if (detailQuery.isLoading) {
-    return <p className="text-sm text-muted">Loading sensor configuration…</p>;
+    return <TableSkeleton rows={4} cols={6} />;
   }
   if (detailQuery.isError || !detail) {
     return <p className="text-sm text-red-600">{(detailQuery.error as Error)?.message ?? 'Node not found'}</p>;
@@ -144,7 +158,7 @@ export function NodeSensorBindingsEditor({
           <span className="text-muted">Seen on wire:</span>
           {discovered.map((c) => (
             <Badge key={`${c.channel_slot}-${c.sensor_type}`} className="bg-slate-100 text-slate-800">
-              {c.channel_slot || 'default'} · {c.sensor_type}
+              {c.channel_slot || 'default'} · {sensorTypeLabel(c.sensor_type)}
               {c.sample_name ? ` (${c.sample_name})` : ''}
             </Badge>
           ))}
@@ -167,7 +181,7 @@ export function NodeSensorBindingsEditor({
             <TH>Type</TH>
             <TH>Label</TH>
             <TH>Machine</TH>
-            <TH>On threshold (A)</TH>
+            <TH>On threshold</TH>
             <TH>On</TH>
             {canWrite && <TH />}
           </TR>
@@ -195,13 +209,18 @@ export function NodeSensorBindingsEditor({
                   value={row.sensor_type}
                   onChange={(e) => {
                     const next = [...(rows ?? [])];
-                    next[idx] = { ...row, sensor_type: e.target.value };
+                    const sensor_type = e.target.value;
+                    next[idx] = {
+                      ...row,
+                      sensor_type,
+                      on_threshold_a: usesOnThreshold(sensor_type) ? row.on_threshold_a ?? 0.12 : null,
+                    };
                     setRows(next);
                   }}
                 >
                   {SENSOR_TYPES.map((t) => (
                     <option key={t} value={t}>
-                      {t}
+                      {sensorTypeLabel(t)}
                     </option>
                   ))}
                 </select>
@@ -239,22 +258,26 @@ export function NodeSensorBindingsEditor({
                 </select>
               </TD>
               <TD>
-                <input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  className="w-20 rounded border border-slate-200 px-2 py-1 text-sm"
-                  disabled={!canWrite || row.sensor_type !== 'current'}
-                  value={row.on_threshold_a ?? ''}
-                  onChange={(e) => {
-                    const next = [...(rows ?? [])];
-                    next[idx] = {
-                      ...row,
-                      on_threshold_a: e.target.value === '' ? null : Number(e.target.value),
-                    };
-                    setRows(next);
-                  }}
-                />
+                {usesOnThreshold(row.sensor_type) ? (
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    className="w-20 rounded border border-slate-200 px-2 py-1 text-sm"
+                    disabled={!canWrite}
+                    value={row.on_threshold_a ?? ''}
+                    onChange={(e) => {
+                      const next = [...(rows ?? [])];
+                      next[idx] = {
+                        ...row,
+                        on_threshold_a: e.target.value === '' ? null : Number(e.target.value),
+                      };
+                      setRows(next);
+                    }}
+                  />
+                ) : (
+                  <span className="text-sm text-muted">—</span>
+                )}
               </TD>
               <TD>
                 <input

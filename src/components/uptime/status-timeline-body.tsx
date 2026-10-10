@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
 
 import { UptimeTimeSeriesChart, type SegmentDetail } from '@/components/charts/metric-chart';
@@ -171,7 +172,14 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
         return (
           <Card key={m.stream_key}>
             <CardHeader
-              title={m.machine_name}
+              title={
+                <Link
+                  href={`/factories/${factoryId}/machines/${m.machine_id}`}
+                  className="hover:text-primary hover:underline"
+                >
+                  {m.machine_name}
+                </Link>
+              }
               description={machineSubtitle(operatorNames, liveSince, currentStatus)}
               action={
                 <div className="flex flex-wrap items-center gap-3">

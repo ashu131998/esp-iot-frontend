@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Search, ChevronDown, X } from 'lucide-react';
 
 import type { Machine, ProductionLine } from '@/lib/types';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
 
 export const MACHINE_PARAM = 'machine_id';
@@ -39,8 +40,9 @@ export function MachineSelector({
   );
 
   const filtered = useMemo(() => {
+    const sorted = sortByMachineName(machines);
     const q = search.toLowerCase().trim();
-    return q ? machines.filter((m) => m.name.toLowerCase().includes(q)) : machines;
+    return q ? sorted.filter((m) => m.name.toLowerCase().includes(q)) : sorted;
   }, [machines, search]);
 
   const grouped = useMemo(() => {
@@ -48,6 +50,9 @@ export function MachineSelector({
     for (const m of filtered) {
       if (!groups[m.line_id]) groups[m.line_id] = [];
       groups[m.line_id].push(m);
+    }
+    for (const id of Object.keys(groups)) {
+      groups[id] = sortByMachineName(groups[id]);
     }
     return groups;
   }, [filtered]);

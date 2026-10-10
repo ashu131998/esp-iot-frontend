@@ -21,6 +21,7 @@ import type {
   WorkerSchedule,
 } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
+import { sortByMachineName } from '@/lib/machine-sort';
 
 function qs(
   params?: DateRangeParams &
@@ -67,39 +68,69 @@ async function serverRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+function withSortedMachines<
+  T extends {
+    machines: Array<{ machine_id: string; name?: string; machine_name?: string }>;
+  },
+>(data: T): T {
+  return { ...data, machines: sortByMachineName(data.machines) } as T;
+}
+
 /** Request-scoped cached API for server components (dedupes layout + page fetches). */
 export const serverApi = {
   overview: cache((params?: DateRangeParams) =>
     serverRequest<PlatformOverview>(`/v1/overview${qs(params)}`),
   ),
   factories: cache(() => serverRequest<{ factories: Factory[] }>('/v1/factories')),
-  factory: cache((factoryId: string) =>
-    serverRequest<Factory & { machines: Machine[] }>(`/v1/factories/${factoryId}`),
-  ),
-  machines: cache((factoryId: string, lineId?: string) =>
-    serverRequest<{ factory_id: string; machines: Machine[] }>(
+  factory: cache(async (factoryId: string) => {
+    const data = await serverRequest<Factory & { machines: Machine[] }>(
+      `/v1/factories/${factoryId}`,
+    );
+    return { ...data, machines: sortByMachineName(data.machines ?? []) };
+  }),
+  machines: cache(async (factoryId: string, lineId?: string) => {
+    const data = await serverRequest<{ factory_id: string; machines: Machine[] }>(
       `/v1/factories/${factoryId}/machines${qs({ line_id: lineId })}`,
-    ),
-  ),
+    );
+    return withSortedMachines(data);
+  }),
   lines: cache((factoryId: string, limit?: number, offset?: number) =>
     serverRequest<{ factory_id: string; lines: ProductionLine[] }>(
       `/v1/factories/${factoryId}/lines${qs({ limit, offset })}`,
     ),
   ),
-  availability: cache((factoryId: string, params?: DateRangeParams) =>
-    serverRequest<AvailabilityResponse>(`/v1/factories/${factoryId}/metrics/availability${qs(params)}`),
+  availability: cache(async (factoryId: string, params?: DateRangeParams) =>
+    withSortedMachines(
+      await serverRequest<AvailabilityResponse>(
+        `/v1/factories/${factoryId}/metrics/availability${qs(params)}`,
+      ),
+    ),
   ),
-  energy: cache((factoryId: string, params?: DateRangeParams) =>
-    serverRequest<EnergyResponse>(`/v1/factories/${factoryId}/metrics/energy${qs(params)}`),
+  energy: cache(async (factoryId: string, params?: DateRangeParams) =>
+    withSortedMachines(
+      await serverRequest<EnergyResponse>(
+        `/v1/factories/${factoryId}/metrics/energy${qs(params)}`,
+      ),
+    ),
   ),
-  production: cache((factoryId: string, params?: DateRangeParams) =>
-    serverRequest<ProductionResponse>(`/v1/factories/${factoryId}/metrics/production${qs(params)}`),
+  production: cache(async (factoryId: string, params?: DateRangeParams) =>
+    withSortedMachines(
+      await serverRequest<ProductionResponse>(
+        `/v1/factories/${factoryId}/metrics/production${qs(params)}`,
+      ),
+    ),
   ),
-  uptime: cache((factoryId: string, params?: DateRangeParams) =>
-    serverRequest<UptimeResponse>(`/v1/factories/${factoryId}/uptime${qs(params)}`),
+  uptime: cache(async (factoryId: string, params?: DateRangeParams) =>
+    withSortedMachines(
+      await serverRequest<UptimeResponse>(`/v1/factories/${factoryId}/uptime${qs(params)}`),
+    ),
   ),
-  performance: cache((factoryId: string, params?: DateRangeParams) =>
-    serverRequest<PerformanceResponse>(`/v1/factories/${factoryId}/metrics/performance${qs(params)}`),
+  performance: cache(async (factoryId: string, params?: DateRangeParams) =>
+    withSortedMachines(
+      await serverRequest<PerformanceResponse>(
+        `/v1/factories/${factoryId}/metrics/performance${qs(params)}`,
+      ),
+    ),
   ),
   quality: cache((
     factoryId: string,

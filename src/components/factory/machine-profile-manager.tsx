@@ -228,10 +228,10 @@ export function MachineProfileManager({
     return map;
   }, [machines, profiles]);
 
-  const machinesSorted = useMemo(() => {
-    const list = filterMachinesByScope(machines, { machineId, lineId });
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [machines, machineId, lineId]);
+  const machinesSorted = useMemo(
+    () => filterMachinesByScope(machines, { machineId, lineId }),
+    [machines, machineId, lineId],
+  );
 
   return (
     <div className="space-y-6">

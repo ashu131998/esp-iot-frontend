@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 
+import { sortByMachineName } from '@/lib/machine-sort';
 import type { Machine, ProductionLine } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -24,12 +25,9 @@ export function MachineMultiSelect({
   const locked = useMemo(() => new Set(lockedIds), [lockedIds]);
   const machinesByLine = useMemo(() => {
     const groups = new Map<string, Machine[]>();
-    for (const m of machines) {
+    for (const m of sortByMachineName(machines)) {
       if (!groups.has(m.line_id)) groups.set(m.line_id, []);
       groups.get(m.line_id)!.push(m);
-    }
-    for (const list of groups.values()) {
-      list.sort((a, b) => a.name.localeCompare(b.name));
     }
     return groups;
   }, [machines]);

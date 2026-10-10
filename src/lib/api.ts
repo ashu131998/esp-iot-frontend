@@ -37,6 +37,7 @@ import type {
   CreateScheduleInput,
 } from './types';
 import { getClientCsrf } from './auth-context';
+import { sortByMachineName } from './machine-sort';
 import {
   type ApiRequestOptions,
   fetchWithSignal,
@@ -141,14 +142,21 @@ export const api = {
   factories: (options?: ApiRequestOptions) =>
     request<{ factories: Factory[] }>('/v1/factories', options),
 
-  factory: (factoryId: string, options?: ApiRequestOptions) =>
-    request<Factory & { machines: Machine[] }>(`/v1/factories/${factoryId}`, options),
+  factory: async (factoryId: string, options?: ApiRequestOptions) => {
+    const data = await request<Factory & { machines: Machine[] }>(
+      `/v1/factories/${factoryId}`,
+      options,
+    );
+    return { ...data, machines: sortByMachineName(data.machines ?? []) };
+  },
 
-  machines: (factoryId: string, params?: { line_id?: string }, options?: ApiRequestOptions) =>
-    request<{ factory_id: string; machines: Machine[] }>(
+  machines: async (factoryId: string, params?: { line_id?: string }, options?: ApiRequestOptions) => {
+    const data = await request<{ factory_id: string; machines: Machine[] }>(
       `/v1/factories/${factoryId}/machines${qs(params)}`,
       options,
-    ),
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
   lines: (factoryId: string, params?: PaginationParams, options?: ApiRequestOptions) =>
     request<{ factory_id: string; lines: ProductionLine[] }>(
@@ -156,29 +164,45 @@ export const api = {
       options,
     ),
 
-  availability: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
-    request<AvailabilityResponse>(
+  availability: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
+    const data = await request<AvailabilityResponse>(
       `/v1/factories/${factoryId}/metrics/availability${qs(params)}`,
       options,
-    ),
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
-  energy: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
-    request<EnergyResponse>(`/v1/factories/${factoryId}/metrics/energy${qs(params)}`, options),
+  energy: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
+    const data = await request<EnergyResponse>(
+      `/v1/factories/${factoryId}/metrics/energy${qs(params)}`,
+      options,
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
-  performance: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
-    request<PerformanceResponse>(
+  performance: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
+    const data = await request<PerformanceResponse>(
       `/v1/factories/${factoryId}/metrics/performance${qs(params)}`,
       options,
-    ),
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
-  production: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
-    request<ProductionResponse>(
+  production: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
+    const data = await request<ProductionResponse>(
       `/v1/factories/${factoryId}/metrics/production${qs(params)}`,
       options,
-    ),
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
-  uptime: (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) =>
-    request<UptimeResponse>(`/v1/factories/${factoryId}/uptime${qs(params)}`, options),
+  uptime: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
+    const data = await request<UptimeResponse>(
+      `/v1/factories/${factoryId}/uptime${qs(params)}`,
+      options,
+    );
+    return { ...data, machines: sortByMachineName(data.machines) };
+  },
 
   shiftReportSchedule: (factoryId: string, options?: ApiRequestOptions) =>
     request<ShiftReportScheduleResponse>(

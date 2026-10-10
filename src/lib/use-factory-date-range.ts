@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { isLiveDateParams, resolveDateRange } from '@/lib/date-range';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 
 /**
@@ -47,14 +48,16 @@ export function factoryMetricsApiRange(
 }
 
 /** Client-side narrow when API returns factory-wide rows or for single-machine selection. */
-export function filterMachinesByScope<T extends { machine_id: string; line_id?: string }>(
+export function filterMachinesByScope<
+  T extends { machine_id: string; line_id?: string; name?: string; machine_name?: string },
+>(
   machines: T[],
   { machineId, lineId }: FactoryScopeFilters,
 ): T[] {
   let list = machines;
   if (lineId) list = list.filter((m) => m.line_id === lineId);
   if (machineId) list = list.filter((m) => m.machine_id === machineId);
-  return list;
+  return sortByMachineName(list);
 }
 
 export function factoryScopeQueryKey({ lineId, machineId }: FactoryScopeFilters): [string, string] {

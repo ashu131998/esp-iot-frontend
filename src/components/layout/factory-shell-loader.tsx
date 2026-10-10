@@ -4,6 +4,7 @@ import { FactoryShell } from '@/components/layout/factory-shell';
 import { serverApi } from '@/lib/server-api';
 import { getFactoryConfig } from '@/lib/factory-config';
 import { filterTabsByFeatures } from '@/lib/factory-features';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 
 export async function FactoryShellLoader({
@@ -45,7 +46,7 @@ export async function FactoryShellLoader({
       tabs={visibleTabs}
       description={`${factory.location ?? ''} · ${factory.machines?.length ?? 0} machines · ${shiftLabel}`}
       refs={{
-        machines: factory.machines ?? [],
+        machines: sortByMachineName(factory.machines ?? []),
         lines: lines ?? [],
         minDate: factory.created_at,
       }}

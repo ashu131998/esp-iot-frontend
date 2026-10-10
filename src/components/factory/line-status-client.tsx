@@ -18,6 +18,7 @@ import type {
   ProductionMachine,
   UptimeMachine,
 } from '@/lib/types';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { formatNumber, formatPercent } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -67,6 +68,8 @@ export function LineStatusClient({
 
   const { availability, energy, production, uptime24h } = data;
 
+  const machineRows = useMemo(() => sortByMachineName(machines), [machines]);
+
   const availByMachine = availability.machines.reduce<Record<string, AvailabilityMachine>>(
     (acc, m) => { acc[m.machine_id] = m; return acc; },
     {},
@@ -110,7 +113,7 @@ export function LineStatusClient({
           description={`Metrics for ${rangeLabel} · timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
         />
 
-        {machines.length === 0 ? (
+        {machineRows.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No machines on this line.</p>
         ) : (
           <Table>
@@ -126,7 +129,7 @@ export function LineStatusClient({
               </TR>
             </THead>
             <TBody>
-              {machines.map((machine) => {
+              {machineRows.map((machine) => {
                 const avail = availByMachine[machine.machine_id];
                 const eng = energyByMachine[machine.machine_id];
                 const prod = productionByMachine[machine.machine_id];

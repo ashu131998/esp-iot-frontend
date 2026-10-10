@@ -29,6 +29,7 @@ import {
 } from '@/lib/date-range';
 import { useRefreshInfo } from '@/lib/refresh-context';
 import type { Machine, ProductionLine } from '@/lib/types';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
 
 // ── Presets ──────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ export function DateRangePicker({
   );
 
   const machinesForLine = useMemo(() => {
-    const list = machines ?? [];
+    const list = sortByMachineName(machines ?? []);
     return lineId ? list.filter((m) => m.line_id === lineId) : list;
   }, [machines, lineId]);
 
@@ -140,6 +141,9 @@ export function DateRangePicker({
     for (const m of filteredMachines) {
       if (!groups[m.line_id]) groups[m.line_id] = [];
       groups[m.line_id].push(m);
+    }
+    for (const id of Object.keys(groups)) {
+      groups[id] = sortByMachineName(groups[id]);
     }
     return groups;
   }, [filteredMachines]);

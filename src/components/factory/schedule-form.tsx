@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 import type {
   CreateScheduleInput,
@@ -91,7 +92,7 @@ export function ScheduleForm({
 
   const machinesByLine = useMemo(() => {
     const groups = new Map<string, Machine[]>();
-    for (const m of machines) {
+    for (const m of sortByMachineName(machines)) {
       if (!groups.has(m.line_id)) groups.set(m.line_id, []);
       groups.get(m.line_id)!.push(m);
     }

@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useNavigate, useIsNavigating } from '@/lib/navigation-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
+import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
 import type {
   Machine,
@@ -101,8 +102,9 @@ function SchedulingFilterBar({
   );
 
   const filteredMachines = useMemo(() => {
+    const sorted = sortByMachineName(machines);
     const q = machineSearch.toLowerCase().trim();
-    return q ? machines.filter((m) => m.name.toLowerCase().includes(q)) : machines;
+    return q ? sorted.filter((m) => m.name.toLowerCase().includes(q)) : sorted;
   }, [machines, machineSearch]);
 
   const groupedMachines = useMemo(() => {
@@ -110,6 +112,9 @@ function SchedulingFilterBar({
     for (const m of filteredMachines) {
       if (!groups[m.line_id]) groups[m.line_id] = [];
       groups[m.line_id].push(m);
+    }
+    for (const id of Object.keys(groups)) {
+      groups[id] = sortByMachineName(groups[id]);
     }
     return groups;
   }, [filteredMachines]);

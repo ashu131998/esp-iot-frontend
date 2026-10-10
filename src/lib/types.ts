@@ -368,8 +368,7 @@ export interface MachineConfigProfile {
 }
 
 export interface CreateConfigProfileInput {
-  machine_id?: string;
-  machine_ids?: string[];
+  machine_id: string;
   name: string;
   parameters: ConfigProfileParameter[];
 }

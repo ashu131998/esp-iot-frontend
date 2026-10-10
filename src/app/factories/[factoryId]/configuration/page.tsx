@@ -1,4 +1,5 @@
 import { MachineProfileManager } from '@/components/factory/machine-profile-manager';
+import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
 
@@ -11,9 +12,8 @@ export default async function ConfigurationPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { factoryId } = await params;
-  const [{ machines }, { lines }, profilesData, configData] = await Promise.all([
+  const [{ machines }, profilesData, configData] = await Promise.all([
     serverApi.machines(factoryId),
-    serverApi.lines(factoryId).catch(() => ({ lines: [] as import('@/lib/types').ProductionLine[] })),
     serverApi.configProfiles(factoryId).catch(() => ({ profiles: [] as import('@/lib/types').MachineConfigProfile[] })),
     serverApi.configurations(factoryId, 200, 0).catch(() => ({ configurations: [] as import('@/lib/types').MachineConfiguration[] })),
   ]);
@@ -29,14 +29,18 @@ export default async function ConfigurationPage({
   }
 
   return (
-    <NavDim className="p-4 sm:p-6 lg:p-8">
-      <MachineProfileManager
-        factoryId={factoryId}
-        machines={machines}
-        lines={lines}
-        profiles={profilesData.profiles ?? []}
-        lastAppliedAt={lastAppliedAt}
-      />
-    </NavDim>
+    <div className="space-y-6">
+      <div className="px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
+        <DateRangeToolbar hideDateRange />
+      </div>
+      <NavDim className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+        <MachineProfileManager
+          factoryId={factoryId}
+          machines={machines}
+          profiles={profilesData.profiles ?? []}
+          lastAppliedAt={lastAppliedAt}
+        />
+      </NavDim>
+    </div>
   );
 }

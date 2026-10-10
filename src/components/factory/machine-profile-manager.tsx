@@ -2,65 +2,49 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
-import { MachineMultiSelect } from '@/components/factory/machine-multi-select';
-import { Field, Input } from '@/components/ui/input';
+import { Field, Input, Select } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { formatDate } from '@/lib/utils';
 import type {
   ConfigProfileParameter,
+  CreateConfigProfileInput,
   Machine,
   MachineConfigProfile,
-  ProductionLine,
 } from '@/lib/types';
 
-type FormState = {
-  machine_ids: string[];
-  name: string;
-  parameters: ConfigProfileParameter[];
-};
+type FormState = CreateConfigProfileInput;
 
 const emptyParam = (): ConfigProfileParameter => ({ key: '', value: '', unit: '', description: '' });
 
 function ProfileForm({
   machines,
-  lines,
   initial,
-  editingProfileId,
+  lockMachine,
   onSave,
   onCancel,
   isSaving,
   error,
 }: {
   machines: Machine[];
-  lines?: ProductionLine[];
-  initial?: Partial<FormState> & { machine_id?: string };
-  editingProfileId?: string;
+  initial?: Partial<FormState>;
+  /** When editing, profile stays on this machine. */
+  lockMachine?: boolean;
   onSave: (form: FormState) => void;
   onCancel: () => void;
   isSaving: boolean;
   error?: string;
 }) {
-  const lockedMachineId = initial?.machine_id;
-
-  const initialMachineIds =
-    initial?.machine_ids?.length
-      ? initial.machine_ids
-      : lockedMachineId
-        ? [lockedMachineId]
-        : machines[0]?.machine_id
-          ? [machines[0].machine_id]
-          : [];
-
   const [form, setForm] = useState<FormState>({
-    machine_ids: initialMachineIds,
+    machine_id: initial?.machine_id ?? machines[0]?.machine_id ?? '',
     name: initial?.name ?? '',
     parameters: initial?.parameters?.length ? initial.parameters : [emptyParam()],
   });
@@ -82,7 +66,7 @@ function ProfileForm({
   }
 
   const canSave =
-    form.machine_ids.length > 0 &&
+    Boolean(form.machine_id) &&
     Boolean(form.name.trim()) &&
     form.parameters.length > 0 &&
     form.parameters.every((p) => p.key.trim() && p.value !== '');
@@ -94,6 +78,19 @@ function ProfileForm({
       </h4>
 
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <Field label="Machine">
+          <Select
+            value={form.machine_id}
+            disabled={lockMachine}
+            onChange={(e) => setForm((f) => ({ ...f, machine_id: e.target.value }))}
+          >
+            {machines.map((m) => (
+              <option key={m.machine_id} value={m.machine_id}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="Profile Name">
           <Input
             placeholder="e.g. Product A — High Speed"
@@ -101,31 +98,6 @@ function ProfileForm({
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
         </Field>
-      </div>
-
-      <div className="mb-4">
-        <Field
-          label={
-            editingProfileId
-              ? 'Machines (add more to copy this profile)'
-              : 'Machines'
-          }
-        >
-          <MachineMultiSelect
-            machines={machines}
-            lines={lines}
-            selectedIds={form.machine_ids}
-            lockedIds={lockedMachineId ? [lockedMachineId] : []}
-            onChange={(machine_ids) => setForm((f) => ({ ...f, machine_ids }))}
-          />
-        </Field>
-        {lockedMachineId && (
-          <p className="mt-1 text-xs text-muted">
-            This profile stays on{' '}
-            {machines.find((m) => m.machine_id === lockedMachineId)?.name ?? lockedMachineId}.
-            Select additional machines to create matching profiles for them.
-          </p>
-        )}
       </div>
 
       <p className="mb-2 text-xs font-medium text-muted">Parameters</p>
@@ -193,57 +165,40 @@ function ProfileForm({
   );
 }
 
-async function saveProfilesForMachines(
-  factoryId: string,
-  form: FormState,
-  opts?: { updateProfileId?: string },
-) {
-  const payload = {
-    name: form.name.trim(),
-    parameters: form.parameters,
-    machine_ids: form.machine_ids,
-  };
-
-  if (opts?.updateProfileId) {
-    await api.updateConfigProfile(factoryId, opts.updateProfileId, payload);
-    return;
-  }
-
-  await api.createConfigProfile(factoryId, payload);
-}
-
 export function MachineProfileManager({
   factoryId,
   machines,
-  lines,
   profiles,
   lastAppliedAt = {},
 }: {
   factoryId: string;
   machines: Machine[];
-  lines?: ProductionLine[];
   profiles: MachineConfigProfile[];
   lastAppliedAt?: Record<string, string>;
 }) {
   const router = useRouter();
   const { canWriteFactory } = useAuth();
-  const [showNew, setShowNew] = useState(false);
+  const { machineId, lineId } = useFactoryDateRange();
+  const [newProfileMachineId, setNewProfileMachineId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [profilePendingDelete, setProfilePendingDelete] = useState<MachineConfigProfile | null>(
     null,
   );
 
   const createMutation = useMutation({
-    mutationFn: (form: FormState) => saveProfilesForMachines(factoryId, form),
+    mutationFn: (form: FormState) => api.createConfigProfile(factoryId, form),
     onSuccess: () => {
       router.refresh();
-      setShowNew(false);
+      setNewProfileMachineId(null);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ profileId, form }: { profileId: string; form: FormState }) =>
-      saveProfilesForMachines(factoryId, form, { updateProfileId: profileId }),
+      api.updateConfigProfile(factoryId, profileId, {
+        name: form.name,
+        parameters: form.parameters,
+      }),
     onSuccess: () => {
       router.refresh();
       setEditingId(null);
@@ -260,121 +215,200 @@ export function MachineProfileManager({
 
   const machineById = Object.fromEntries(machines.map((m) => [m.machine_id, m]));
 
+  const profilesByMachine = useMemo(() => {
+    const map = new Map<string, MachineConfigProfile[]>();
+    for (const m of machines) map.set(m.machine_id, []);
+    for (const p of profiles) {
+      if (!map.has(p.machine_id)) map.set(p.machine_id, []);
+      map.get(p.machine_id)!.push(p);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return map;
+  }, [machines, profiles]);
+
+  const machinesSorted = useMemo(() => {
+    const list = filterMachinesByScope(machines, { machineId, lineId });
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [machines, machineId, lineId]);
+
   return (
-    <Card>
-      <CardHeader
-        title="Machine Profiles"
-        description="Manager-defined configuration presets. Operators select a profile when starting a shift."
-        action={
-          canWriteFactory && !showNew ? (
-            <Button size="sm" onClick={() => setShowNew(true)}>
-              + New Profile
-            </Button>
-          ) : undefined
-        }
-      />
-
-      {showNew && (
-        <div className="mb-6">
-          <ProfileForm
-            machines={machines}
-            lines={lines}
-            onSave={(form) => createMutation.mutate(form)}
-            onCancel={() => setShowNew(false)}
-            isSaving={createMutation.isPending}
-            error={createMutation.isError ? createMutation.error?.message : undefined}
-          />
-        </div>
-      )}
-
-      {profiles.length === 0 && !showNew ? (
-        <p className="py-8 text-center text-sm text-muted">
-          No profiles yet. Add named presets so operators can pick a configuration at shift start.
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Machine Profiles</h2>
+        <p className="mt-1 text-sm text-muted">
+          Configuration presets per machine. Operators select a profile when starting a shift.
         </p>
+      </div>
+
+      {machines.length === 0 ? (
+        <Card>
+          <p className="py-6 text-center text-sm text-muted">No machines registered for this factory.</p>
+        </Card>
+      ) : machinesSorted.length === 0 ? (
+        <Card>
+          <p className="py-6 text-center text-sm text-muted">
+            No machines match the current line or machine filter.
+          </p>
+        </Card>
       ) : (
-        <div className="space-y-4">
-          {profiles.map((profile) =>
-            editingId === profile.profile_id ? (
-              <div key={profile.profile_id}>
-                <ProfileForm
-                  machines={machines}
-                  lines={lines}
-                  initial={profile}
-                  editingProfileId={profile.profile_id}
-                  onSave={(form) =>
-                    updateMutation.mutate({ profileId: profile.profile_id, form })
-                  }
-                  onCancel={() => setEditingId(null)}
-                  isSaving={updateMutation.isPending}
-                  error={updateMutation.isError ? updateMutation.error?.message : undefined}
-                />
-              </div>
-            ) : (
-              <div key={profile.profile_id} className="rounded-lg border p-4">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-sm">{profile.name}</span>
-                    <Badge className="bg-slate-100 text-slate-600 text-xs">
-                      {machineById[profile.machine_id]?.name ?? profile.machine_id}
-                    </Badge>
-                    <Badge className="bg-blue-50 text-blue-700 text-xs">
-                      {profile.parameters.length} param{profile.parameters.length !== 1 ? 's' : ''}
-                    </Badge>
-                    {lastAppliedAt[profile.profile_id] ? (
-                      <span className="text-xs text-muted">
-                        Last run: {formatDate(lastAppliedAt[profile.profile_id])}
-                      </span>
+        machinesSorted.map((machine) => {
+          const machineProfiles = profilesByMachine.get(machine.machine_id) ?? [];
+          const isAddingHere = newProfileMachineId === machine.machine_id;
+          const editingHere = machineProfiles.some((p) => p.profile_id === editingId);
+
+          const profileCountLabel =
+            machineProfiles.length === 0
+              ? 'No profiles yet'
+              : `${machineProfiles.length} profile${machineProfiles.length !== 1 ? 's' : ''}`;
+
+          return (
+            <Card key={machine.machine_id}>
+              <CardHeader
+                title={
+                  <span className="flex flex-wrap items-center gap-2">
+                    {machine.name}
+                    <Badge className="bg-slate-100 font-normal text-slate-700">{profileCountLabel}</Badge>
+                  </span>
+                }
+                description={`${machine.line_id} · ${machine.type}`}
+                action={
+                  canWriteFactory && !isAddingHere && !editingHere ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditingId(null);
+                        setNewProfileMachineId(machine.machine_id);
+                      }}
+                    >
+                      + Profile
+                    </Button>
+                  ) : undefined
+                }
+              />
+
+              {isAddingHere && (
+                <div className="mb-4">
+                  <ProfileForm
+                    machines={machines}
+                    initial={{ machine_id: machine.machine_id }}
+                    lockMachine
+                    onSave={(form) => createMutation.mutate(form)}
+                    onCancel={() => setNewProfileMachineId(null)}
+                    isSaving={createMutation.isPending}
+                    error={createMutation.isError ? createMutation.error?.message : undefined}
+                  />
+                </div>
+              )}
+
+              {machineProfiles.length === 0 && !isAddingHere ? (
+                <p className="text-sm text-muted">No profiles for this machine yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {machineProfiles.map((profile, profileIndex) =>
+                    editingId === profile.profile_id ? (
+                      <div
+                        key={profile.profile_id}
+                        className={profileIndex > 0 ? 'border-t border-dashed pt-4' : undefined}
+                      >
+                        <ProfileForm
+                          machines={machines}
+                          initial={profile}
+                          lockMachine
+                          onSave={(form) =>
+                            updateMutation.mutate({ profileId: profile.profile_id, form })
+                          }
+                          onCancel={() => setEditingId(null)}
+                          isSaving={updateMutation.isPending}
+                          error={
+                            updateMutation.isError ? updateMutation.error?.message : undefined
+                          }
+                        />
+                      </div>
                     ) : (
-                      <span className="text-xs text-muted">Never applied</span>
-                    )}
-                  </div>
-                  {canWriteFactory && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingId(profile.profile_id)}
+                      <div
+                        key={profile.profile_id}
+                        className={
+                          profileIndex > 0
+                            ? 'mt-4 rounded-lg border border-dashed bg-slate-50/50 p-4'
+                            : 'rounded-lg border bg-slate-50/50 p-4'
+                        }
                       >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600"
-                        onClick={() => setProfilePendingDelete(profile)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {machineProfiles.length > 1 && (
+                              <span className="text-xs font-medium text-muted">
+                                Profile {profileIndex + 1} of {machineProfiles.length}
+                              </span>
+                            )}
+                            <span className="font-semibold text-sm">{profile.name}</span>
+                            <Badge className="bg-blue-50 text-blue-700 text-xs">
+                              {profile.parameters.length} param
+                              {profile.parameters.length !== 1 ? 's' : ''}
+                            </Badge>
+                            {lastAppliedAt[profile.profile_id] ? (
+                              <span className="text-xs text-muted">
+                                Last run: {formatDate(lastAppliedAt[profile.profile_id])}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted">Never applied</span>
+                            )}
+                          </div>
+                          {canWriteFactory && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setNewProfileMachineId(null);
+                                  setEditingId(profile.profile_id);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => setProfilePendingDelete(profile)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {profile.parameters.length > 0 && (
+                          <Table className="border-0 bg-transparent">
+                            <THead>
+                              <TR>
+                                <TH>Parameter</TH>
+                                <TH>Value</TH>
+                                <TH>Unit</TH>
+                                <TH>Description</TH>
+                              </TR>
+                            </THead>
+                            <TBody>
+                              {profile.parameters.map((p, i) => (
+                                <TR key={i}>
+                                  <TD className="font-mono text-xs">{p.key}</TD>
+                                  <TD className="font-semibold">{String(p.value)}</TD>
+                                  <TD>{p.unit || '—'}</TD>
+                                  <TD className="text-muted">{p.description || '—'}</TD>
+                                </TR>
+                              ))}
+                            </TBody>
+                          </Table>
+                        )}
+                      </div>
+                    ),
                   )}
                 </div>
-
-                {profile.parameters.length > 0 && (
-                  <Table className="border-0">
-                    <THead>
-                      <TR>
-                        <TH>Parameter</TH>
-                        <TH>Value</TH>
-                        <TH>Unit</TH>
-                        <TH>Description</TH>
-                      </TR>
-                    </THead>
-                    <TBody>
-                      {profile.parameters.map((p, i) => (
-                        <TR key={i}>
-                          <TD className="font-mono text-xs">{p.key}</TD>
-                          <TD className="font-semibold">{String(p.value)}</TD>
-                          <TD>{p.unit || '—'}</TD>
-                          <TD className="text-muted">{p.description || '—'}</TD>
-                        </TR>
-                      ))}
-                    </TBody>
-                  </Table>
-                )}
-              </div>
-            ),
-          )}
-        </div>
+              )}
+            </Card>
+          );
+        })
       )}
 
       <Modal
@@ -416,6 +450,6 @@ export function MachineProfileManager({
           <p className="mt-3 text-sm text-red-600">{deleteMutation.error.message}</p>
         )}
       </Modal>
-    </Card>
+    </div>
   );
 }

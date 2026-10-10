@@ -8,7 +8,12 @@ import { api } from '@/lib/api';
 import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { formatPercent } from '@/lib/utils';
 
 const PERFORMANCE_REFRESH_MS = 60_000;
@@ -24,24 +29,24 @@ function getCurrentShiftName(from: string, to: string): string | null {
 }
 
 export function PerformanceCards({ factoryId }: { factoryId: string }) {
-  const { range, live, machineId } = useFactoryDateRange();
+  const { range, live, machineId, lineId } = useFactoryDateRange();
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const refetchInterval = useRefetchInterval(PERFORMANCE_REFRESH_MS);
   const rangeLabel = formatRangeLabel(range.from, range.to);
   const shiftName = getCurrentShiftName(range.from, range.to);
   const timeLabel = shiftName ?? rangeLabel;
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['performance', factoryId, live ? 'live' : range.from, live ? 'live' : range.to],
-    queryFn: ({ signal }) => api.performance(factoryId, range, { signal }),
+    queryKey: ['performance', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, ...scopeKey],
+    queryFn: ({ signal }) => api.performance(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
   useSetRefreshInfo(dataUpdatedAt, PERFORMANCE_REFRESH_SEC);
 
-  const allMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const allMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const avgPerformance =
     allMachines.length > 0

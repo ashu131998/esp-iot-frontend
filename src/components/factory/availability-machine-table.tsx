@@ -15,7 +15,12 @@ import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatPercent, statusLabel } from '@/lib/utils';
 
@@ -29,8 +34,10 @@ export function AvailabilityMachineTable({
   to?: string;
 }) {
   const { minDate } = useFactoryRefs();
-  const { machineId } = useFactoryDateRange();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
   const refetchInterval = useRefetchInterval(60_000);
 
@@ -38,19 +45,24 @@ export function AvailabilityMachineTable({
   const [{ data }, { data: uptimeData }] = useSuspenseQueries({
     queries: [
       {
-        queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live'],
-        queryFn: ({ signal }: { signal: AbortSignal }) => api.availability(factoryId, range, { signal }),
+        queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+        queryFn: ({ signal }: { signal: AbortSignal }) => api.availability(factoryId, apiRange, { signal }),
         refetchInterval,
         staleTime: 0,
       },
       {
-        queryKey: ['uptime-24h', factoryId, machineId ?? 'all'],
+        queryKey: ['uptime-24h', factoryId, ...scopeKey],
         queryFn: ({ signal }: { signal: AbortSignal }) => {
           const now = new Date();
           const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
           return api.uptime(
             factoryId,
-            { from: from24h, to: now.toISOString(), ...(machineId ? { machine_id: machineId } : {}) },
+            {
+              from: from24h,
+              to: now.toISOString(),
+              ...(machineId ? { machine_id: machineId } : {}),
+              ...(lineId ? { line_id: lineId } : {}),
+            },
             { signal },
           );
         },
@@ -60,9 +72,7 @@ export function AvailabilityMachineTable({
     ],
   });
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const searchParams = useSearchParams();
   const { page, limit } = resolvePagination({

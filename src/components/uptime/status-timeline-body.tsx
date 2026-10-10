@@ -8,7 +8,7 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
@@ -113,7 +113,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const detailTo = data.detail_to ?? data.timeline_to;
 
   const displayRows = expandUptimeMachines(
-    machineId ? data.machines.filter((m) => m.machine_id === machineId) : data.machines,
+    filterMachinesByScope(data.machines, { machineId, lineId }),
   );
 
   const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;

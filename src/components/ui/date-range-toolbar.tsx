@@ -21,6 +21,7 @@ export function DateRangeToolbar({
   machines,
   lines,
   selectedMachineId,
+  selectedLineId,
   hideDateRange = false,
   hideMachineSelector = false,
 }: {
@@ -31,6 +32,7 @@ export function DateRangeToolbar({
   machines?: Machine[];
   lines?: ProductionLine[];
   selectedMachineId?: string;
+  selectedLineId?: string;
   hideDateRange?: boolean;
   hideMachineSelector?: boolean;
 }) {
@@ -44,7 +46,7 @@ export function DateRangeToolbar({
       from={sp.get('from') ?? from ?? undefined}
       to={sp.get('to') ?? to ?? undefined}
       machineId={sp.get('machine_id') ?? selectedMachineId ?? undefined}
-      lineId={sp.get('line_id') ?? undefined}
+      lineId={sp.get('line_id') ?? selectedLineId ?? undefined}
       machines={hideMachineSelector ? undefined : machines ?? refs?.machines}
       lines={lines ?? refs?.lines}
       hideDateRange={hideDateRange}

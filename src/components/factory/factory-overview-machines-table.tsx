@@ -13,6 +13,12 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { useClientPagination } from '@/lib/use-client-pagination';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
@@ -30,15 +36,22 @@ export function FactoryOverviewMachinesTable({
   to?: string;
 }) {
   const { minDate, machines } = useFactoryRefs();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
   const rangeLabel = formatRangeLabel(range.from, range.to);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
+  const scopedMachines = useMemo(
+    () => filterMachinesByScope(machines, { machineId, lineId }),
+    [machines, machineId, lineId],
+  );
   const refetchInterval = useRefetchInterval(REFRESH_MS);
 
   const { page, limit, offset, setPaginationParams } = useClientPagination();
 
   const pageMachineIds = useMemo(
-    () => machines.slice(offset, offset + limit).map((m) => m.machine_id),
-    [machines, offset, limit],
+    () => scopedMachines.slice(offset, offset + limit).map((m) => m.machine_id),
+    [scopedMachines, offset, limit],
   );
   const pageMachineIdsKey = pageMachineIds.join(',');
 
@@ -46,28 +59,28 @@ export function FactoryOverviewMachinesTable({
     useSuspenseQueries({
       queries: [
         {
-          queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live'],
+          queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
           queryFn: ({ signal }: { signal: AbortSignal }) =>
-            api.availability(factoryId, range, { signal }),
+            api.availability(factoryId, apiRange, { signal }),
           refetchInterval,
           staleTime: 0,
         },
         {
-          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live'],
+          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
           queryFn: ({ signal }: { signal: AbortSignal }) =>
-            api.energy(factoryId, range, { signal }),
+            api.energy(factoryId, apiRange, { signal }),
           refetchInterval,
           staleTime: 0,
         },
         {
-          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live'],
+          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
           queryFn: ({ signal }: { signal: AbortSignal }) =>
-            api.production(factoryId, range, { signal }),
+            api.production(factoryId, apiRange, { signal }),
           refetchInterval,
           staleTime: 0,
         },
         {
-          queryKey: ['uptime-24h-overview', factoryId, page, limit, pageMachineIdsKey],
+          queryKey: ['uptime-24h-overview', factoryId, page, limit, pageMachineIdsKey, ...scopeKey],
           queryFn: ({ signal }: { signal: AbortSignal }) => {
             if (pageMachineIds.length === 0) {
               return Promise.resolve({ machines: [] });
@@ -97,7 +110,7 @@ export function FactoryOverviewMachinesTable({
     uptime24h.machines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
   );
 
-  const machineRows = machines.map((m) => {
+  const machineRows = scopedMachines.map((m) => {
     const avail = availability.machines.find((a) => a.machine_id === m.machine_id);
     const eng = energy.machines.find((e) => e.machine_id === m.machine_id);
     const prod = production.machines.find((p) => p.machine_id === m.machine_id);
@@ -106,7 +119,7 @@ export function FactoryOverviewMachinesTable({
   });
 
   const pageRows = machineRows.slice(offset, offset + limit);
-  const total = machines.length;
+  const total = scopedMachines.length;
 
   function currentStatus(
     uptime?: (typeof uptime24h.machines)[0],

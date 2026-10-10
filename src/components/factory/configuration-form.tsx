@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { MachineMultiSelect } from '@/components/factory/machine-multi-select';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -23,8 +24,10 @@ export function ConfigurationForm({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<ConfigScope>('machine');
-  const [form, setForm] = useState<CreateConfigurationInput>({
-    machine_id: machines[0]?.machine_id ?? '',
+  const [machineIds, setMachineIds] = useState<string[]>(
+    machines[0]?.machine_id ? [machines[0].machine_id] : [],
+  );
+  const [form, setForm] = useState<Omit<CreateConfigurationInput, 'machine_id'>>({
     line_id: lines[0]?.line_id ?? '',
     key: '',
     value: '',
@@ -33,8 +36,8 @@ export function ConfigurationForm({
   });
 
   const mutation = useMutation({
-    mutationFn: () => {
-      const payload: CreateConfigurationInput = {
+    mutationFn: async () => {
+      const payload = {
         key: form.key,
         value: form.value,
         unit: form.unit,
@@ -42,12 +45,10 @@ export function ConfigurationForm({
       };
 
       if (scope === 'machine') {
-        payload.machine_id = form.machine_id;
-      } else {
-        payload.line_id = form.line_id;
+        return api.createConfiguration(factoryId, { ...payload, machine_ids: machineIds });
       }
 
-      return api.createConfiguration(factoryId, payload);
+      return api.createConfiguration(factoryId, { ...payload, line_id: form.line_id });
     },
     onSuccess: () => {
       router.refresh();
@@ -59,7 +60,7 @@ export function ConfigurationForm({
   const canSave =
     form.key &&
     form.value !== '' &&
-    (scope === 'machine' ? Boolean(form.machine_id) : Boolean(form.line_id));
+    (scope === 'machine' ? machineIds.length > 0 : Boolean(form.line_id));
 
   if (!open) {
     return (
@@ -84,18 +85,16 @@ export function ConfigurationForm({
         </Field>
 
         {scope === 'machine' ? (
-          <Field label="Machine">
-            <Select
-              value={form.machine_id}
-              onChange={(e) => setForm({ ...form, machine_id: e.target.value })}
-            >
-              {machines.map((m) => (
-                <option key={m.machine_id} value={m.machine_id}>
-                  {m.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Machines">
+              <MachineMultiSelect
+                machines={machines}
+                lines={lines}
+                selectedIds={machineIds}
+                onChange={setMachineIds}
+              />
+            </Field>
+          </div>
         ) : (
           <Field label="Line">
             <Select

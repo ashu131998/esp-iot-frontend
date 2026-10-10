@@ -8,7 +8,10 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 
 export function UptimeChartSection({ factoryId }: { factoryId: string }) {
@@ -27,7 +30,7 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
   });
 
   const summaryData = expandUptimeMachines(
-    machineId ? data.machines.filter((m) => m.machine_id === machineId) : data.machines,
+    filterMachinesByScope(data.machines, { machineId, lineId }),
   ).map((m) => ({
     name: m.display_name,
     up: m.up_hours,

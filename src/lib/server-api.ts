@@ -24,7 +24,7 @@ import type { AuthUser } from '@/lib/auth-types';
 
 function qs(
   params?: DateRangeParams &
-    PaginationParams & { machine_id?: string; status?: string },
+    PaginationParams & { machine_id?: string; line_id?: string; status?: string },
 ): string {
   if (!params) return '';
   const search = new URLSearchParams();
@@ -108,9 +108,10 @@ export const serverApi = {
     limit: number,
     offset: number,
     machineId?: string,
+    lineId?: string,
   ) =>
     serverRequest<{ factory_id: string; records: QualityRecord[] } & PaginatedMeta>(
-      `/v1/factories/${factoryId}/quality${qs({ from, to, limit, offset, machine_id: machineId })}`,
+      `/v1/factories/${factoryId}/quality${qs({ from, to, limit, offset, machine_id: machineId, line_id: lineId })}`,
     ),
   ),
   configurations: cache((

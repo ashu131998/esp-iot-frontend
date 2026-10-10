@@ -11,8 +11,9 @@ export default async function ConfigurationPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { factoryId } = await params;
-  const [{ machines }, profilesData, configData] = await Promise.all([
+  const [{ machines }, { lines }, profilesData, configData] = await Promise.all([
     serverApi.machines(factoryId),
+    serverApi.lines(factoryId).catch(() => ({ lines: [] as import('@/lib/types').ProductionLine[] })),
     serverApi.configProfiles(factoryId).catch(() => ({ profiles: [] as import('@/lib/types').MachineConfigProfile[] })),
     serverApi.configurations(factoryId, 200, 0).catch(() => ({ configurations: [] as import('@/lib/types').MachineConfiguration[] })),
   ]);
@@ -32,6 +33,7 @@ export default async function ConfigurationPage({
       <MachineProfileManager
         factoryId={factoryId}
         machines={machines}
+        lines={lines}
         profiles={profilesData.profiles ?? []}
         lastAppliedAt={lastAppliedAt}
       />

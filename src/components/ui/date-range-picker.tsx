@@ -314,8 +314,8 @@ export function DateRangePicker({
   const rangeEnd   = draftTo ?? (draftFrom && hoverDate && !isBefore(hoverDate, draftFrom) ? hoverDate : null);
 
   const triggerLabel = `${format(parseISO(current.from), 'd MMM yyyy, HH:mm')} → ${format(parseISO(current.to), 'd MMM yyyy, HH:mm')}`;
-  const showLines = lines && lines.length > 0;
   const showMachines = machines && machines.length > 0;
+  const showLines = showMachines && lines && lines.length > 0;
 
   return (
     <div className={cn('relative flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm ring-1 ring-gray-100', className)}>

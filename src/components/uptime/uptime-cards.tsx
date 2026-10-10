@@ -7,7 +7,10 @@ import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { formatNumber, formatPercent } from '@/lib/utils';
 
 export function UptimeCards({ factoryId }: { factoryId: string }) {
@@ -25,9 +28,7 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
     staleTime: 0,
   });
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const withAvail = displayMachines.filter((m) => m.availability_percent !== null);
   const overallAvailability =

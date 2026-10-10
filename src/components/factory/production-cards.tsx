@@ -10,7 +10,12 @@ import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 
 const PRODUCTION_REFRESH_MS = 60_000;
 const PRODUCTION_REFRESH_SEC = 60;
@@ -34,23 +39,23 @@ export function ProductionCards({
   to?: string;
 }) {
   const { minDate } = useFactoryRefs();
-  const { machineId } = useFactoryDateRange();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
   const refetchInterval = useRefetchInterval(PRODUCTION_REFRESH_MS);
 
   const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['production', factoryId, from ?? 'live', to ?? 'live'],
-    queryFn: ({ signal }) => api.production(factoryId, range, { signal }),
+    queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+    queryFn: ({ signal }) => api.production(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
   useSetRefreshInfo(dataUpdatedAt, PRODUCTION_REFRESH_SEC);
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const totalUnits = displayMachines.reduce((s, m) => s + m.units_produced, 0);
   const rangeLabel = formatRangeLabel(range.from, range.to);

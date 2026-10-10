@@ -20,7 +20,7 @@ export default async function LineDetailPage({
   searchParams,
 }: {
   params: Promise<{ factoryId: string; lineId: string }>;
-  searchParams: Promise<{ from?: string; to?: string; machine_id?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId, lineId } = await params;
   const sp = await searchParams;
@@ -28,24 +28,21 @@ export default async function LineDetailPage({
   const factory = await serverApi.factory(factoryId);
   const range = resolveDateRange(sp, factory.created_at);
 
-  const [{ lines }, { machines }, configsData, profilesData] = await Promise.all([
+  const activeLineId = sp.line_id ?? lineId;
+
+  const [{ lines }, { machines: allMachines }, configsData, profilesData] = await Promise.all([
     serverApi.lines(factoryId),
-    serverApi.machines(factoryId, lineId),
-    serverApi.configurations(factoryId, 200, 0, undefined, lineId),
+    serverApi.machines(factoryId),
+    serverApi.configurations(factoryId, 200, 0, undefined, activeLineId),
     serverApi.configProfiles(factoryId).catch(() => ({ profiles: [] as import('@/lib/types').MachineConfigProfile[] })),
   ]);
 
   const line = lines.find((l) => l.line_id === lineId);
+  const lineMachines = allMachines.filter((m) => m.line_id === activeLineId);
 
-  // For the machine selector on this page, only show machines on this line
-  const lineMachines = machines;
-  // The lines list for grouping in the selector — just the current line is sufficient
-  const lineForSelector = lines.filter((l) => l.line_id === lineId);
-
-  // Filter machines to display if a specific machine is selected
   const displayMachines = sp.machine_id
-    ? machines.filter((m) => m.machine_id === sp.machine_id)
-    : machines;
+    ? lineMachines.filter((m) => m.machine_id === sp.machine_id)
+    : lineMachines;
 
   const configsByMachine = (configsData.configurations ?? []).reduce<Record<string, number>>(
     (acc, c) => {
@@ -58,15 +55,15 @@ export default async function LineDetailPage({
   // Prefetch live metrics so the client component renders immediately on first load
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
-    queryKey: ['line-status', factoryId, lineId, sp.from ?? null, sp.to ?? null],
+    queryKey: ['line-status', factoryId, activeLineId, sp.from ?? null, sp.to ?? null],
     queryFn: async () => {
       const now = new Date();
       const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const [availability, energy, production, uptime24h] = await Promise.all([
-        serverApi.availability(factoryId, { ...range, line_id: lineId }),
-        serverApi.energy(factoryId, { ...range, line_id: lineId }),
-        serverApi.production(factoryId, { ...range, line_id: lineId }),
-        serverApi.uptime(factoryId, { from: from24h, to: now.toISOString(), line_id: lineId }),
+        serverApi.availability(factoryId, { ...range, line_id: activeLineId }),
+        serverApi.energy(factoryId, { ...range, line_id: activeLineId }),
+        serverApi.production(factoryId, { ...range, line_id: activeLineId }),
+        serverApi.uptime(factoryId, { from: from24h, to: now.toISOString(), line_id: activeLineId }),
       ]);
       return { availability, energy, production, uptime24h };
     },
@@ -96,7 +93,7 @@ export default async function LineDetailPage({
             )}
           </div>
           <Badge className="bg-blue-50 text-blue-700 shrink-0">
-            {machines.length} machine{machines.length !== 1 ? 's' : ''}
+            {lineMachines.length} machine{lineMachines.length !== 1 ? 's' : ''}
           </Badge>
         </div>
       )}
@@ -105,8 +102,9 @@ export default async function LineDetailPage({
         minDate={factory.created_at}
         from={sp.from}
         to={sp.to}
-        machines={lineMachines}
-        lines={lineForSelector}
+        machines={allMachines}
+        lines={lines}
+        selectedLineId={activeLineId}
         selectedMachineId={sp.machine_id}
       />
 
@@ -117,13 +115,13 @@ export default async function LineDetailPage({
             fallback={
               <div className="space-y-6">
                 <StatGridSkeleton count={3} />
-                <TableSkeleton rows={machines.length || 3} cols={7} />
+                <TableSkeleton rows={lineMachines.length || 3} cols={7} />
               </div>
             }
           >
             <LineStatusClient
               factoryId={factoryId}
-              lineId={lineId}
+              lineId={activeLineId}
               machines={displayMachines}
               configsByMachine={configsByMachine}
               from={sp.from}
@@ -137,7 +135,7 @@ export default async function LineDetailPage({
       {/* Operator configuration — static, doesn't need to auto-refresh */}
       <LineMachineConfig
         factoryId={factoryId}
-        machines={machines}
+        machines={lineMachines}
         configurations={configsData.configurations ?? []}
         profiles={profilesData.profiles ?? []}
       />

@@ -377,7 +377,9 @@ export const api = {
     body: CreateConfigurationInput,
     options?: ApiRequestOptions,
   ) =>
-    request<MachineConfiguration>(`/v1/factories/${factoryId}/configurations`, {
+    request<
+      MachineConfiguration | { factory_id: string; configurations: MachineConfiguration[] }
+    >(`/v1/factories/${factoryId}/configurations`, {
       method: 'POST',
       body: JSON.stringify(body),
       ...options,
@@ -416,11 +418,14 @@ export const api = {
     body: CreateConfigProfileInput,
     options?: ApiRequestOptions,
   ) =>
-    request<MachineConfigProfile>(`/v1/factories/${factoryId}/config-profiles`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      ...options,
-    }),
+    request<MachineConfigProfile | { factory_id: string; profiles: MachineConfigProfile[] }>(
+      `/v1/factories/${factoryId}/config-profiles`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+        ...options,
+      },
+    ),
 
   updateConfigProfile: (
     factoryId: string,

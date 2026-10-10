@@ -16,6 +16,7 @@ async function QualityContent({
   page,
   limit,
   machineId,
+  lineId,
 }: {
   factoryId: string;
   from?: string;
@@ -23,9 +24,15 @@ async function QualityContent({
   page?: string;
   limit?: string;
   machineId?: string;
+  lineId?: string;
 }) {
   const factory = await serverApi.factory(factoryId);
-  const { machines } = await serverApi.machines(factoryId);
+  const { machines: allMachines } = await serverApi.machines(factoryId);
+  const machines = lineId
+    ? allMachines.filter((m) => m.line_id === lineId)
+    : machineId
+      ? allMachines.filter((m) => m.machine_id === machineId)
+      : allMachines;
   const range = resolveDateRange({ from, to }, factory.created_at);
   const rangeLabel = formatRangeLabel(range.from, range.to);
   const pagination = resolvePagination({ page, limit });
@@ -36,6 +43,7 @@ async function QualityContent({
     pagination.limit,
     pagination.offset,
     machineId,
+    lineId,
   );
 
   return (
@@ -63,7 +71,7 @@ export default async function QualityPage({
   searchParams,
 }: {
   params: Promise<{ factoryId: string }>;
-  searchParams: Promise<{ from?: string; to?: string; page?: string; limit?: string; machine_id?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; page?: string; limit?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId } = await params;
   const sp = await searchParams;
@@ -82,6 +90,7 @@ export default async function QualityPage({
             page={sp.page}
             limit={sp.limit}
             machineId={sp.machine_id}
+            lineId={sp.line_id}
           />
         </Suspense>
       </NavDim>

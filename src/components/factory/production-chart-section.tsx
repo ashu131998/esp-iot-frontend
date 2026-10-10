@@ -9,7 +9,12 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 
 export function ProductionChartSection({
   factoryId,
@@ -21,21 +26,21 @@ export function ProductionChartSection({
   to?: string;
 }) {
   const { minDate } = useFactoryRefs();
-  const { machineId } = useFactoryDateRange();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
   const refetchInterval = useRefetchInterval(60_000);
 
   const { data } = useSuspenseQuery({
-    queryKey: ['production', factoryId, from ?? 'live', to ?? 'live'],
-    queryFn: ({ signal }) => api.production(factoryId, range, { signal }),
+    queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+    queryFn: ({ signal }) => api.production(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const chartData = displayMachines.map((m) => ({ name: m.machine_name, units: m.units_produced }));
 

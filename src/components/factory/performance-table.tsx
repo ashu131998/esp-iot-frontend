@@ -10,23 +10,28 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { formatPercent } from '@/lib/utils';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
-  const { range, live, machineId } = useFactoryDateRange();
+  const { range, live, machineId, lineId } = useFactoryDateRange();
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const refetchInterval = useRefetchInterval(60_000);
 
   const { data } = useSuspenseQuery({
-    queryKey: ['performance', factoryId, live ? 'live' : range.from, live ? 'live' : range.to],
-    queryFn: ({ signal }) => api.performance(factoryId, range, { signal }),
+    queryKey: ['performance', factoryId, live ? 'live' : range.from, live ? 'live' : range.to, ...scopeKey],
+    queryFn: ({ signal }) => api.performance(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
-  const allMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const allMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const searchParams = useSearchParams();
   const { page, limit } = resolvePagination({

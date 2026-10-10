@@ -9,7 +9,12 @@ import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 
 export function AvailabilityChartSection({
   factoryId,
@@ -21,22 +26,22 @@ export function AvailabilityChartSection({
   to?: string;
 }) {
   const { minDate } = useFactoryRefs();
-  const { machineId } = useFactoryDateRange();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
   const rangeLabel = formatRangeLabel(range.from, range.to);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
   const refetchInterval = useRefetchInterval(60_000);
 
   const { data } = useSuspenseQuery({
-    queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live'],
-    queryFn: ({ signal }) => api.availability(factoryId, range, { signal }),
+    queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+    queryFn: ({ signal }) => api.availability(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const chartData = displayMachines.map((m) => ({
     name: m.machine_name,

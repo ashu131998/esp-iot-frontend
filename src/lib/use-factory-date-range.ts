@@ -35,3 +35,28 @@ export function useFactoryDateRange() {
 
   return { from, to, machineId, lineId, range, live, rangeKey, minDate };
 }
+
+export type FactoryScopeFilters = { machineId?: string; lineId?: string };
+
+/** Query params for metrics endpoints that support server-side line filtering. */
+export function factoryMetricsApiRange(
+  range: { from: string; to: string },
+  { lineId }: FactoryScopeFilters,
+) {
+  return { ...range, ...(lineId ? { line_id: lineId } : {}) };
+}
+
+/** Client-side narrow when API returns factory-wide rows or for single-machine selection. */
+export function filterMachinesByScope<T extends { machine_id: string; line_id?: string }>(
+  machines: T[],
+  { machineId, lineId }: FactoryScopeFilters,
+): T[] {
+  let list = machines;
+  if (lineId) list = list.filter((m) => m.line_id === lineId);
+  if (machineId) list = list.filter((m) => m.machine_id === machineId);
+  return list;
+}
+
+export function factoryScopeQueryKey({ lineId, machineId }: FactoryScopeFilters): [string, string] {
+  return [lineId ?? '', machineId ?? ''];
+}

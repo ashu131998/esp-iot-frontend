@@ -10,7 +10,12 @@ import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
-import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import {
+  factoryMetricsApiRange,
+  factoryScopeQueryKey,
+  filterMachinesByScope,
+  useFactoryDateRange,
+} from '@/lib/use-factory-date-range';
 import { formatNumber } from '@/lib/utils';
 
 const ENERGY_REFRESH_MS = 60_000;
@@ -38,23 +43,23 @@ export function EnergyCards({
   to?: string;
 }) {
   const { minDate } = useFactoryRefs();
-  const { machineId } = useFactoryDateRange();
+  const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
   const refetchInterval = useRefetchInterval(ENERGY_REFRESH_MS);
 
   const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live'],
-    queryFn: ({ signal }) => api.energy(factoryId, range, { signal }),
+    queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+    queryFn: ({ signal }) => api.energy(factoryId, apiRange, { signal }),
     refetchInterval,
     staleTime: 0,
   });
 
   useSetRefreshInfo(dataUpdatedAt, ENERGY_REFRESH_SEC);
 
-  const displayMachines = machineId
-    ? data.machines.filter((m) => m.machine_id === machineId)
-    : data.machines;
+  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const totalEnergy = displayMachines.reduce((s, m) => s + (m.energy_kwh ?? 0), 0);
   const rangeLabel = formatRangeLabel(range.from, range.to);

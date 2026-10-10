@@ -7,39 +7,59 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
-import { Field, Input, Select, Textarea } from '@/components/ui/input';
+import { MachineMultiSelect } from '@/components/factory/machine-multi-select';
+import { Field, Input } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type {
   ConfigProfileParameter,
-  CreateConfigProfileInput,
   Machine,
   MachineConfigProfile,
+  ProductionLine,
 } from '@/lib/types';
 
-type FormState = CreateConfigProfileInput;
+type FormState = {
+  machine_ids: string[];
+  name: string;
+  parameters: ConfigProfileParameter[];
+};
 
 const emptyParam = (): ConfigProfileParameter => ({ key: '', value: '', unit: '', description: '' });
 
 function ProfileForm({
   machines,
+  lines,
   initial,
+  editingProfileId,
   onSave,
   onCancel,
   isSaving,
   error,
 }: {
   machines: Machine[];
-  initial?: Partial<FormState>;
+  lines?: ProductionLine[];
+  initial?: Partial<FormState> & { machine_id?: string };
+  editingProfileId?: string;
   onSave: (form: FormState) => void;
   onCancel: () => void;
   isSaving: boolean;
   error?: string;
 }) {
+  const lockedMachineId = initial?.machine_id;
+
+  const initialMachineIds =
+    initial?.machine_ids?.length
+      ? initial.machine_ids
+      : lockedMachineId
+        ? [lockedMachineId]
+        : machines[0]?.machine_id
+          ? [machines[0].machine_id]
+          : [];
+
   const [form, setForm] = useState<FormState>({
-    machine_id: initial?.machine_id ?? machines[0]?.machine_id ?? '',
+    machine_ids: initialMachineIds,
     name: initial?.name ?? '',
     parameters: initial?.parameters?.length ? initial.parameters : [emptyParam()],
   });
@@ -61,7 +81,7 @@ function ProfileForm({
   }
 
   const canSave =
-    Boolean(form.machine_id) &&
+    form.machine_ids.length > 0 &&
     Boolean(form.name.trim()) &&
     form.parameters.length > 0 &&
     form.parameters.every((p) => p.key.trim() && p.value !== '');
@@ -73,18 +93,6 @@ function ProfileForm({
       </h4>
 
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Machine">
-          <Select
-            value={form.machine_id}
-            onChange={(e) => setForm((f) => ({ ...f, machine_id: e.target.value }))}
-          >
-            {machines.map((m) => (
-              <option key={m.machine_id} value={m.machine_id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field label="Profile Name">
           <Input
             placeholder="e.g. Product A — High Speed"
@@ -92,6 +100,31 @@ function ProfileForm({
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
         </Field>
+      </div>
+
+      <div className="mb-4">
+        <Field
+          label={
+            editingProfileId
+              ? 'Machines (add more to copy this profile)'
+              : 'Machines'
+          }
+        >
+          <MachineMultiSelect
+            machines={machines}
+            lines={lines}
+            selectedIds={form.machine_ids}
+            lockedIds={lockedMachineId ? [lockedMachineId] : []}
+            onChange={(machine_ids) => setForm((f) => ({ ...f, machine_ids }))}
+          />
+        </Field>
+        {lockedMachineId && (
+          <p className="mt-1 text-xs text-muted">
+            This profile stays on{' '}
+            {machines.find((m) => m.machine_id === lockedMachineId)?.name ?? lockedMachineId}.
+            Select additional machines to create matching profiles for them.
+          </p>
+        )}
       </div>
 
       <p className="mb-2 text-xs font-medium text-muted">Parameters</p>
@@ -159,14 +192,35 @@ function ProfileForm({
   );
 }
 
+async function saveProfilesForMachines(
+  factoryId: string,
+  form: FormState,
+  opts?: { updateProfileId?: string },
+) {
+  const payload = {
+    name: form.name.trim(),
+    parameters: form.parameters,
+    machine_ids: form.machine_ids,
+  };
+
+  if (opts?.updateProfileId) {
+    await api.updateConfigProfile(factoryId, opts.updateProfileId, payload);
+    return;
+  }
+
+  await api.createConfigProfile(factoryId, payload);
+}
+
 export function MachineProfileManager({
   factoryId,
   machines,
+  lines,
   profiles,
   lastAppliedAt = {},
 }: {
   factoryId: string;
   machines: Machine[];
+  lines?: ProductionLine[];
   profiles: MachineConfigProfile[];
   lastAppliedAt?: Record<string, string>;
 }) {
@@ -176,7 +230,7 @@ export function MachineProfileManager({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (form: FormState) => api.createConfigProfile(factoryId, form),
+    mutationFn: (form: FormState) => saveProfilesForMachines(factoryId, form),
     onSuccess: () => {
       router.refresh();
       setShowNew(false);
@@ -185,7 +239,7 @@ export function MachineProfileManager({
 
   const updateMutation = useMutation({
     mutationFn: ({ profileId, form }: { profileId: string; form: FormState }) =>
-      api.updateConfigProfile(factoryId, profileId, form),
+      saveProfilesForMachines(factoryId, form, { updateProfileId: profileId }),
     onSuccess: () => {
       router.refresh();
       setEditingId(null);
@@ -217,6 +271,7 @@ export function MachineProfileManager({
         <div className="mb-6">
           <ProfileForm
             machines={machines}
+            lines={lines}
             onSave={(form) => createMutation.mutate(form)}
             onCancel={() => setShowNew(false)}
             isSaving={createMutation.isPending}
@@ -236,7 +291,9 @@ export function MachineProfileManager({
               <div key={profile.profile_id}>
                 <ProfileForm
                   machines={machines}
+                  lines={lines}
                   initial={profile}
+                  editingProfileId={profile.profile_id}
                   onSave={(form) =>
                     updateMutation.mutate({ profileId: profile.profile_id, form })
                   }

@@ -368,7 +368,8 @@ export interface MachineConfigProfile {
 }
 
 export interface CreateConfigProfileInput {
-  machine_id: string;
+  machine_id?: string;
+  machine_ids?: string[];
   name: string;
   parameters: ConfigProfileParameter[];
 }
@@ -574,6 +575,7 @@ export interface CreateQualityInput {
 
 export interface CreateConfigurationInput {
   machine_id?: string;
+  machine_ids?: string[];
   line_id?: string;
   key: string;
   value: string | number;

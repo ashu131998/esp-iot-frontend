@@ -53,12 +53,20 @@ export default async function FactoriesPage() {
                 <dd className="font-semibold">{f.device_count}</dd>
               </div>
             </dl>
-            <Link
-              href={`/factories/${f.factory_id}`}
-              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              Open dashboard <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="mt-4 flex flex-col gap-2">
+              <Link
+                href={`/internal/factories/${f.factory_id}`}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                Setup (lines & machines) <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href={`/factories/${f.factory_id}`}
+                className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary hover:underline"
+              >
+                Factory dashboard
+              </Link>
+            </div>
           </Card>
         ))}
       </div>

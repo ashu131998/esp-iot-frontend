@@ -250,6 +250,50 @@ export const api = {
       { method: 'PUT', body: JSON.stringify({ bindings }), ...options },
     ),
 
+  adminCreateLine: (
+    factoryId: string,
+    body: { line_id: string; name?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; line: ProductionLine }>(
+      `/v1/admin/factories/${factoryId}/lines`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  adminCreateMachine: (
+    factoryId: string,
+    body: {
+      machine_id: string;
+      line_id: string;
+      name: string;
+      type?: string;
+      voltage_v?: number;
+      target_cycle_time_sec?: number;
+      target_units_per_hour?: number;
+    },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; machine: Machine }>(
+      `/v1/admin/factories/${factoryId}/machines`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  adminRegisterDevice: (
+    body: {
+      factory_id: string;
+      line_id: string;
+      device_id: string;
+      device_type?: string;
+      bindings?: SensorBinding[];
+    },
+    options?: ApiRequestOptions,
+  ) =>
+    request<NodeDetailResponse>('/v1/admin/devices', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
   activeAssignments: (factoryId: string, options?: ApiRequestOptions) =>
     request<ActiveAssignmentsResponse>(
       `/v1/factories/${factoryId}/active-assignments`,

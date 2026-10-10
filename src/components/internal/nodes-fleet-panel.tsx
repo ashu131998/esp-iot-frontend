@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 
+import { AddNodeModal } from '@/components/internal/add-node-modal';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
@@ -13,6 +15,8 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { isInternalAdmin } from '@/lib/internal-auth';
+import { useAuth } from '@/lib/auth-context';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { formatDate } from '@/lib/utils';
 
@@ -22,6 +26,9 @@ function nodeHref(factoryId: string, deviceId: string, tab?: 'sensors') {
 }
 
 function NodesFleetInner() {
+  const { user } = useAuth();
+  const canWrite = isInternalAdmin(user);
+  const [addNodeOpen, setAddNodeOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pagination = resolvePagination({
@@ -146,12 +153,19 @@ function NodesFleetInner() {
           title="All nodes"
           description="ESP32 fleet — filter by factory, line, or linked machine"
           action={
-            <ExportCsvButton
-              filename="esp-nodes"
-              headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status']}
-              fetchRows={fetchAllNodes}
-              rowCount={total}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              {canWrite && (
+                <Button size="sm" onClick={() => setAddNodeOpen(true)}>
+                  Register node
+                </Button>
+              )}
+              <ExportCsvButton
+                filename="esp-nodes"
+                headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status']}
+                fetchRows={fetchAllNodes}
+                rowCount={total}
+              />
+            </div>
           }
         />
 
@@ -295,6 +309,12 @@ function NodesFleetInner() {
           </>
         )}
       </Card>
+
+      <AddNodeModal
+        open={addNodeOpen}
+        onClose={() => setAddNodeOpen(false)}
+        defaultFactoryId={factoryFilter || undefined}
+      />
     </div>
   );
 }

@@ -162,12 +162,17 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold">{m.display_name}</p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    Operator: {operatorNames || '—'}
-                    {liveSince && (
-                      <> · {statusLabel(currentStatus)} since {shortTime(liveSince)}</>
-                    )}
-                  </p>
+                  {(operatorNames || liveSince) && (
+                    <p className="mt-0.5 text-sm text-muted">
+                      {operatorNames ? <>Operator: {operatorNames}</> : null}
+                      {operatorNames && liveSince ? ' · ' : null}
+                      {liveSince ? (
+                        <>
+                          {statusLabel(currentStatus)} since {shortTime(liveSince)}
+                        </>
+                      ) : null}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-3 sm:justify-end">
                   <MachineStatusBadge status={currentStatus} />

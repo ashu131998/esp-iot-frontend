@@ -45,6 +45,9 @@ export function ProductionChartSection({
       <MetricBarChart
         data={chartData}
         bars={[{ key: 'units', color: '#2563eb', label: 'Units Produced' }]}
+        showAllXLabels
+        xLabelRotate={-45}
+        height={360}
       />
     </Card>
   );

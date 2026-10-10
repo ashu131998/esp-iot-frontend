@@ -13,23 +13,42 @@ interface MetricBarChartProps {
   data: ChartData[];
   bars: Array<{ key: string; color: string; label: string }>;
   height?: number;
+  /** When many categories (e.g. 20 looms), rotate and show every label. */
+  xLabelRotate?: number;
+  showAllXLabels?: boolean;
 }
 
 function barOptions(
   data: ChartData[],
   series: Array<{ key: string; color: string; label: string }>,
   stacked: boolean,
+  xLabelRotate = 0,
+  showAllXLabels = false,
 ): ApexOptions {
+  const manyCategories = data.length > 8;
+  const rotate = xLabelRotate || (manyCategories ? -45 : 0);
+  const hideOverlapping = showAllXLabels ? false : !manyCategories;
+
   return {
     ...baseChartOptions,
-    chart: { ...baseChartOptions.chart, type: 'bar', stacked },
+    chart: {
+      ...baseChartOptions.chart,
+      type: 'bar',
+      stacked,
+      toolbar: { show: false },
+    },
     colors: series.map((s) => s.color),
     plotOptions: {
-      bar: { borderRadius: 4, borderRadiusApplication: 'end', columnWidth: '60%' },
+      bar: { borderRadius: 4, borderRadiusApplication: 'end', columnWidth: manyCategories ? '75%' : '60%' },
     },
     xaxis: {
       categories: data.map((d) => d.name),
-      labels: { style: { fontSize: '11px' }, rotate: 0, hideOverlappingLabels: true },
+      labels: {
+        style: { fontSize: '10px' },
+        rotate,
+        hideOverlappingLabels: hideOverlapping,
+        trim: false,
+      },
       axisBorder: { show: false },
       axisTicks: { show: false },
     },
@@ -43,7 +62,13 @@ function barOptions(
   };
 }
 
-export function MetricBarChart({ data, bars, height = 320 }: MetricBarChartProps) {
+export function MetricBarChart({
+  data,
+  bars,
+  height = 320,
+  xLabelRotate,
+  showAllXLabels,
+}: MetricBarChartProps) {
   if (data.length === 0) {
     return <p className="py-12 text-center text-sm text-muted">No chart data available</p>;
   }
@@ -53,7 +78,16 @@ export function MetricBarChart({ data, bars, height = 320 }: MetricBarChartProps
     data: data.map((row) => Number(row[bar.key]) || 0),
   }));
 
-  return <ApexChart type="bar" series={series} options={barOptions(data, bars, false)} height={height} />;
+  const chartHeight = data.length > 8 ? Math.max(height, 340) : height;
+
+  return (
+    <ApexChart
+      type="bar"
+      series={series}
+      options={barOptions(data, bars, false, xLabelRotate, showAllXLabels)}
+      height={chartHeight}
+    />
+  );
 }
 
 interface StackedBarChartProps {

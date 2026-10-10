@@ -24,7 +24,7 @@ function InternalSidebar({ onNavigate }: { onNavigate?: () => void }) {
             <Factory className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold">ESP IoT</p>
+            <p className="text-sm font-semibold text-white">ESP IoT</p>
             <p className="text-xs text-amber-300/90">Staff · Internal</p>
           </div>
         </div>

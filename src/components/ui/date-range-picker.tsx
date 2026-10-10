@@ -52,6 +52,7 @@ export function DateRangePicker({
   from,
   to,
   machineId,
+  lineId,
   machines,
   lines,
   hideDateRange = false,
@@ -61,6 +62,7 @@ export function DateRangePicker({
   from?: string;
   to?: string;
   machineId?: string;
+  lineId?: string;
   machines?: Machine[];
   lines?: ProductionLine[];
   hideDateRange?: boolean;
@@ -70,7 +72,8 @@ export function DateRangePicker({
   const isNavigating = useIsNavigating();
   const refreshInfo = useRefreshInfo();
 
-  // Machine selector state
+  // Line / machine selector state
+  const [lineOpen,      setLineOpen]      = useState(false);
   const [machineOpen,   setMachineOpen]   = useState(false);
   const [machineSearch, setMachineSearch] = useState('');
 
@@ -110,15 +113,27 @@ export function DateRangePicker({
     [lines],
   );
 
+  const selectedLine = useMemo(
+    () => (lines ?? []).find((l) => l.line_id === lineId),
+    [lines, lineId],
+  );
+
   const selectedMachine = useMemo(
     () => (machines ?? []).find(m => m.machine_id === machineId),
     [machines, machineId],
   );
 
+  const machinesForLine = useMemo(() => {
+    const list = machines ?? [];
+    return lineId ? list.filter((m) => m.line_id === lineId) : list;
+  }, [machines, lineId]);
+
   const filteredMachines = useMemo(() => {
     const q = machineSearch.toLowerCase().trim();
-    return q ? (machines ?? []).filter(m => m.name.toLowerCase().includes(q)) : (machines ?? []);
-  }, [machines, machineSearch]);
+    return q
+      ? machinesForLine.filter(m => m.name.toLowerCase().includes(q))
+      : machinesForLine;
+  }, [machinesForLine, machineSearch]);
 
   const groupedMachines = useMemo(() => {
     const groups: Record<string, Machine[]> = {};
@@ -137,6 +152,16 @@ export function DateRangePicker({
     [navigate, pathname],
   );
 
+  const appendFilterParams = useCallback(
+    (params: URLSearchParams, opts?: { lineId?: string | null; machineId?: string | null }) => {
+      const nextLine = opts && 'lineId' in opts ? opts.lineId : lineId;
+      const nextMachine = opts && 'machineId' in opts ? opts.machineId : machineId;
+      if (nextLine) params.set('line_id', nextLine);
+      if (nextMachine) params.set('machine_id', nextMachine);
+    },
+    [lineId, machineId],
+  );
+
   const applyRange = useCallback(
     (fromDate: Date, toDate: Date, dateOnly = false) => {
       const params = new URLSearchParams();
@@ -149,10 +174,27 @@ export function DateRangePicker({
           params.set(DATE_PARAM_TO, format(toDate, "yyyy-MM-dd'T'HH:mm"));
         }
       }
-      if (machineId) params.set('machine_id', machineId);
+      appendFilterParams(params);
       push(params);
     },
-    [machineId, push],
+    [appendFilterParams, push],
+  );
+
+  const applyLine = useCallback(
+    (newLineId: string | undefined) => {
+      const params = new URLSearchParams();
+      if (from) params.set(DATE_PARAM_FROM, from);
+      if (to) params.set(DATE_PARAM_TO, to);
+      let nextMachine = machineId;
+      if (newLineId && machineId) {
+        const m = (machines ?? []).find((x) => x.machine_id === machineId);
+        if (m && m.line_id !== newLineId) nextMachine = undefined;
+      }
+      appendFilterParams(params, { lineId: newLineId ?? null, machineId: nextMachine ?? null });
+      push(params);
+      setLineOpen(false);
+    },
+    [from, to, machineId, machines, appendFilterParams, push],
   );
 
   const applyMachine = useCallback(
@@ -160,12 +202,16 @@ export function DateRangePicker({
       const params = new URLSearchParams();
       if (from) params.set(DATE_PARAM_FROM, from);
       if (to)   params.set(DATE_PARAM_TO,   to);
-      if (newMachineId) params.set('machine_id', newMachineId);
+      const m = newMachineId ? (machines ?? []).find((x) => x.machine_id === newMachineId) : undefined;
+      appendFilterParams(params, {
+        lineId: m?.line_id ?? lineId ?? null,
+        machineId: newMachineId ?? null,
+      });
       push(params);
       setMachineOpen(false);
       setMachineSearch('');
     },
-    [from, to, push],
+    [from, to, lineId, machines, appendFilterParams, push],
   );
 
   useEffect(() => {
@@ -268,6 +314,7 @@ export function DateRangePicker({
   const rangeEnd   = draftTo ?? (draftFrom && hoverDate && !isBefore(hoverDate, draftFrom) ? hoverDate : null);
 
   const triggerLabel = `${format(parseISO(current.from), 'd MMM yyyy, HH:mm')} → ${format(parseISO(current.to), 'd MMM yyyy, HH:mm')}`;
+  const showLines = lines && lines.length > 0;
   const showMachines = machines && machines.length > 0;
 
   return (
@@ -285,6 +332,68 @@ export function DateRangePicker({
           <span className="font-medium text-foreground">{triggerLabel}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted" />
         </button>
+      )}
+
+      {/* Line selector */}
+      {showLines && (
+        <>
+          {!hideDateRange && <div className="mx-1 hidden h-5 w-px bg-border sm:block" />}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setLineOpen((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs transition-colors',
+                'border-input bg-background hover:bg-accent',
+                lineId && 'border-primary/50 bg-primary/5',
+              )}
+            >
+              <span className="font-medium text-muted">Line</span>
+              <span className={cn('max-w-[120px] truncate font-medium', lineId ? 'text-primary' : 'text-foreground')}>
+                {selectedLine ? selectedLine.name : 'All'}
+              </span>
+              {lineId ? (
+                <span
+                  role="button"
+                  aria-label="Clear line filter"
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
+                  onClick={(e) => { e.stopPropagation(); applyLine(undefined); }}
+                >
+                  <X className="h-3 w-3 text-primary" />
+                </span>
+              ) : (
+                <ChevronDown className="h-3 w-3 text-muted" />
+              )}
+            </button>
+            {lineOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setLineOpen(false)} />
+                <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-lg border bg-white shadow-lg py-1">
+                  <button
+                    type="button"
+                    onClick={() => applyLine(undefined)}
+                    className={cn('w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent', !lineId && 'bg-accent font-medium')}
+                  >
+                    All lines
+                  </button>
+                  {(lines ?? []).map((line) => (
+                    <button
+                      key={line.line_id}
+                      type="button"
+                      onClick={() => applyLine(line.line_id)}
+                      className={cn(
+                        'w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent',
+                        line.line_id === lineId && 'bg-accent font-medium',
+                      )}
+                    >
+                      {line.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {/* Machine selector */}

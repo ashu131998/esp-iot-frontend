@@ -171,7 +171,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
         return (
           <Card key={m.stream_key}>
             <CardHeader
-              title={m.display_name}
+              title={m.machine_name}
               description={machineSubtitle(operatorNames, liveSince, currentStatus)}
               action={
                 <div className="flex flex-wrap items-center gap-3">

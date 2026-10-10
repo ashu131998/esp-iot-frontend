@@ -12,7 +12,7 @@ export const INTERNAL_NAV: InternalNavItem[] = [
   { href: '/internal', label: 'Home' },
   { href: '/internal/factories', label: 'Factories' },
   { href: '/internal/alerts', label: 'Alerts' },
-  { href: '/internal/shift-reports', label: 'Shift reports' },
+  { href: '/internal/shift-reports', label: 'Email cron (shift reports)' },
   { href: '/internal/nodes', label: 'Nodes' },
   { href: '/internal/health', label: 'System health' },
   { href: '/internal/onboard', label: 'Onboard', writeOnly: true },

@@ -69,6 +69,24 @@ export default async function OverviewPage({
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <DateRangeToolbar minDate={earliestOnboard} from={sp.from} to={sp.to} />
 
+        <Card className="p-4">
+          <CardHeader title="Internal tools" description="Setup, fleet, and platform jobs" />
+          <div className="flex flex-wrap gap-3 text-sm">
+            <Link href="/internal/shift-reports" className="text-primary hover:underline">
+              Email cron (shift reports)
+            </Link>
+            <Link href="/internal/factories" className="text-primary hover:underline">
+              Factory setup
+            </Link>
+            <Link href="/internal/nodes" className="text-primary hover:underline">
+              Nodes
+            </Link>
+            <Link href="/internal/health" className="text-primary hover:underline">
+              System health
+            </Link>
+          </div>
+        </Card>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Factories" value={String(overview.factory_count)} icon={<Building2 className="h-4 w-4 text-muted" />} />
           <StatCard label="Total Machines" value={String(overview.total_machines)} icon={<Cpu className="h-4 w-4 text-muted" />} />

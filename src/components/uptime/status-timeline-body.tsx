@@ -192,7 +192,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
                 </div>
               }
             />
-            <p className="mb-1 text-[10px] text-muted">
+            <p className="mb-1 text-xs font-medium text-muted">
               24h overview — short transitions are proportionally tiny; use detail below for exact times.
             </p>
             <UptimeTimeSeriesChart

@@ -59,6 +59,11 @@ export function MachineSelector({
 
   const navigate = useCallback(
     (machineId: string | undefined) => {
+      if (machineId === selectedMachineId || (!machineId && !selectedMachineId)) {
+        setOpen(false);
+        setSearch('');
+        return;
+      }
       const params = new URLSearchParams();
       if (from) params.set('from', from);
       if (to) params.set('to', to);
@@ -70,7 +75,7 @@ export function MachineSelector({
       setOpen(false);
       setSearch('');
     },
-    [router, pathname, from, to],
+    [router, pathname, from, to, selectedMachineId],
   );
 
   return (

@@ -48,11 +48,11 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['shift-report-schedule', factoryId] });
-      setSaveMsg('Saved.');
+      setSaveMsg('ok:Saved.');
       setEnabled(null);
       setEmailText(null);
     },
-    onError: (e: Error) => setSaveMsg(e.message),
+    onError: (e: Error) => setSaveMsg(`err:${e.message}`),
   });
 
   const testMutation = useMutation({
@@ -60,8 +60,8 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
       api.testShiftReportSchedule(factoryId, {
         recipient_emails: textToEmails(effectiveEmails),
       }),
-    onSuccess: () => setTestMsg('Test email sent — check the inbox (and spam).'),
-    onError: (e: Error) => setTestMsg(e.message),
+    onSuccess: () => setTestMsg('ok:Test email sent — check the inbox (and spam).'),
+    onError: (e: Error) => setTestMsg(`err:${e.message}`),
   });
 
   if (isLoading) {
@@ -150,8 +150,16 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
               </button>
             </div>
           )}
-          {saveMsg && <p className="text-sm text-muted">{saveMsg}</p>}
-          {testMsg && <p className="text-sm text-muted">{testMsg}</p>}
+          {saveMsg && (
+            <p className={`text-sm ${saveMsg.startsWith('err:') ? 'text-red-600' : 'text-muted'}`}>
+              {saveMsg.replace(/^(ok:|err:)/, '')}
+            </p>
+          )}
+          {testMsg && (
+            <p className={`text-sm ${testMsg.startsWith('err:') ? 'text-red-600' : 'text-muted'}`}>
+              {testMsg.replace(/^(ok:|err:)/, '')}
+            </p>
+          )}
         </div>
       </Card>
     </div>

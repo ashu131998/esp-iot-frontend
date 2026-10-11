@@ -19,6 +19,7 @@ import {
   setAuthCookies,
 } from '@/lib/server/bff';
 import type { TokenPair } from '@/lib/server/bff';
+import { internalHostAllowed } from '@/lib/internal-host';
 import { fetchWithSignal } from '@/lib/request-signal';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -48,8 +49,15 @@ async function forward(
   });
 }
 
+function isStaffOnlyApiPath(segments: string[]): boolean {
+  return segments[0] === 'admin';
+}
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params;
+  if (isStaffOnlyApiPath(path) && !internalHostAllowed(req)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   const method = req.method.toUpperCase();
   const search = req.nextUrl.search;
   const target = `${internalApiBase()}/v1/${path.join('/')}${search}`;

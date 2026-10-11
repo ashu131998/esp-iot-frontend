@@ -90,10 +90,14 @@ export function SystemHealthPanel() {
         <CardHeader title="Edge access" description="Production hardening (ops)" />
         <ul className="mt-2 list-inside list-disc space-y-1">
           <li>
-            Set <code className="text-xs">INTERNAL_REQUIRE_CF_ACCESS=true</code> on the frontend when Cloudflare
-            Access protects staff URLs.
+            Set <code className="text-xs">INTERNAL_STAFF_HOSTNAMES</code> on the Worker so{' '}
+            <code className="text-xs">/internal</code> is not served on public{' '}
+            <code className="text-xs">*.workers.dev</code> URLs.
           </li>
-          <li>Point staff at an <code className="text-xs">internal.</code> hostname behind Access; disable public dev URLs.</li>
+          <li>
+            Set <code className="text-xs">INTERNAL_REQUIRE_CF_ACCESS=true</code> when Cloudflare Access protects
+            the staff hostname.
+          </li>
         </ul>
       </Card>
     </div>

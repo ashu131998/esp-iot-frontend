@@ -20,9 +20,13 @@ export function UserAdminActions({ target }: { target: AuthUser }) {
   const internalAdmin = isInternalAdmin(actor);
   const isStaffAccount = !target.factory_id;
   const isFactoryEmployee = target.factory_id && target.role === 'employee';
+  const isFactoryAccount =
+    Boolean(target.factory_id) && (target.role === 'admin' || target.role === 'employee');
 
   const canResetPassword =
-    owner && isStaffAccount && target.role !== 'super_admin' && target.user_id !== actor?.user_id;
+    target.user_id !== actor?.user_id &&
+    ((owner && isStaffAccount && target.role !== 'super_admin') ||
+      (internalAdmin && isFactoryAccount));
 
   const canSetStatus =
     (owner && target.user_id !== actor?.user_id) ||

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { ACCESS_COOKIE, CSRF_COOKIE } from '@/lib/auth-types';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
+import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
 
 /**
@@ -43,8 +44,10 @@ async function getIdentity(req: NextRequest): Promise<Identity | null> {
 }
 
 /** Where an authenticated user belongs when blocked from the requested route. */
-function homeFor(identity: Identity): string {
-  if (isStaffRole(identity.role)) return '/internal';
+function homeFor(identity: Identity, req: NextRequest): string {
+  if (isStaffRole(identity.role)) {
+    return internalHostAllowed(req) ? '/internal' : '/internal/login';
+  }
   if (identity.factoryId) return `/factories/${identity.factoryId}`;
   return '/internal/login';
 }
@@ -63,6 +66,9 @@ export async function middleware(req: NextRequest) {
 
   const legacyTarget = LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
+    if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
+      return internalHostBlockResponse();
+    }
     const url = req.nextUrl.clone();
     url.pathname = legacyTarget;
     return NextResponse.redirect(url);
@@ -115,7 +121,7 @@ export async function middleware(req: NextRequest) {
   const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup)\/?$/.test(pathname);
   const isInternalLogin = pathname === '/internal/login';
   if (isFactoryAuthPage || isInternalLogin) {
-    if (identity) return redirectTo(homeFor(identity));
+    if (identity) return redirectTo(homeFor(identity, req));
     return secured();
   }
 
@@ -126,7 +132,7 @@ export async function middleware(req: NextRequest) {
     if (!identity) return redirectTo(`/f/${factoryId}/login`);
     const allowed =
       isStaffRole(identity.role) || identity.factoryId === factoryId;
-    if (!allowed) return redirectTo(homeFor(identity));
+    if (!allowed) return redirectTo(homeFor(identity, req));
     if (sub.startsWith('team')) {
       const isAdmin =
         identity.role === 'super_admin' ||
@@ -147,11 +153,14 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/internal' || pathname.startsWith('/internal/')) {
+    if (!internalHostAllowed(req)) {
+      return internalHostBlockResponse();
+    }
     if (!cfAccessOk(req)) {
       return new NextResponse(cfAccessBlockMessage(), { status: 403 });
     }
     if (!identity) return redirectTo('/internal/login');
-    if (!isStaffRole(identity.role)) return redirectTo(homeFor(identity));
+    if (!isStaffRole(identity.role)) return redirectTo(homeFor(identity, req));
     if (
       isInternalWritePath(pathname) &&
       identity.role === 'internal_viewer'
@@ -170,13 +179,15 @@ export async function middleware(req: NextRequest) {
     if (!identity) return redirectTo(`/f/${factoryId}/login`);
     const allowed =
       isStaffRole(identity.role) || identity.factoryId === factoryId;
-    if (!allowed) return redirectTo(homeFor(identity));
+    if (!allowed) return redirectTo(homeFor(identity, req));
     return secured();
   }
 
   if (pathname === '/') {
-    if (!identity) return redirectTo('/internal/login');
-    return redirectTo(homeFor(identity));
+    if (!identity) {
+      return internalHostAllowed(req) ? redirectTo('/internal/login') : secured();
+    }
+    return redirectTo(homeFor(identity, req));
   }
 
   return secured();

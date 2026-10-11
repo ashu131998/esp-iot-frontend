@@ -10,13 +10,18 @@ Staff roles: `super_admin`, `internal_admin`, `internal_viewer`. Factory custome
    ```
 2. **Query API** — deploy `backend/` (admin health, audit filters, fleet search/stale filter).
 3. **Frontend** — deploy `esp-iot-frontend`.
-4. **Cloudflare Access** — protect staff hostname; set on frontend:
+4. **Staff hostname** — set on the Cloudflare Worker (production):
+   ```bash
+   INTERNAL_STAFF_HOSTNAMES=internal.yourdomain.com
+   ```
+   Comma-separated list. `/internal` returns **404** on any other host (e.g. `*.workers.dev`) unless this var is set.
+5. **Cloudflare Access** — protect the staff hostname; set on frontend:
    ```bash
    INTERNAL_REQUIRE_CF_ACCESS=true
    ```
    Users must hit the app through Access so `cf-access-authenticated-user-email` is present.
-5. **Disable public dev URLs** — turn off any public `*.workers.dev` or open staging URLs pointing at prod data.
-6. **Owner + staff** — create staff under **Internal → Users**.
+6. **Disable public dev URLs** — turn off any public `*.workers.dev` or open staging URLs pointing at prod data.
+7. **Owner + staff** — create staff under **Internal → Users**.
 
 ## Routes
 
@@ -25,7 +30,7 @@ Staff roles: `super_admin`, `internal_admin`, `internal_viewer`. Factory custome
 | `/internal/health` | All staff — Postgres ping, fleet counts, aggregator row |
 | `/internal/devices` | Fleet search, server-side stale filter, CSV |
 | `/internal/audit` | Owner — filters + CSV |
-| `/internal/users` | Staff list; owner creates staff; password reset / disable where permitted |
+| `/internal/users` | Staff list; owner creates staff; owner resets staff passwords; admins reset factory user passwords; disable where permitted |
 
 Legacy `/settings` and `/internal/settings` redirect to `/internal/health`.
 

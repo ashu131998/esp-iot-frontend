@@ -13,12 +13,9 @@ function normalizeHost(hostname: string): string {
   return hostname.toLowerCase().split(':')[0] ?? '';
 }
 
+/** Exact hostname match only (no bare parent domain → all subdomains). */
 function hostMatchesAllowed(hostname: string, allowed: string): boolean {
-  const host = normalizeHost(hostname);
-  const pattern = allowed.toLowerCase();
-  if (host === pattern) return true;
-  if (host.endsWith(`.${pattern}`)) return true;
-  return false;
+  return normalizeHost(hostname) === allowed.toLowerCase();
 }
 
 /**

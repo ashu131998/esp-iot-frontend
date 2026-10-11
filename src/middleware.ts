@@ -46,10 +46,10 @@ async function getIdentity(req: NextRequest): Promise<Identity | null> {
 /** Where an authenticated user belongs when blocked from the requested route. */
 function homeFor(identity: Identity, req: NextRequest): string {
   if (isStaffRole(identity.role)) {
-    return internalHostAllowed(req) ? '/internal' : '/internal/login';
+    return internalHostAllowed(req) ? '/internal' : '/';
   }
   if (identity.factoryId) return `/factories/${identity.factoryId}`;
-  return '/internal/login';
+  return internalHostAllowed(req) ? '/internal/login' : '/';
 }
 
 function isInternalWritePath(pathname: string): boolean {
@@ -120,7 +120,14 @@ export async function middleware(req: NextRequest) {
 
   const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup)\/?$/.test(pathname);
   const isInternalLogin = pathname === '/internal/login';
-  if (isFactoryAuthPage || isInternalLogin) {
+  if (isInternalLogin) {
+    if (!internalHostAllowed(req)) {
+      return internalHostBlockResponse();
+    }
+    if (identity) return redirectTo(homeFor(identity, req));
+    return secured();
+  }
+  if (isFactoryAuthPage) {
     if (identity) return redirectTo(homeFor(identity, req));
     return secured();
   }
@@ -143,10 +150,12 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/internal/settings') {
+    if (!internalHostAllowed(req)) return internalHostBlockResponse();
     return redirectTo('/internal/health');
   }
 
   if (pathname === '/internal/devices' || pathname === '/internal/devices/') {
+    if (!internalHostAllowed(req)) return internalHostBlockResponse();
     const url = req.nextUrl.clone();
     url.pathname = '/internal/nodes';
     return NextResponse.redirect(url);
@@ -187,7 +196,9 @@ export async function middleware(req: NextRequest) {
     if (!identity) {
       return internalHostAllowed(req) ? redirectTo('/internal/login') : secured();
     }
-    return redirectTo(homeFor(identity, req));
+    const home = homeFor(identity, req);
+    if (home === pathname) return secured();
+    return redirectTo(home);
   }
 
   return secured();

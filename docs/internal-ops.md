@@ -12,9 +12,9 @@ Staff roles: `super_admin`, `internal_admin`, `internal_viewer`. Factory custome
 3. **Frontend** — deploy `esp-iot-frontend`.
 4. **Staff hostname** — set on the Cloudflare Worker (production):
    ```bash
-   INTERNAL_STAFF_HOSTNAMES=internal.yourdomain.com
+   INTERNAL_STAFF_HOSTNAMES=esp-iot-frontend.ashu131998.workers.dev
    ```
-   Comma-separated list. `/internal` returns **404** on any other host (e.g. `*.workers.dev`) unless this var is set.
+   Comma-separated **exact** hostnames (no bare parent domain). Default in `wrangler.jsonc` is the workers.dev URL until a custom staff domain exists.
 5. **Cloudflare Access** — protect the staff hostname; set on frontend:
    ```bash
    INTERNAL_REQUIRE_CF_ACCESS=true

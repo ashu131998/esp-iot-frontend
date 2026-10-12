@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 
@@ -11,7 +11,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { formatRangeLabel, isLiveDateParams, resolveDateRange } from '@/lib/date-range';
 import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
@@ -38,9 +38,16 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
       : 'overview',
   );
 
-  const range = resolveDateRange(
-    { from: searchParams.get('from') ?? undefined, to: searchParams.get('to') ?? undefined },
-    null,
+  const fromParam = searchParams.get('from') ?? undefined;
+  const toParam = searchParams.get('to') ?? undefined;
+  // Resolve the window once per URL change, never per render. Without a `to` in the URL the end is "now"; when
+  // that was recomputed on every render it changed the query key on every render, so each response started a
+  // brand-new request and the readings table never left its loading state (about one request a second for as
+  // long as the tab stayed open; found on production 2026-10-12). Same rule as useFactoryDateRange.
+  const live = isLiveDateParams({ from: fromParam, to: toParam });
+  const range = useMemo(
+    () => resolveDateRange({ from: fromParam, to: toParam }, null),
+    [fromParam, toParam],
   );
   const rangeLabel = formatRangeLabel(range.from, range.to);
 
@@ -51,14 +58,20 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
   });
 
   const rangeQuery = useQuery({
-    queryKey: ['readings-range', factoryId, deviceId, range.from, range.to],
+    // Keyed on the URL's bounds ('live' = open-ended), not on resolved timestamps.
+    queryKey: ['readings-range', factoryId, deviceId, fromParam ?? 'default', toParam ?? 'live'],
     enabled: tab === 'readings',
-    queryFn: ({ signal }) =>
-      api.readingsRange(
+    queryFn: ({ signal }) => {
+      // An open-ended window follows "now": resolve it at fetch time, so each refresh picks up the newest minute.
+      const r = live ? resolveDateRange({ from: fromParam, to: toParam }, null) : range;
+      return api.readingsRange(
         factoryId,
-        { device_id: deviceId, from: range.from, to: range.to, limit: 2000 },
+        { device_id: deviceId, from: r.from, to: r.to, limit: 2000 },
         { signal },
-      ),
+      );
+    },
+    refetchInterval: live ? 60_000 : false,
+    placeholderData: keepPreviousData,
   });
 
   const deviceMeta = recentQuery.data?.devices?.[0];

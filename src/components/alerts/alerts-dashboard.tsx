@@ -1,13 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useSuspenseQuery, useQueries } from '@tanstack/react-query';
 import { Activity, AlertTriangle, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { api } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge, StatCard } from '@/components/ui/badge';
+import { FactoryLineMachineAlertFilters } from '@/components/alerts/alert-scope-filters';
+import { StatGridSkeleton } from '@/components/ui/page-skeletons';
+import { machineInAlertScope } from '@/lib/alert-machine-scope';
 import { formatPercent } from '@/lib/utils';
 
 const WARN_THRESHOLD = 85;
@@ -50,7 +54,20 @@ function severityConfig(severity: AlertSeverity) {
   };
 }
 
-export function AlertsDashboard() {
+type AlertsDashboardProps = {
+  /** Factory / line / machine filters via URL (internal ops). */
+  fleetFilters?: boolean;
+};
+
+function AlertsDashboardBody({
+  factoryFilter,
+  lineFilter,
+  machineFilter,
+}: {
+  factoryFilter: string;
+  lineFilter: string;
+  machineFilter: string;
+}) {
   const { data: factoriesData, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['factories-for-alerts'],
     queryFn: ({ signal }) => api.factories({ signal }),
@@ -59,9 +76,12 @@ export function AlertsDashboard() {
   });
 
   const factories = factoriesData.factories;
+  const factoriesInScope = factoryFilter
+    ? factories.filter((f) => f.factory_id === factoryFilter)
+    : factories;
 
   const availabilityResults = useQueries({
-    queries: factories.map((f) => ({
+    queries: factoriesInScope.map((f) => ({
       queryKey: ['availability-alerts', f.factory_id],
       queryFn: ({ signal }: { signal?: AbortSignal }) => {
         const to = new Date().toISOString();
@@ -76,11 +96,13 @@ export function AlertsDashboard() {
   const alerts = useMemo<AlertItem[]>(() => {
     const result: AlertItem[] = [];
 
-    for (const [i, factory] of factories.entries()) {
+    for (const [i, factory] of factoriesInScope.entries()) {
       const res = availabilityResults[i];
       if (!res.data) continue;
 
       for (const machine of res.data.machines) {
+        if (!machineInAlertScope(machine, lineFilter, machineFilter)) continue;
+
         const isOffline =
           machine.status === 'down' ||
           machine.status === 'no_data' ||
@@ -140,14 +162,26 @@ export function AlertsDashboard() {
       const bVal = b.availability ?? 0;
       return aVal - bVal;
     });
-  }, [factories, availabilityResults]);
+  }, [factoriesInScope, availabilityResults, lineFilter, machineFilter]);
 
-  const totalMachines = availabilityResults.reduce(
-    (sum, r) => sum + (r.data?.machines.length ?? 0),
-    0,
-  );
+  const totalMachines = useMemo(() => {
+    let count = 0;
+    for (const r of availabilityResults) {
+      if (!r.data) continue;
+      for (const machine of r.data.machines) {
+        if (!machineInAlertScope(machine, lineFilter, machineFilter)) continue;
+        count += 1;
+      }
+    }
+    return count;
+  }, [availabilityResults, lineFilter, machineFilter]);
+
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
   const warningCount = alerts.filter((a) => a.severity === 'warning').length;
+  const factoryLabel =
+    factoriesInScope.length === 1
+      ? (factoriesInScope[0]?.name ?? factoriesInScope[0]?.factory_id ?? 'factory')
+      : `${factoriesInScope.length} factories`;
   const lastUpdated = new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
@@ -180,7 +214,7 @@ export function AlertsDashboard() {
         <StatCard
           label="Machines Monitored"
           value={String(totalMachines)}
-          sub={`${factories.length} ${factories.length === 1 ? 'factory' : 'factories'}`}
+          sub={factoryLabel}
           icon={<Activity className="h-4 w-4 text-muted" />}
         />
       </div>
@@ -188,7 +222,9 @@ export function AlertsDashboard() {
       <Card>
         <CardHeader
           title="Active Alerts"
-          description={`Last 24 h · warn < ${WARN_THRESHOLD}% · critical < ${CRIT_THRESHOLD}%`}
+          description={`Last 24 h · warn < ${WARN_THRESHOLD}% · critical < ${CRIT_THRESHOLD}%${
+            factoryFilter || lineFilter || machineFilter ? ' · filtered view' : ''
+          }`}
           action={
             <span className="flex items-center gap-1.5 text-xs text-muted">
               <RefreshCw className="h-3 w-3" />
@@ -201,9 +237,14 @@ export function AlertsDashboard() {
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
             <CheckCircle className="h-10 w-10 text-emerald-500" />
             <div>
-              <p className="font-semibold">No active alerts</p>
+              <p className="font-semibold">
+                {factoryFilter || lineFilter || machineFilter
+                  ? 'No alerts for this filter'
+                  : 'No active alerts'}
+              </p>
               <p className="mt-0.5 text-sm text-muted">
-                All {totalMachines} machines are within healthy thresholds.
+                All {totalMachines} machine{totalMachines === 1 ? '' : 's'} in scope are within healthy
+                thresholds.
               </p>
             </div>
           </div>
@@ -262,5 +303,65 @@ export function AlertsDashboard() {
         )}
       </Card>
     </>
+  );
+}
+
+function AlertsDashboardWithFleetFilters() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const factoryFilter = searchParams.get('factory_id') ?? '';
+  const lineFilter = searchParams.get('line_id') ?? '';
+  const machineFilter = searchParams.get('machine_id') ?? '';
+
+  function setQuery(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null || v === '') next.delete(k);
+      else next.set(k, v);
+    }
+    if (patch.factory_id !== undefined) {
+      next.delete('line_id');
+      next.delete('machine_id');
+    } else if (patch.line_id !== undefined) {
+      next.delete('machine_id');
+    }
+    router.replace(`/internal/alerts?${next.toString()}`);
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <CardHeader
+          title="Scope"
+          description="Limit availability alerts to a factory, line, or machine"
+        />
+        <FactoryLineMachineAlertFilters onChange={setQuery} />
+      </Card>
+      <AlertsDashboardBody
+        factoryFilter={factoryFilter}
+        lineFilter={lineFilter}
+        machineFilter={machineFilter}
+      />
+    </div>
+  );
+}
+
+export function AlertsDashboard({ fleetFilters = false }: AlertsDashboardProps) {
+  if (fleetFilters) {
+    return (
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <StatGridSkeleton count={3} />
+          </div>
+        }
+      >
+        <AlertsDashboardWithFleetFilters />
+      </Suspense>
+    );
+  }
+
+  return (
+    <AlertsDashboardBody factoryFilter="" lineFilter="" machineFilter="" />
   );
 }

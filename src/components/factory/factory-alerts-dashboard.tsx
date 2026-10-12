@@ -1,13 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Activity, AlertTriangle, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
+import { LineMachineAlertFilters } from '@/components/alerts/alert-scope-filters';
 import { api } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge, StatCard } from '@/components/ui/badge';
+import { StatGridSkeleton } from '@/components/ui/page-skeletons';
+import { machineInAlertScope } from '@/lib/alert-machine-scope';
 import { formatPercent } from '@/lib/utils';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 
@@ -50,8 +54,22 @@ function severityConfig(severity: AlertSeverity) {
   };
 }
 
-export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
+function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const lineFilter = searchParams.get('line_id') ?? '';
+  const machineFilter = searchParams.get('machine_id') ?? '';
   const refetchInterval = useRefetchInterval(REFRESH_MS);
+
+  function setQuery(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null || v === '') next.delete(k);
+      else next.set(k, v);
+    }
+    if (patch.line_id !== undefined) next.delete('machine_id');
+    router.replace(`/factories/${factoryId}/alerts?${next.toString()}`);
+  }
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['availability-factory-alerts', factoryId],
@@ -70,6 +88,8 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
     const result: AlertItem[] = [];
 
     for (const machine of data.machines) {
+      if (!machineInAlertScope(machine, lineFilter, machineFilter)) continue;
+
       const isOffline =
         machine.status === 'down' ||
         machine.status === 'no_data' ||
@@ -122,9 +142,15 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
       const bVal = b.availability ?? 0;
       return aVal - bVal;
     });
-  }, [data]);
+  }, [data, lineFilter, machineFilter]);
 
-  const totalMachines = data.machines.length;
+  const totalMachines = useMemo(() => {
+    let count = 0;
+    for (const machine of data.machines) {
+      if (machineInAlertScope(machine, lineFilter, machineFilter)) count += 1;
+    }
+    return count;
+  }, [data.machines, lineFilter, machineFilter]);
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
   const warningCount = alerts.filter((a) => a.severity === 'warning').length;
   const lastUpdated = new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
@@ -135,6 +161,19 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
 
   return (
     <>
+      <Card className="p-6">
+        <CardHeader
+          title="Scope"
+          description="Limit alerts to a line or machine"
+        />
+        <LineMachineAlertFilters
+          factoryId={factoryId}
+          lineFilter={lineFilter}
+          machineFilter={machineFilter}
+          onChange={setQuery}
+        />
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Critical"
@@ -159,7 +198,7 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
         <StatCard
           label="Machines Monitored"
           value={String(totalMachines)}
-          sub="Last 24 hours"
+          sub={lineFilter || machineFilter ? 'In filter scope · last 24 h' : 'Last 24 hours'}
           icon={<Activity className="h-4 w-4 text-muted" />}
         />
       </div>
@@ -167,7 +206,9 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
       <Card>
         <CardHeader
           title="Active Alerts"
-          description={`Last 24 h · warn < ${WARN_THRESHOLD}% · critical < ${CRIT_THRESHOLD}%`}
+          description={`Last 24 h · warn < ${WARN_THRESHOLD}% · critical < ${CRIT_THRESHOLD}%${
+            lineFilter || machineFilter ? ' · filtered view' : ''
+          }`}
           action={
             <span className="flex items-center gap-1.5 text-xs text-muted">
               <RefreshCw className="h-3 w-3" />
@@ -180,9 +221,12 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
             <CheckCircle className="h-10 w-10 text-emerald-500" />
             <div>
-              <p className="font-semibold">No active alerts</p>
+              <p className="font-semibold">
+                {lineFilter || machineFilter ? 'No alerts for this filter' : 'No active alerts'}
+              </p>
               <p className="mt-0.5 text-sm text-muted">
-                All {totalMachines} machines are within healthy thresholds.
+                All {totalMachines} machine{totalMachines === 1 ? '' : 's'} in scope are within healthy
+                thresholds.
               </p>
             </div>
           </div>
@@ -239,5 +283,19 @@ export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
         )}
       </Card>
     </>
+  );
+}
+
+export function FactoryAlertsDashboard({ factoryId }: { factoryId: string }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <StatGridSkeleton count={3} />
+        </div>
+      }
+    >
+      <FactoryAlertsDashboardInner factoryId={factoryId} />
+    </Suspense>
   );
 }

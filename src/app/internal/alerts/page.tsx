@@ -38,12 +38,12 @@ export default async function AlertsPage() {
     <>
       <PageHeader
         title="Alerts"
-        description="Machine availability monitoring across all factories · refreshes every 60 s"
+        description="Machine availability monitoring — filter by factory, line, or machine · refreshes every 60 s"
       />
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <HydrationBoundary state={dehydrate(queryClient)}>
           <QuerySuspense fallback={<AlertsLoadingSkeleton />}>
-            <AlertsDashboard />
+            <AlertsDashboard fleetFilters />
           </QuerySuspense>
         </HydrationBoundary>
       </div>

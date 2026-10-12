@@ -160,19 +160,13 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
   });
 
   return (
-    <>
-      <Card className="p-6">
-        <CardHeader
-          title="Scope"
-          description="Limit alerts to a line or machine"
-        />
-        <LineMachineAlertFilters
-          factoryId={factoryId}
-          lineFilter={lineFilter}
-          machineFilter={machineFilter}
-          onChange={setQuery}
-        />
-      </Card>
+    <div className="space-y-6">
+      <LineMachineAlertFilters
+        factoryId={factoryId}
+        lineFilter={lineFilter}
+        machineFilter={machineFilter}
+        onChange={setQuery}
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -282,7 +276,7 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
           </div>
         )}
       </Card>
-    </>
+    </div>
   );
 }
 

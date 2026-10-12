@@ -330,13 +330,7 @@ function AlertsDashboardWithFleetFilters() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <CardHeader
-          title="Scope"
-          description="Limit availability alerts to a factory, line, or machine"
-        />
-        <FactoryLineMachineAlertFilters onChange={setQuery} />
-      </Card>
+      <FactoryLineMachineAlertFilters onChange={setQuery} />
       <AlertsDashboardBody
         factoryFilter={factoryFilter}
         lineFilter={lineFilter}

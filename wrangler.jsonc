@@ -28,25 +28,47 @@
         "STAFF_URL": "https://ops.floorbeat.in/internal"
       }
     },
-    // Non-production: one Worker per environment serves both the factory
-    // dashboard and the staff console. No shared hint cookie, so a stage or
-    // dev session never steers floorbeat.in. JWT_ACCESS_SECRET is set by CI.
+    // Stage and dev mirror production: <env>-ops (staff console) and <env>-app
+    // (customer dashboard), against their own API. No shared hint cookie: it
+    // would live on floorbeat.in next to production's. JWT_ACCESS_SECRET is set by CI.
     "stage": {
       "name": "esp-iot-frontend-stage",
-      "routes": [{ "pattern": "stage.floorbeat.in", "custom_domain": true }],
+      "routes": [{ "pattern": "stage-ops.floorbeat.in", "custom_domain": true }],
       "workers_dev": true,
       "vars": {
-        "INTERNAL_STAFF_HOSTNAMES": "stage.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
+        "INTERNAL_STAFF_HOSTNAMES": "stage-ops.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
         "API_INTERNAL_URL": "https://api-stage.floorbeat.in"
+      }
+    },
+    "stage-app": {
+      "name": "esp-iot-frontend-stage-app",
+      "routes": [{ "pattern": "stage-app.floorbeat.in", "custom_domain": true }],
+      "workers_dev": true,
+      "vars": {
+        "INTERNAL_STAFF_HOSTNAMES": "stage-ops.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
+        "API_INTERNAL_URL": "https://api-stage.floorbeat.in",
+        "MARKETING_URL": "https://stage-www.floorbeat.in",
+        "STAFF_URL": "https://stage-ops.floorbeat.in/internal"
       }
     },
     "dev": {
       "name": "esp-iot-frontend-dev",
-      "routes": [{ "pattern": "dev.floorbeat.in", "custom_domain": true }],
+      "routes": [{ "pattern": "dev-ops.floorbeat.in", "custom_domain": true }],
       "workers_dev": true,
       "vars": {
-        "INTERNAL_STAFF_HOSTNAMES": "dev.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
+        "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
         "API_INTERNAL_URL": "https://api-dev.floorbeat.in"
+      }
+    },
+    "dev-app": {
+      "name": "esp-iot-frontend-dev-app",
+      "routes": [{ "pattern": "dev-app.floorbeat.in", "custom_domain": true }],
+      "workers_dev": true,
+      "vars": {
+        "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
+        "API_INTERNAL_URL": "https://api-dev.floorbeat.in",
+        "MARKETING_URL": "https://dev-www.floorbeat.in",
+        "STAFF_URL": "https://dev-ops.floorbeat.in/internal"
       }
     }
   }

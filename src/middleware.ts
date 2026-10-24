@@ -197,7 +197,11 @@ export async function middleware(req: NextRequest) {
   if (pathname === '/') {
     if (!identity) {
       if (internalHostAllowed(req)) return redirectTo('/internal/login');
-      const hinted = req.cookies.get(SESSION_HINT_COOKIE)?.value;
+      // Only where this Worker writes the hint: on stage/dev the cookie present
+      // on floorbeat.in is production's and names a production factory.
+      const hinted = process.env.SESSION_HINT_COOKIE_DOMAIN?.trim()
+        ? req.cookies.get(SESSION_HINT_COOKIE)?.value
+        : undefined;
       if (hinted && FACTORY_HOME_RE.test(hinted)) return redirectTo(hinted);
       const marketingUrl = process.env.MARKETING_URL?.trim();
       if (marketingUrl) return NextResponse.redirect(marketingUrl);

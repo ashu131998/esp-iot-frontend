@@ -3,6 +3,8 @@ import { factoryExists, factoryLoginUrl, signedInHome, type Origins } from './re
 interface Env extends Origins {
   ASSETS: Fetcher;
   API_ORIGIN: string;
+  /** "true" on stage/dev: not indexed, and production's hint cookie is ignored. */
+  NON_PRODUCTION?: string;
 }
 
 const ASSET_EXT_RE = /\.(?!html?$)[a-z0-9]+$/i;
@@ -19,8 +21,9 @@ function redirect(location: string): Response {
   });
 }
 
-function withPageHeaders(res: Response, env: Origins): Response {
+function withPageHeaders(res: Response, env: Env): Response {
   const out = new Response(res.body, res);
+  if (env.NON_PRODUCTION === 'true') out.headers.set('X-Robots-Tag', 'noindex, nofollow');
   // Pages are revalidated on every visit so a cached copy never hides the
   // signed-in redirect.
   out.headers.set('Cache-Control', 'no-cache');
@@ -47,7 +50,9 @@ export default {
 
     if (!isPageRequest(req, url)) return env.ASSETS.fetch(req);
 
-    const home = signedInHome(req.headers.get('cookie'), env);
+    // The hint cookie lives on floorbeat.in and is written by production only,
+    // so on stage/dev it would send visitors to the wrong environment.
+    const home = env.NON_PRODUCTION === 'true' ? null : signedInHome(req.headers.get('cookie'), env);
     if (home) return redirect(home);
 
     if (url.pathname === '/login' && url.searchParams.has('factory')) {

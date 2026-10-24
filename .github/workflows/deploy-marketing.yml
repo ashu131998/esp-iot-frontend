@@ -1,8 +1,9 @@
 name: Deploy marketing site (floorbeat.in)
 
+# main -> floorbeat.in, staging -> stage-www.floorbeat.in, develop -> dev-www.floorbeat.in
 on:
   push:
-    branches: [main]
+    branches: [main, staging, develop]
     paths:
       - 'marketing/**'
       - '.github/workflows/deploy-marketing.yml'
@@ -11,6 +12,7 @@ on:
     paths:
       - 'marketing/**'
       - '.github/workflows/deploy-marketing.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -43,9 +45,9 @@ jobs:
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && contains(fromJSON('["refs/heads/main","refs/heads/staging","refs/heads/develop"]'), github.ref)
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: marketing
-          command: deploy
+          command: deploy${{ github.ref_name == 'staging' && ' --env stage' || github.ref_name == 'develop' && ' --env dev' || '' }}

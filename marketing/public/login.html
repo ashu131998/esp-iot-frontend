@@ -22,19 +22,29 @@
 
   <main class="login-main">
     <form class="login-card" action="/login" method="get">
-      <h1>Log in to your factory</h1>
-      <p class="muted">Enter the factory ID from your welcome email.</p>
+      <div class="login-badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21V10l5 3V10l5 3V10l5 3V4h3v17z" />
+          <path d="M7 17h2M12 17h2M17 17h1" />
+        </svg>
+      </div>
+      <div class="login-head">
+        <h1>Log in to your factory</h1>
+        <p class="muted">Enter the factory ID from your welcome email.</p>
+      </div>
       <p class="login-error" id="invalid" role="alert">That factory ID doesn't look right. Use letters, numbers, - or _ only.</p>
       <p class="login-error" id="not-found" role="alert">We couldn't find a factory with that ID. Check the ID in your welcome email, or ask support.</p>
       <label for="factory">Factory ID</label>
-      <input id="factory" name="factory" type="text" required autocomplete="organization" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_\-]{1,64}" placeholder="e.g. factory-a">
-      <button class="btn btn-primary" type="submit">Continue</button>
+      <input id="factory" name="factory" type="text" required autofocus autocomplete="organization" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_\-]{1,64}" placeholder="e.g. factory-a">
+      <button class="btn btn-primary" type="submit">Continue <span aria-hidden="true">→</span></button>
       <p class="login-foot">
         <a href="/login/staff">FloorBeat staff sign in</a>
-        <span aria-hidden="true">·</span>
-        <a href="mailto:support@floorbeat.in?subject=FloorBeat%20login%20help">Need help?</a>
       </p>
     </form>
   </main>
+
+  <footer class="login-footer">
+    Trouble signing in? <a href="mailto:support@floorbeat.in?subject=FloorBeat%20login%20help">support@floorbeat.in</a>
+  </footer>
 </body>
 </html>

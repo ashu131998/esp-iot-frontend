@@ -38,6 +38,32 @@ export function signedInHome(cookieHeader: string | null, origins: Origins): str
   return null;
 }
 
+const NOT_FOUND_ERROR = 'Factory not found';
+
+/**
+ * Whether the factory exists, from the API's public lookup: false only for a
+ * definite "not found", null when the API can't answer, so an API outage still
+ * lets visitors through to the sign-in page.
+ */
+export async function factoryExists(
+  factoryId: string,
+  apiOrigin: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean | null> {
+  try {
+    const res = await fetchImpl(`${apiOrigin}/v1/public/factories/${encodeURIComponent(factoryId)}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) return true;
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    // An older API answers 404 for the unknown route itself, with a different body.
+    if (res.status === 404 && body?.error === NOT_FOUND_ERROR) return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Factory login URL for the `/login?factory=<id>` form, or null if the id is invalid. */
 export function factoryLoginUrl(factory: string | null, origins: Origins): string | null {
   const id = factory?.trim() ?? '';

@@ -17,7 +17,8 @@
   ],
   "vars": {
     "APP_ORIGIN": "https://app.floorbeat.in",
-    "STAFF_ORIGIN": "https://ops.floorbeat.in"
+    "STAFF_ORIGIN": "https://ops.floorbeat.in",
+    "API_ORIGIN": "https://api.floorbeat.in"
   },
   "observability": {
     "enabled": true

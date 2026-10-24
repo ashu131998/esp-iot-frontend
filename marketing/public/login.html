@@ -23,6 +23,7 @@
       <h1>Log in to your factory</h1>
       <p class="muted">Enter the factory ID from your welcome email.</p>
       <p class="login-error" id="invalid" role="alert">That factory ID doesn't look right. Use letters, numbers, - or _ only.</p>
+      <p class="login-error" id="not-found" role="alert">We couldn't find a factory with that ID. Check the ID in your welcome email, or ask support.</p>
       <label for="factory">Factory ID</label>
       <input id="factory" name="factory" type="text" required autocomplete="organization" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_\-]{1,64}" placeholder="e.g. factory-a">
       <button class="btn btn-primary" type="submit">Continue</button>

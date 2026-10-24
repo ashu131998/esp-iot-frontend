@@ -1,7 +1,8 @@
-import { factoryLoginUrl, signedInHome, type Origins } from './redirect';
+import { factoryExists, factoryLoginUrl, signedInHome, type Origins } from './redirect';
 
 interface Env extends Origins {
   ASSETS: Fetcher;
+  API_ORIGIN: string;
 }
 
 const ASSET_EXT_RE = /\.(?!html?$)[a-z0-9]+$/i;
@@ -50,8 +51,11 @@ export default {
     if (home) return redirect(home);
 
     if (url.pathname === '/login' && url.searchParams.has('factory')) {
-      const target = factoryLoginUrl(url.searchParams.get('factory'), env);
-      return redirect(target ?? '/login#invalid');
+      const factoryId = url.searchParams.get('factory')?.trim() ?? '';
+      const target = factoryLoginUrl(factoryId, env);
+      if (!target) return redirect('/login#invalid');
+      if ((await factoryExists(factoryId, env.API_ORIGIN)) === false) return redirect('/login#not-found');
+      return redirect(target);
     }
 
     if (url.pathname === '/login/staff') return redirect(`${env.STAFF_ORIGIN}/internal/login`);

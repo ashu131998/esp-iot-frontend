@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { factoryLoginUrl, readCookie, signedInHome } from './redirect';
+import { factoryExists, factoryLoginUrl, readCookie, signedInHome } from './redirect';
+
+function respond(status: number, body: unknown): typeof fetch {
+  return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
+}
+
+describe('factoryExists', () => {
+  const api = 'https://api.floorbeat.in';
+
+  it('is true for an existing factory', async () => {
+    expect(await factoryExists('factory-01', api, respond(200, { factory_id: 'factory-01', name: 'Mill' }))).toBe(true);
+  });
+
+  it('is false only for the API\'s factory-not-found answer', async () => {
+    expect(await factoryExists('nope', api, respond(404, { error: 'Factory not found' }))).toBe(false);
+  });
+
+  it('is null when the API cannot answer, so visitors still reach sign-in', async () => {
+    expect(await factoryExists('factory-01', api, respond(404, { error: 'Not Found', statusCode: 404 }))).toBeNull();
+    expect(await factoryExists('factory-01', api, respond(502, {}))).toBeNull();
+    const failing = (async () => { throw new Error('offline'); }) as typeof fetch;
+    expect(await factoryExists('factory-01', api, failing)).toBeNull();
+  });
+});
 
 const origins = {
   APP_ORIGIN: 'https://app.floorbeat.in',

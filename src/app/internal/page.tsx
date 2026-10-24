@@ -3,7 +3,7 @@ import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { StatCard } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/table';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { serverApi } from '@/lib/server-api';
 import { formatNumber, formatPercent } from '@/lib/utils';
 import Link from 'next/link';
@@ -31,7 +31,6 @@ export default async function OverviewPage({
   }, null);
 
   const range = resolveDateRange(sp, earliestOnboard);
-  const rangeLabel = formatRangeLabel(range.from, range.to);
 
   let overview;
   let fleetSummary: {
@@ -64,7 +63,7 @@ export default async function OverviewPage({
     <>
       <PageHeader
         title="Internal home"
-        description={`Operational summary across all connected factories · ${rangeLabel}`}
+        description="Operational summary across all connected factories"
       />
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <DateRangeToolbar minDate={earliestOnboard} from={sp.from} to={sp.to} />
@@ -118,7 +117,7 @@ export default async function OverviewPage({
             )}
           />
           <StatCard
-            label={`Total Energy (${rangeLabel})`}
+            label="Total Energy"
             value={`${formatNumber(overview.factories.reduce((s, f) => s + f.total_energy_kwh, 0))} kWh`}
             icon={<Zap className="h-4 w-4 text-muted" />}
           />

@@ -11,7 +11,7 @@ import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import {
   factoryMetricsApiRange,
@@ -38,7 +38,6 @@ export function FactoryOverviewMachinesTable({
   const { minDate, machines } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
-  const rangeLabel = formatRangeLabel(range.from, range.to);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const scopedMachines = useMemo(
@@ -132,7 +131,7 @@ export function FactoryOverviewMachinesTable({
     <Card>
       <CardHeader
         title="Machines"
-        description={`All machines registered for this factory · ${rangeLabel}`}
+        description="All machines registered for this factory"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ExportCsvButton

@@ -6,7 +6,6 @@ import { StackedBarChart } from '@/components/charts/metric-chart';
 import { UPTIME_REFRESH_MS } from '@/components/uptime/refresh-countdown';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   filterMachinesByScope,
@@ -18,8 +17,6 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
-  const displayTo = live ? new Date().toISOString() : range.to;
-  const rangeLabel = formatRangeLabel(range.from, displayTo);
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data } = useSuspenseQuery({
@@ -39,7 +36,7 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Loom Uptime vs Downtime" description={`Running/stopped hours per machine · ${rangeLabel}`} />
+      <CardHeader title="Loom Uptime vs Downtime" description="Running/stopped hours per machine" />
       <StackedBarChart
         data={summaryData}
         keys={[

@@ -11,7 +11,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import { formatRangeLabel, isLiveDateParams, resolveDateRange } from '@/lib/date-range';
+import { isLiveDateParams, resolveDateRange } from '@/lib/date-range';
 import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
@@ -49,7 +49,6 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
     () => resolveDateRange({ from: fromParam, to: toParam }, null),
     [fromParam, toParam],
   );
-  const rangeLabel = formatRangeLabel(range.from, range.to);
 
   const recentQuery = useQuery({
     queryKey: ['readings-recent', factoryId, deviceId],
@@ -229,7 +228,6 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
         <Card className="p-6">
           <CardHeader
             title="Raw readings"
-            description={rangeLabel}
             action={
               <ExportCsvButton
                 filename={`readings-${deviceId}`}

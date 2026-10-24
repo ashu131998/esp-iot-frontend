@@ -5,7 +5,6 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { UPTIME_REFRESH_MS } from '@/components/uptime/refresh-countdown';
 import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { formatRangeLabel } from '@/lib/date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   filterMachinesByScope,
@@ -17,8 +16,6 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
-  const displayTo = live ? new Date().toISOString() : range.to;
-  const rangeLabel = formatRangeLabel(range.from, displayTo);
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data } = useSuspenseQuery({
@@ -40,7 +37,7 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
-      <StatCard label={`Overall Availability (${rangeLabel})`} value={formatPercent(overallAvailability)} />
+      <StatCard label="Overall Availability" value={formatPercent(overallAvailability)} />
       <StatCard label="Loom Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
       <StatCard label="Loom Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
     </div>

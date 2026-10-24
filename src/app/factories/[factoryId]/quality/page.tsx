@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { QualityPanel } from '@/components/factory/quality-panel';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { serverApi } from '@/lib/server-api';
 
@@ -34,7 +34,6 @@ async function QualityContent({
       ? allMachines.filter((m) => m.machine_id === machineId)
       : allMachines;
   const range = resolveDateRange({ from, to }, factory.created_at);
-  const rangeLabel = formatRangeLabel(range.from, range.to);
   const pagination = resolvePagination({ page, limit });
   const data = await serverApi.quality(
     factoryId,
@@ -53,7 +52,6 @@ async function QualityContent({
       records={data.records ?? []}
       from={range.from}
       to={range.to}
-      rangeLabel={rangeLabel}
       total={resolveListTotal(
         data.total,
         data.records?.length ?? 0,

@@ -6,7 +6,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { StackedBarChart } from '@/components/charts/metric-chart';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
@@ -28,7 +28,6 @@ export function AvailabilityChartSection({
   const { minDate } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
-  const rangeLabel = formatRangeLabel(range.from, range.to);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
@@ -51,7 +50,7 @@ export function AvailabilityChartSection({
 
   return (
     <Card>
-      <CardHeader title="Uptime vs Downtime" description={`Per machine · ${rangeLabel}`} />
+      <CardHeader title="Uptime vs Downtime" description="Per machine" />
       <StackedBarChart
         data={chartData}
         keys={[

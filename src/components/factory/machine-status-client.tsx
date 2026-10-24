@@ -9,7 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { MachineAvailabilityTrends } from '@/components/factory/machine-availability-trends';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
@@ -75,7 +75,6 @@ export function MachineStatusClient({
     () => resolveDateRange({ from, to }, minDate),
     [from, to, minDate],
   );
-  const rangeLabel = formatRangeLabel(range.from, range.to);
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);
 
@@ -128,17 +127,17 @@ export function MachineStatusClient({
       {/* Summary stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label={`Total Energy (${rangeLabel})`}
+          label="Total Energy"
           value={`${formatNumber(machineEnergy?.energy_kwh ?? 0)} kWh`}
           sub={machineEnergy?.avg_amps != null ? `Avg: ${formatNumber(machineEnergy.avg_amps)}A` : 'No data'}
         />
         <StatCard
-          label={`Availability (${rangeLabel})`}
+          label="Availability"
           value={formatPercent(machineAvail?.availability_percent ?? null)}
           sub={`${formatNumber(machineAvail?.uptime_minutes ?? 0, 0)}m up · ${formatNumber(machineAvail?.downtime_minutes ?? 0, 0)}m down`}
         />
         <StatCard
-          label={`Units Produced (${rangeLabel})`}
+          label="Units Produced"
           value={formatUnits(machineProduction?.units_produced ?? 0, machineProduction?.unit_label)}
           sub="From proximity sensor detections"
         />
@@ -157,7 +156,7 @@ export function MachineStatusClient({
           <Card key={stream.stream_key}>
             <CardHeader
               title={stream.display_name}
-              description={`Current status · ${rangeLabel} · last 24h${isFetching ? ' · updating…' : ''}`}
+              description={`Current status · last 24h${isFetching ? ' · updating…' : ''}`}
             />
             <div className="px-6 py-4">
               {streamNarrative && (

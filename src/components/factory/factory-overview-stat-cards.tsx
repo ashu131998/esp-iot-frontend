@@ -6,7 +6,7 @@ import { Activity, Package, Zap } from 'lucide-react';
 
 import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
@@ -32,7 +32,6 @@ export function FactoryOverviewStatCards({
   const { minDate, machines } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
-  const rangeLabel = formatRangeLabel(range.from, range.to);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const scopedMachines = useMemo(
@@ -99,12 +98,12 @@ export function FactoryOverviewStatCards({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        label={`Availability (${rangeLabel})`}
+        label="Availability"
         value={formatPercent(avgAvailability)}
         icon={<Activity className="h-4 w-4 text-muted" />}
       />
       <StatCard
-        label={`Energy (${rangeLabel})`}
+        label="Energy"
         value={`${formatNumber(totalEnergy)} kWh`}
         icon={<Zap className="h-4 w-4 text-muted" />}
       />

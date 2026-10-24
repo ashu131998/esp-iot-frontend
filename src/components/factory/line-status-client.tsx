@@ -9,7 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
-import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
+import { resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import type {
   AvailabilityMachine,
@@ -44,7 +44,6 @@ export function LineStatusClient({
     () => resolveDateRange({ from, to }, minDate),
     [from, to, minDate],
   );
-  const rangeLabel = formatRangeLabel(range.from, range.to);
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);
 
@@ -91,17 +90,17 @@ export function LineStatusClient({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label={`Total Energy (${rangeLabel})`}
+          label="Total Energy"
           value={`${formatNumber(energy.total_energy_kwh)} kWh`}
           sub="Estimated from current sensors"
         />
         <StatCard
-          label={`Avg Availability (${rangeLabel})`}
+          label="Avg Availability"
           value={formatPercent(availability.avg_availability_percent)}
           sub={`${formatNumber(availability.total_uptime_minutes, 0)} min running · ${formatNumber(availability.total_downtime_minutes, 0)} min stopped`}
         />
         <StatCard
-          label={`Units Produced (${rangeLabel})`}
+          label="Units Produced"
           value={formatUnits(production.total_units, production.unit_label)}
           sub="From proximity sensor detections"
         />
@@ -110,7 +109,7 @@ export function LineStatusClient({
       <Card>
         <CardHeader
           title="Machine Status"
-          description={`Metrics for ${rangeLabel} · timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
+          description={`Timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
         />
 
         {machineRows.length === 0 ? (

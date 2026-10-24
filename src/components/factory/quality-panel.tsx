@@ -21,7 +21,6 @@ export function QualityPanel({
   records,
   from,
   to,
-  rangeLabel,
   total,
   page,
   limit,
@@ -31,7 +30,6 @@ export function QualityPanel({
   records: QualityRecord[];
   from: string;
   to: string;
-  rangeLabel: string;
   total: number;
   page: number;
   limit: number;
@@ -72,7 +70,7 @@ export function QualityPanel({
       <Card>
         <CardHeader
           title="Quality Records"
-          description={`Manual QA entries and inspection results · ${rangeLabel}`}
+          description="Manual QA entries and inspection results"
           action={
             <div className="flex flex-wrap items-center gap-2">
               <ExportCsvButton

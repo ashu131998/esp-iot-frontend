@@ -39,8 +39,8 @@ export interface FactoryConfig {
 // factory has the flag enabled. Non-gated tabs are always shown.
 const DEFAULT_TABS: FactoryTab[] = [
   'overview',
-  'availability',
   'status-timeline',
+  'availability',
   'alerts',
   'energy',
   'vibration',

@@ -125,9 +125,10 @@ export function MachineStatusClient({
 
   const { availability, energy, production, uptime24h } = data;
 
-  const machineAvail = availability.machines[0];
-  const machineEnergy = energy.machines[0];
-  const machineProduction = production.machines[0];
+  // The metrics endpoints return every machine in the factory (machine_id is not a server filter).
+  const machineAvail = availability.machines.find((m) => m.machine_id === machineId);
+  const machineEnergy = energy.machines.find((m) => m.machine_id === machineId);
+  const machineProduction = production.machines.find((m) => m.machine_id === machineId);
   const uptimeRows = expandUptimeMachines(uptime24h.machines);
   const latestReport = reportsData?.reports?.[0];
   const openReport = latestReport && !latestReport.resolved_at ? latestReport : null;

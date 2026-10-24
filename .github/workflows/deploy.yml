@@ -58,8 +58,7 @@ jobs:
         run: npm ci
 
       - name: Build for Cloudflare
-        # Next.js 15 left its support window on 2026-10-21; remove after upgrading to 16.
-        run: npx opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion
+        run: npx opennextjs-cloudflare build
         env:
           NODE_ENV: production
           # NEXT_PUBLIC_ vars are inlined at build time

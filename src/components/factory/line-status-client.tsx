@@ -19,7 +19,7 @@ import type {
   UptimeMachine,
 } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
 
@@ -102,7 +102,7 @@ export function LineStatusClient({
         />
         <StatCard
           label={`Units Produced (${rangeLabel})`}
-          value={String(production.total_units)}
+          value={formatUnits(production.total_units, production.unit_label)}
           sub="From proximity sensor detections"
         />
       </div>
@@ -151,7 +151,7 @@ export function LineStatusClient({
                     <TD>
                       <MachineStatusBadge status={status} />
                     </TD>
-                    <TD className="font-semibold">{prod?.units_produced ?? '—'}</TD>
+                    <TD className="font-semibold">{prod ? formatUnits(prod.units_produced, prod.unit_label) : '—'}</TD>
                     <TD>
                       {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
                     </TD>

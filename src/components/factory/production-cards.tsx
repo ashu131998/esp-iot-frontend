@@ -16,6 +16,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
+import { formatUnits, sharedUnitLabel, sumUnits } from '@/lib/utils';
 
 const PRODUCTION_REFRESH_MS = 60_000;
 const PRODUCTION_REFRESH_SEC = 60;
@@ -57,7 +58,7 @@ export function ProductionCards({
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const totalUnits = displayMachines.reduce((s, m) => s + m.units_produced, 0);
+  const totalUnits = sumUnits(displayMachines);
   const rangeLabel = formatRangeLabel(range.from, range.to);
   const shiftName = getCurrentShiftName(range.from, range.to);
   const timeLabel = shiftName ?? rangeLabel;
@@ -65,7 +66,7 @@ export function ProductionCards({
   return (
     <StatCard
       label="Total Units Produced"
-      value={String(totalUnits)}
+      value={formatUnits(totalUnits, sharedUnitLabel(displayMachines))}
       sub={`From proximity sensor detections · ${timeLabel}${isFetching ? ' · updating…' : ''}`}
     />
   );

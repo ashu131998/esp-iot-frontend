@@ -43,6 +43,10 @@ export interface Machine {
   target_cycle_time_sec: number | null;
   target_units_per_hour: number | null;
   voltage_v: number;
+  /** Proximity pulses per production unit (e.g. rotations per metre). 1 = every pulse is a unit. */
+  rotations_per_unit?: number;
+  /** Production unit name, e.g. "m", "cm"; null = plain units. */
+  unit_label?: string | null;
   device_states?: Record<string, { device_id: string; readings: Record<string, unknown>; occurred_at: string } | null>;
 }
 
@@ -106,6 +110,7 @@ export interface PerformanceMachine {
   throughput_percent: number | null;
   performance_percent: number;
   units_produced: number;
+  unit_label?: string | null;
   target_units: number;
   target_cycle_time_sec: number | null;
   status: string;
@@ -134,6 +139,8 @@ export interface MachineDailyTrendResponse {
   machine_id: string;
   from: string;
   to: string;
+  unit_label?: string | null;
+  rotations_per_unit?: number;
   days: MachineDailyTrendDay[];
 }
 
@@ -164,7 +171,12 @@ export interface ProductionMachine {
   machine_name: string;
   line_id: string;
   device_id?: string;
+  /** Units: proximity pulses / rotations_per_unit. */
   units_produced: number;
+  /** Raw proximity pulses behind units_produced. */
+  pulses?: number;
+  unit_label?: string | null;
+  rotations_per_unit?: number;
   status: string;
   data_points?: number;
 }
@@ -174,6 +186,8 @@ export interface ProductionResponse {
   from: string;
   to: string;
   total_units: number;
+  /** Unit name all producing machines share; 'mixed' when they differ; null = plain units. */
+  unit_label?: string | null;
   machines: ProductionMachine[];
 }
 

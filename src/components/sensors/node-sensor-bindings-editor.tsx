@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
@@ -68,6 +70,8 @@ export function NodeSensorBindingsEditor({
 
   const [rows, setRows] = useState<DraftBinding[] | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Row waiting for the user to confirm its removal (index into rows), null when no dialog is open.
+  const [pendingRemove, setPendingRemove] = useState<number | null>(null);
 
   const detail = detailQuery.data;
   const machines = detail?.machines ?? [];
@@ -296,7 +300,7 @@ export function NodeSensorBindingsEditor({
                   <button
                     type="button"
                     className="text-xs text-red-600 hover:underline"
-                    onClick={() => setRows((rows ?? []).filter((_, i) => i !== idx))}
+                    onClick={() => setPendingRemove(idx)}
                   >
                     Remove
                   </button>
@@ -337,6 +341,54 @@ export function NodeSensorBindingsEditor({
         </p>
       )}
       {message && <p className="mt-2 text-sm text-muted">{message}</p>}
+
+      <RemoveRowDialog
+        row={pendingRemove !== null ? (rows ?? [])[pendingRemove] ?? null : null}
+        machineName={machineName}
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={() => {
+          setRows((rows ?? []).filter((_, i) => i !== pendingRemove));
+          setPendingRemove(null);
+        }}
+      />
     </Card>
+  );
+}
+
+/** Asks before a sensor row leaves the table; the removal is applied by Save mapping. */
+function RemoveRowDialog({
+  row,
+  machineName,
+  onCancel,
+  onConfirm,
+}: {
+  row: DraftBinding | null;
+  machineName: Record<string, string>;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const channel = row?.channel_slot || 'new row';
+  const machine = row?.machine_id ? machineName[row.machine_id] ?? row.machine_id : null;
+  const saved = Boolean(row?.binding_id);
+  return (
+    <Modal
+      open={row !== null}
+      onClose={onCancel}
+      title="Remove this sensor row?"
+      description={
+        saved
+          ? `${channel} (${row?.sensor_type})${machine ? ` → ${machine}` : ''} stops feeding ${machine ?? 'its machine'} once you press Save mapping.`
+          : `${channel} is not saved yet, so nothing changes on the dashboard.`
+      }
+    >
+      <div className="flex gap-2">
+        <Button type="button" variant="danger" onClick={onConfirm}>
+          Remove
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </Modal>
   );
 }

@@ -81,7 +81,12 @@ export default async function MachineDetailPage({
             )}
             {machine.target_units_per_hour && (
               <Badge className="bg-blue-50 text-blue-700">
-                Target Units: {machine.target_units_per_hour}/hr
+                Target: {machine.target_units_per_hour} {machine.unit_label || 'units'}/hr
+              </Badge>
+            )}
+            {((machine.rotations_per_unit ?? 1) !== 1 || machine.unit_label) && (
+              <Badge className="bg-slate-100 text-slate-700">
+                1 {machine.unit_label || 'unit'} = {machine.rotations_per_unit ?? 1} rotations
               </Badge>
             )}
           </div>

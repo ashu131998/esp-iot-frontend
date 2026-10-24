@@ -15,6 +15,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
+import { sharedUnitLabel } from '@/lib/utils';
 
 export function ProductionChartSection({
   factoryId,
@@ -43,13 +44,15 @@ export function ProductionChartSection({
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
   const chartData = displayMachines.map((m) => ({ name: m.machine_name, units: m.units_produced }));
+  const unit = sharedUnitLabel(displayMachines);
+  const unitSuffix = unit === 'mixed' ? ' (mixed units)' : unit ? ` (${unit})` : '';
 
   return (
     <Card>
       <CardHeader title="Production by Machine" description="Units counted from proximity sensor rising edges" />
       <MetricBarChart
         data={chartData}
-        bars={[{ key: 'units', color: '#2563eb', label: 'Units Produced' }]}
+        bars={[{ key: 'units', color: '#2563eb', label: `Units Produced${unitSuffix}` }]}
         showAllXLabels
         xLabelRotate={-45}
         height={360}

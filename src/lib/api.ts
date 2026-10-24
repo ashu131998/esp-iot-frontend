@@ -295,12 +295,26 @@ export const api = {
       voltage_v?: number;
       target_cycle_time_sec?: number;
       target_units_per_hour?: number;
+      rotations_per_unit?: number;
+      unit_label?: string | null;
     },
     options?: ApiRequestOptions,
   ) =>
     request<{ factory_id: string; machine: Machine }>(
       `/v1/admin/factories/${factoryId}/machines`,
       { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Change a machine's production unit: proximity pulses per unit and the unit name. */
+  adminUpdateMachineUnits: (
+    factoryId: string,
+    machineId: string,
+    body: { rotations_per_unit?: number; unit_label?: string | null },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; machine: Machine }>(
+      `/v1/admin/factories/${factoryId}/machines/${encodeURIComponent(machineId)}`,
+      { method: 'PATCH', body: JSON.stringify(body), ...options },
     ),
 
   adminRegisterDevice: (

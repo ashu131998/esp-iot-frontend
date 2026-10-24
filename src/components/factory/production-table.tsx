@@ -19,6 +19,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
+import { formatUnits } from '@/lib/utils';
 
 export function ProductionTable({
   factoryId,
@@ -62,11 +63,12 @@ export function ProductionTable({
           <div className="flex items-center gap-3">
             <ExportCsvButton
               filename="machine-production"
-              headers={['Machine', 'Line', 'Units Produced', 'Sensor', 'Data Points']}
+              headers={['Machine', 'Line', 'Units Produced', 'Unit', 'Sensor', 'Data Points']}
               rows={displayMachines.map((m) => [
                 m.machine_name,
                 m.line_id,
                 m.units_produced,
+                m.unit_label ?? 'units',
                 m.device_id,
                 m.data_points,
               ])}
@@ -89,7 +91,7 @@ export function ProductionTable({
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
-              <TD className="font-semibold">{m.units_produced}</TD>
+              <TD className="font-semibold">{formatUnits(m.units_produced, m.unit_label)}</TD>
               <TD className="font-mono text-xs">{m.device_id ?? '—'}</TD>
               <TD>{m.data_points ?? '—'}</TD>
             </TR>

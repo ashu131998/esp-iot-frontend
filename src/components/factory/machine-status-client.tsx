@@ -11,7 +11,7 @@ import { MachineAvailabilityTrends } from '@/components/factory/machine-availabi
 import { api } from '@/lib/api';
 import { formatRangeLabel, resolveDateRange } from '@/lib/date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { formatAlertVia, formatNumber, formatPercent } from '@/lib/utils';
+import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
@@ -139,7 +139,7 @@ export function MachineStatusClient({
         />
         <StatCard
           label={`Units Produced (${rangeLabel})`}
-          value={String(machineProduction?.units_produced ?? 0)}
+          value={formatUnits(machineProduction?.units_produced ?? 0, machineProduction?.unit_label)}
           sub="From proximity sensor detections"
         />
       </div>

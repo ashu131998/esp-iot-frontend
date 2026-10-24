@@ -15,7 +15,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber, formatPercent, formatUnits, sharedUnitLabel, sumUnits } from '@/lib/utils';
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
@@ -75,10 +75,8 @@ export function FactoryOverviewStatCards({
 
   const windowHours =
     (new Date(range.to).getTime() - new Date(range.from).getTime()) / 3600000;
-  const productionUnits = filterMachinesByScope(production.machines, { machineId, lineId }).reduce(
-    (s, m) => s + m.units_produced,
-    0,
-  );
+  const scopedProduction = filterMachinesByScope(production.machines, { machineId, lineId });
+  const productionUnits = sumUnits(scopedProduction);
   const targetUnits = scopedMachines.reduce(
     (s, m) => s + (m.target_units_per_hour ?? 0) * windowHours,
     0,
@@ -112,7 +110,7 @@ export function FactoryOverviewStatCards({
       />
       <StatCard
         label="Units Produced"
-        value={String(productionUnits)}
+        value={formatUnits(productionUnits, sharedUnitLabel(scopedProduction))}
         icon={<Package className="h-4 w-4 text-muted" />}
       />
       <StatCard label="Performance" value={formatPercent(performancePct)} />

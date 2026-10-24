@@ -16,7 +16,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatPercent } from '@/lib/utils';
+import { formatPercent, formatUnits } from '@/lib/utils';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
@@ -84,7 +84,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
               <TD>{formatPercent(m.availability_percent)}</TD>
               <TD>{formatPercent(m.throughput_percent)}</TD>
               <TD>
-                {m.units_produced} / {m.target_units}
+                {formatUnits(m.units_produced, m.unit_label)} / {formatUnits(m.target_units, m.unit_label)}
               </TD>
               <TD>{m.target_cycle_time_sec ? `${m.target_cycle_time_sec}s` : '—'}</TD>
             </TR>

@@ -11,6 +11,7 @@ import { Field, Input, Select } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import type { Machine } from '@/lib/types';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/lib/auth-context';
@@ -26,12 +27,17 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   const [nodeModal, setNodeModal] = useState(false);
 
   const [lineForm, setLineForm] = useState({ line_id: '', name: '' });
-  const [machineForm, setMachineForm] = useState({
+  const emptyMachineForm = {
     machine_id: '',
     line_id: '',
     name: '',
     type: 'loom',
-  });
+    rotations_per_unit: '1',
+    unit_label: '',
+  };
+  const [machineForm, setMachineForm] = useState(emptyMachineForm);
+  // Production unit being edited for an existing machine (null = dialog closed).
+  const [unitEdit, setUnitEdit] = useState<{ machine: Machine; rotations_per_unit: string; unit_label: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const factoryQuery = useQuery({
@@ -66,12 +72,35 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   });
 
   const createMachine = useMutation({
-    mutationFn: () => api.adminCreateMachine(factoryId, machineForm),
+    mutationFn: () =>
+      api.adminCreateMachine(factoryId, {
+        machine_id: machineForm.machine_id,
+        line_id: machineForm.line_id,
+        name: machineForm.name,
+        type: machineForm.type,
+        rotations_per_unit: Number(machineForm.rotations_per_unit) || 1,
+        unit_label: machineForm.unit_label.trim() || null,
+      }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['factory-machines', factoryId] });
       await qc.invalidateQueries({ queryKey: ['admin-factories'] });
-      setMachineForm({ machine_id: '', line_id: '', name: '', type: 'loom' });
+      setMachineForm(emptyMachineForm);
       setMachineModal(false);
+      setMessage(null);
+    },
+    onError: (e: Error) => setMessage(e.message),
+  });
+
+  const updateUnits = useMutation({
+    mutationFn: (edit: NonNullable<typeof unitEdit>) =>
+      api.adminUpdateMachineUnits(factoryId, edit.machine.machine_id, {
+        rotations_per_unit: Number(edit.rotations_per_unit),
+        unit_label: edit.unit_label.trim() || null,
+      }),
+    onSuccess: async () => {
+      // Every production figure of this factory changes with the unit: refetch what is on screen.
+      await qc.invalidateQueries();
+      setUnitEdit(null);
       setMessage(null);
     },
     onError: (e: Error) => setMessage(e.message),
@@ -174,6 +203,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
                 <TH>Machine</TH>
                 <TH>Line</TH>
                 <TH>Type</TH>
+                <TH>Production unit</TH>
                 <TH />
               </TR>
             </THead>
@@ -183,13 +213,32 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
                   <TD className="font-medium">{m.name}</TD>
                   <TD className="font-mono text-xs">{m.line_id}</TD>
                   <TD className="capitalize">{m.type}</TD>
+                  <TD className="text-xs">{unitSummary(m)}</TD>
                   <TD>
-                    <Link
-                      href={`/factories/${factoryId}/machines/${m.machine_id}`}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Factory view
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {canWrite && (
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => {
+                            setMessage(null);
+                            setUnitEdit({
+                              machine: m,
+                              rotations_per_unit: String(m.rotations_per_unit ?? 1),
+                              unit_label: m.unit_label ?? '',
+                            });
+                          }}
+                        >
+                          Edit unit
+                        </button>
+                      )}
+                      <Link
+                        href={`/factories/${factoryId}/machines/${m.machine_id}`}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Factory view
+                      </Link>
+                    </div>
                   </TD>
                 </TR>
               ))}
@@ -286,6 +335,12 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
               onChange={(e) => setMachineForm({ ...machineForm, type: e.target.value })}
             />
           </Field>
+          <UnitFields
+            rotations={machineForm.rotations_per_unit}
+            label={machineForm.unit_label}
+            onRotations={(v) => setMachineForm({ ...machineForm, rotations_per_unit: v })}
+            onLabel={(v) => setMachineForm({ ...machineForm, unit_label: v })}
+          />
           {message && machineModal && <p className="text-sm text-red-600">{message}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={createMachine.isPending}>
@@ -298,7 +353,84 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
         </form>
       </Modal>
 
+      <Modal
+        open={unitEdit !== null}
+        onClose={() => setUnitEdit(null)}
+        title={`Production unit · ${unitEdit?.machine.name ?? ''}`}
+        description="Units produced = proximity pulses ÷ rotations per unit. Applies to every report and chart of this machine, past shifts included."
+      >
+        {unitEdit && (
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateUnits.mutate(unitEdit);
+            }}
+          >
+            <UnitFields
+              rotations={unitEdit.rotations_per_unit}
+              label={unitEdit.unit_label}
+              onRotations={(v) => setUnitEdit({ ...unitEdit, rotations_per_unit: v })}
+              onLabel={(v) => setUnitEdit({ ...unitEdit, unit_label: v })}
+            />
+            {message && <p className="text-sm text-red-600">{message}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={updateUnits.isPending}>
+                {updateUnits.isPending ? 'Saving…' : 'Save'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setUnitEdit(null)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       <AddNodeModal open={nodeModal} onClose={() => setNodeModal(false)} defaultFactoryId={factoryId} />
+    </div>
+  );
+}
+
+/** "1 m = 39.37 rotations", or "1 unit = 1 rotation" for machines that count every pulse. */
+function unitSummary(m: Machine): string {
+  const perUnit = m.rotations_per_unit ?? 1;
+  return `1 ${m.unit_label || 'unit'} = ${perUnit} rotation${perUnit === 1 ? '' : 's'}`;
+}
+
+/** Rotations-per-unit and unit-name inputs, shared by the create and edit dialogs. */
+function UnitFields({
+  rotations,
+  label,
+  onRotations,
+  onLabel,
+}: {
+  rotations: string;
+  label: string;
+  onRotations: (v: string) => void;
+  onLabel: (v: string) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Rotations per unit">
+        <Input
+          type="number"
+          required
+          min="0.0001"
+          step="any"
+          value={rotations}
+          onChange={(e) => onRotations(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-muted">Proximity pulses that make one unit. 1 counts every pulse.</p>
+      </Field>
+      <Field label="Unit">
+        <Input
+          maxLength={16}
+          value={label}
+          placeholder="m, cm, mm, pcs…"
+          onChange={(e) => onLabel(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-muted">Shown after the number, e.g. 25.4 m. Empty = units.</p>
+      </Field>
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { useClientPagination } from '@/lib/use-client-pagination';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
-import { formatNumber, formatPercent, statusLabel } from '@/lib/utils';
+import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
 
 const REFRESH_MS = 60_000;
 
@@ -186,7 +186,7 @@ export function FactoryOverviewMachinesTable({
               <TD className="capitalize">{machine.type}</TD>
               <TD>{formatPercent(avail?.availability_percent)}</TD>
               <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
-              <TD>{prod?.units_produced ?? 0}</TD>
+              <TD>{formatUnits(prod?.units_produced ?? 0, prod?.unit_label)}</TD>
               <TD>
                 {(uptimeRowsByMachine[machine.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">

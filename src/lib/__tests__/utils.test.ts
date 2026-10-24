@@ -3,7 +3,10 @@ import {
   formatNumber,
   formatPercent,
   formatAlertVia,
+  formatUnits,
   normalizeMachineStatus,
+  sharedUnitLabel,
+  sumUnits,
   statusColor,
   statusLabel,
 } from '@/lib/utils';
@@ -78,4 +81,24 @@ describe('statusLabel', () => {
   it('running → "Running"', () => expect(statusLabel('up')).toBe('Running'));
   it('stopped → "Stopped"', () => expect(statusLabel('down')).toBe('Stopped'));
   it('no_signal → "No signal"', () => expect(statusLabel('stale')).toBe('No signal'));
+});
+
+// ── production units ─────────────────────────────────────────────────────────
+
+describe('formatUnits', () => {
+  it('adds the unit name', () => expect(formatUnits(25.4, 'm')).toBe('25.4 m'));
+  it('keeps whole counts whole and plain without a unit', () => expect(formatUnits(1200, null)).toBe('1200'));
+  it('rounds to 2 decimals', () => expect(formatUnits(3.333, 'cm')).toBe('3.33 cm'));
+  it('spells out mixed units', () => expect(formatUnits(10, 'mixed')).toBe('10 (mixed units)'));
+  it('shows a dash for no value', () => expect(formatUnits(null, 'm')).toBe('—'));
+});
+
+describe('sharedUnitLabel / sumUnits', () => {
+  it('returns the label all producing machines share', () =>
+    expect(sharedUnitLabel([{ unit_label: 'm' }, { unit_label: 'm' }, { unit_label: 'cm', status: 'no_sensor' }])).toBe('m'));
+  it('returns mixed when producing machines differ', () =>
+    expect(sharedUnitLabel([{ unit_label: 'm' }, { unit_label: 'cm' }])).toBe('mixed'));
+  it('returns null for plain units', () => expect(sharedUnitLabel([{ unit_label: null }, {}])).toBeNull());
+  it('sums fractional units to 2 decimals', () =>
+    expect(sumUnits([{ units_produced: 0.1 }, { units_produced: 0.2 }])).toBe(0.3));
 });

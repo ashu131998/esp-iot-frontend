@@ -12,6 +12,29 @@ export function formatNumber(value: number | string | null | undefined, decimals
   return n.toFixed(decimals);
 }
 
+/**
+ * Units produced with the machine's unit name: "25.4 m", "1200". Whole counts stay whole, others
+ * keep up to 2 decimals. A 'mixed' label (machines counting in different units) is spelled out.
+ */
+export function formatUnits(value: number | null | undefined, label?: string | null): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  const n = Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+  if (label === 'mixed') return `${n} (mixed units)`;
+  return label ? `${n} ${label}` : n;
+}
+
+/** The unit name the producing machines share: null when none, 'mixed' when they differ. */
+export function sharedUnitLabel(machines: Array<{ unit_label?: string | null; status?: string }>): string | null {
+  const labels = new Set(machines.filter((m) => m.status !== 'no_sensor').map((m) => m.unit_label ?? null));
+  if (labels.size === 0) return null;
+  return labels.size === 1 ? [...labels][0] : 'mixed';
+}
+
+/** Sum of units, to 2 decimals (units are fractional once rotations_per_unit is not 1). */
+export function sumUnits(machines: Array<{ units_produced: number }>): number {
+  return Math.round(machines.reduce((s, m) => s + (m.units_produced ?? 0), 0) * 100) / 100;
+}
+
 export function formatPercent(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;

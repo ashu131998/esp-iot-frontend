@@ -2,9 +2,16 @@ name: Deploy to Cloudflare Workers
 
 on:
   push:
-    branches: [main]
+    # main -> app/ops (production), staging -> stage.floorbeat.in, develop -> dev.floorbeat.in
+    branches: [main, staging, develop]
+    paths-ignore:
+      - 'marketing/**'
+      - '.github/workflows/deploy-marketing.yml'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'marketing/**'
+      - '.github/workflows/deploy-marketing.yml'
 
 jobs:
   test:
@@ -91,3 +98,22 @@ jobs:
             echo "${{ secrets.JWT_ACCESS_SECRET }}" | npx wrangler secret put JWT_ACCESS_SECRET $env_flag
             echo "${{ secrets.API_INTERNAL_URL }}"  | npx wrangler secret put API_INTERNAL_URL $env_flag
           done
+
+      # Stage / dev: same build, their own Worker (API_INTERNAL_URL is a plain
+      # var in wrangler.jsonc). JWT_ACCESS_SECRET must match that backend's .env.
+      - name: Deploy non-production Worker
+        uses: cloudflare/wrangler-action@v3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop')
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env ${{ github.ref_name == 'staging' && 'stage' || 'dev' }}
+
+      - name: Set non-production Worker secret
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          JWT_SECRET: ${{ github.ref_name == 'staging' && secrets.STAGE_JWT_ACCESS_SECRET || secrets.DEV_JWT_ACCESS_SECRET }}
+          ENV_NAME: ${{ github.ref_name == 'staging' && 'stage' || 'dev' }}
+        run: printf '%s' "$JWT_SECRET" | npx wrangler secret put JWT_ACCESS_SECRET --env "$ENV_NAME"

@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "floorbeat-site",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // The Worker runs before every asset so signed-in users are redirected
+    // to their dashboard instead of being served a marketing page.
+    "run_worker_first": true,
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "floorbeat.in", "custom_domain": true },
+    { "pattern": "www.floorbeat.in", "custom_domain": true }
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://app.floorbeat.in",
+    "STAFF_ORIGIN": "https://ops.floorbeat.in"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

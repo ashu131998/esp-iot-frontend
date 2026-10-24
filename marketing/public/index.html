@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FloorBeat — Live machine uptime for every factory</title>
+  <meta name="description" content="FloorBeat clips onto your machines and shows which are running, which are idle, and why — live, on any phone. Automatic shift reports and downtime alerts. No PLC, no rewiring.">
+  <meta name="theme-color" content="#0b1020">
+  <meta property="og:title" content="FloorBeat — Live machine uptime for every factory">
+  <meta property="og:description" content="Know which machines are running right now. Live status, downtime alerts and automatic shift reports — installed in a day, no PLC needed.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://floorbeat.in/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/" aria-label="FloorBeat home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M4 17h6l3-7 5 13 3-6h7"/></svg>
+        <span>FloorBeat</span>
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#industries">Industries</a>
+        <a href="#hardware">Hardware</a>
+      </nav>
+      <div class="nav-cta">
+        <a class="link-quiet" href="/login">Log in</a>
+        <a class="btn btn-primary btn-sm" href="mailto:support@floorbeat.in?subject=FloorBeat%20demo">Book a demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot dot-live"></span> Live machine monitoring</p>
+          <h1>Know which machines are running. <span class="accent">Right now.</span></h1>
+          <p class="lead">FloorBeat clips onto any machine and shows you, live, which ones are running, which are idle, and for how long. Shift reports land in your inbox automatically. No PLC, no rewiring, no paper logs.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20demo">Book a free demo</a>
+            <a class="btn btn-ghost" href="#how">See how it works</a>
+          </div>
+          <ul class="hero-points">
+            <li>Works on old and new machines</li>
+            <li>Installed in a day</li>
+            <li>Any phone, any browser</li>
+          </ul>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="panel">
+            <div class="panel-head">
+              <span>Weaving — Line 2</span>
+              <span class="pill pill-live"><span class="dot dot-live"></span> Live</span>
+            </div>
+            <div class="panel-stat">
+              <div><small>Availability today</small><strong>87.4%</strong></div>
+              <div><small>Running</small><strong class="ok">11 / 12</strong></div>
+            </div>
+            <svg class="pulse" viewBox="0 0 300 60" preserveAspectRatio="none"><path d="M0 34 L40 34 L52 34 L60 12 L70 52 L80 34 L130 34 L140 34 L148 18 L158 46 L166 34 L220 34 L228 34 L236 8 L246 56 L254 34 L300 34"/></svg>
+            <ul class="machines">
+              <li><span class="dot dot-ok"></span>Loom 01<em>Running · 6h 12m</em></li>
+              <li><span class="dot dot-ok"></span>Loom 02<em>Running · 5h 48m</em></li>
+              <li><span class="dot dot-bad"></span>Loom 03<em>Stopped · 14 min</em></li>
+              <li><span class="dot dot-ok"></span>Loom 04<em>Running · 6h 31m</em></li>
+            </ul>
+            <div class="alert-toast"><span class="dot dot-bad"></span> Loom 03 stopped for 10 min — supervisor notified</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="strip">
+      <div class="wrap strip-grid">
+        <div><strong>No PLC needed</strong><span>Reads the machine's own power draw</span></div>
+        <div><strong>No rewiring</strong><span>Clamp-on sensors, DIN-rail node</span></div>
+        <div><strong>Wi-Fi or 4G</strong><span>Works where your machines are</span></div>
+        <div><strong>Updates over the air</strong><span>New features without a site visit</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap narrow center">
+        <p class="eyebrow">The problem</p>
+        <h2>Your machines are idle more than you think.</h2>
+        <p class="lead">Most factories still rely on supervisors' notes and end-of-day counts. Short stops, slow restarts and silent breakdowns never make it onto paper — so the real cost of downtime stays invisible.</p>
+      </div>
+    </section>
+
+    <section class="section alt" id="how">
+      <div class="wrap">
+        <div class="section-head center">
+          <p class="eyebrow">How it works</p>
+          <h2>From clamp to dashboard in three steps</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">1</span>
+            <h3>Clip</h3>
+            <p>A current sensor clamps around the machine's power cable inside the panel. Nothing is cut, nothing is reprogrammed. One FloorBeat node on a DIN rail covers several machines.</p>
+          </li>
+          <li>
+            <span class="step-n">2</span>
+            <h3>Connect</h3>
+            <p>The node detects when each machine starts and stops, and sends it to the FloorBeat cloud over Wi-Fi or 4G — every few seconds.</p>
+          </li>
+          <li>
+            <span class="step-n">3</span>
+            <h3>See</h3>
+            <p>Owners, managers and supervisors see live status, availability and downtime on any phone or laptop — and get alerts and shift reports without asking anyone.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head center">
+          <p class="eyebrow">Features</p>
+          <h2>Everything you need to run a tighter floor</h2>
+        </div>
+        <div class="cards">
+          <article class="card">
+            <h3>Live machine status</h3>
+            <p>Running or stopped, for every machine, updated every few seconds — across lines and factories.</p>
+          </article>
+          <article class="card">
+            <h3>Availability &amp; uptime</h3>
+            <p>Hour-by-hour availability per machine, line and shift. See exactly where production time goes.</p>
+          </article>
+          <article class="card">
+            <h3>Downtime alerts</h3>
+            <p>Get notified when a machine has been stopped too long — scoped to the factory, line or machine you care about.</p>
+          </article>
+          <article class="card">
+            <h3>Automatic shift reports</h3>
+            <p>A clear PDF for every shift, emailed to owners and managers on schedule. No spreadsheets, no chasing.</p>
+          </article>
+          <article class="card">
+            <h3>Status timeline</h3>
+            <p>A minute-by-minute history of every start and stop, so you can find patterns and fix root causes.</p>
+          </article>
+          <article class="card">
+            <h3>Factory → line → machine</h3>
+            <p>Drill from the whole factory down to a single machine. Built for one site or many.</p>
+          </article>
+          <article class="card">
+            <h3>Team access</h3>
+            <p>Invite managers and supervisors with the right permissions. Everyone sees the same numbers.</p>
+          </article>
+          <article class="card">
+            <h3>Ready to grow</h3>
+            <p>Add energy, temperature, vibration, production counts and quality as you need them — on the same platform.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="industries">
+      <div class="wrap">
+        <div class="section-head center">
+          <p class="eyebrow">Industries</p>
+          <h2>If it runs on power, FloorBeat can watch it</h2>
+        </div>
+        <ul class="chips">
+          <li>Textiles &amp; weaving</li>
+          <li>CNC &amp; machining</li>
+          <li>Plastics &amp; injection moulding</li>
+          <li>Packaging</li>
+          <li>Food processing</li>
+          <li>Printing</li>
+          <li>Pumps &amp; compressors</li>
+          <li>Assembly lines</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="hardware">
+      <div class="wrap split">
+        <div>
+          <p class="eyebrow">Hardware</p>
+          <h2>Industrial-grade, designed in India</h2>
+          <p class="lead">The FloorBeat node is built for the factory floor — not a hobby board in a plastic box.</p>
+          <ul class="ticks">
+            <li>DIN-rail mounted, fits inside your existing panel</li>
+            <li>Clamp-on current sensors and proximity inputs</li>
+            <li>24 V industrial supply, surge protection and watchdog</li>
+            <li>Wi-Fi built in, 4G and RS485 / Modbus expansion</li>
+            <li>Firmware updates over the air</li>
+          </ul>
+        </div>
+        <div class="node-card" aria-hidden="true">
+          <div class="node">
+            <div class="node-leds"><span class="dot dot-ok"></span><span class="dot dot-ok"></span><span class="dot dot-live"></span></div>
+            <div class="node-label">FloorBeat Node</div>
+            <div class="node-ports"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+          <div class="rail"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap narrow center">
+        <h2>See FloorBeat on your own machines</h2>
+        <p class="lead">We'll install a pilot on a few machines and show you real availability numbers within a week.</p>
+        <div class="hero-actions center">
+          <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot</a>
+          <a class="btn btn-ghost-light" href="mailto:support@floorbeat.in">support@floorbeat.in</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M4 17h6l3-7 5 13 3-6h7"/></svg>
+        <span>FloorBeat</span>
+      </a>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#features">Features</a>
+        <a href="#hardware">Hardware</a>
+        <a href="/login">Log in</a>
+        <a href="mailto:support@floorbeat.in">Contact</a>
+      </nav>
+      <p class="muted">© 2026 FloorBeat. Made in India.</p>
+    </div>
+  </footer>
+</body>
+</html>

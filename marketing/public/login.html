@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in — FloorBeat</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="login-page">
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/" aria-label="FloorBeat home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M4 17h6l3-7 5 13 3-6h7"/></svg>
+        <span>FloorBeat</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="login-main">
+    <form class="login-card" action="/login" method="get">
+      <h1>Log in to your factory</h1>
+      <p class="muted">Enter the factory ID from your welcome email.</p>
+      <p class="login-error" id="invalid" role="alert">That factory ID doesn't look right. Use letters, numbers, - or _ only.</p>
+      <label for="factory">Factory ID</label>
+      <input id="factory" name="factory" type="text" required autocomplete="organization" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_\-]{1,64}" placeholder="e.g. factory-a">
+      <button class="btn btn-primary" type="submit">Continue</button>
+      <p class="login-foot">
+        <a href="/login/staff">FloorBeat staff sign in</a>
+        <span aria-hidden="true">·</span>
+        <a href="mailto:support@floorbeat.in?subject=FloorBeat%20login%20help">Need help?</a>
+      </p>
+    </form>
+  </main>
+</body>
+</html>

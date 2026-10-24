@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { normalizeMachineStatus, statusLabel } from '@/lib/utils';
 import { ApexChart, baseChartOptions, formatAxisTick, type ApexOptions } from './apex';
+import { placeSegments } from '@/lib/timeline-layout';
 
 interface ChartData {
   name: string;
@@ -257,9 +258,8 @@ export function UptimeTimeSeriesChart({
   /** Extra tooltip rows per segment (e.g. downtime reason, active config). */
   segmentDetails?: (segment: UptimeSegmentPoint) => SegmentDetail[];
 }) {
-  const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number } | null>(null);
-
-  const windowMs = Math.max(new Date(windowTo).getTime() - new Date(windowFrom).getTime(), 1);
+  // index: position among the drawn segments; last: the newest segment of the data.
+  const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number; last: boolean } | null>(null);
 
   if (segments.length === 0) {
     return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
@@ -270,15 +270,10 @@ export function UptimeTimeSeriesChart({
   const axisStart = formatAxisStart(windowFrom);
   const axisEnd = liveEnd ? 'Now' : formatAxisStart(windowTo);
 
-  // Absolute layout (left/width in %) avoids the sub-pixel white seams that a
-  // flex row of many thin segments produces. A small overlap hides any gap.
-  let cursorPct = 0;
-  const placed = filled.map((segment, i) => {
-    const widthPct = (segment.duration_seconds * 1000 / windowMs) * 100;
-    const leftPct = cursorPct;
-    cursorPct += widthPct;
-    return { segment, i, leftPct, widthPct };
-  });
+  // Each segment at its real time in the window (lib/timeline-layout.ts); time
+  // without data stays empty. Absolute layout (left/width in %) avoids the
+  // sub-pixel white seams a flex row of many thin segments produces.
+  const placed = placeSegments(filled, windowFrom, windowTo);
 
   const hoverCenterPct = hover
     ? (placed[hover.index]?.leftPct ?? 0) + (placed[hover.index]?.widthPct ?? 0) / 2
@@ -294,7 +289,7 @@ export function UptimeTimeSeriesChart({
           >
             <UptimeSegmentTooltip
               segment={hover.segment}
-              ongoing={liveEnd && hover.index === filled.length - 1}
+              ongoing={liveEnd && hover.last}
               details={segmentDetails?.(hover.segment)}
             />
           </div>
@@ -305,8 +300,7 @@ export function UptimeTimeSeriesChart({
           role="img"
           aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
         >
-          {placed.map(({ segment, i, leftPct, widthPct }) => {
-            if (widthPct <= 0) return null;
+          {placed.map(({ segment, index, leftPct, widthPct }, i) => {
             // Every segment overlaps its neighbors by ~1px on both sides so
             // no sub-pixel rounding gap between two adjacent boxes can ever
             // show the container background through — regardless of paint
@@ -323,7 +317,7 @@ export function UptimeTimeSeriesChart({
                   minWidth: 1,
                   backgroundColor: uptimeColor(segment.status),
                 }}
-                onMouseEnter={() => setHover({ segment, index: i })}
+                onMouseEnter={() => setHover({ segment, index: i, last: index === filled.length - 1 })}
                 onMouseLeave={() => setHover(null)}
               />
             );

@@ -150,6 +150,10 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
             <span className="inline-block h-3 w-3 rounded-sm bg-gray-300" />
             No signal
           </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-sm border border-slate-300 bg-white" />
+            No data
+          </span>
         </div>
       </Card>
 

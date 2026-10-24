@@ -1,21 +1,22 @@
+import { placeSegments, segmentsSpan } from '@/lib/timeline-layout';
 import type { UptimeSegment } from '@/lib/types';
 import { statusLabel } from '@/lib/utils';
 
+/**
+ * Small status strip for tables. Segments sit at their real times across the
+ * span they cover (lib/timeline-layout.ts), so time without data shows as an
+ * empty stretch instead of the later segments sliding into it.
+ */
 export function MiniTimeline({ segments }: { segments: UptimeSegment[] }) {
-  if (!segments || segments.length === 0) {
-    return <span className="text-xs text-muted">No data</span>;
-  }
-
-  const totalSeconds = segments.reduce((sum, s) => sum + s.duration_seconds, 0);
-  if (totalSeconds === 0) return <span className="text-xs text-muted">No data</span>;
+  const span = segments?.length ? segmentsSpan(segments) : null;
+  if (!span) return <span className="text-xs text-muted">No data</span>;
 
   return (
     <div
-      className="flex h-4 w-40 overflow-hidden rounded-sm"
-      title="Last 24h · green = running, red = stopped, grey = no signal"
+      className="relative h-4 w-40 overflow-hidden rounded-sm bg-white ring-1 ring-inset ring-slate-200"
+      title="Last 24h · green = running, red = stopped, grey = no signal, empty = no data"
     >
-      {segments.map((seg, i) => {
-        const widthPct = (seg.duration_seconds / totalSeconds) * 100;
+      {placeSegments(segments, span.from, span.to).map(({ segment: seg, index, leftPct, widthPct }) => {
         const hrs = Math.round(seg.duration_seconds / 36) / 100;
         const color =
           seg.status === 'up'
@@ -25,9 +26,9 @@ export function MiniTimeline({ segments }: { segments: UptimeSegment[] }) {
               : 'bg-gray-300';
         return (
           <div
-            key={i}
-            className={color}
-            style={{ width: `${widthPct}%`, minWidth: widthPct > 1 ? undefined : '1px' }}
+            key={index}
+            className={`absolute top-0 bottom-0 ${color}`}
+            style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '1px' }}
             title={`${statusLabel(seg.status)} · ${hrs}h`}
           />
         );

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true" className={cn('shrink-0', className)}>
-      <rect width="64" height="64" rx="16" fill="#ff5a1f" />
+      <rect width="64" height="64" rx="16" fill="#eb531d" />
       <path
         d="M25.84 15.09A18 18 0 1 0 38.16 15.09"
         fill="none"

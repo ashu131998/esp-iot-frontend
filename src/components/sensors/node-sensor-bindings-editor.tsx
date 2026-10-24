@@ -46,17 +46,23 @@ function toDraft(b: SensorBinding): DraftBinding {
   };
 }
 
-export function NodeSensorBindingsEditor({
-  factoryId,
-  deviceId,
-  apiMode,
-  canWrite,
-}: {
+type EditorProps = {
   factoryId: string;
   deviceId: string;
   apiMode: 'admin' | 'factory';
   canWrite: boolean;
-}) {
+};
+
+/**
+ * The draft rows are seeded once from the node's saved bindings, so a different
+ * node must get a fresh editor — otherwise it shows (and would save) the
+ * previous node's rows.
+ */
+export function NodeSensorBindingsEditor(props: EditorProps) {
+  return <NodeBindingsDraft key={`${props.apiMode}:${props.factoryId}:${props.deviceId}`} {...props} />;
+}
+
+function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorProps) {
   const qc = useQueryClient();
   const queryKey = ['node-detail', apiMode, factoryId, deviceId];
 
@@ -154,7 +160,7 @@ export function NodeSensorBindingsEditor({
   return (
     <Card className="p-6">
       <CardHeader
-        title="Sensor → machine mapping"
+        title={`Sensor → machine mapping · ${deviceId}`}
         description="Each row is one telemetry stream on this node (channel + type). Assign a machine and label — factory uptime and status use these bindings."
       />
       {discovered.length > 0 && (

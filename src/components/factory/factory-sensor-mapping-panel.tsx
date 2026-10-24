@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -13,6 +13,12 @@ import { formatDate } from '@/lib/utils';
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  function configure(deviceId: string) {
+    setSelectedDeviceId(deviceId);
+    requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
 
   const nodesQuery = useQuery({
     queryKey: ['factory-nodes', factoryId],
@@ -62,7 +68,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
                     <button
                       type="button"
                       className={`text-sm ${activeDeviceId === n.device_id ? 'font-semibold text-primary' : 'text-primary hover:underline'}`}
-                      onClick={() => setSelectedDeviceId(n.device_id)}
+                      onClick={() => configure(n.device_id)}
                     >
                       {activeDeviceId === n.device_id ? 'Editing' : 'Configure'}
                     </button>
@@ -75,12 +81,14 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
       </Card>
 
       {activeDeviceId && selected && (
-        <NodeSensorBindingsEditor
-          factoryId={factoryId}
-          deviceId={activeDeviceId}
-          apiMode="factory"
-          canWrite={canWriteFactory}
-        />
+        <div ref={editorRef} className="scroll-mt-4">
+          <NodeSensorBindingsEditor
+            factoryId={factoryId}
+            deviceId={activeDeviceId}
+            apiMode="factory"
+            canWrite={canWriteFactory}
+          />
+        </div>
       )}
     </div>
   );

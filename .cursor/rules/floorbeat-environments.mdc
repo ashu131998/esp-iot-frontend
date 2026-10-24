@@ -1,0 +1,55 @@
+---
+description: FloorBeat environments, hostnames, deploy flow and repo layout (prod / stage / dev)
+alwaysApply: true
+---
+
+# FloorBeat platform map (updated 2026-10-24)
+
+Full details: `docs/ENVIRONMENTS.md` in the backend repo (`~/esp-intro/backend`) and the personal-store memory file
+`esp-iot-platform-memory.md`.
+
+## Repos
+- Firmware: `~/esp-intro` (`esp-iot-firmware`). Backend: `~/esp-intro/backend` (nested git, `esp-iot-backend-stack`).
+- Frontend + marketing site: `~/esp-iot-frontend` (`esp-iot-frontend`); marketing lives in `marketing/`
+  (`~/floorbeat-site` is an old, unused copy).
+
+## Environments (all on Hetzner `esp-iot` = 162.55.168.191, one factory each)
+
+| | Prod | Stage | Dev |
+|---|---|---|---|
+| Branch | `main` | `staging` | `develop` |
+| Marketing | `floorbeat.in` | `stage-www.floorbeat.in` | `dev-www.floorbeat.in` |
+| Dashboard | `app.floorbeat.in` | `stage-app.floorbeat.in` | `dev-app.floorbeat.in` |
+| Staff console | `ops.floorbeat.in` | `stage-ops.floorbeat.in` | `dev-ops.floorbeat.in` |
+| API | `api.floorbeat.in` | `api-stage.floorbeat.in` | `api-dev.floorbeat.in` |
+| Server dir / port | `/root/backend` / 8001 | `/root/backend-stage` / 8101 | `/root/backend-dev` / 8201 |
+| Factory | `factory-01` (real ESP `revb-304ad0` + mock looms 5–20) | `factory-pune-01` | `factory-mumbai-02` |
+
+- Stage/dev use `docker-compose.nonprod.yml` (Postgres, query-api, aggregator, mock producer writing to
+  Postgres; no MQTT/Redpanda, alerts and email off). Their `.env` files are server-only, never in CI.
+- Prod `.env` has `SEED_FACTORY_IDS=none`; Pune/Mumbai were removed from prod (backup in `/root/backups/`).
+- Caddy proxies api-stage → 8101, api-dev → 8201.
+
+## Deploy flow
+- Promote `develop` → `staging` → `main`. Prod-facing fixes: push the same commit to all three.
+- Backend: `deploy.yml` (main → prod), `deploy-nonprod.yml` (develop/staging → rsync + `scripts/deploy-nonprod.sh`).
+- Frontend: `deploy.yml` deploys Workers per branch (prod envs default/`app`; `stage`/`stage-app`; `dev`/`dev-app`).
+  `deploy-marketing.yml` runs only on `marketing/**` changes (`--env stage|dev` off main).
+- Wrangler: use `--env <name>` only; never pass the Worker name too. New-Worker deploy error 10007 → rerun.
+- Branch pushes with only ignored paths don't trigger CI; use `workflow_dispatch`.
+
+## Behaviour to preserve
+- `GET /v1/public/factories/:id` (no auth) → `{factory_id,name}` or 404 `{error:'Factory not found'}`.
+  Marketing `/login` and app `/f/:id/login` show "factory not found" instead of redirecting.
+- Marketing CSP `form-action` must include `APP_ORIGIN`. Non-prod marketing sends `X-Robots-Tag: noindex`.
+- Session hint cookie `fb_home` only in prod (`SESSION_HINT_COOKIE_DOMAIN`).
+- Factory sidebar order is `DEFAULT_TABS` in frontend `src/lib/factory-config.ts`
+  (Overview, Status Timeline, Availability, Alerts, ...).
+
+## Email
+- Inbox: Zoho Mail (free) on `floorbeat.in`; MX/SPF/DKIM/DMARC in Cloudflare DNS.
+- Sending: Resend from `reports@floorbeat.in`, reply-to `support@floorbeat.in`;
+  bounce webhook `POST https://api.floorbeat.in/v1/webhooks/resend`.
+
+## Secrets
+Never print or commit secrets. Read them with hidden input (`read -rs`) or pipe them over ssh into `gh secret set`.

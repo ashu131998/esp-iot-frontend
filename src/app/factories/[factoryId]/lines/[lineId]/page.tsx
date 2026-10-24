@@ -111,7 +111,7 @@ export default async function LineDetailPage({
       {/* Live metrics section — auto-refreshes every 60s */}
       <NavDim>
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <QuerySuspense
+          <QuerySuspense ssr
             fallback={
               <div className="space-y-6">
                 <StatGridSkeleton count={3} />

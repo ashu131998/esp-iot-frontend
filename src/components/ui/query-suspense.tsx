@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useSyncExternalStore, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/table';
@@ -44,14 +44,27 @@ class QueryErrorBoundary extends Component<
   }
 }
 
-/** Suspense + error boundary for TanStack Query `useSuspenseQuery` children. */
+const noopSubscribe = () => () => {};
+
+/**
+ * Suspense + error boundary for TanStack Query `useSuspenseQuery` children.
+ *
+ * Children render only in the browser unless `ssr` is set: the client API uses
+ * relative `/api` URLs, which cannot be fetched during server rendering. Pass
+ * `ssr` only when the page prefetches the queries into a `HydrationBoundary`.
+ */
 export function QuerySuspense({
   children,
   fallback,
+  ssr = false,
 }: {
   children: ReactNode;
   fallback: ReactNode;
+  ssr?: boolean;
 }) {
+  const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!ssr && !isClient) return <>{fallback}</>;
+
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (

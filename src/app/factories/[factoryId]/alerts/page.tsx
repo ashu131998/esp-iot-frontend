@@ -34,7 +34,7 @@ export default async function FactoryAlertsPage({
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <NavDim className="space-y-6">
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <QuerySuspense fallback={<FactoryPageSkeleton statCards={3} className="pt-0" />}>
+          <QuerySuspense ssr fallback={<FactoryPageSkeleton statCards={3} className="pt-0" />}>
             <FactoryAlertsDashboard factoryId={factoryId} />
           </QuerySuspense>
           <div className="grid gap-6 xl:grid-cols-2">

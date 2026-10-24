@@ -72,12 +72,22 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
-      # Push runtime secrets into the Worker after each deploy
+      - name: Deploy customer dashboard Worker (env app)
+        uses: cloudflare/wrangler-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env app
+
+      # Push runtime secrets into both Workers after each deploy
       - name: Set Worker runtime secrets
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          echo "${{ secrets.JWT_ACCESS_SECRET }}" | npx wrangler secret put JWT_ACCESS_SECRET
-          echo "${{ secrets.API_INTERNAL_URL }}"  | npx wrangler secret put API_INTERNAL_URL
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for env_flag in "" "--env app"; do
+            echo "${{ secrets.JWT_ACCESS_SECRET }}" | npx wrangler secret put JWT_ACCESS_SECRET $env_flag
+            echo "${{ secrets.API_INTERNAL_URL }}"  | npx wrangler secret put API_INTERNAL_URL $env_flag
+          done

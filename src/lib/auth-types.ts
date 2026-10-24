@@ -3,6 +3,8 @@
 export const ACCESS_COOKIE = 'esp_access';
 export const REFRESH_COOKIE = 'esp_refresh';
 export const CSRF_COOKIE = 'esp_csrf';
+/** Non-secret "signed in, home is X" hint shared with the marketing site. */
+export const SESSION_HINT_COOKIE = 'fb_home';
 
 export type Role =
   | 'super_admin'

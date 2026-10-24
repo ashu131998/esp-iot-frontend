@@ -1,7 +1,7 @@
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { ACCESS_COOKIE, CSRF_COOKIE } from '@/lib/auth-types';
+import { ACCESS_COOKIE, CSRF_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
@@ -21,6 +21,8 @@ const LEGACY_PLATFORM_REDIRECTS: Record<string, string> = {
   '/admin': '/internal',
   '/admin/login': '/internal/login',
 };
+
+const FACTORY_HOME_RE = /^\/factories\/[A-Za-z0-9_-]{1,64}$/;
 
 interface Identity {
   role: string;
@@ -194,7 +196,16 @@ export async function middleware(req: NextRequest) {
 
   if (pathname === '/') {
     if (!identity) {
-      return internalHostAllowed(req) ? redirectTo('/internal/login') : secured();
+      if (internalHostAllowed(req)) return redirectTo('/internal/login');
+      const hinted = req.cookies.get(SESSION_HINT_COOKIE)?.value;
+      if (hinted && FACTORY_HOME_RE.test(hinted)) return redirectTo(hinted);
+      const marketingUrl = process.env.MARKETING_URL?.trim();
+      if (marketingUrl) return NextResponse.redirect(marketingUrl);
+      return secured();
+    }
+    const staffUrl = process.env.STAFF_URL?.trim();
+    if (staffUrl && isStaffRole(identity.role) && !internalHostAllowed(req)) {
+      return NextResponse.redirect(staffUrl);
     }
     const home = homeFor(identity, req);
     if (home === pathname) return secured();

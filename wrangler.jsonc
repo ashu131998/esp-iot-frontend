@@ -1,5 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
+  // Default environment = staff console (ops host). `--env app` deploys the
+  // same build as the customer dashboard, where /internal is not served.
   "name": "esp-iot-frontend",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-01",
@@ -8,7 +10,23 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "routes": [{ "pattern": "ops.floorbeat.in", "custom_domain": true }],
+  "workers_dev": true,
   "vars": {
-    "INTERNAL_STAFF_HOSTNAMES": "esp-iot-frontend.ashu131998.workers.dev"
+    "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+    "SESSION_HINT_COOKIE_DOMAIN": "floorbeat.in"
+  },
+  "env": {
+    "app": {
+      "name": "esp-iot-frontend-app",
+      "routes": [{ "pattern": "app.floorbeat.in", "custom_domain": true }],
+      "workers_dev": true,
+      "vars": {
+        "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+        "SESSION_HINT_COOKIE_DOMAIN": "floorbeat.in",
+        "MARKETING_URL": "https://floorbeat.in",
+        "STAFF_URL": "https://ops.floorbeat.in/internal"
+      }
+    }
   }
 }

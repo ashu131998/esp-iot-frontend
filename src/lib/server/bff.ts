@@ -4,11 +4,12 @@
  */
 import type { NextRequest, NextResponse } from 'next/server';
 
-import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE } from '@/lib/auth-types';
+import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
+import { isStaffRole, staffHomePath } from '@/lib/internal-auth';
 import { fetchWithSignal } from '@/lib/request-signal';
 
 // Single source of truth for cookie names lives in auth-types (client-safe).
-export { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE };
+export { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE };
 export const CSRF_HEADER = 'x-csrf-token';
 
 // Token lifetimes (cookie maxAge). The backend remains authoritative on actual
@@ -32,6 +33,37 @@ export function internalApiBase(): string {
     process.env.NEXT_PUBLIC_API_URL ??
     'http://localhost:8001'
   );
+}
+
+/**
+ * Parent domain (e.g. `.floorbeat.in`) for the session hint cookie, so the
+ * marketing site on the apex can send signed-in users to their dashboard.
+ * Unset: no hint cookie is written (workers.dev / local dev).
+ */
+function sessionHintDomain(): string | undefined {
+  return process.env.SESSION_HINT_COOKIE_DOMAIN?.trim() || undefined;
+}
+
+const FACTORY_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Home path for the signed-in user, read from the (unverified) access token
+ * payload. Only used for the cross-subdomain redirect hint, never for access.
+ */
+export function homePathFromAccessToken(access: string): string | null {
+  const part = access.split('.')[1];
+  if (!part) return null;
+  try {
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as { role?: unknown; factory_id?: unknown };
+    const role = typeof payload.role === 'string' ? payload.role : undefined;
+    if (isStaffRole(role)) return staffHomePath();
+    const factoryId = typeof payload.factory_id === 'string' ? payload.factory_id : null;
+    if (factoryId && FACTORY_ID_RE.test(factoryId)) return `/factories/${factoryId}`;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function generateCsrfToken(): string {
@@ -62,6 +94,18 @@ export function setAuthCookies(res: NextResponse, tokens: TokenPair, csrfToken?:
     path: '/',
     maxAge: REFRESH_MAX_AGE,
   });
+  const hintDomain = sessionHintDomain();
+  const home = hintDomain ? homePathFromAccessToken(tokens.access) : null;
+  if (hintDomain && home) {
+    res.cookies.set(SESSION_HINT_COOKIE, home, {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      domain: hintDomain,
+      path: '/',
+      maxAge: REFRESH_MAX_AGE,
+    });
+  }
 }
 
 /** Sets just the readable csrf cookie and returns the token (used to bootstrap CSRF). */
@@ -83,6 +127,17 @@ export function clearAuthCookies(res: NextResponse): void {
       httpOnly: name !== CSRF_COOKIE,
       secure: isProd(),
       sameSite: 'strict',
+      path: '/',
+      maxAge: 0,
+    });
+  }
+  const hintDomain = sessionHintDomain();
+  if (hintDomain) {
+    res.cookies.set(SESSION_HINT_COOKIE, '', {
+      httpOnly: true,
+      secure: isProd(),
+      sameSite: 'lax',
+      domain: hintDomain,
       path: '/',
       maxAge: 0,
     });

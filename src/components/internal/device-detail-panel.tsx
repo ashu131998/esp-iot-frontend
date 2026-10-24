@@ -91,10 +91,14 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
     }
     for (const c of rangeQuery.data.cycle ?? []) {
       const slot = (c.metadata?.slot as string | undefined) ?? (c.metadata?.name as string | undefined);
+      // Universal firmware: one record per minute for both proximity inputs, PX1 in count, PX2 in rotations.
+      const bothInputs = slot === 'P1' && c.rotations != null;
       rows.push({
         at: c.occurred_at,
-        kind: slot ? `cycle (${slot})` : 'cycle',
-        summary: `count=${c.count} running=${c.running ?? '—'} window_s=${c.window_s ?? '—'}`,
+        kind: bothInputs ? 'cycle (P1 · P2)' : slot ? `cycle (${slot})` : 'cycle',
+        summary: bothInputs
+          ? `P1=${c.count} P2=${c.rotations} running=${c.running ?? '—'} window_s=${c.window_s ?? '—'}`
+          : `count=${c.count} running=${c.running ?? '—'} window_s=${c.window_s ?? '—'}`,
       });
     }
     return rows.sort((a, b) => (a.at < b.at ? 1 : -1));
@@ -207,7 +211,10 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
                 <p className="font-medium">Latest cycle sample</p>
                 {latestCycle ? (
                   <p className="font-mono text-xs">
-                    {formatDate(latestCycle.occurred_at)} · count={latestCycle.count}
+                    {formatDate(latestCycle.occurred_at)} ·{' '}
+                    {latestCycle.metadata?.name === 'P1' && latestCycle.rotations != null
+                      ? `P1=${latestCycle.count} P2=${latestCycle.rotations}`
+                      : `count=${latestCycle.count}`}
                   </p>
                 ) : (
                   <p className="text-muted">None in recent window</p>

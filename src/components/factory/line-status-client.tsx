@@ -10,7 +10,8 @@ import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
+import { noEnergy, noProduction } from '@/lib/display';
+import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import type {
   AvailabilityMachine,
@@ -23,6 +24,8 @@ import { sortByMachineName } from '@/lib/machine-sort';
 import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
+// Summary cards per row, by how many are shown (literal class names for Tailwind).
+const GRID_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
 
 export function LineStatusClient({
   factoryId,
@@ -48,6 +51,10 @@ export function LineStatusClient({
   );
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);
+  // Energy / Production switched off for the factory: not requested, not shown.
+  const shown = useShown();
+  const energyOn = shown('energy');
+  const productionOn = shown('production');
 
   const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['line-status', factoryId, lineId, from ?? null, to ?? null],
@@ -56,8 +63,10 @@ export function LineStatusClient({
       const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const [availability, energy, production, uptime24h] = await Promise.all([
         api.availability(factoryId, { ...range, line_id: lineId }, { signal }),
-        api.energy(factoryId, { ...range, line_id: lineId }, { signal }),
-        api.production(factoryId, { ...range, line_id: lineId }, { signal }),
+        energyOn ? api.energy(factoryId, { ...range, line_id: lineId }, { signal }) : noEnergy(factoryId),
+        productionOn
+          ? api.production(factoryId, { ...range, line_id: lineId }, { signal })
+          : noProduction(factoryId),
         api.uptime(factoryId, { from: from24h, to: now.toISOString(), line_id: lineId }, { signal }),
       ]);
       return { availability, energy, production, uptime24h };
@@ -90,22 +99,26 @@ export function LineStatusClient({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Total Energy"
-          value={`${formatNumber(energy.total_energy_kwh)} kWh`}
-          sub="Estimated from current sensors"
-        />
+      <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
+        {energyOn && (
+          <StatCard
+            label="Total Energy"
+            value={`${formatNumber(energy.total_energy_kwh)} kWh`}
+            sub="Estimated from current sensors"
+          />
+        )}
         <StatCard
           label="Avg Availability"
           value={formatPercent(availability.avg_availability_percent)}
           sub={`${formatNumber(availability.total_uptime_minutes, 0)} min running · ${formatNumber(availability.total_downtime_minutes, 0)} min stopped`}
         />
-        <StatCard
-          label="Units Produced"
-          value={formatUnits(production.total_units, production.unit_label)}
-          sub="From proximity sensor detections"
-        />
+        {productionOn && (
+          <StatCard
+            label="Units Produced"
+            value={formatUnits(production.total_units, production.unit_label)}
+            sub="From proximity sensor detections"
+          />
+        )}
       </div>
 
       <Card>
@@ -122,8 +135,8 @@ export function LineStatusClient({
               <TR>
                 <TH>Machine</TH>
                 <TH>Current Status</TH>
-                <TH>Units Produced</TH>
-                <TH>Energy (kWh)</TH>
+                {productionOn && <TH>Units Produced</TH>}
+                {energyOn && <TH>Energy (kWh)</TH>}
                 <TH>Availability</TH>
                 <TH>Last 24h</TH>
                 <TH>Config Entries</TH>
@@ -152,10 +165,14 @@ export function LineStatusClient({
                     <TD>
                       <MachineStatusBadge status={status} />
                     </TD>
-                    <TD className="font-semibold">{prod ? formatUnits(prod.units_produced, prod.unit_label) : '—'}</TD>
-                    <TD>
-                      {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
-                    </TD>
+                    {productionOn && (
+                      <TD className="font-semibold">{prod ? formatUnits(prod.units_produced, prod.unit_label) : '—'}</TD>
+                    )}
+                    {energyOn && (
+                      <TD>
+                        {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
+                      </TD>
+                    )}
                     <TD>{formatPercent(avail?.availability_percent ?? null)}</TD>
                     <TD>
                       <MiniTimeline segments={uptime?.timeline ?? []} />

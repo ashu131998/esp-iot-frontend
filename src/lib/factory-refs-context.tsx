@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, type ReactNode } from 'react';
 
+import { isShown, type Display } from '@/lib/display';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 
 export interface FactoryRefs {
@@ -13,6 +14,8 @@ export interface FactoryRefs {
   minDate: string | null;
   /** Shift schedule; the default date range is the current shift. */
   shifts: Shift[];
+  /** Pages and page sections switched on for this factory (lib/display.ts). */
+  display: Display;
 }
 
 const FactoryRefsContext = createContext<FactoryRefs | null>(null);
@@ -43,4 +46,14 @@ export function useFactoryRefs(): FactoryRefs {
 /** Non-throwing variant for components shared with non-factory pages (overview). */
 export function useFactoryRefsOptional(): FactoryRefs | null {
   return useContext(FactoryRefsContext);
+}
+
+/**
+ * `shown(key)`: whether this factory shows a page or page section, e.g.
+ * `shown('production.chart')` or `shown('energy')`. Everything is shown outside
+ * a factory (shared components on the platform pages).
+ */
+export function useShown(): (key: string) => boolean {
+  const display = useContext(FactoryRefsContext)?.display;
+  return useCallback((key: string) => isShown(display, key), [display]);
 }

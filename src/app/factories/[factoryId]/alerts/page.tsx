@@ -6,8 +6,10 @@ import { MobileSettingsCard } from '@/components/alerts/mobile-settings-card';
 import { FactoryAlertsDashboard } from '@/components/factory/factory-alerts-dashboard';
 import { FactoryPageSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
+import { isShown } from '@/lib/display';
 import { NavDim } from '@/lib/navigation-context';
 import { getQueryClient } from '@/lib/get-query-client';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -18,30 +20,38 @@ export default async function FactoryAlertsPage({
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
+  const display = await requireFactoryPage(factoryId, 'alerts');
+  const show = (section: string) => isShown(display, `alerts.${section}`);
 
   const queryClient = getQueryClient();
   const now = new Date();
-  await queryClient.prefetchQuery({
-    queryKey: ['availability-factory-alerts', factoryId],
-    queryFn: () =>
-      serverApi.availability(factoryId, {
-        from: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-        to: now.toISOString(),
-      }),
-  });
+  if (show('machines')) {
+    await queryClient.prefetchQuery({
+      queryKey: ['availability-factory-alerts', factoryId],
+      queryFn: () =>
+        serverApi.availability(factoryId, {
+          from: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+          to: now.toISOString(),
+        }),
+    });
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <NavDim className="space-y-6">
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <QuerySuspense ssr fallback={<FactoryPageSkeleton statCards={3} className="pt-0" />}>
-            <FactoryAlertsDashboard factoryId={factoryId} />
-          </QuerySuspense>
-          <div className="grid gap-6 xl:grid-cols-2">
-            <MobileSettingsCard factoryId={factoryId} />
-            <DowntimeReportsCard factoryId={factoryId} />
-          </div>
-          <NotificationFeed factoryId={factoryId} />
+          {show('machines') && (
+            <QuerySuspense ssr fallback={<FactoryPageSkeleton statCards={3} className="pt-0" />}>
+              <FactoryAlertsDashboard factoryId={factoryId} />
+            </QuerySuspense>
+          )}
+          {(show('mobile') || show('downtime')) && (
+            <div className="grid gap-6 xl:grid-cols-2">
+              {show('mobile') && <MobileSettingsCard factoryId={factoryId} />}
+              {show('downtime') && <DowntimeReportsCard factoryId={factoryId} />}
+            </div>
+          )}
+          {show('feed') && <NotificationFeed factoryId={factoryId} />}
         </HydrationBoundary>
       </NavDim>
     </div>

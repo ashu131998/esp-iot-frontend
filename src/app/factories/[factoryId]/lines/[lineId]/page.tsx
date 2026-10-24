@@ -7,9 +7,11 @@ import { QuerySuspense } from '@/components/ui/query-suspense';
 import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { LineStatusClient } from '@/components/factory/line-status-client';
 import { LineMachineConfig } from '@/components/factory/line-machine-config';
+import { isShown, noEnergy, noProduction } from '@/lib/display';
 import { NavDim } from '@/lib/navigation-context';
 import { resolveDateRange } from '@/lib/date-range';
 import { getQueryClient } from '@/lib/get-query-client';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
 import { formatDate } from '@/lib/utils';
 
@@ -23,6 +25,7 @@ export default async function LineDetailPage({
   searchParams: Promise<{ from?: string; to?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId, lineId } = await params;
+  const display = await requireFactoryPage(factoryId, 'lines');
   const sp = await searchParams;
 
   const factory = await serverApi.factory(factoryId);
@@ -61,8 +64,13 @@ export default async function LineDetailPage({
       const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const [availability, energy, production, uptime24h] = await Promise.all([
         serverApi.availability(factoryId, { ...range, line_id: activeLineId }),
-        serverApi.energy(factoryId, { ...range, line_id: activeLineId }),
-        serverApi.production(factoryId, { ...range, line_id: activeLineId }),
+        // Same switches as LineStatusClient, so the hydrated data matches its own requests.
+        isShown(display, 'energy')
+          ? serverApi.energy(factoryId, { ...range, line_id: activeLineId })
+          : noEnergy(factoryId),
+        isShown(display, 'production')
+          ? serverApi.production(factoryId, { ...range, line_id: activeLineId })
+          : noProduction(factoryId),
         serverApi.uptime(factoryId, { from: from24h, to: now.toISOString(), line_id: activeLineId }),
       ]);
       return { availability, energy, production, uptime24h };

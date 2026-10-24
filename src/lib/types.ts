@@ -16,7 +16,10 @@ export interface Factory {
   shifts?: Shift[];
   shifts_per_day?: number;
   shift_hours?: number;
-  features?: import('./factory-features').FactoryFeatures;
+  /** Raw page / section switches as stored (only the keys staff changed). */
+  features?: Record<string, boolean>;
+  /** Every page and section switch resolved to on/off (lib/display.ts). */
+  display?: import('./display').Display;
   machine_count: number;
   device_count: number;
   line_count: number;

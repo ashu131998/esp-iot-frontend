@@ -6,6 +6,7 @@ import { AvailabilityCards } from '@/components/factory/availability-cards';
 import { FactoryAvailabilityTrend } from '@/components/factory/factory-availability-trend';
 import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
+import { useShown } from '@/lib/factory-refs-context';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 
 const AvailabilityChartSection = dynamic(
@@ -28,30 +29,38 @@ export function AvailabilityDashboard({
   to?: string;
 }) {
   const { machineId } = useFactoryDateRange();
+  // Parts our staff switched off for this factory are neither shown nor fetched.
+  const shown = useShown();
 
   return (
     <>
       {/* Cards + shift section — resolves as soon as the availability query returns */}
-      <QuerySuspense fallback={<StatGridSkeleton count={3} />}>
-        <AvailabilityCards factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
+      {shown('availability.cards') && (
+        <QuerySuspense fallback={<StatGridSkeleton count={3} />}>
+          <AvailabilityCards factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
 
       {/* Bar chart — lazy JS bundle, shares the cached availability query */}
-      <QuerySuspense fallback={<ChartSkeleton />}>
-        <AvailabilityChartSection factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
+      {shown('availability.chart') && (
+        <QuerySuspense fallback={<ChartSkeleton />}>
+          <AvailabilityChartSection factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
 
       {/* Daily trend — lazy JS bundle, own separate API call */}
-      {!machineId && (
+      {!machineId && shown('availability.trend') && (
         <QuerySuspense fallback={<ChartSkeleton />}>
           <FactoryAvailabilityTrend factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
 
       {/* Machine table — lazy JS bundle, fires availability + uptime in parallel */}
-      <QuerySuspense fallback={<TableSkeleton rows={5} cols={7} />}>
-        <AvailabilityMachineTable factoryId={factoryId} from={from} to={to} />
-      </QuerySuspense>
+      {shown('availability.table') && (
+        <QuerySuspense fallback={<TableSkeleton rows={5} cols={7} />}>
+          <AvailabilityMachineTable factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
     </>
   );
 }

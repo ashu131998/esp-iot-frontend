@@ -2,11 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { FactoryFeaturesCard } from '@/components/admin/factory-features-card';
+import { FactoryDisplayEditor } from '@/components/admin/factory-display-editor';
 import { PageHeader } from '@/components/layout/internal-shell';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { api } from '@/lib/api';
-import { FEATURE_SLUGS } from '@/lib/factory-features';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
 
 export default function InternalFeaturesPage() {
@@ -14,15 +13,28 @@ export default function InternalFeaturesPage() {
     queryKey: ['admin-factories'],
     queryFn: ({ signal }) => api.adminFactories({ signal }),
   });
+  const catalogQuery = useQuery({
+    queryKey: ['admin-display-catalog'],
+    queryFn: ({ signal }) => api.adminDisplayCatalog({ signal }),
+    staleTime: Infinity,
+  });
 
   return (
     <>
-      <PageHeader title="Feature flags" description="Toggle optional dashboard pages per factory" />
+      <PageHeader
+        title="Pages & sections"
+        description="Switch dashboard pages, and parts of pages, per factory"
+      />
       <div className="p-4 sm:p-6 lg:p-8">
-        {queryShowsTableLoading(factoriesQuery) ? (
-          <TableSkeleton rows={5} cols={FEATURE_SLUGS.length + 1} />
+        {queryShowsTableLoading(factoriesQuery) || queryShowsTableLoading(catalogQuery) ? (
+          <TableSkeleton rows={8} cols={2} />
+        ) : catalogQuery.error ? (
+          <p className="text-sm text-red-600">Could not load the page list: {catalogQuery.error.message}</p>
         ) : (
-          <FactoryFeaturesCard factories={factoriesQuery.data?.factories ?? []} />
+          <FactoryDisplayEditor
+            factories={factoriesQuery.data?.factories ?? []}
+            pages={catalogQuery.data?.pages ?? []}
+          />
         )}
       </div>
     </>

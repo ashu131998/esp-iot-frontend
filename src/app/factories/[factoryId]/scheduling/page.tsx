@@ -8,6 +8,7 @@ import type {
   Worker,
   WorkerSchedule,
 } from '@/lib/types';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,7 @@ export default async function SchedulingPage({
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
+  await requireFactoryPage(factoryId, 'scheduling');
 
   const [{ machines }, linesData, profilesData, workersData, schedulesData] = await Promise.all([
     serverApi.machines(factoryId),

@@ -689,15 +689,20 @@ export const api = {
       ...options,
     }),
 
+  /** Switch factory pages / page sections (keys from adminDisplayCatalog). Staff only. */
   adminUpdateFactoryFeatures: (
     factoryId: string,
-    features: import('./factory-features').FactoryFeatures,
+    features: Record<string, boolean>,
     options?: ApiRequestOptions,
   ) =>
-    request<{ factory_id: string; features: import('./factory-features').FactoryFeatures }>(
+    request<{ factory_id: string; features: Record<string, boolean> }>(
       `/v1/admin/factories/${factoryId}/features`,
       { method: 'PATCH', body: JSON.stringify(features), ...options },
     ),
+
+  /** Every page that can be switched per factory, with its sections. Staff only. */
+  adminDisplayCatalog: (options?: ApiRequestOptions) =>
+    request<{ pages: import('./display').DisplayPage[] }>('/v1/admin/display-catalog', options),
 
   adminSummary: (params?: { stale_minutes?: number }, options?: ApiRequestOptions) =>
     request<{

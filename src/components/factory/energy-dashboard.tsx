@@ -9,6 +9,7 @@ import {
   TableSkeleton,
 } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
+import { useShown } from '@/lib/factory-refs-context';
 
 const EnergyChartSection = dynamic(
   () => import('@/components/factory/energy-chart-section').then((m) => m.EnergyChartSection),
@@ -29,11 +30,13 @@ export function EnergyDashboard({
   from?: string;
   to?: string;
 }) {
+  // Parts our staff switched off for this factory are neither shown nor fetched.
+  const shown = useShown();
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={6} />}>
-      <EnergyCards factoryId={factoryId} from={from} to={to} />
-      <EnergyChartSection factoryId={factoryId} from={from} to={to} />
-      <EnergyTable factoryId={factoryId} from={from} to={to} />
+      {shown('energy.cards') && <EnergyCards factoryId={factoryId} from={from} to={to} />}
+      {shown('energy.chart') && <EnergyChartSection factoryId={factoryId} from={from} to={to} />}
+      {shown('energy.table') && <EnergyTable factoryId={factoryId} from={from} to={to} />}
     </QuerySuspense>
   );
 }

@@ -12,7 +12,8 @@ import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { noEnergy, noProduction, offQuery } from '@/lib/display';
+import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
 import {
   factoryMetricsApiRange,
   factoryScopeQueryKey,
@@ -45,6 +46,10 @@ export function FactoryOverviewMachinesTable({
     [machines, machineId, lineId],
   );
   const refetchInterval = useRefetchInterval(REFRESH_MS);
+  // Modules switched off for the factory: their columns are not requested or shown.
+  const shown = useShown();
+  const energyOn = shown('energy');
+  const productionOn = shown('production');
 
   const { page, limit, offset, setPaginationParams } = useClientPagination();
 
@@ -64,20 +69,24 @@ export function FactoryOverviewMachinesTable({
           refetchInterval,
           staleTime: 0,
         },
-        {
-          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
-          queryFn: ({ signal }: { signal: AbortSignal }) =>
-            api.energy(factoryId, apiRange, { signal }),
-          refetchInterval,
-          staleTime: 0,
-        },
-        {
-          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
-          queryFn: ({ signal }: { signal: AbortSignal }) =>
-            api.production(factoryId, apiRange, { signal }),
-          refetchInterval,
-          staleTime: 0,
-        },
+        energyOn
+          ? {
+            queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+            queryFn: ({ signal }: { signal: AbortSignal }) =>
+              api.energy(factoryId, apiRange, { signal }),
+            refetchInterval,
+            staleTime: 0,
+          }
+          : offQuery('energy', noEnergy(factoryId)),
+        productionOn
+          ? {
+            queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+            queryFn: ({ signal }: { signal: AbortSignal }) =>
+              api.production(factoryId, apiRange, { signal }),
+            refetchInterval,
+            staleTime: 0,
+          }
+          : offQuery('production', noProduction(factoryId)),
         {
           queryKey: ['uptime-24h-overview', factoryId, page, limit, pageMachineIdsKey, ...scopeKey],
           queryFn: ({ signal }: { signal: AbortSignal }) => {
@@ -141,8 +150,8 @@ export function FactoryOverviewMachinesTable({
                 'Line',
                 'Type',
                 'Availability',
-                'Energy (kWh)',
-                'Units',
+                ...(energyOn ? ['Energy (kWh)'] : []),
+                ...(productionOn ? ['Units'] : []),
                 'Current Status',
               ]}
               rows={machineRows.map(({ machine, avail, eng, prod, uptime }) => [
@@ -150,8 +159,8 @@ export function FactoryOverviewMachinesTable({
                 machine.line_id,
                 machine.type,
                 avail?.availability_percent,
-                eng?.energy_kwh,
-                prod?.units_produced ?? 0,
+                ...(energyOn ? [eng?.energy_kwh] : []),
+                ...(productionOn ? [prod?.units_produced ?? 0] : []),
                 currentStatus(uptime, avail),
               ])}
             />
@@ -171,8 +180,8 @@ export function FactoryOverviewMachinesTable({
             <TH>Line</TH>
             <TH>Type</TH>
             <TH>Availability</TH>
-            <TH>Energy</TH>
-            <TH>Units</TH>
+            {energyOn && <TH>Energy</TH>}
+            {productionOn && <TH>Units</TH>}
             <TH>Last 24h</TH>
             <TH>Current Status</TH>
           </TR>
@@ -184,8 +193,10 @@ export function FactoryOverviewMachinesTable({
               <TD>{machine.line_id}</TD>
               <TD className="capitalize">{machine.type}</TD>
               <TD>{formatPercent(avail?.availability_percent)}</TD>
-              <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
-              <TD>{formatUnits(prod?.units_produced ?? 0, prod?.unit_label)}</TD>
+              {energyOn && (
+                <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
+              )}
+              {productionOn && <TD>{formatUnits(prod?.units_produced ?? 0, prod?.unit_label)}</TD>}
               <TD>
                 {(uptimeRowsByMachine[machine.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">

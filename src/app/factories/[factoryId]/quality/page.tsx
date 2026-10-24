@@ -6,6 +6,7 @@ import { NavDim } from '@/lib/navigation-context';
 import { resolveDateRange } from '@/lib/date-range';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { serverApi } from '@/lib/server-api';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,7 @@ export default async function QualityPage({
   searchParams: Promise<{ from?: string; to?: string; page?: string; limit?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId } = await params;
+  await requireFactoryPage(factoryId, 'quality');
   const sp = await searchParams;
 
   return (

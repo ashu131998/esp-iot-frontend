@@ -1,10 +1,10 @@
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getFactoryConfig } from '@/lib/factory-config';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 
 /**
- * Factory-specific page — only registered for factories with customPages in factory-config.
- * Mumbai Precision Works includes ISO compliance tracking.
+ * Optional page, off unless our staff switch it on for a factory (Pages &
+ * sections). Shows sample audit data until it is wired to real records.
  */
 export default async function CompliancePage({
   params,
@@ -12,8 +12,7 @@ export default async function CompliancePage({
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
-  const config = getFactoryConfig(factoryId);
-  const customPage = config.customPages?.find((p) => p.slug === 'compliance');
+  await requireFactoryPage(factoryId, 'compliance');
 
   const audits = [
     { id: 'ISO-9001', status: 'Certified', expiry: '2027-03-15', score: 94 },
@@ -26,7 +25,7 @@ export default async function CompliancePage({
       <Card>
         <CardHeader
           title="Compliance Dashboard"
-          description={customPage?.description ?? 'Factory compliance and certification status'}
+          description="Factory compliance and certification status"
         />
         <div className="grid gap-4 md:grid-cols-3">
           {audits.map((a) => (
@@ -56,10 +55,7 @@ export default async function CompliancePage({
             </div>
           ))}
         </div>
-        <p className="mt-6 text-sm text-muted">
-          This page is factory-specific to {config.name}. Add more custom pages via{' '}
-          <code className="rounded bg-slate-100 px-1">src/lib/factory-config.ts</code>.
-        </p>
+        <p className="mt-6 text-sm text-muted">Sample data — not yet connected to audit records.</p>
       </Card>
     </div>
   );

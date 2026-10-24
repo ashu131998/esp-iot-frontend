@@ -2,6 +2,7 @@ import { MachineProfileManager } from '@/components/factory/machine-profile-mana
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function ConfigurationPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { factoryId } = await params;
+  await requireFactoryPage(factoryId, 'configuration');
   const [{ machines }, profilesData, configData] = await Promise.all([
     serverApi.machines(factoryId),
     serverApi.configProfiles(factoryId).catch(() => ({ profiles: [] as import('@/lib/types').MachineConfigProfile[] })),

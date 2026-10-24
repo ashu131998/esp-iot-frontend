@@ -3,17 +3,15 @@ import { notFound } from 'next/navigation';
 import { FactoryShell } from '@/components/layout/factory-shell';
 import { serverApi } from '@/lib/server-api';
 import { getFactoryConfig } from '@/lib/factory-config';
-import { filterTabsByFeatures } from '@/lib/factory-features';
+import { displayOf, factoryTabs } from '@/lib/display';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 
 export async function FactoryShellLoader({
   factoryId,
-  tabs,
   children,
 }: {
   factoryId: string;
-  tabs: Array<{ slug: string; label: string; href: string }>;
   children: React.ReactNode;
 }) {
   const config = getFactoryConfig(factoryId);
@@ -34,8 +32,8 @@ export async function FactoryShellLoader({
   const shifts = factory.shifts?.length ? factory.shifts : DEFAULT_SHIFTS;
   const shiftLabel = shifts.map((s) => s.label).join(' · ');
 
-  // Hide feature-gated tabs (energy/vibration/temperature) the factory disabled.
-  const visibleTabs = filterTabsByFeatures(tabs, factory.features);
+  // Pages and sections our staff switched for this factory (lib/display.ts).
+  const display = displayOf(factory);
 
   return (
     <FactoryShell
@@ -43,13 +41,14 @@ export async function FactoryShellLoader({
       factoryName={factory.name ?? config.name}
       location={factory.location}
       shifts={shifts}
-      tabs={visibleTabs}
+      tabs={factoryTabs(factoryId, display)}
       description={`${factory.location ?? ''} · ${factory.machines?.length ?? 0} machines · ${shiftLabel}`}
       refs={{
         machines: sortByMachineName(factory.machines ?? []),
         lines: lines ?? [],
         minDate: factory.created_at,
         shifts,
+        display,
       }}
     >
       {children}

@@ -10,13 +10,16 @@ import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { MachineAvailabilityTrends } from '@/components/factory/machine-availability-trends';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
+import { noEnergy, noProduction } from '@/lib/display';
+import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
+// Summary cards per row, by how many are shown (literal class names for Tailwind).
+const GRID_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
 
 function humanDuration(ms: number): string {
   const min = Math.max(1, Math.round(ms / 60000));
@@ -79,6 +82,10 @@ export function MachineStatusClient({
   );
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);
+  // Energy / Production switched off for the factory: not requested, not shown.
+  const shown = useShown();
+  const energyOn = shown('energy');
+  const productionOn = shown('production');
 
   const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['machine-status', factoryId, machineId, from ?? null, to ?? null],
@@ -87,8 +94,10 @@ export function MachineStatusClient({
       const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const [availability, energy, production, uptime24h] = await Promise.all([
         api.availability(factoryId, { ...range, machine_id: machineId }, { signal }),
-        api.energy(factoryId, { ...range, machine_id: machineId }, { signal }),
-        api.production(factoryId, { ...range, machine_id: machineId }, { signal }),
+        energyOn ? api.energy(factoryId, { ...range, machine_id: machineId }, { signal }) : noEnergy(factoryId),
+        productionOn
+          ? api.production(factoryId, { ...range, machine_id: machineId }, { signal })
+          : noProduction(factoryId),
         api.uptime(factoryId, { from: from24h, to: now.toISOString(), machine_id: machineId }, { signal }),
       ]);
       return { availability, energy, production, uptime24h };
@@ -127,22 +136,26 @@ export function MachineStatusClient({
   return (
     <div className="space-y-6">
       {/* Summary stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Total Energy"
-          value={`${formatNumber(machineEnergy?.energy_kwh ?? 0)} kWh`}
-          sub={machineEnergy?.avg_amps != null ? `Avg: ${formatNumber(machineEnergy.avg_amps)}A` : 'No data'}
-        />
+      <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
+        {energyOn && (
+          <StatCard
+            label="Total Energy"
+            value={`${formatNumber(machineEnergy?.energy_kwh ?? 0)} kWh`}
+            sub={machineEnergy?.avg_amps != null ? `Avg: ${formatNumber(machineEnergy.avg_amps)}A` : 'No data'}
+          />
+        )}
         <StatCard
           label="Availability"
           value={formatPercent(machineAvail?.availability_percent ?? null)}
           sub={`${formatNumber(machineAvail?.uptime_minutes ?? 0, 0)}m up · ${formatNumber(machineAvail?.downtime_minutes ?? 0, 0)}m down`}
         />
-        <StatCard
-          label="Units Produced"
-          value={formatUnits(machineProduction?.units_produced ?? 0, machineProduction?.unit_label)}
-          sub="From proximity sensor detections"
-        />
+        {productionOn && (
+          <StatCard
+            label="Units Produced"
+            value={formatUnits(machineProduction?.units_produced ?? 0, machineProduction?.unit_label)}
+            sub="From proximity sensor detections"
+          />
+        )}
       </div>
 
       {uptimeRows.length > 1 && (

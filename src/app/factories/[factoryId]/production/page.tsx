@@ -1,6 +1,7 @@
 import { ProductionDashboard } from '@/components/factory/production-dashboard';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
+import { requireFactoryPage } from '@/lib/server/page-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function ProductionPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { factoryId } = await params;
+  await requireFactoryPage(factoryId, 'production');
   const { from, to } = await searchParams;
 
   return (

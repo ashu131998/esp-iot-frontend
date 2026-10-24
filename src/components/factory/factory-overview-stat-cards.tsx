@@ -7,7 +7,8 @@ import { Activity, Package, Zap } from 'lucide-react';
 import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { noEnergy, noProduction, offQuery } from '@/lib/display';
+import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -19,6 +20,8 @@ import { formatNumber, formatPercent, formatUnits, sharedUnitLabel, sumUnits } f
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
+// Cards per row on wide screens, by how many are shown (literal class names for Tailwind).
+const LG_COLS: Record<number, string> = { 1: 'lg:grid-cols-1', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' };
 
 export function FactoryOverviewStatCards({
   factoryId,
@@ -39,6 +42,11 @@ export function FactoryOverviewStatCards({
     [machines, machineId, lineId],
   );
   const refetchInterval = useRefetchInterval(REFRESH_MS);
+  // Modules switched off for the factory: their data is not requested, their cards not shown.
+  const shown = useShown();
+  const energyOn = shown('energy');
+  const productionOn = shown('production');
+  const performanceOn = productionOn && shown('performance');
 
   const [
     { data: availability, dataUpdatedAt: availabilityUpdatedAt },
@@ -53,20 +61,24 @@ export function FactoryOverviewStatCards({
         refetchInterval,
         staleTime: 0,
       },
-      {
-        queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
-        queryFn: ({ signal }: { signal: AbortSignal }) =>
-          api.energy(factoryId, apiRange, { signal }),
-        refetchInterval,
-        staleTime: 0,
-      },
-      {
-        queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
-        queryFn: ({ signal }: { signal: AbortSignal }) =>
-          api.production(factoryId, apiRange, { signal }),
-        refetchInterval,
-        staleTime: 0,
-      },
+      energyOn
+        ? {
+          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryFn: ({ signal }: { signal: AbortSignal }) =>
+            api.energy(factoryId, apiRange, { signal }),
+          refetchInterval,
+          staleTime: 0,
+        }
+        : offQuery('energy', noEnergy(factoryId)),
+      productionOn
+        ? {
+          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryFn: ({ signal }: { signal: AbortSignal }) =>
+            api.production(factoryId, apiRange, { signal }),
+          refetchInterval,
+          staleTime: 0,
+        }
+        : offQuery('production', noProduction(factoryId)),
     ],
   });
 
@@ -95,24 +107,30 @@ export function FactoryOverviewStatCards({
     0,
   );
 
+  const cards = 1 + Number(energyOn) + Number(productionOn) + Number(performanceOn);
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={`grid gap-4 ${cards > 1 ? 'sm:grid-cols-2' : ''} ${LG_COLS[cards]}`}>
       <StatCard
         label="Availability"
         value={formatPercent(avgAvailability)}
         icon={<Activity className="h-4 w-4 text-muted" />}
       />
-      <StatCard
-        label="Energy"
-        value={`${formatNumber(totalEnergy)} kWh`}
-        icon={<Zap className="h-4 w-4 text-muted" />}
-      />
-      <StatCard
-        label="Units Produced"
-        value={formatUnits(productionUnits, sharedUnitLabel(scopedProduction))}
-        icon={<Package className="h-4 w-4 text-muted" />}
-      />
-      <StatCard label="Performance" value={formatPercent(performancePct)} />
+      {energyOn && (
+        <StatCard
+          label="Energy"
+          value={`${formatNumber(totalEnergy)} kWh`}
+          icon={<Zap className="h-4 w-4 text-muted" />}
+        />
+      )}
+      {productionOn && (
+        <StatCard
+          label="Units Produced"
+          value={formatUnits(productionUnits, sharedUnitLabel(scopedProduction))}
+          icon={<Package className="h-4 w-4 text-muted" />}
+        />
+      )}
+      {performanceOn && <StatCard label="Performance" value={formatPercent(performancePct)} />}
     </div>
   );
 }

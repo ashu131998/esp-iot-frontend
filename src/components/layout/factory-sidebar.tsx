@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -66,9 +67,7 @@ export function FactorySidebar({
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Factory className="h-5 w-5 text-white" />
-          </div>
+          <BrandMark className="h-9 w-9" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{factoryName}</p>
             <p className="truncate text-xs text-slate-400">{location ?? factoryId}</p>

@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Factory, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { PageHeader } from '@/components/layout/page-header';
 import { useAuth } from '@/lib/auth-context';
 import { visibleInternalNav } from '@/lib/internal-nav';
@@ -20,11 +21,9 @@ function InternalSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Factory className="h-5 w-5 text-white" />
-          </div>
+          <BrandMark className="h-9 w-9" />
           <div>
-            <p className="text-sm font-semibold text-white">ESP IoT</p>
+            <p className="text-sm font-semibold text-white">FloorBeat</p>
             <p className="text-xs text-amber-300/90">Staff · Internal</p>
           </div>
         </div>

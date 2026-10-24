@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ESP IoT Platform',
+  title: 'FloorBeat',
   description: 'Industrial IoT monitoring and analytics for multi-factory operations',
 };
 

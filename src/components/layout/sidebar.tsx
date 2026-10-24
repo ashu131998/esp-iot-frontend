@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { cn } from '@/lib/utils';
 
 const platformNav = [
@@ -41,11 +42,9 @@ function SidebarContent({
     <>
       <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Factory className="h-5 w-5 text-white" />
-          </div>
+          <BrandMark className="h-9 w-9" />
           <div>
-            <p className="text-sm font-semibold">ESP IoT</p>
+            <p className="text-sm font-semibold">FloorBeat</p>
             <p className="text-xs text-slate-400">Operations Platform</p>
           </div>
         </div>
@@ -135,10 +134,8 @@ export function Sidebar({ factories }: { factories: Array<{ factory_id: string; 
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Factory className="h-4 w-4 text-white" />
-          </div>
-          <p className="text-sm font-semibold">ESP IoT</p>
+          <BrandMark className="h-8 w-8" />
+          <p className="text-sm font-semibold">FloorBeat</p>
         </div>
       </div>
 

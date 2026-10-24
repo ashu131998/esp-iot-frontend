@@ -8,7 +8,8 @@ import {
   subMonths,
 } from 'date-fns';
 
-import { DEFAULT_SHIFTS } from '@/lib/shifts';
+import { currentShiftWindow, DEFAULT_SHIFTS } from '@/lib/shifts';
+import type { Shift } from '@/lib/types';
 
 export const DATE_PARAM_FROM = 'from';
 export const DATE_PARAM_TO = 'to';
@@ -74,20 +75,20 @@ export function todayProductionRange(ref: Date = new Date()): ResolvedDateRange 
 
 /**
  * Resolve URL search params into ISO from/to bounds.
- * Default: rolling last 24 hours (now − 24h → now).
+ * Default: the current shift (shift start → now).
  */
 export function resolveDateRange(
   params: DateRangeSearchParams,
   minDate?: string | Date | null,
+  shifts?: Shift[] | null,
 ): ResolvedDateRange {
   const now = new Date();
   const min = parseMinDate(minDate);
 
   if (!params.from && !params.to) {
-    // Default to a rolling last-24h window: it re-resolves against "now" on
-    // every render/refetch, so a dashboard left open keeps sliding forward
-    // instead of pinning to a shift or production day.
-    let start = new Date(now.getTime() - UPTIME_TIMELINE_HOURS * 3600000);
+    // Re-resolves against "now" on every render/refetch, so a dashboard left
+    // open rolls into the next shift when it starts.
+    let start = currentShiftWindow(shifts ?? DEFAULT_SHIFTS, now).from;
     if (min && start < min) start = min;
     if (start > now) start = now;
     return { from: start.toISOString(), to: now.toISOString() };

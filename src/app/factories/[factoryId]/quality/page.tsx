@@ -33,7 +33,7 @@ async function QualityContent({
     : machineId
       ? allMachines.filter((m) => m.machine_id === machineId)
       : allMachines;
-  const range = resolveDateRange({ from, to }, factory.created_at);
+  const range = resolveDateRange({ from, to }, factory.created_at, factory.shifts);
   const pagination = resolvePagination({ page, limit });
   const data = await serverApi.quality(
     factoryId,

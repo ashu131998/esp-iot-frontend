@@ -15,7 +15,7 @@ import {
   subHours,
   subMonths,
 } from 'date-fns';
-import { shiftWindow } from '@/lib/shifts';
+import { currentShiftWindow, previousShiftWindow } from '@/lib/shifts';
 import { Calendar, ChevronDown, Clock, Loader2, Search, X } from 'lucide-react';
 
 import { MonthCalendar } from '@/components/ui/date-range-calendar';
@@ -28,22 +28,67 @@ import {
   resolveDateRange,
 } from '@/lib/date-range';
 import { useRefreshInfo } from '@/lib/refresh-context';
-import type { Machine, ProductionLine } from '@/lib/types';
+import type { Machine, ProductionLine, Shift } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
 
 // ── Presets ──────────────────────────────────────────────────────────────────
 
-const PRESETS = [
-  { label: 'Last 24 Hours', getDates: () => { const n = new Date(); return { from: subHours(n, 24), to: n }; } },
-  { label: 'Today',         getDates: () => { const n = new Date(); return { from: startOfDay(n), to: n }; } },
-  { label: 'Last 3 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 3)), to: n }; } },
-  { label: 'Last 7 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 7)), to: n }; } },
-  { label: 'Last 10 Days',  getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 10)), to: n }; } },
-  { label: 'Last 3 Months', getDates: () => { const n = new Date(); return { from: startOfDay(subMonths(n, 3)), to: n }; } },
-  { label: 'Day Shift',     getDates: () => shiftWindow('A') },
-  { label: 'Night Shift',   getDates: () => shiftWindow('B') },
-];
+const CURRENT_SHIFT = 'current-shift';
+const LAST_SHIFT = 'last-shift';
+
+interface Preset {
+  id: string;
+  label: string;
+  hint?: string;
+  getDates: () => { from: Date; to: Date };
+}
+
+/** "Night Shift" → "Night"; custom names without the suffix pass through. */
+function shortShiftName(shift: Shift): string {
+  return shift.name.replace(/\s*shift$/i, '') || shift.name;
+}
+
+function buildPresets(shifts: Shift[] | undefined): Preset[] {
+  const now = new Date();
+  const cur = currentShiftWindow(shifts, now);
+  const prev = previousShiftWindow(shifts, now);
+  return [
+    {
+      id: CURRENT_SHIFT,
+      label: 'Current Shift',
+      hint: `${shortShiftName(cur.shift)} · since ${format(cur.from, 'HH:mm')}`,
+      getDates: () => ({ from: cur.from, to: new Date() }),
+    },
+    {
+      id: LAST_SHIFT,
+      label: 'Last Shift',
+      hint: `${shortShiftName(prev.shift)} · ${format(prev.from, 'HH:mm')}–${format(prev.to, 'HH:mm')}`,
+      getDates: () => ({ from: prev.from, to: prev.to }),
+    },
+    { id: '24h', label: 'Last 24 Hours', getDates: () => { const n = new Date(); return { from: subHours(n, 24), to: n }; } },
+    { id: 'today', label: 'Today',         getDates: () => { const n = new Date(); return { from: startOfDay(n), to: n }; } },
+    { id: '3d',  label: 'Last 3 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 3)), to: n }; } },
+    { id: '7d',  label: 'Last 7 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 7)), to: n }; } },
+    { id: '10d', label: 'Last 10 Days',  getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 10)), to: n }; } },
+    { id: '3m',  label: 'Last 3 Months', getDates: () => { const n = new Date(); return { from: startOfDay(subMonths(n, 3)), to: n }; } },
+  ];
+}
+
+/** Matches the URL range to a shift preset so reopening the panel highlights it. */
+function detectShiftPreset(
+  from: string | undefined,
+  to: string | undefined,
+  shifts: Shift[] | undefined,
+): string | null {
+  if (!from && !to) return CURRENT_SHIFT;
+  if (from && to) {
+    const prev = previousShiftWindow(shifts);
+    const minute = "yyyy-MM-dd'T'HH:mm";
+    if (from === format(prev.from, minute) && to === format(prev.to, minute)) return LAST_SHIFT;
+  }
+  return null;
+}
 
 // ── DateRangePicker ──────────────────────────────────────────────────────────
 
@@ -56,6 +101,7 @@ export function DateRangePicker({
   lineId,
   machines,
   lines,
+  shifts,
   hideDateRange = false,
 }: {
   minDate?: string | null;
@@ -66,6 +112,7 @@ export function DateRangePicker({
   lineId?: string;
   machines?: Machine[];
   lines?: ProductionLine[];
+  shifts?: Shift[];
   hideDateRange?: boolean;
 }) {
   const pathname   = usePathname();
@@ -104,9 +151,16 @@ export function DateRangePicker({
   const liveNow = !to ? (refreshInfo?.lastUpdatedAt ?? 0) : 0;
 
   const current = useMemo(
-    () => resolveDateRange({ from, to }, minDate),
+    () => resolveDateRange({ from, to }, minDate, shifts),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [from, to, minDate, liveNow],
+    [from, to, minDate, shifts, liveNow],
+  );
+
+  const presets = useMemo(
+    () => buildPresets(shifts),
+    // Rebuilt on open so shift labels reflect the time the panel was opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shifts, open],
   );
 
   const lineMap = useMemo(
@@ -239,7 +293,7 @@ export function DateRangePicker({
     setDraftTo(endOfDay(t));
     setFromMonth(startOfMonth(f));
     setToMonth(startOfMonth(isSameDay(startOfMonth(f), startOfMonth(t)) ? addMonths(t, 1) : t));
-    setActivePreset(null);
+    setActivePreset(detectShiftPreset(from, to, shifts));
     setSelecting('start');
     setHoverDate(null);
     setDraftFromTime(format(f, 'HH:mm'));
@@ -265,11 +319,11 @@ export function DateRangePicker({
     }
   };
 
-  const handlePreset = (preset: (typeof PRESETS)[number]) => {
+  const handlePreset = (preset: Preset) => {
     const { from: pf, to: pt } = preset.getDates();
     setDraftFrom(startOfDay(pf));
     setDraftTo(endOfDay(pt));
-    setActivePreset(preset.label);
+    setActivePreset(preset.id);
     setSelecting('start');
     setHoverDate(null);
     setFromMonth(startOfMonth(pf));
@@ -278,26 +332,19 @@ export function DateRangePicker({
     setDraftToTime(format(pt, 'HH:mm'));
   };
 
-  const handleClear = () => {
-    // Reset to the app default: rolling last 24 hours.
-    const now   = new Date();
-    const start = subHours(now, 24);
-    setDraftFrom(startOfDay(start));
-    setDraftTo(endOfDay(now));
-    setActivePreset('Last 24 Hours');
-    setSelecting('start');
-    setHoverDate(null);
-    setFromMonth(startOfMonth(start));
-    setToMonth(addMonths(startOfMonth(start), 1));
-    setDraftFromTime(format(start, 'HH:mm'));
-    setDraftToTime(format(now, 'HH:mm'));
-  };
+  // Reset to the app default: the current shift.
+  const handleClear = () => handlePreset(presets[0]);
 
   const timeCutoff  = startOfDay(subDays(new Date(), 3));
   const timeDisabled = !!draftFrom && draftFrom < timeCutoff;
 
   const handleApply = () => {
-    if (draftFrom && draftTo) {
+    if (activePreset === CURRENT_SHIFT) {
+      // No date params = live current shift, which rolls over at shift change.
+      const params = new URLSearchParams();
+      appendFilterParams(params);
+      push(params);
+    } else if (draftFrom && draftTo) {
       if (timeDisabled) {
         applyRange(startOfDay(draftFrom), endOfDay(draftTo), true);
       } else {
@@ -329,12 +376,13 @@ export function DateRangePicker({
         <button
           ref={triggerRef}
           type="button"
-          onClick={openPanel}
+          onClick={() => (open ? setOpen(false) : openPanel())}
+          aria-expanded={open}
           className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 hover:border-gray-300"
         >
           <Calendar className="h-4 w-4 shrink-0 text-muted" />
           <span className="font-medium text-foreground">{triggerLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted" />
+          <ChevronDown className={cn('h-3.5 w-3.5 text-muted transition-transform', open && 'rotate-180')} />
         </button>
       )}
 
@@ -366,7 +414,7 @@ export function DateRangePicker({
                   <X className="h-3 w-3 text-primary" />
                 </span>
               ) : (
-                <ChevronDown className="h-3 w-3 text-muted" />
+                <ChevronDown className={cn('h-3 w-3 text-muted transition-transform', lineOpen && 'rotate-180')} />
               )}
             </button>
             {lineOpen && (
@@ -428,7 +476,7 @@ export function DateRangePicker({
                   <X className="h-3 w-3 text-primary" />
                 </span>
               ) : (
-                <ChevronDown className="h-3 w-3 text-muted" />
+                <ChevronDown className={cn('h-3 w-3 text-muted transition-transform', machineOpen && 'rotate-180')} />
               )}
             </button>
 
@@ -509,14 +557,6 @@ export function DateRangePicker({
           style={{ minWidth: 660 }}
         >
           <div className="flex items-center gap-3 border-b px-4 py-3">
-            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">
-              {activePreset ?? 'Custom'}
-            </span>
-            <span className="text-sm text-gray-500">
-              {draftFrom ? format(draftFrom, 'd MMMM yyyy') : '—'}
-              {' → '}
-              {draftTo   ? format(draftTo,   'd MMMM yyyy') : (selecting === 'end' ? 'pick end date' : '—')}
-            </span>
             <button
               type="button"
               onClick={handleClear}
@@ -542,20 +582,24 @@ export function DateRangePicker({
           </div>
 
           <div className="flex">
-            <div className="w-36 shrink-0 border-r py-4">
-              {PRESETS.map(preset => (
+            <div className="w-44 shrink-0 border-r py-4">
+              {presets.map((preset, i) => (
                 <button
-                  key={preset.label}
+                  key={preset.id}
                   type="button"
                   onClick={() => handlePreset(preset)}
                   className={cn(
                     'w-full px-4 py-2 text-left text-sm transition-colors',
-                    activePreset === preset.label
+                    i === 2 && 'mt-1 border-t border-gray-100',
+                    activePreset === preset.id
                       ? 'bg-blue-50 font-semibold text-blue-600'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                   )}
                 >
                   {preset.label}
+                  {preset.hint && (
+                    <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>
+                  )}
                 </button>
               ))}
             </div>

@@ -1,78 +1,14 @@
-export type ShiftId = 'A' | 'B';
-
-/** Return the most-recently-started window for the given shift (may still be in progress). */
-export function shiftWindow(shiftId: ShiftId, refDate = new Date()): { from: Date; to: Date } {
-  const d = new Date(refDate);
-  const now = new Date();
-
-  if (shiftId === 'A') {
-    // Day shift 06:00–18:00
-    const end = new Date(d);
-    end.setHours(18, 0, 0, 0);
-    // If current time is before 18:00 today, the shift is still in progress – use now as "to"
-    // If before 06:00, step back to yesterday's shift
-    if (d < end) {
-      const dayStart = new Date(d);
-      dayStart.setHours(6, 0, 0, 0);
-      if (d < dayStart) {
-        // Before today's day shift: use yesterday's completed shift
-        end.setDate(end.getDate() - 1);
-      } else {
-        // In today's day shift: cap "to" at now
-        end.setTime(now.getTime());
-      }
-    }
-    const start = new Date(end);
-    // If "to" was capped at now, compute start from today at 06:00
-    if (end.getHours() !== 18 || end.getMinutes() !== 0) {
-      start.setHours(6, 0, 0, 0);
-    } else {
-      start.setHours(6, 0, 0, 0);
-    }
-    return { from: start, to: end };
-  }
-
-  // Night shift B: 18:00 → 06:00 next day
-  const h = d.getHours();
-  let start: Date;
-  let end: Date;
-
-  if (h >= 18) {
-    // Currently in night shift: started today at 18:00, ends tomorrow 06:00
-    start = new Date(d);
-    start.setHours(18, 0, 0, 0);
-    end = new Date(now); // cap at now
-  } else if (h < 6) {
-    // Currently in night shift: started yesterday at 18:00, ends today 06:00
-    start = new Date(d);
-    start.setDate(start.getDate() - 1);
-    start.setHours(18, 0, 0, 0);
-    end = new Date(now);
-  } else {
-    // Between 06:00 and 18:00 — last completed night shift
-    end = new Date(d);
-    end.setHours(6, 0, 0, 0);
-    start = new Date(end);
-    start.setDate(start.getDate() - 1);
-    start.setHours(18, 0, 0, 0);
-  }
-
-  return { from: start, to: end };
-}
+import type { Shift } from '@/lib/types';
 
 /**
- * Window for the shift that is currently in progress (06:00–18:00 → Day,
- * otherwise Night). Used as the default range so "no selection" shows the
- * current shift's data and picking the matching shift preset is a no-op.
+ * Civil timezone the whole product runs in (mirrors backend `APP_TZ`). Shift
+ * boundaries are wall-clock hours in this zone, so they resolve identically on
+ * the server (UTC) and in any browser.
  */
-export function currentShiftWindow(refDate = new Date()): { from: Date; to: Date } {
-  const h = refDate.getHours();
-  const inDayShift = h >= 6 && h < 18;
-  return shiftWindow(inDayShift ? 'A' : 'B', refDate);
-}
+export const APP_TZ = 'Asia/Kolkata';
 
 /** Client-side shift defaults (mirrors backend). */
-export const DEFAULT_SHIFTS = [
+export const DEFAULT_SHIFTS: Shift[] = [
   {
     shift_id: 'A',
     name: 'Day Shift',
@@ -90,3 +26,74 @@ export const DEFAULT_SHIFTS = [
     label: '18:00 – 06:00',
   },
 ];
+
+export interface ShiftWindow {
+  shift: Shift;
+  from: Date;
+  to: Date;
+}
+
+const partsFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TZ,
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+function zoneParts(date: Date) {
+  const out: Record<string, number> = {};
+  for (const p of partsFmt.formatToParts(date)) {
+    if (p.type !== 'literal') out[p.type] = Number(p.value);
+  }
+  return out as { year: number; month: number; day: number; hour: number; minute: number; second: number };
+}
+
+/** Instant at which the APP_TZ wall clock reads `year-month-day hour:00`. */
+function zonedWallToInstant(year: number, month: number, day: number, hour: number): Date {
+  const guess = Date.UTC(year, month - 1, day, hour);
+  const p = zoneParts(new Date(guess));
+  const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - guess;
+  return new Date(guess - offset);
+}
+
+/** Latest instant at or before `ref` whose APP_TZ wall clock reads `hour:00`. */
+function lastWallHour(ref: Date, hour: number): Date {
+  const p = zoneParts(ref);
+  const today = zonedWallToInstant(p.year, p.month, p.day, hour);
+  return today <= ref ? today : zonedWallToInstant(p.year, p.month, p.day - 1, hour);
+}
+
+function shiftEnd(shift: Shift, from: Date): Date {
+  const hours = shift.duration_hours || ((shift.end_hour - shift.start_hour + 24) % 24 || 24);
+  return new Date(from.getTime() + hours * 3_600_000);
+}
+
+/** The most recently started shift as of `ref`, from its start through `ref`. */
+export function currentShiftWindow(
+  shifts: Shift[] = DEFAULT_SHIFTS,
+  ref: Date = new Date(),
+): ShiftWindow {
+  const list = shifts.length ? shifts : DEFAULT_SHIFTS;
+  let best: ShiftWindow | null = null;
+  for (const shift of list) {
+    const from = lastWallHour(ref, shift.start_hour);
+    if (!best || from > best.from) best = { shift, from, to: ref };
+  }
+  return best!;
+}
+
+/** The completed shift immediately before the current one. */
+export function previousShiftWindow(
+  shifts: Shift[] = DEFAULT_SHIFTS,
+  ref: Date = new Date(),
+): ShiftWindow {
+  const current = currentShiftWindow(shifts, ref);
+  const before = new Date(current.from.getTime() - 1);
+  const { shift, from } = currentShiftWindow(shifts, before);
+  const end = shiftEnd(shift, from);
+  return { shift, from, to: end < current.from ? end : current.from };
+}

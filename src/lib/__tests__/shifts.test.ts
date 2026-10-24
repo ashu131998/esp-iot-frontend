@@ -1,149 +1,113 @@
 /**
- * shifts.ts uses local time (setHours). Tests use getHours() not UTC equivalents.
+ * Shift windows resolve in APP_TZ (Asia/Kolkata, UTC+05:30), independent of the
+ * machine running the tests, so assertions use absolute UTC instants.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { shiftWindow, currentShiftWindow, DEFAULT_SHIFTS } from '@/lib/shifts';
+import { describe, it, expect } from 'vitest';
+import { currentShiftWindow, previousShiftWindow, DEFAULT_SHIFTS } from '@/lib/shifts';
+import type { Shift } from '@/lib/types';
 
-function atHour(h: number, date = new Date()): Date {
-  const d = new Date(date);
-  d.setHours(h, 0, 0, 0);
-  return d;
+/** Instant for an IST wall-clock time on 2026-10-24 (dayOffset shifts the date). */
+function ist(hour: number, minute = 0, dayOffset = 0): Date {
+  return new Date(Date.UTC(2026, 9, 24 + dayOffset, hour, minute) - 330 * 60_000);
 }
 
 // ── DEFAULT_SHIFTS ────────────────────────────────────────────────────────────
 
 describe('DEFAULT_SHIFTS', () => {
-  it('exports two shifts: A (Day) and B (Night)', () => {
-    expect(DEFAULT_SHIFTS).toHaveLength(2);
-    expect(DEFAULT_SHIFTS[0].shift_id).toBe('A');
-    expect(DEFAULT_SHIFTS[1].shift_id).toBe('B');
-  });
-  it('Day shift starts at 06:00 and ends at 18:00', () => {
-    expect(DEFAULT_SHIFTS[0].start_hour).toBe(6);
-    expect(DEFAULT_SHIFTS[0].end_hour).toBe(18);
-  });
-  it('Night shift starts at 18:00 and ends at 06:00', () => {
-    expect(DEFAULT_SHIFTS[1].start_hour).toBe(18);
-    expect(DEFAULT_SHIFTS[1].end_hour).toBe(6);
-  });
-});
-
-// ── shiftWindow — shift A (Day 06:00–18:00) ───────────────────────────────────
-
-describe('shiftWindow A — completed (after 18:00)', () => {
-  it('from=06:00, to=18:00 same day when ref is at 20:00', () => {
-    const ref = atHour(20);
-    const { from, to } = shiftWindow('A', ref);
-    expect(from.getHours()).toBe(6);
-    expect(to.getHours()).toBe(18);
-    expect(to.getMinutes()).toBe(0);
-    expect(from.getDate()).toBe(ref.getDate());
-  });
-});
-
-describe('shiftWindow A — in-progress (08:00–17:00)', () => {
-  it('from=06:00 today, to≈actual now when ref is 10:00', () => {
-    const ref = atHour(10);
-    const { from, to } = shiftWindow('A', ref);
-    expect(from.getHours()).toBe(6);
-    expect(from.getDate()).toBe(ref.getDate());
-    // shiftWindow uses new Date() internally for the "to" cap — assert actual now
-    expect(Math.abs(to.getTime() - Date.now())).toBeLessThan(5000);
-  });
-});
-
-describe('shiftWindow A — pre-shift (before 06:00, use yesterday)', () => {
-  it('from=yesterday 06:00, to=yesterday 18:00 when ref is 03:00', () => {
-    const ref = atHour(3);
-    const { from, to } = shiftWindow('A', ref);
-    const yesterday = ref.getDate() - 1;
-    expect(to.getHours()).toBe(18);
-    expect(to.getMinutes()).toBe(0);
-    // from and to should be on the same day (yesterday)
-    expect(from.getDate()).toBe(to.getDate());
-    // from is 06:00 on that day
-    expect(from.getHours()).toBe(6);
-    // Both are yesterday relative to ref
-    const refYesterday = new Date(ref);
-    refYesterday.setDate(refYesterday.getDate() - 1);
-    expect(to.getDate()).toBe(refYesterday.getDate());
-  });
-});
-
-// ── shiftWindow — shift B (Night 18:00–06:00) ────────────────────────────────
-
-describe('shiftWindow B — in-progress (evening h≥18)', () => {
-  it('from=18:00 today, to≈actual now when ref is 22:00', () => {
-    const ref = atHour(22);
-    const { from, to } = shiftWindow('B', ref);
-    expect(from.getHours()).toBe(18);
-    expect(from.getDate()).toBe(ref.getDate());
-    // shiftWindow uses new Date() internally for the "to" cap — assert actual now
-    expect(Math.abs(to.getTime() - Date.now())).toBeLessThan(5000);
-  });
-});
-
-describe('shiftWindow B — in-progress (early morning h<6)', () => {
-  it('from=yesterday 18:00, to≈actual now when ref is 02:00', () => {
-    const ref = atHour(2);
-    const { from } = shiftWindow('B', ref);
-    // started yesterday at 18:00
-    const yesterday = new Date(ref);
-    yesterday.setDate(yesterday.getDate() - 1);
-    expect(from.getDate()).toBe(yesterday.getDate());
-    expect(from.getHours()).toBe(18);
-  });
-});
-
-describe('shiftWindow B — completed (daytime 06:00–18:00)', () => {
-  it('from=yesterday 18:00, to=today 06:00 when ref is 12:00', () => {
-    const ref = atHour(12);
-    const { from, to } = shiftWindow('B', ref);
-    expect(to.getHours()).toBe(6);
-    expect(to.getDate()).toBe(ref.getDate());
-    const yesterday = new Date(ref);
-    yesterday.setDate(yesterday.getDate() - 1);
-    expect(from.getDate()).toBe(yesterday.getDate());
-    expect(from.getHours()).toBe(18);
+  it('exports Day 06–18 and Night 18–06', () => {
+    expect(DEFAULT_SHIFTS.map((s) => [s.shift_id, s.start_hour, s.end_hour])).toEqual([
+      ['A', 6, 18],
+      ['B', 18, 6],
+    ]);
   });
 });
 
 // ── currentShiftWindow ────────────────────────────────────────────────────────
 
-describe('currentShiftWindow', () => {
-  it('returns shift A window during daytime (10:00)', () => {
-    const ref = atHour(10);
-    const win = currentShiftWindow(ref);
-    expect(win.from.getHours()).toBe(6);
+describe('currentShiftWindow (default shifts)', () => {
+  it('day shift at 10:00 IST → from 06:00 IST, to = ref', () => {
+    const ref = ist(10);
+    const win = currentShiftWindow(DEFAULT_SHIFTS, ref);
+    expect(win.shift.shift_id).toBe('A');
+    expect(win.from).toEqual(ist(6));
+    expect(win.to).toEqual(ref);
   });
 
-  it('returns shift B window during evening (21:00)', () => {
-    const ref = atHour(21);
-    const win = currentShiftWindow(ref);
-    expect(win.from.getHours()).toBe(18);
+  it('night shift at 21:00 IST → from 18:00 IST same day', () => {
+    const win = currentShiftWindow(DEFAULT_SHIFTS, ist(21));
+    expect(win.shift.shift_id).toBe('B');
+    expect(win.from).toEqual(ist(18));
   });
 
-  it('returns shift B window during early morning (03:00)', () => {
-    const ref = atHour(3);
-    const win = currentShiftWindow(ref);
-    // started yesterday at 18:00
-    const yesterday = new Date(ref);
-    yesterday.setDate(yesterday.getDate() - 1);
-    expect(win.from.getDate()).toBe(yesterday.getDate());
-    expect(win.from.getHours()).toBe(18);
+  it('night shift at 03:00 IST → from 18:00 IST previous day', () => {
+    const win = currentShiftWindow(DEFAULT_SHIFTS, ist(3));
+    expect(win.shift.shift_id).toBe('B');
+    expect(win.from).toEqual(ist(18, 0, -1));
   });
 
-  it('from < to', () => {
-    // shiftWindow caps "to" at the real `now`, so pin the clock to a mid-day-shift
-    // time — otherwise this fails when the suite runs before 06:00 local (real now
-    // ends up earlier than the 06:00 shift start derived from the ref).
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2025, 0, 10, 14, 0, 0));
-    try {
-      const { from, to } = currentShiftWindow();
-      expect(from.getTime()).toBeLessThan(to.getTime());
-    } finally {
-      vi.useRealTimers();
-    }
+  it('exactly at shift change belongs to the new shift', () => {
+    const win = currentShiftWindow(DEFAULT_SHIFTS, ist(18));
+    expect(win.shift.shift_id).toBe('B');
+    expect(win.from).toEqual(ist(18));
+  });
+
+  it('falls back to defaults for an empty schedule', () => {
+    expect(currentShiftWindow([], ist(10)).shift.shift_id).toBe('A');
+  });
+});
+
+// ── previousShiftWindow ───────────────────────────────────────────────────────
+
+describe('previousShiftWindow (default shifts)', () => {
+  it('during day shift → last night 18:00 → 06:00 IST', () => {
+    const win = previousShiftWindow(DEFAULT_SHIFTS, ist(10));
+    expect(win.shift.shift_id).toBe('B');
+    expect(win.from).toEqual(ist(18, 0, -1));
+    expect(win.to).toEqual(ist(6));
+  });
+
+  it('during night shift (evening) → today 06:00 → 18:00 IST', () => {
+    const win = previousShiftWindow(DEFAULT_SHIFTS, ist(23, 40));
+    expect(win.shift.shift_id).toBe('A');
+    expect(win.from).toEqual(ist(6));
+    expect(win.to).toEqual(ist(18));
+  });
+
+  it('during night shift (after midnight) → previous day 06:00 → 18:00 IST', () => {
+    const win = previousShiftWindow(DEFAULT_SHIFTS, ist(2));
+    expect(win.shift.shift_id).toBe('A');
+    expect(win.from).toEqual(ist(6, 0, -1));
+    expect(win.to).toEqual(ist(18, 0, -1));
+  });
+});
+
+// ── custom schedules ──────────────────────────────────────────────────────────
+
+describe('custom shift schedules', () => {
+  const three: Shift[] = [
+    { shift_id: 'A', name: 'Morning', start_hour: 8, end_hour: 16, duration_hours: 8, label: '' },
+    { shift_id: 'B', name: 'Evening', start_hour: 16, end_hour: 0, duration_hours: 8, label: '' },
+    { shift_id: 'C', name: 'Night', start_hour: 0, end_hour: 8, duration_hours: 8, label: '' },
+  ];
+
+  it('three 8h shifts: 05:00 IST is Night (from 00:00), previous is Evening', () => {
+    const cur = currentShiftWindow(three, ist(5));
+    expect(cur.shift.shift_id).toBe('C');
+    expect(cur.from).toEqual(ist(0));
+    const prev = previousShiftWindow(three, ist(5));
+    expect(prev.shift.shift_id).toBe('B');
+    expect(prev.from).toEqual(ist(16, 0, -1));
+    expect(prev.to).toEqual(ist(0));
+  });
+
+  it('a gap between shifts: previous shift ends at its own end, not the next start', () => {
+    const gappy: Shift[] = [
+      { shift_id: 'A', name: 'Day', start_hour: 8, end_hour: 16, duration_hours: 8, label: '' },
+      { shift_id: 'B', name: 'Late', start_hour: 18, end_hour: 22, duration_hours: 4, label: '' },
+    ];
+    const prev = previousShiftWindow(gappy, ist(19));
+    expect(prev.shift.shift_id).toBe('A');
+    expect(prev.from).toEqual(ist(8));
+    expect(prev.to).toEqual(ist(16));
   });
 });

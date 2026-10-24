@@ -10,6 +10,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { formatNumber, formatPercent } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -41,7 +42,8 @@ export function AvailabilityTrendTable({
   from?: string;
   to?: string;
 }) {
-  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
+  const shifts = useFactoryRefsOptional()?.shifts;
+  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   const trends = useMemo<TrendRow[]>(() => {

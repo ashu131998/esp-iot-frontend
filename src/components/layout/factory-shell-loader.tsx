@@ -49,6 +49,7 @@ export async function FactoryShellLoader({
         machines: sortByMachineName(factory.machines ?? []),
         lines: lines ?? [],
         minDate: factory.created_at,
+        shifts,
       }}
     >
       {children}

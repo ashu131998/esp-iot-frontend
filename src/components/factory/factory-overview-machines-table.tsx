@@ -35,9 +35,9 @@ export function FactoryOverviewMachinesTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, machines } = useFactoryRefs();
+  const { minDate, machines, shifts } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const scopedMachines = useMemo(

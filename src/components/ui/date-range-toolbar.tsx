@@ -49,6 +49,7 @@ export function DateRangeToolbar({
       lineId={sp.get('line_id') ?? selectedLineId ?? undefined}
       machines={hideMachineSelector ? undefined : machines ?? refs?.machines}
       lines={lines ?? refs?.lines}
+      shifts={refs?.shifts}
       hideDateRange={hideDateRange}
     />
   );

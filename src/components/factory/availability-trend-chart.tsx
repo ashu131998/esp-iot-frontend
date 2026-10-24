@@ -8,6 +8,7 @@ import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/char
 import { Card, CardHeader } from '@/components/ui/card';
 import { ChartSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { productionDayStart } from '@/lib/date-range';
 import { formatNumber } from '@/lib/utils';
 
@@ -22,7 +23,8 @@ export function AvailabilityTrendChart({
   from?: string;
   to?: string;
 }) {
-  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to));
+  const shifts = useFactoryRefsOptional()?.shifts;
+  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   const toDate = useMemo(() => {

@@ -26,7 +26,7 @@ export default async function LineDetailPage({
   const sp = await searchParams;
 
   const factory = await serverApi.factory(factoryId);
-  const range = resolveDateRange(sp, factory.created_at);
+  const range = resolveDateRange(sp, factory.created_at, factory.shifts);
 
   const activeLineId = sp.line_id ?? lineId;
 

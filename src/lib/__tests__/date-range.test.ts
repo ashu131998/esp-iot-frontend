@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseISO } from 'date-fns';
 import {
   productionDayStart,
@@ -95,10 +95,33 @@ describe('resolveDateRange with no params', () => {
     expect(Math.abs(parseISO(result.to).getTime() - now)).toBeLessThan(5000);
   });
 
-  it('defaults to a rolling last-24h window', () => {
-    const result = resolveDateRange({});
-    const spanMs = parseISO(result.to).getTime() - parseISO(result.from).getTime();
-    expect(Math.abs(spanMs - 24 * 3600000)).toBeLessThan(5000);
+  it('defaults to the current shift (shift start in IST → now)', () => {
+    vi.useFakeTimers();
+    try {
+      // 23:40 IST → night shift started 18:00 IST (12:30Z).
+      vi.setSystemTime(new Date('2026-10-24T18:10:00Z'));
+      expect(resolveDateRange({}).from).toBe('2026-10-24T12:30:00.000Z');
+      // 10:00 IST → day shift started 06:00 IST (00:30Z).
+      vi.setSystemTime(new Date('2026-10-24T04:30:00Z'));
+      expect(resolveDateRange({}).from).toBe('2026-10-24T00:30:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses the factory shift schedule when given', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-24T04:30:00Z')); // 10:00 IST
+      const shifts = [
+        { shift_id: 'A', name: 'Morning', start_hour: 8, end_hour: 16, duration_hours: 8, label: '' },
+        { shift_id: 'B', name: 'Evening', start_hour: 16, end_hour: 0, duration_hours: 8, label: '' },
+        { shift_id: 'C', name: 'Night', start_hour: 0, end_hour: 8, duration_hours: 8, label: '' },
+      ];
+      expect(resolveDateRange({}, null, shifts).from).toBe('2026-10-24T02:30:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clamps the default window start to minDate', () => {

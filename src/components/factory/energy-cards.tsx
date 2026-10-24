@@ -28,9 +28,9 @@ export function EnergyCards({
   from?: string;
   to?: string;
 }) {
-  const { minDate } = useFactoryRefs();
+  const { minDate, shifts } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate), [from, to, minDate]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 

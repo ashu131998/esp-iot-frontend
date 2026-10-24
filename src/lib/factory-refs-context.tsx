@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { Machine, ProductionLine } from '@/lib/types';
+import type { Machine, ProductionLine, Shift } from '@/lib/types';
 
 export interface FactoryRefs {
   /** Machines for this factory (used by the machine selector). */
@@ -11,6 +11,8 @@ export interface FactoryRefs {
   lines: ProductionLine[];
   /** Factory `created_at`, used as the date-picker minimum. */
   minDate: string | null;
+  /** Shift schedule; the default date range is the current shift. */
+  shifts: Shift[];
 }
 
 const FactoryRefsContext = createContext<FactoryRefs | null>(null);

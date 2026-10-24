@@ -10,6 +10,7 @@ import { MiniTimeline } from '@/components/ui/mini-timeline';
 import { MachineAvailabilityTrends } from '@/components/factory/machine-availability-trends';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
@@ -71,9 +72,10 @@ export function MachineStatusClient({
   to?: string;
   minDate?: string | null;
 }) {
+  const shifts = useFactoryRefsOptional()?.shifts;
   const range = useMemo(
-    () => resolveDateRange({ from, to }, minDate),
-    [from, to, minDate],
+    () => resolveDateRange({ from, to }, minDate, shifts),
+    [from, to, minDate, shifts],
   );
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);

@@ -700,6 +700,20 @@ export const api = {
       { method: 'PATCH', body: JSON.stringify(features), ...options },
     ),
 
+  /**
+   * Set a factory's accent colour and/or logo (staff only). null clears; a
+   * field left out is unchanged. Logo: PNG / JPEG / WebP, base64, up to 200 KB.
+   */
+  adminUpdateFactoryBranding: (
+    factoryId: string,
+    body: { accent_color?: string | null; logo?: { type: string; data: string } | null },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; branding: import('./branding').FactoryBranding }>(
+      `/v1/admin/factories/${factoryId}/branding`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
   /** Every page that can be switched per factory, with its sections. Staff only. */
   adminDisplayCatalog: (options?: ApiRequestOptions) =>
     request<{ pages: import('./display').DisplayPage[] }>('/v1/admin/display-catalog', options),

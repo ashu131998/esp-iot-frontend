@@ -11,10 +11,11 @@ import { NavDim } from '@/lib/navigation-context';
 import { getQueryClient } from '@/lib/get-query-client';
 import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FactoryAlertsPage({
+async function FactoryAlertsPage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
@@ -57,3 +58,5 @@ export default async function FactoryAlertsPage({
     </div>
   );
 }
+
+export default factoryPage('alerts', FactoryAlertsPage);

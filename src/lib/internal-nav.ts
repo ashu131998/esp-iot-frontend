@@ -16,7 +16,7 @@ export const INTERNAL_NAV: InternalNavItem[] = [
   { href: '/internal/nodes', label: 'Nodes' },
   { href: '/internal/health', label: 'System health' },
   { href: '/internal/onboard', label: 'Onboard', writeOnly: true },
-  { href: '/internal/features', label: 'Pages & sections', writeOnly: true },
+  { href: '/internal/features', label: 'Pages & branding', writeOnly: true },
   { href: '/internal/users', label: 'Users' },
   { href: '/internal/audit', label: 'Audit log', ownerOnly: true },
 ];

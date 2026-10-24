@@ -42,6 +42,7 @@ export async function FactoryShellLoader({
       location={factory.location}
       shifts={shifts}
       tabs={factoryTabs(factoryId, display)}
+      branding={factory.branding}
       description={`${factory.location ?? ''} · ${factory.machines?.length ?? 0} machines · ${shiftLabel}`}
       refs={{
         machines: sortByMachineName(factory.machines ?? []),

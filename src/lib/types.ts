@@ -20,6 +20,8 @@ export interface Factory {
   features?: Record<string, boolean>;
   /** Every page and section switch resolved to on/off (lib/display.ts). */
   display?: import('./display').Display;
+  /** Accent colour and logo set by our staff (lib/branding.ts). */
+  branding?: import('./branding').FactoryBranding;
   machine_count: number;
   device_count: number;
   line_count: number;

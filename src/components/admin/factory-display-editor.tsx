@@ -50,19 +50,18 @@ function Switch({
  * that is off is not shown or loaded. Each switch saves on its own.
  */
 export function FactoryDisplayEditor({
-  factories,
+  factory,
   pages,
 }: {
-  factories: Factory[];
+  factory: Factory;
   pages: DisplayPage[];
 }) {
   const qc = useQueryClient();
-  const [factoryId, setFactoryId] = useState(factories[0]?.factory_id ?? '');
+  const factoryId = factory.factory_id;
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const factory = factories.find((f) => f.factory_id === factoryId);
-  const display = resolveDisplay(pages, factory?.features);
+  const display = resolveDisplay(pages, factory.features);
 
   const mutation = useMutation({
     mutationFn: ({ key, value }: { key: string; value: boolean }) =>
@@ -92,14 +91,6 @@ export function FactoryDisplayEditor({
     onSettled: () => setPending(null),
   });
 
-  if (factories.length === 0) {
-    return (
-      <Card className="p-6">
-        <p className="text-sm text-muted">No factories found.</p>
-      </Card>
-    );
-  }
-
   const toggle = (key: string, value: boolean) => mutation.mutate({ key, value });
 
   return (
@@ -107,23 +98,6 @@ export function FactoryDisplayEditor({
       <CardHeader
         title="Pages & sections"
         description="Choose which pages, and which parts of each page, this factory sees. A page that is off leaves the factory's menu and its data is refused. Only our staff can change this."
-        action={
-          <select
-            aria-label="Factory"
-            value={factoryId}
-            onChange={(e) => {
-              setError(null);
-              setFactoryId(e.target.value);
-            }}
-            className="rounded-md border px-2 py-1.5 text-sm"
-          >
-            {factories.map((f) => (
-              <option key={f.factory_id} value={f.factory_id}>
-                {f.name} ({f.factory_id})
-              </option>
-            ))}
-          </select>
-        }
       />
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
       <ul className="mt-2 divide-y">

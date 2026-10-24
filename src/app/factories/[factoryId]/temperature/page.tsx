@@ -1,15 +1,10 @@
 import { TemperatureDashboard } from '@/components/factory/temperature-dashboard';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TemperaturePage({
-  params,
-}: {
-  params: Promise<{ factoryId: string }>;
-}) {
-  const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'temperature');
+// The switch check runs in factoryPage, which is all this page needs the factory for.
+async function TemperaturePage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -17,3 +12,5 @@ export default async function TemperaturePage({
     </div>
   );
 }
+
+export default factoryPage('temperature', TemperaturePage);

@@ -1,17 +1,16 @@
 import { PerformanceDashboard } from '@/components/factory/performance-dashboard';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PerformancePage({
+async function PerformancePage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'performance');
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -22,3 +21,5 @@ export default async function PerformancePage({
     </div>
   );
 }
+
+export default factoryPage('performance', PerformancePage);

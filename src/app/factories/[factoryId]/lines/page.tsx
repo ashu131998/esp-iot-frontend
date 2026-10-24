@@ -3,17 +3,16 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { NavDim } from '@/lib/navigation-context';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { serverApi } from '@/lib/server-api';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LinesPage({
+async function LinesPage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'lines');
   const [{ lines }, { machines }] = await Promise.all([
     serverApi.lines(factoryId),
     serverApi.machines(factoryId),
@@ -58,3 +57,5 @@ export default async function LinesPage({
     </NavDim>
   );
 }
+
+export default factoryPage('lines', LinesPage);

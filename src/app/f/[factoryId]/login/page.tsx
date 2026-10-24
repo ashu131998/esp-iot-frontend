@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 
 import { LoginForm } from '@/components/auth/login-form';
 import { Card, CardHeader } from '@/components/ui/card';
+import { brandStyle, logoUrl } from '@/lib/branding';
 import { lookupFactory } from '@/lib/server/factory-lookup';
 
 export const dynamic = 'force-dynamic';
@@ -43,13 +44,20 @@ export default async function FactoryLoginPage({
   if (factory.status === 'missing') return <FactoryNotFound factoryId={factoryId} />;
 
   const name = factory.status === 'found' ? factory.name : factoryId.replace(/-/g, ' ');
+  const branding = factory.status === 'found' ? factory.branding : null;
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center text-muted">Loading…</div>
       }
     >
-      <LoginForm title="Factory Sign In" subtitle={`Sign in to ${name}`} factoryId={factoryId} />
+      <LoginForm
+        title="Factory Sign In"
+        subtitle={`Sign in to ${name}`}
+        factoryId={factoryId}
+        logoSrc={logoUrl(factoryId, branding)}
+        brand={brandStyle(branding)}
+      />
     </Suspense>
   );
 }

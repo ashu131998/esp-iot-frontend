@@ -3,10 +3,11 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FactoryTeamPage({
+async function FactoryTeamPage({
   params,
   searchParams,
 }: {
@@ -47,3 +48,5 @@ export default async function FactoryTeamPage({
     </NavDim>
   );
 }
+
+export default factoryPage('team', FactoryTeamPage);

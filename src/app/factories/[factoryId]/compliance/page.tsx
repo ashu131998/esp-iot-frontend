@@ -1,18 +1,13 @@
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 /**
  * Optional page, off unless our staff switch it on for a factory (Pages &
  * sections). Shows sample audit data until it is wired to real records.
  */
-export default async function CompliancePage({
-  params,
-}: {
-  params: Promise<{ factoryId: string }>;
-}) {
-  const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'compliance');
+// The switch check runs in factoryPage, which is all this page needs the factory for.
+async function CompliancePage() {
 
   const audits = [
     { id: 'ISO-9001', status: 'Certified', expiry: '2027-03-15', score: 94 },
@@ -60,3 +55,5 @@ export default async function CompliancePage({
     </div>
   );
 }
+
+export default factoryPage('compliance', CompliancePage);

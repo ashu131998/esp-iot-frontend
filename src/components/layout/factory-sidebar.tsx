@@ -45,12 +45,15 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
 export function FactorySidebar({
   factoryId,
   factoryName,
+  logoSrc,
   location,
   shifts,
   tabs,
 }: {
   factoryId: string;
   factoryName: string;
+  /** The factory's own logo (branding); our mark when it has none. */
+  logoSrc?: string | null;
   location?: string | null;
   shifts: Shift[];
   tabs: Array<{ slug: string; label: string; href: string }>;
@@ -67,7 +70,12 @@ export function FactorySidebar({
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-2">
-          <BrandMark className="h-9 w-9" />
+          {logoSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
+            <img src={logoSrc} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain p-0.5" />
+          ) : (
+            <BrandMark className="h-9 w-9" />
+          )}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{factoryName}</p>
             <p className="truncate text-xs text-slate-400">{location ?? factoryId}</p>

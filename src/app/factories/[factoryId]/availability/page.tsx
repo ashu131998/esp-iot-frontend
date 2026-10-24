@@ -1,11 +1,11 @@
 import { AvailabilityDashboard } from '@/components/factory/availability-dashboard';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AvailabilityPage({
+async function AvailabilityPage({
   params,
   searchParams,
 }: {
@@ -13,7 +13,6 @@ export default async function AvailabilityPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'availability');
   const { from, to } = await searchParams;
 
   return (
@@ -25,3 +24,5 @@ export default async function AvailabilityPage({
     </div>
   );
 }
+
+export default factoryPage('availability', AvailabilityPage);

@@ -2,18 +2,17 @@ import { MachineProfileManager } from '@/components/factory/machine-profile-mana
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ConfigurationPage({
+async function ConfigurationPage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
   searchParams: Promise<Record<string, string>>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'configuration');
   const [{ machines }, profilesData, configData] = await Promise.all([
     serverApi.machines(factoryId),
     serverApi.configProfiles(factoryId).catch(() => ({ profiles: [] as import('@/lib/types').MachineConfigProfile[] })),
@@ -46,3 +45,5 @@ export default async function ConfigurationPage({
     </div>
   );
 }
+
+export default factoryPage('configuration', ConfigurationPage);

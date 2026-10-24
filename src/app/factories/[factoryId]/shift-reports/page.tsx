@@ -1,16 +1,15 @@
 import { ShiftReportSchedulePanel } from '@/components/factory/shift-report-schedule-panel';
 import { NavDim } from '@/lib/navigation-context';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ShiftReportsPage({
+async function ShiftReportsPage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'shift-reports');
 
   return (
     <NavDim className="p-4 sm:p-6 lg:p-8">
@@ -18,3 +17,5 @@ export default async function ShiftReportsPage({
     </NavDim>
   );
 }
+
+export default factoryPage('shift-reports', ShiftReportsPage);

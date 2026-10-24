@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -14,10 +14,16 @@ export function LoginForm({
   factoryId,
   isSuperAdmin = false,
   staffLogin = false,
+  logoSrc,
+  brand,
 }: {
   title: string;
   subtitle?: string;
   factoryId?: string;
+  /** The factory's logo (branding), shown above the title. */
+  logoSrc?: string | null;
+  /** The factory's accent colour as theme variables (lib/branding.ts). */
+  brand?: CSSProperties;
   /** @deprecated use staffLogin */
   isSuperAdmin?: boolean;
   staffLogin?: boolean;
@@ -68,8 +74,12 @@ export function LoginForm({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4" style={brand}>
       <Card className="w-full max-w-md p-6">
+        {logoSrc && (
+          // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
+          <img src={logoSrc} alt="" className="mx-auto mb-4 h-14 max-w-[12rem] object-contain" />
+        )}
         <CardHeader title={title} description={subtitle} />
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Field label="Username">

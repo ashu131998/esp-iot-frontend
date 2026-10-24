@@ -2,6 +2,7 @@ import { SignOutButton } from '@/components/auth/sidebar-user-footer';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { PageHeader } from '@/components/layout/page-header';
 import { FactoryNav, FactorySidebar } from '@/components/layout/factory-sidebar';
+import { brandStyle, logoUrl, type FactoryBranding } from '@/lib/branding';
 import { FactoryRefsProvider, type FactoryRefs } from '@/lib/factory-refs-context';
 import { RefreshProvider } from '@/lib/refresh-context';
 import type { Shift } from '@/lib/types';
@@ -13,6 +14,7 @@ export function FactoryShell({
   location,
   shifts,
   tabs,
+  branding,
   description,
   refs,
   children,
@@ -22,16 +24,19 @@ export function FactoryShell({
   location?: string | null;
   shifts: Shift[];
   tabs: Array<{ slug: string; label: string; href: string }>;
+  /** Accent colour and logo our staff set for this factory. */
+  branding?: FactoryBranding;
   description?: string;
   refs: FactoryRefs;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={brandStyle(branding)}>
       <aside className="hidden h-screen w-64 shrink-0 lg:block">
         <FactorySidebar
           factoryId={factoryId}
           factoryName={factoryName}
+          logoSrc={logoUrl(factoryId, branding)}
           location={location}
           shifts={shifts}
           tabs={tabs}

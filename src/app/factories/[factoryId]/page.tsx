@@ -1,11 +1,12 @@
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { FactoryOverviewDashboard } from '@/components/factory/factory-overview-dashboard';
 import { NavDim } from '@/lib/navigation-context';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
 /** Overview metrics + machine table — data loads on the client (see FactoryOverviewDashboard). */
-export default async function FactoryOverviewPage({
+async function FactoryOverviewPage({
   params,
   searchParams,
 }: {
@@ -24,3 +25,5 @@ export default async function FactoryOverviewPage({
     </div>
   );
 }
+
+export default factoryPage('overview', FactoryOverviewPage);

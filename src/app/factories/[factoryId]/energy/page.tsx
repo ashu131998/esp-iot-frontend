@@ -1,11 +1,11 @@
 import { EnergyDashboard } from '@/components/factory/energy-dashboard';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function EnergyPage({
+async function EnergyPage({
   params,
   searchParams,
 }: {
@@ -13,7 +13,6 @@ export default async function EnergyPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'energy');
   const { from, to } = await searchParams;
 
   return (
@@ -25,3 +24,5 @@ export default async function EnergyPage({
     </div>
   );
 }
+
+export default factoryPage('energy', EnergyPage);

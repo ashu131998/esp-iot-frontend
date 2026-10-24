@@ -1,15 +1,10 @@
 import { VibrationDashboard } from '@/components/factory/vibration-dashboard';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function VibrationPage({
-  params,
-}: {
-  params: Promise<{ factoryId: string }>;
-}) {
-  const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'vibration');
+// The switch check runs in factoryPage, which is all this page needs the factory for.
+async function VibrationPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -17,3 +12,5 @@ export default async function VibrationPage({
     </div>
   );
 }
+
+export default factoryPage('vibration', VibrationPage);

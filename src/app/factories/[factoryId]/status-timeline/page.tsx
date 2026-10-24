@@ -1,17 +1,16 @@
 import { StatusTimelineDashboard } from '@/components/uptime/status-timeline-dashboard';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
-import { requireFactoryPage } from '@/lib/server/page-guard';
+import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StatusTimelinePage({
+async function StatusTimelinePage({
   params,
 }: {
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
-  await requireFactoryPage(factoryId, 'status-timeline');
 
   return (
     <div className="space-y-6">
@@ -24,3 +23,5 @@ export default async function StatusTimelinePage({
     </div>
   );
 }
+
+export default factoryPage('status-timeline', StatusTimelinePage);

@@ -209,6 +209,12 @@ export interface UptimeSegment {
   status: UptimeStatus;
 }
 
+/** A power cut the board reported (it restarted after power-on / brownout): its last heartbeat before → it started again. */
+export interface UptimePowerCut {
+  from: string;
+  to: string;
+}
+
 export interface UptimeStream {
   binding_id: string | null;
   label: string;
@@ -225,6 +231,8 @@ export interface UptimeStream {
   live_status?: UptimeStatus;
   live_since?: string | null;
   timeline: UptimeSegment[];
+  /** Power cuts in the timeline window (backend, firmware 2.0.3+). */
+  power_cuts?: UptimePowerCut[];
   detail_timeline?: UptimeSegment[];
 }
 
@@ -242,6 +250,8 @@ export interface UptimeMachine {
   live_status?: UptimeStatus;
   live_since?: string | null;
   timeline: UptimeSegment[];
+  /** Power cuts in the timeline window (backend, firmware 2.0.3+). */
+  power_cuts?: UptimePowerCut[];
   /** Last 2h zoom — same segments, wider pixels for recent transitions. */
   detail_timeline?: UptimeSegment[];
   /** When sensor_bindings exist — one timeline per labeled channel. */

@@ -37,6 +37,7 @@ export function expandUptimeMachines(machines: UptimeMachine[]): UptimeDisplayRo
           live_since: s.live_since ?? m.live_since,
           timeline: s.timeline,
           detail_timeline: s.detail_timeline ?? s.timeline,
+          power_cuts: s.power_cuts ?? m.power_cuts,
           display_name: streamDisplayName(m.machine_name, s.label ?? s.display_name),
           stream_key: `${m.machine_id}:${s.binding_id ?? s.label}`,
         });

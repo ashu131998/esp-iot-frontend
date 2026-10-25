@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { knownNumber, normalizeMachineStatus, statusLabel } from '@/lib/utils';
 import { ApexChart, baseChartOptions, formatAxisTick, type ApexOptions } from './apex';
-import { placeSegments } from '@/lib/timeline-layout';
+import { placeMarks, placeSegments } from '@/lib/timeline-layout';
 
 interface ChartData {
   name: string;
@@ -250,6 +250,7 @@ export function UptimeTimeSeriesChart({
   windowLabel,
   height = 48,
   segmentDetails,
+  powerCuts,
 }: {
   segments: UptimeSegmentPoint[];
   windowFrom: string;
@@ -258,6 +259,8 @@ export function UptimeTimeSeriesChart({
   height?: number;
   /** Extra tooltip rows per segment (e.g. downtime reason, active config). */
   segmentDetails?: (segment: UptimeSegmentPoint) => SegmentDetail[];
+  /** Power cuts the board reported: marked even when too short to show as No signal. */
+  powerCuts?: { from: string; to: string }[];
 }) {
   // index: position among the drawn segments; last: the newest segment of the data.
   const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number; last: boolean } | null>(null);
@@ -275,6 +278,11 @@ export function UptimeTimeSeriesChart({
   // without data stays empty. Absolute layout (left/width in %) avoids the
   // sub-pixel white seams a flex row of many thin segments produces.
   const placed = placeSegments(filled, windowFrom, windowTo);
+  const cuts = placeMarks(powerCuts, windowFrom, windowTo);
+  const cutTitle = (from: string, to: string) => {
+    const t = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    return `Power cut: ${t(from)} – ${t(to)}`;
+  };
 
   const hoverCenterPct = hover
     ? (placed[hover.index]?.leftPct ?? 0) + (placed[hover.index]?.widthPct ?? 0) / 2
@@ -283,6 +291,16 @@ export function UptimeTimeSeriesChart({
   return (
     <div className="space-y-1">
       <div className="relative" style={{ contain: 'layout' }}>
+        {cuts.map((c) => (
+          // A red dot above the bar: visible on every colour, even on a stopped (red) loom.
+          <span
+            key={`dot-${c.from}`}
+            className="absolute -top-1.5 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-white bg-red-600"
+            style={{ left: `${c.leftPct + c.widthPct / 2}%` }}
+            title={cutTitle(c.from, c.to)}
+            aria-label={cutTitle(c.from, c.to)}
+          />
+        ))}
         {hover && (
           <div
             className="pointer-events-none absolute bottom-full z-20 mb-2"
@@ -323,6 +341,15 @@ export function UptimeTimeSeriesChart({
               />
             );
           })}
+          {cuts.map((c) => (
+            // The cut itself, at least 2 px wide: a second is far less than a pixel on 24 hours.
+            <div
+              key={`cut-${c.from}`}
+              className="absolute top-0 bottom-0 z-10 bg-slate-900"
+              style={{ left: `${c.leftPct}%`, width: `max(2px, ${c.widthPct}%)` }}
+              title={cutTitle(c.from, c.to)}
+            />
+          ))}
         </div>
       </div>
       <div className="grid grid-cols-3 items-center text-[10px] text-muted tabular-nums">

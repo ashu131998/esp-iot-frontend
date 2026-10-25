@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { placeSegments, segmentsSpan } from '@/lib/timeline-layout';
+import { placeMarks } from '@/lib/timeline-layout';
 
 const at = (hhmm: string, day = 25) => `2026-10-${day}T${hhmm}:00.000Z`;
 const seg = (from: string, to: string, status = 'up') => ({ from, to, status });
@@ -65,5 +66,31 @@ describe('segmentsSpan', () => {
   it('is null without segments or time', () => {
     expect(segmentsSpan([])).toBeNull();
     expect(segmentsSpan([seg(at('01:00'), at('01:00'))])).toBeNull();
+  });
+});
+
+describe('placeMarks: power cuts on a timeline bar', () => {
+  const W = { from: '2026-10-25T00:00:00.000Z', to: '2026-10-25T10:00:00.000Z' };   // 10 h
+
+  it('at its real time; a one-second cut keeps its place though it is far below a pixel', () => {
+    const [m] = placeMarks([{ from: '2026-10-25T05:00:00.000Z', to: '2026-10-25T05:00:01.000Z' }], W.from, W.to);
+    expect(m.leftPct).toBe(50);
+    expect(m.widthPct).toBeCloseTo(100 / 36000, 10);
+  });
+
+  it('clipped to the window; ones outside it, or nonsense, are left out', () => {
+    const marks = placeMarks([
+      { from: '2026-10-24T23:59:00.000Z', to: '2026-10-25T00:01:00.000Z' },
+      { from: '2026-10-25T11:00:00.000Z', to: '2026-10-25T11:00:05.000Z' },
+      { from: 'garbage', to: '2026-10-25T01:00:00.000Z' },
+    ], W.from, W.to);
+    expect(marks).toHaveLength(1);
+    expect(marks[0].leftPct).toBe(0);
+    expect(marks[0].widthPct).toBeCloseTo(100 / 600, 10);
+  });
+
+  it('nothing to place, or no window: none', () => {
+    expect(placeMarks(undefined, W.from, W.to)).toEqual([]);
+    expect(placeMarks([{ from: W.from, to: W.to }], W.to, W.from)).toEqual([]);
   });
 });

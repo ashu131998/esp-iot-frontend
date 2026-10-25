@@ -155,6 +155,13 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
             <span className="inline-block h-3 w-3 rounded-sm border border-slate-300 bg-white" />
             No data
           </span>
+          <span className="flex items-center gap-2">
+            <span className="relative inline-block h-3 w-3">
+              <span className="absolute left-1/2 top-0 h-3 w-0.5 -translate-x-1/2 bg-slate-900" />
+              <span className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full border border-white bg-red-600" />
+            </span>
+            Power cut
+          </span>
         </div>
       </Card>
 
@@ -207,6 +214,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowLabel={timelineWindowLabel}
               height={STATUS_TIMELINE_CHART_HEIGHT}
               segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+              powerCuts={m.power_cuts}
             />
             <p className="mb-1 mt-4 text-xs font-medium text-muted">
               Last {UPTIME_DETAIL_HOURS} hours
@@ -218,6 +226,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowLabel={detailLabel}
               height={STATUS_TIMELINE_CHART_HEIGHT}
               segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+              powerCuts={m.power_cuts}
             />
           </Card>
         );

@@ -51,3 +51,34 @@ export function segmentsSpan(
   }
   return to > from ? { from: new Date(from).toISOString(), to: new Date(to).toISOString() } : null;
 }
+
+export interface PlacedMark {
+  from: string;
+  to: string;
+  /** Left edge and width as % of the window (width may be ~0: draw it with a minimum width). */
+  leftPct: number;
+  widthPct: number;
+}
+
+/**
+ * Short events — power cuts — on a timeline bar: each at its real time, clipped to the
+ * window, kept even when far too short for a pixel (the bar draws them at a minimum width).
+ */
+export function placeMarks(
+  marks: { from: string; to: string }[] | undefined,
+  windowFrom: string,
+  windowTo: string,
+): PlacedMark[] {
+  const start = Date.parse(windowFrom);
+  const end = Date.parse(windowTo);
+  if (!(end > start)) return [];
+  const span = end - start;
+  return (marks ?? []).flatMap((m) => {
+    const a = Date.parse(m.from);
+    const b = Math.max(Date.parse(m.to), a);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b < start || a > end) return [];
+    const from = Math.max(a, start);
+    const to = Math.min(b, end);
+    return [{ from: m.from, to: m.to, leftPct: ((from - start) / span) * 100, widthPct: ((to - from) / span) * 100 }];
+  });
+}

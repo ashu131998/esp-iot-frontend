@@ -23,7 +23,7 @@ export interface DisplayPage {
   /** Always on; only its sections switch (Overview). */
   fixed: boolean;
   default: boolean;
-  sections: Array<{ key: string; label: string; default: boolean }>;
+  sections: Array<{ key: string; label: string; default: boolean; description?: string }>;
 }
 
 /**

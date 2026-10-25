@@ -121,8 +121,13 @@ export function FactoryDisplayEditor({
               {page.sections.length > 0 && (
                 <ul className="mt-2 space-y-2 border-l pl-4">
                   {page.sections.map((section) => (
-                    <li key={section.key} className="flex items-center justify-between gap-4 text-sm">
-                      <span className={cn('text-muted', !pageOn && 'opacity-60')}>{section.label}</span>
+                    <li key={section.key} className="flex items-start justify-between gap-4 text-sm">
+                      <div className={cn('min-w-0 flex-1', !pageOn && 'opacity-60')}>
+                        <div className="text-foreground">{section.label}</div>
+                        {section.description ? (
+                          <p className="mt-0.5 text-xs leading-snug text-muted">{section.description}</p>
+                        ) : null}
+                      </div>
                       <Switch
                         label={`${page.label}: ${section.label}`}
                         checked={display[section.key] !== false}

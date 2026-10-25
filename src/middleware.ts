@@ -1,8 +1,8 @@
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { ACCESS_COOKIE, CSRF_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
-import { loginRedirectPath } from '@/lib/auth-redirect';
+import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
+import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
@@ -11,7 +11,8 @@ import { isStaffRole } from '@/lib/internal-auth';
  * Edge middleware: route protection + RBAC redirects, per-request CSP nonce, and
  * security headers. The backend remains authoritative; this is defense-in-depth
  * plus UX routing. It only *reads* the access token to determine role/factory;
- * it never refreshes (the BFF proxy auto-refreshes on data calls).
+ * it does not verify refresh tokens inline; expired access JWTs with a refresh
+ * cookie go through GET /api/auth/session-restore (API calls refresh via the BFF).
  */
 
 const LEGACY_PLATFORM_REDIRECTS: Record<string, string> = {
@@ -119,13 +120,33 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
+  /** Access JWT expired but refresh cookie may still be valid — renew without flashing the login page. */
+  const redirectToSessionRestore = () => {
+    const returnPath = `${pathname}${req.nextUrl.search}`;
+    const next = safeNextPath(returnPath) ?? '/';
+    const url = req.nextUrl.clone();
+    url.pathname = '/api/auth/session-restore';
+    url.search = `?next=${encodeURIComponent(next)}`;
+    return NextResponse.redirect(url);
+  };
+
   // Not signed in (or the cookies did not come: a click from an email is cross-site and they
   // are SameSite=Strict): the factory login, which renews the session if it can and comes back.
   const redirectToLogin = (factoryId: string) => {
+    if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
     const [path, query] = loginRedirectPath(factoryId, pathname, req.nextUrl.search).split('?');
     const url = req.nextUrl.clone();
     url.pathname = path;
     url.search = query ? `?${query}` : '';
+    return NextResponse.redirect(url);
+  };
+
+  const redirectToInternalLogin = () => {
+    if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+    const url = req.nextUrl.clone();
+    url.pathname = '/internal/login';
+    const next = safeNextPath(`${pathname}${req.nextUrl.search}`);
+    url.search = next ? `?next=${encodeURIComponent(next)}` : '';
     return NextResponse.redirect(url);
   };
 
@@ -181,7 +202,7 @@ export async function middleware(req: NextRequest) {
     if (!cfAccessOk(req)) {
       return new NextResponse(cfAccessBlockMessage(), { status: 403 });
     }
-    if (!identity) return redirectTo('/internal/login');
+    if (!identity) return redirectToInternalLogin();
     if (!isStaffRole(identity.role)) return redirectTo(homeFor(identity, req));
     if (
       isInternalWritePath(pathname) &&

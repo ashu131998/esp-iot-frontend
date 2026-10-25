@@ -517,6 +517,8 @@ export interface AlertSettings {
   updated_at: string | null;
   mobile_configured: boolean;
   alertops_configured: boolean;
+  board_email_configured?: boolean;
+  board_email_from?: string;
 }
 
 export interface NotificationItem {

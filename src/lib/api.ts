@@ -572,7 +572,17 @@ export const api = {
 
   updateAlertSettings: (
     factoryId: string,
-    body: Partial<Omit<AlertSettings, 'factory_id' | 'updated_at' | 'mobile_configured' | 'alertops_configured'>>,
+    body: Partial<
+      Omit<
+        AlertSettings,
+        | 'factory_id'
+        | 'updated_at'
+        | 'mobile_configured'
+        | 'alertops_configured'
+        | 'board_email_configured'
+        | 'board_email_from'
+      >
+    >,
     options?: ApiRequestOptions,
   ) =>
     request<AlertSettings>(`/v1/factories/${factoryId}/alert-settings`, {
@@ -616,6 +626,15 @@ export const api = {
       body: JSON.stringify(body),
       ...options,
     }),
+
+  sendTestBoardAlertEmail: (factoryId: string, options?: ApiRequestOptions) =>
+    request<{
+      ok: boolean;
+      sent: number;
+      failed: number;
+      from_email: string;
+      results: Array<{ email: string; ok: boolean; error: string | null; from_email?: string }>;
+    }>(`/v1/factories/${factoryId}/board-alerts/test`, { method: 'POST', body: '{}', ...options }),
 
   downtimeReasons: (factoryId: string, options?: ApiRequestOptions) =>
     request<{ reasons: DowntimeReason[] }>(

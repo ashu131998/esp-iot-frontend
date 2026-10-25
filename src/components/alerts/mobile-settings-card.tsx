@@ -23,6 +23,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testWorkerId, setTestWorkerId] = useState('');
   const [testPushResult, setTestPushResult] = useState<string | null>(null);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
 
   const { data: workersData } = useQuery({
     queryKey: ['workers', factoryId, 'alert-test'],
@@ -61,6 +62,22 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
     },
     onError: (err) => setTestResult(`Failed: ${err.message}`),
+  });
+
+  const testBoardEmail = useMutation({
+    mutationFn: () => api.sendTestBoardAlertEmail(factoryId),
+    onSuccess: (res) => {
+      if (res.ok) {
+        setTestEmailResult(
+          `Sent ${res.sent} test email(s) from ${res.from_email}. Check inbox and spam.`,
+        );
+      } else {
+        const err = res.results?.find((r) => r.error)?.error ?? 'Send failed';
+        setTestEmailResult(`Failed: ${err}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
+    },
+    onError: (err) => setTestEmailResult(`Failed: ${err.message}`),
   });
 
   const testPush = useMutation({
@@ -108,13 +125,39 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     <div className="space-y-6">
       <SummaryCard tone={tone} title={statusTitle} subtitle={statusSub} />
 
-      <p className="px-1 text-sm text-muted">
-        Board offline emails use the same address list as{' '}
-        <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
-          Shift reports
-        </Link>
-        .
-      </p>
+      <div className="space-y-2 px-1 text-sm text-muted">
+        <p>
+          Board offline emails go to the same list as{' '}
+          <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
+            Shift reports
+          </Link>
+          {settings?.board_email_from ? (
+            <>
+              , from <span className="font-mono text-foreground">{settings.board_email_from}</span>.
+            </>
+          ) : (
+            '.'
+          )}
+        </p>
+        {settings?.board_email_configured ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={testBoardEmail.isPending}
+              onClick={() => {
+                setTestEmailResult(null);
+                testBoardEmail.mutate();
+              }}
+            >
+              {testBoardEmail.isPending ? 'Sending…' : 'Send test board alert email'}
+            </Button>
+            {testEmailResult && <p className="text-xs">{testEmailResult}</p>}
+          </div>
+        ) : (
+          <p className="text-xs text-amber-700">Board email is not configured on the server yet.</p>
+        )}
+      </div>
 
       <ListGroup title="Settings">
         <SettingRow

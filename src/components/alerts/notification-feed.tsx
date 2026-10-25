@@ -36,7 +36,13 @@ function rowDetail(n: NotificationItem) {
     hour: '2-digit',
     minute: '2-digit',
   });
-  const bits = [who, n.machine_id, when, n.status === 'simulated' ? 'simulated' : null].filter(Boolean);
+  const bits = [
+    who,
+    n.machine_id,
+    when,
+    n.status === 'simulated' ? 'simulated' : null,
+    n.status === 'failed' && n.error ? `Error: ${n.error}` : null,
+  ].filter(Boolean);
   const msg = n.message?.trim();
   return msg ? `${msg.slice(0, 120)}${msg.length > 120 ? '…' : ''} · ${bits.join(' · ')}` : bits.join(' · ');
 }

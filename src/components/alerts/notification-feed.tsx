@@ -1,47 +1,44 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  ArrowDownCircle,
-  ArrowUpCircle,
-  BellRing,
-  Clock,
-  MessageCircle,
-  Power,
-  PowerOff,
-  Reply,
-  Send,
-} from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader } from '@/components/ui/card';
+import { ListEmpty, ListGroup, ListRow, SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { NotificationItem } from '@/lib/types';
 
 const REFRESH_MS = 30_000;
 
-const TYPE_META: Record<string, { label: string; Icon: typeof BellRing; iconClass: string }> = {
-  shift_reminder: { label: 'Shift reminder', Icon: Clock, iconClass: 'text-blue-500' },
-  machine_down: { label: 'Machine down', Icon: ArrowDownCircle, iconClass: 'text-red-500' },
-  owner_machine_down: { label: 'Owner alert · down', Icon: ArrowDownCircle, iconClass: 'text-red-400' },
-  machine_up_config: { label: 'Machine up · config', Icon: ArrowUpCircle, iconClass: 'text-emerald-500' },
-  owner_machine_up: { label: 'Owner alert · up', Icon: ArrowUpCircle, iconClass: 'text-emerald-400' },
-  downtime_reason_reply: { label: 'Reason received', Icon: Reply, iconClass: 'text-violet-500' },
-  config_selection_reply: { label: 'Config selected', Icon: Reply, iconClass: 'text-violet-500' },
-  test: { label: 'Test message', Icon: Send, iconClass: 'text-slate-400' },
-  test_push: { label: 'Test push', Icon: Send, iconClass: 'text-blue-500' },
-  // Emails to the report recipients when a board goes silent / is back (query-api board-alert-mailer).
-  board_offline: { label: 'Board offline · email', Icon: PowerOff, iconClass: 'text-red-500' },
-  board_online: { label: 'Board back online · email', Icon: Power, iconClass: 'text-emerald-500' },
-  board_power_cut: { label: 'Board was powered off · email', Icon: PowerOff, iconClass: 'text-red-500' },
+const TYPE_LABEL: Record<string, string> = {
+  shift_reminder: 'Shift reminder',
+  machine_down: 'Machine stopped',
+  owner_machine_down: 'Owner · machine stopped',
+  machine_up_config: 'Machine running again',
+  owner_machine_up: 'Owner · machine running',
+  downtime_reason_reply: 'Reason from worker',
+  config_selection_reply: 'Config from worker',
+  test: 'Test message',
+  test_push: 'Test push',
+  board_offline: 'Board offline (email)',
+  board_online: 'Board back (email)',
+  board_power_cut: 'Board powered off (email)',
 };
 
-function statusBadge(n: NotificationItem) {
-  if (n.status === 'sent') return 'bg-emerald-50 text-emerald-700';
-  if (n.status === 'received') return 'bg-violet-50 text-violet-700';
-  if (n.status === 'simulated') return 'bg-slate-100 text-slate-600';
-  return 'bg-red-50 text-red-700';
+function rowTitle(n: NotificationItem) {
+  return TYPE_LABEL[n.type] ?? n.type.replace(/_/g, ' ');
+}
+
+function rowDetail(n: NotificationItem) {
+  const who = [n.recipient_name, n.phone].filter(Boolean).join(' · ');
+  const when = new Date(n.created_at).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const bits = [who, n.machine_id, when, n.status === 'simulated' ? 'simulated' : null].filter(Boolean);
+  const msg = n.message?.trim();
+  return msg ? `${msg.slice(0, 120)}${msg.length > 120 ? '…' : ''} · ${bits.join(' · ')}` : bits.join(' · ');
 }
 
 export function NotificationFeed({ factoryId }: { factoryId: string }) {
@@ -55,62 +52,36 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
 
   const notifications = data?.notifications ?? [];
 
+  if (isLoading) {
+    return <p className="text-sm text-muted">Loading notification history…</p>;
+  }
+
   return (
-    <Card>
-      <CardHeader
-        title="Mobile Alert Log"
-        description={`Every reminder, alert and worker reply${data ? ` · ${data.total} total` : ''}`}
-        action={<MessageCircle className="h-4 w-4 text-muted" />}
+    <div className="space-y-6">
+      <SummaryCard
+        tone={notifications.length === 0 ? 'idle' : 'good'}
+        title={notifications.length === 0 ? 'No notifications yet' : 'Notification history'}
+        subtitle={
+          data
+            ? `${notifications.length} recent · ${data.total} total`
+            : 'Reminders, mobile alerts, and board emails'
+        }
       />
-      {isLoading ? (
-        <p className="py-8 text-center text-sm text-muted">Loading…</p>
-      ) : notifications.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted">
-          No messages yet. Reminders go out automatically before each shift, and machine
-          down/up alerts fire the moment a machine changes state.
-        </div>
-      ) : (
-        <ul className="max-h-[480px] divide-y overflow-y-auto rounded-lg border">
-          {notifications.map((n) => {
-            const meta = TYPE_META[n.type] ?? {
-              label: n.type,
-              Icon: BellRing,
-              iconClass: 'text-slate-400',
-            };
-            const { Icon } = meta;
-            return (
-              <li key={n.notification_id} className="flex gap-3 px-4 py-3">
-                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${meta.iconClass}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium">{meta.label}</span>
-                    <Badge className={statusBadge(n)}>{n.status}</Badge>
-                    {n.channel === 'console' && (
-                      <Badge className="bg-slate-100 text-slate-500">simulated</Badge>
-                    )}
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted">
-                    {n.message}
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted">
-                    {n.recipient_name ? `${n.recipient_name} · ` : ''}
-                    {n.phone ?? ''}
-                    {n.machine_id ? ` · ${n.machine_id}` : ''}
-                    {' · '}
-                    {new Date(n.created_at).toLocaleString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                    {n.error ? ` · ${n.error}` : ''}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
+
+      <ListGroup title="Latest" count={notifications.length}>
+        {notifications.length === 0 ? (
+          <ListEmpty>Shift reminders and alerts will appear here as they are sent.</ListEmpty>
+        ) : (
+          notifications.map((n) => (
+            <ListRow
+              key={n.notification_id}
+              tone={n.status === 'failed' ? 'bad' : n.status === 'simulated' ? 'idle' : 'good'}
+              title={rowTitle(n)}
+              detail={rowDetail(n)}
+            />
+          ))
+        )}
+      </ListGroup>
+    </div>
   );
 }

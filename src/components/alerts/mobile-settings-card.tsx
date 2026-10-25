@@ -1,51 +1,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Plus, Send, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader } from '@/components/ui/card';
-import { Field, Input, Select } from '@/components/ui/input';
+import { Input, Select } from '@/components/ui/input';
+import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  description,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-  description: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-lg border px-4 py-3 text-left hover:bg-slate-50"
-    >
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-muted">{description}</span>
-      </span>
-      <span
-        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-emerald-500' : 'bg-slate-300'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-            checked ? 'translate-x-[18px]' : 'translate-x-0.5'
-          }`}
-        />
-      </span>
-    </button>
-  );
-}
 
 export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const queryClient = useQueryClient();
@@ -91,8 +54,8 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
       setTestResult(
         res.ok
           ? res.channel === 'console' || res.channel === 'console-mode'
-            ? 'Simulated (mobile alert bridge not configured yet) — logged to the feed.'
-            : 'Sent! Check the phone or mobile app.'
+            ? 'Logged to the feed (mobile bridge not live yet).'
+            : 'Sent — check the phone or app.'
           : `Failed: ${res.error}`,
       );
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
@@ -105,7 +68,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     onSuccess: (res) => {
       setTestPushResult(
         res.ok
-          ? `Push sent to ${selectedWorker?.name ?? 'worker'} only — check their mobile app inbox.`
+          ? `Push sent to ${selectedWorker?.name ?? 'worker'}.`
           : `Failed: ${res.error ?? 'Unknown error'}`,
       );
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
@@ -114,11 +77,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   });
 
   if (!draft) {
-    return (
-      <Card>
-        <CardHeader title="Mobile Alerts" description="Loading settings…" />
-      </Card>
-    );
+    return <p className="text-sm text-muted">Loading mobile settings…</p>;
   }
 
   const update = (patch: Partial<AlertSettings>) => {
@@ -132,145 +91,137 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     });
   };
 
-  return (
-    <Card>
-      <CardHeader
-        title="Mobile Alerts"
-        description="Shift reminders, machine down/up alerts and reason capture via the mobile app"
-        action={
-          draft.mobile_configured ? (
-            <Badge className="bg-emerald-50 text-emerald-700">
-              <MessageCircle className="mr-1 h-3 w-3" /> Connected
-            </Badge>
-          ) : (
-            <Badge className="bg-amber-50 text-amber-700">
-              <MessageCircle className="mr-1 h-3 w-3" /> Simulation mode
-            </Badge>
-          )
-        }
-      />
+  let tone: Tone = draft.mobile_enabled ? 'good' : 'idle';
+  if (draft.mobile_enabled && !draft.mobile_configured) tone = 'warn';
 
-      <div className="space-y-3">
-        <Toggle
+  const statusTitle = !draft.mobile_enabled
+    ? 'Mobile alerts are off'
+    : draft.mobile_configured
+      ? 'Mobile alerts are on'
+      : 'Mobile alerts on (simulation)';
+
+  const statusSub = draft.mobile_enabled
+    ? 'Shift reminders and machine stop/start go to workers on the app.'
+    : 'Turn on to send reminders and machine alerts to the mobile app.';
+
+  return (
+    <div className="space-y-6">
+      <SummaryCard tone={tone} title={statusTitle} subtitle={statusSub} />
+
+      <p className="px-1 text-sm text-muted">
+        Board offline emails use the same address list as{' '}
+        <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
+          Shift reports
+        </Link>
+        .
+      </p>
+
+      <ListGroup title="Settings">
+        <SettingRow
+          label="Mobile alerts"
+          hint="Master switch for this factory"
           checked={draft.mobile_enabled}
           onChange={(v) => update({ mobile_enabled: v })}
-          label="Enable mobile alerts"
-          description="Master switch for all outgoing alerts for this factory"
         />
-        <Toggle
+        <SettingRow
+          label="Notify owners when a machine stops or starts"
+          hint="Uses the phone numbers below"
           checked={draft.notify_owner_on_down}
           onChange={(v) => update({ notify_owner_on_down: v })}
-          label="Notify owners on machine down/up"
-          description="Owner contacts below get a heads-up whenever a machine stops or restarts"
         />
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Shift reminder lead time (minutes)">
-            <Input
-              type="number"
-              min={5}
-              max={120}
-              value={draft.shift_reminder_minutes}
-              onChange={(e) =>
-                setDraft({ ...draft, shift_reminder_minutes: Number(e.target.value) })
-              }
-              onBlur={() => update({})}
-            />
-          </Field>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-medium">Owner / manager contacts</p>
-          {draft.owner_contacts.length === 0 && (
-            <p className="mb-2 rounded-lg border border-dashed px-4 py-3 text-xs text-muted">
-              No owner numbers yet — add one to receive machine down/up alerts.
-            </p>
-          )}
-          <ul className="space-y-2">
-            {draft.owner_contacts.map((c, i) => (
-              <li
-                key={`${c.phone}-${i}`}
-                className="flex items-center justify-between gap-3 rounded-lg border px-4 py-2 text-sm"
-              >
-                <span>
-                  <span className="font-medium">{c.name || 'Owner'}</span>
-                  <span className="ml-2 font-mono text-xs text-muted">{c.phone}</span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Remove ${c.name || c.phone}`}
-                  onClick={() =>
-                    update({ owner_contacts: draft.owner_contacts.filter((_, j) => j !== i) })
-                  }
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 flex flex-wrap items-end gap-2">
-            <div className="min-w-[140px] flex-1">
-              <Input
-                placeholder="Name"
-                value={newContact.name}
-                onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-              />
-            </div>
-            <div className="min-w-[160px] flex-1">
-              <Input
-                placeholder="+91 98765 43210"
-                value={newContact.phone}
-                onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-              />
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!newContact.phone.trim()}
-              onClick={() => {
-                update({ owner_contacts: [...draft.owner_contacts, newContact] });
-                setNewContact({ name: '', phone: '' });
-              }}
-            >
-              <Plus className="mr-1 h-4 w-4" /> Add
-            </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+          <div>
+            <p className="font-medium text-foreground">Reminder before shift</p>
+            <p className="text-sm text-muted">Minutes before shift start</p>
           </div>
+          <Input
+            type="number"
+            min={5}
+            max={120}
+            className="w-20 text-center tabular-nums"
+            value={draft.shift_reminder_minutes}
+            onChange={(e) => setDraft({ ...draft, shift_reminder_minutes: Number(e.target.value) })}
+            onBlur={() => update({})}
+          />
         </div>
+      </ListGroup>
 
-        <div className="rounded-lg border bg-slate-50 p-4">
-          <p className="mb-1 text-sm font-medium">Send a test push to a worker</p>
-          <p className="mb-3 text-xs text-muted">
-            Delivers a push to the selected worker only — no other workers are notified.
-          </p>
-          {!draft.alertops_configured ? (
-            <p className="text-xs text-amber-700">
-              Set ALERTOPS_INTEGRATION_KEY on the server to enable test pushes.
-            </p>
-          ) : workers.length === 0 ? (
-            <p className="text-xs text-muted">
-              No active workers yet — add workers on the Scheduling page first.
-            </p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="min-w-[220px] flex-1">
-                  <Select
-                    value={testWorkerId}
-                    onChange={(e) => {
-                      setTestWorkerId(e.target.value);
-                      setTestPushResult(null);
-                    }}
+      <ListGroup title="Owner phones" count={draft.owner_contacts.length}>
+        {draft.owner_contacts.length === 0 ? (
+          <ListEmpty>Add a number to get owner alerts when machines stop.</ListEmpty>
+        ) : (
+          draft.owner_contacts.map((c, i) => (
+            <ListRow
+              key={`${c.phone}-${i}`}
+              title={c.name || 'Owner'}
+              detail={
+                <>
+                  {c.phone}
+                  <button
+                    type="button"
+                    className="ml-2 text-xs font-medium text-red-600 hover:underline"
+                    onClick={() => update({ owner_contacts: draft.owner_contacts.filter((_, j) => j !== i) })}
                   >
-                    <option value="">Select worker…</option>
-                    {workers.map((w) => (
-                      <option key={w.worker_id} value={w.worker_id}>
-                        {w.name}
-                        {w.alertops_user_id ? ' · app login ready' : ' · no app login'}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+                    Remove
+                  </button>
+                </>
+              }
+            />
+          ))
+        )}
+        <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 px-4 py-3">
+          <Input
+            placeholder="Name"
+            className="min-w-[100px] flex-1"
+            value={newContact.name}
+            onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+          />
+          <Input
+            placeholder="+91 phone"
+            className="min-w-[120px] flex-1"
+            value={newContact.phone}
+            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!newContact.phone.trim()}
+            onClick={() => {
+              update({ owner_contacts: [...draft.owner_contacts, newContact] });
+              setNewContact({ name: '', phone: '' });
+            }}
+          >
+            Add
+          </Button>
+        </div>
+      </ListGroup>
+
+      <details className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-100">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">Test alerts</summary>
+        <div className="mt-3 space-y-4 border-t border-gray-100 pt-3 text-sm">
+          {!draft.alertops_configured ? (
+            <p className="text-muted">Test push needs the mobile app bridge on the server.</p>
+          ) : workers.length === 0 ? (
+            <p className="text-muted">Add workers on Scheduling first.</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-muted">Send one test push to a worker.</p>
+              <div className="flex flex-wrap gap-2">
+                <Select
+                  className="min-w-[200px] flex-1"
+                  value={testWorkerId}
+                  onChange={(e) => {
+                    setTestWorkerId(e.target.value);
+                    setTestPushResult(null);
+                  }}
+                >
+                  <option value="">Choose worker…</option>
+                  {workers.map((w) => (
+                    <option key={w.worker_id} value={w.worker_id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </Select>
                 <Button
                   size="sm"
                   disabled={!testWorkerId || testPush.isPending}
@@ -279,56 +230,63 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                     testPush.mutate();
                   }}
                 >
-                  <Send className="mr-1 h-4 w-4" />
-                  {testPush.isPending ? 'Sending…' : 'Send test push'}
+                  {testPush.isPending ? 'Sending…' : 'Send push'}
                 </Button>
               </div>
-              {selectedWorker && !selectedWorker.alertops_user_id && (
-                <p className="mt-2 text-xs text-amber-700">
-                  This worker has no mobile app login — recreate them on Scheduling with
-                  email and password so sync-worker runs.
-                </p>
-              )}
-              {testPushResult && <p className="mt-2 text-xs text-muted">{testPushResult}</p>}
-            </>
+              {testPushResult && <p className="text-xs text-muted">{testPushResult}</p>}
+            </div>
           )}
-        </div>
-
-        <div className="rounded-lg border bg-slate-50 p-4">
-          <p className="mb-1 text-sm font-medium">Send a legacy phone test</p>
-          <p className="mb-3 text-xs text-muted">
-            Optional fallback when WhatsApp credentials are configured on the server.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="min-w-[180px] flex-1">
+          <div className="space-y-2">
+            <p className="text-muted">Legacy phone test (WhatsApp if configured).</p>
+            <div className="flex flex-wrap gap-2">
               <Input
                 placeholder="Phone number"
+                className="min-w-[160px] flex-1"
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
               />
+              <Button
+                size="sm"
+                disabled={!testPhone.trim() || test.isPending}
+                onClick={() => {
+                  setTestResult(null);
+                  test.mutate();
+                }}
+              >
+                {test.isPending ? 'Sending…' : 'Send test'}
+              </Button>
             </div>
-            <Button
-              size="sm"
-              disabled={!testPhone.trim() || test.isPending}
-              onClick={() => {
-                setTestResult(null);
-                test.mutate();
-              }}
-            >
-              <Send className="mr-1 h-4 w-4" />
-              {test.isPending ? 'Sending…' : 'Send test'}
-            </Button>
+            {testResult && <p className="text-xs text-muted">{testResult}</p>}
           </div>
-          {testResult && <p className="mt-2 text-xs text-muted">{testResult}</p>}
-          {!draft.mobile_configured && (
-            <p className="mt-2 text-xs text-amber-700">
-              The mobile alert bridge is not configured on the server yet — alerts are
-              simulated and logged in the feed. Set ALERTOPS_INTEGRATION_KEY (and provision
-              workers with app logins) to go live.
-            </p>
-          )}
         </div>
-      </div>
-    </Card>
+      </details>
+    </div>
+  );
+}
+
+function SettingRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3.5">
+      <span className="min-w-0">
+        <span className="block font-medium text-foreground">{label}</span>
+        <span className="block text-sm text-muted">{hint}</span>
+      </span>
+      <input
+        type="checkbox"
+        className="h-4 w-4 shrink-0 rounded border-gray-300"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </label>
   );
 }

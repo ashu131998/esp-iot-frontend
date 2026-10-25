@@ -1,12 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Wrench } from 'lucide-react';
-import Link from 'next/link';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader } from '@/components/ui/card';
 import { Select } from '@/components/ui/input';
+import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { DowntimeReport } from '@/lib/types';
@@ -17,7 +14,16 @@ function durationLabel(report: DowntimeReport) {
   const end = report.resolved_at ? new Date(report.resolved_at).getTime() : Date.now();
   const min = Math.max(1, Math.round((end - new Date(report.down_since).getTime()) / 60000));
   const h = Math.floor(min / 60);
-  return h > 0 ? `${h}h ${min % 60}m` : `${min}m`;
+  return h > 0 ? `${h} h ${min % 60} m` : `${min} m`;
+}
+
+function whenLabel(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
@@ -44,84 +50,87 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
 
   const reports = data?.reports ?? [];
   const reasons = reasonsData?.reasons ?? [];
+  const open = reports.filter((r) => !r.resolved_at);
+  const waitingReason = open.filter((r) => !r.reason_label);
+
+  let tone: Tone = 'good';
+  if (open.length > 0) tone = 'warn';
+  if (waitingReason.length > 0) tone = 'bad';
+
+  const summaryTitle =
+    reports.length === 0
+      ? 'No downtime reports yet'
+      : waitingReason.length > 0
+        ? `${waitingReason.length} waiting for a reason`
+        : open.length > 0
+          ? `${open.length} machine${open.length === 1 ? '' : 's'} still down`
+          : 'Recent downtime is logged';
+
+  const summarySub =
+    reports.length === 0
+      ? 'When a machine stops, workers can say why on the mobile app.'
+      : 'Workers reply on the app — or pick a reason here.';
 
   return (
-    <Card>
-      <CardHeader
-        title="Downtime Reports"
-        description="Why machines went down — answered by workers on the mobile app, or set here"
-        action={<Wrench className="h-4 w-4 text-muted" />}
-      />
-      {reports.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted">
-          No downtime recorded yet. When a machine stops, a report is opened here and the
-          assigned worker is asked for the reason on the mobile app.
-        </div>
-      ) : (
-        <ul className="max-h-[480px] divide-y overflow-y-auto rounded-lg border">
-          {reports.map((r) => (
-            <li key={r.report_id} className="px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/factories/${factoryId}/machines/${r.machine_id}`}
-                  className="text-sm font-semibold hover:underline"
-                >
-                  {r.machine_name ?? r.machine_id}
-                </Link>
-                {r.resolved_at ? (
-                  <Badge className="bg-emerald-50 text-emerald-700">resolved</Badge>
-                ) : (
-                  <Badge className="bg-red-50 text-red-700">still down</Badge>
-                )}
-                <span className="text-xs text-muted">
-                  {new Date(r.down_since).toLocaleString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                  {' · '}
-                  {durationLabel(r)}
-                </span>
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-                {r.reason_label ? (
-                  <>
-                    <Badge className="bg-blue-50 text-blue-700">{r.reason_label}</Badge>
-                    <span className="text-muted">
-                      {r.reported_by_name ? `by ${r.reported_by_name}` : ''}
-                      {r.reported_via ? ` via ${r.reported_via}` : ''}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-muted">Awaiting worker reply · set manually:</span>
-                    <Select
-                      className="w-auto py-1 text-xs"
-                      defaultValue=""
-                      disabled={setReason.isPending}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setReason.mutate({ reportId: r.report_id, code: e.target.value });
-                        }
-                      }}
-                    >
-                      <option value="" disabled>
-                        Select reason…
-                      </option>
-                      {reasons.map((reason) => (
-                        <option key={reason.code} value={reason.code}>
-                          {reason.title}
+    <div className="space-y-6">
+      <SummaryCard tone={tone} badge={waitingReason.length || undefined} title={summaryTitle} subtitle={summarySub} />
+
+      <ListGroup title="Recent stops" count={reports.length}>
+        {reports.length === 0 ? (
+          <ListEmpty>Stops will show up here with time and duration.</ListEmpty>
+        ) : (
+          reports.map((r) => {
+            const openRow = !r.resolved_at;
+            const rowTone: Tone | undefined = openRow ? 'bad' : 'good';
+            const timeLine = `${whenLabel(r.down_since)} · ${durationLabel(r)}`;
+            const reasonLine = r.reason_label
+              ? `${r.reason_label}${r.reported_by_name ? ` · ${r.reported_by_name}` : ''}`
+              : null;
+            const needsReason = !r.reason_label && reasons.length > 0;
+
+            return (
+              <ListRow
+                key={r.report_id}
+                href={needsReason ? undefined : `/factories/${factoryId}/machines/${r.machine_id}`}
+                tone={rowTone}
+                title={r.machine_name ?? r.machine_id}
+                tag={openRow ? 'Still down' : 'Back up'}
+                detail={
+                  needsReason ? (
+                    <span className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <span>{timeLine}</span>
+                      <Select
+                        className="max-w-[200px] py-1 text-xs"
+                        defaultValue=""
+                        disabled={setReason.isPending}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setReason.mutate({ reportId: r.report_id, code: e.target.value });
+                          }
+                        }}
+                      >
+                        <option value="" disabled>
+                          Set reason…
                         </option>
-                      ))}
-                    </Select>
-                  </>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
+                        {reasons.map((reason) => (
+                          <option key={reason.code} value={reason.code}>
+                            {reason.title}
+                          </option>
+                        ))}
+                      </Select>
+                    </span>
+                  ) : (
+                    <>
+                      {timeLine}
+                      {reasonLine ? ` · ${reasonLine}` : ''}
+                    </>
+                  )
+                }
+              />
+            );
+          })
+        )}
+      </ListGroup>
+    </div>
   );
 }

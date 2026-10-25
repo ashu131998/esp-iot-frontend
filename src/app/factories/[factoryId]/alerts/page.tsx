@@ -46,12 +46,8 @@ async function FactoryAlertsPage({
               <FactoryAlertsDashboard factoryId={factoryId} />
             </QuerySuspense>
           )}
-          {(show('mobile') || show('downtime')) && (
-            <div className="grid gap-6 xl:grid-cols-2">
-              {show('mobile') && <MobileSettingsCard factoryId={factoryId} />}
-              {show('downtime') && <DowntimeReportsCard factoryId={factoryId} />}
-            </div>
-          )}
+          {show('mobile') && <MobileSettingsCard factoryId={factoryId} />}
+          {show('downtime') && <DowntimeReportsCard factoryId={factoryId} />}
           {show('feed') && <NotificationFeed factoryId={factoryId} />}
         </HydrationBoundary>
       </NavDim>

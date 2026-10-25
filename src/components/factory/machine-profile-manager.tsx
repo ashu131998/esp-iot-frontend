@@ -12,6 +12,7 @@ import { Field, Input, Select } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -91,7 +92,7 @@ function ProfileForm({
             ))}
           </Select>
         </Field>
-        <Field label="Profile Name">
+        <Field label="Name">
           <Input
             placeholder="e.g. Product A — High Speed"
             value={form.name}
@@ -100,7 +101,7 @@ function ProfileForm({
         </Field>
       </div>
 
-      <p className="mb-2 text-xs font-medium text-muted">Parameters</p>
+      <p className="mb-2 text-xs font-medium text-muted">Settings</p>
       <div className="mb-3 space-y-2">
         {form.parameters.map((param, idx) => (
           <div key={idx} className="grid grid-cols-[1fr_1fr_auto_2fr_auto] gap-2 items-end">
@@ -149,12 +150,12 @@ function ProfileForm({
       </div>
 
       <Button variant="ghost" size="sm" onClick={addParam} className="mb-4">
-        + Add Parameter
+        + Add a setting
       </Button>
 
       <div className="flex items-center gap-2">
         <Button onClick={() => onSave(form)} disabled={isSaving || !canSave}>
-          {isSaving ? 'Saving…' : 'Save Profile'}
+          {isSaving ? 'Saving…' : 'Save'}
         </Button>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
@@ -228,6 +229,9 @@ export function MachineProfileManager({
     return map;
   }, [machines, profiles]);
 
+  const lineNames = useFactoryRefsOptional()?.lines;
+  const lineName = (lineId: string) => lineNames?.find((l) => l.line_id === lineId)?.name ?? lineId;
+
   const machinesSorted = useMemo(
     () => filterMachinesByScope(machines, { machineId, lineId }),
     [machines, machineId, lineId],
@@ -236,20 +240,20 @@ export function MachineProfileManager({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Machine Profiles</h2>
+        <h2 className="text-lg font-semibold text-foreground">Saved settings</h2>
         <p className="mt-1 text-sm text-muted">
-          Configuration presets per machine. Operators select a profile when starting a shift.
+          Ready-made settings for each machine. Workers pick one when their shift starts.
         </p>
       </div>
 
       {machines.length === 0 ? (
         <Card>
-          <p className="py-6 text-center text-sm text-muted">No machines registered for this factory.</p>
+          <p className="py-6 text-center text-sm text-muted">No machines added yet.</p>
         </Card>
       ) : machinesSorted.length === 0 ? (
         <Card>
           <p className="py-6 text-center text-sm text-muted">
-            No machines match the current line or machine filter.
+            No machines match this line or machine.
           </p>
         </Card>
       ) : (
@@ -260,8 +264,8 @@ export function MachineProfileManager({
 
           const profileCountLabel =
             machineProfiles.length === 0
-              ? 'No profiles yet'
-              : `${machineProfiles.length} profile${machineProfiles.length !== 1 ? 's' : ''}`;
+              ? 'None yet'
+              : `${machineProfiles.length} saved`;
 
           return (
             <Card key={machine.machine_id}>
@@ -272,7 +276,7 @@ export function MachineProfileManager({
                     <Badge className="bg-slate-100 font-normal text-slate-700">{profileCountLabel}</Badge>
                   </span>
                 }
-                description={`${machine.line_id} · ${machine.type}`}
+                description={lineName(machine.line_id)}
                 action={
                   canWriteFactory && !isAddingHere && !editingHere ? (
                     <Button
@@ -282,7 +286,7 @@ export function MachineProfileManager({
                         setNewProfileMachineId(machine.machine_id);
                       }}
                     >
-                      + Profile
+                      + Add
                     </Button>
                   ) : undefined
                 }
@@ -303,7 +307,7 @@ export function MachineProfileManager({
               )}
 
               {machineProfiles.length === 0 && !isAddingHere ? (
-                <p className="text-sm text-muted">No profiles for this machine yet.</p>
+                <p className="text-sm text-muted">No saved settings for this machine yet.</p>
               ) : (
                 <div className="space-y-4">
                   {machineProfiles.map((profile, profileIndex) =>
@@ -339,20 +343,20 @@ export function MachineProfileManager({
                           <div className="flex flex-wrap items-center gap-2">
                             {machineProfiles.length > 1 && (
                               <span className="text-xs font-medium text-muted">
-                                Profile {profileIndex + 1} of {machineProfiles.length}
+                                {profileIndex + 1} of {machineProfiles.length}
                               </span>
                             )}
                             <span className="font-semibold text-sm">{profile.name}</span>
                             <Badge className="bg-blue-50 text-blue-700 text-xs">
-                              {profile.parameters.length} param
+                              {profile.parameters.length} setting
                               {profile.parameters.length !== 1 ? 's' : ''}
                             </Badge>
                             {lastAppliedAt[profile.profile_id] ? (
                               <span className="text-xs text-muted">
-                                Last run: {formatDate(lastAppliedAt[profile.profile_id])}
+                                Last used: {formatDate(lastAppliedAt[profile.profile_id])}
                               </span>
                             ) : (
-                              <span className="text-xs text-muted">Never applied</span>
+                              <span className="text-xs text-muted">Not used yet</span>
                             )}
                           </div>
                           {canWriteFactory && (
@@ -383,10 +387,10 @@ export function MachineProfileManager({
                           <Table className="border-0 bg-transparent">
                             <THead>
                               <TR>
-                                <TH>Parameter</TH>
+                                <TH>Setting</TH>
                                 <TH>Value</TH>
                                 <TH>Unit</TH>
-                                <TH>Description</TH>
+                                <TH>Note</TH>
                               </TR>
                             </THead>
                             <TBody>
@@ -413,13 +417,13 @@ export function MachineProfileManager({
 
       <Modal
         open={profilePendingDelete !== null}
-        title="Delete profile?"
+        title="Delete this saved setting?"
         description={
           profilePendingDelete
             ? `Remove "${profilePendingDelete.name}" for ${
                 machineById[profilePendingDelete.machine_id]?.name ??
                 profilePendingDelete.machine_id
-              }? Operators will no longer see this preset. Applied configuration values on the machine are not removed.`
+              }? Workers will no longer be able to pick it. Settings already on the machine stay.`
             : undefined
         }
         onClose={() => {
@@ -443,7 +447,7 @@ export function MachineProfileManager({
               if (profilePendingDelete) deleteMutation.mutate(profilePendingDelete.profile_id);
             }}
           >
-            {deleteMutation.isPending ? 'Deleting…' : 'Delete profile'}
+            {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
           </Button>
         </div>
         {deleteMutation.isError && (

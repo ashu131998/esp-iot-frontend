@@ -396,7 +396,7 @@ export function SchedulingPanel({
         </span>
       ),
     },
-    { accessorKey: 'task', header: 'Task' },
+    { accessorKey: 'task', header: 'Job' },
     {
       id: 'shift',
       accessorFn: (s) => shiftName(s.shift_id),
@@ -498,8 +498,8 @@ export function SchedulingPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Total assignments" value={String(stats.total)} />
-        <StatCard label="Active (open)" value={String(stats.active)} />
+        <StatCard label="Jobs given" value={String(stats.total)} />
+        <StatCard label="Not done yet" value={String(stats.active)} />
         <StatCard label="Day shift" value={String(stats.dayShift)} sub="06:00 – 18:00" />
         <StatCard label="Night shift" value={String(stats.nightShift)} sub="18:00 – 06:00" />
       </div>
@@ -508,8 +508,8 @@ export function SchedulingPanel({
 
       <Card>
         <CardHeader
-          title="Task Schedule"
-          description="Assign each worker a function, shift, date, looms and a machine configuration profile"
+          title="Who works where"
+          description="Give each worker a job, a shift, a day, the looms to run and the setting to use"
           action={
             canWriteFactory ? (
               <ScheduleForm
@@ -525,7 +525,7 @@ export function SchedulingPanel({
 
         {deleteMutation.isError && (
           <p className="mx-4 mb-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            Couldn&apos;t delete task: {(deleteMutation.error as Error).message}
+            Couldn&apos;t delete job: {(deleteMutation.error as Error).message}
           </p>
         )}
 
@@ -540,8 +540,8 @@ export function SchedulingPanel({
           }
           emptyMessage={
             dateFilter || machineFilter
-              ? 'No tasks match the selected filters.'
-              : 'No tasks scheduled yet. Use "Schedule Task" to assign a worker.'
+              ? 'No jobs match this day or machine.'
+              : 'No jobs given yet. Press "Give a job" to add one.'
           }
         />
       </Card>

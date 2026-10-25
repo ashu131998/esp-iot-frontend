@@ -8,12 +8,15 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { formatDate } from '@/lib/utils';
 
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const lines = useFactoryRefsOptional()?.lines;
+  const lineName = (lineId: string) => lines?.find((l) => l.line_id === lineId)?.name ?? lineId;
 
   function configure(deviceId: string) {
     setSelectedDeviceId(deviceId);
@@ -37,21 +40,21 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
     <div className="space-y-6">
       <Card className="p-6">
         <CardHeader
-          title="Nodes in this factory"
-          description="Pick a node (ESP) to map each sensor channel to a machine and label. Status timelines and uptime use these names (e.g. Loom 1: Main motor)."
+          title="Sensor boxes"
+          description="Pick a sensor box to choose which machine each of its sensors belongs to."
         />
         {nodesQuery.isLoading ? (
-          <p className="mt-4 text-sm text-muted">Loading nodes…</p>
+          <p className="mt-4 text-sm text-muted">Loading…</p>
         ) : nodes.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No devices registered yet — telemetry will create nodes automatically.</p>
+          <p className="mt-4 text-sm text-muted">No sensor boxes yet. They show up here when they start sending data.</p>
         ) : (
           <Table className="mt-4 border-0">
             <THead>
               <TR>
-                <TH>Node</TH>
+                <TH>Sensor box</TH>
                 <TH>Line</TH>
-                <TH>Bindings</TH>
-                <TH>Last seen</TH>
+                <TH>Sensors</TH>
+                <TH>Last data</TH>
                 <TH />
               </TR>
             </THead>
@@ -59,7 +62,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
               {nodes.map((n) => (
                 <TR key={n.device_id}>
                   <TD className="font-mono text-sm">{n.device_id}</TD>
-                  <TD>{n.line_id}</TD>
+                  <TD>{lineName(n.line_id)}</TD>
                   <TD>{n.binding_count}</TD>
                   <TD className="text-xs text-muted">
                     {n.last_seen_at ? formatDate(n.last_seen_at) : '—'}

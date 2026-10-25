@@ -35,8 +35,8 @@ export function EnergyDashboard({
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={6} />}>
       {shown('energy.cards') && <EnergyCards factoryId={factoryId} from={from} to={to} />}
-      {shown('energy.chart') && <EnergyChartSection factoryId={factoryId} from={from} to={to} />}
       {shown('energy.table') && <EnergyTable factoryId={factoryId} from={from} to={to} />}
+      {shown('energy.chart') && <EnergyChartSection factoryId={factoryId} from={from} to={to} />}
     </QuerySuspense>
   );
 }

@@ -65,7 +65,7 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
   });
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-muted">Loading shift report settings…</p>;
+    return <p className="p-6 text-sm text-muted">Loading…</p>;
   }
   if (error) {
     return <p className="p-6 text-sm text-red-600">{(error as Error).message}</p>;
@@ -76,17 +76,17 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
       <Card className="p-6">
         <CardHeader
           title="Email after each shift"
-          description="Choose who receives availability summaries when a shift ends. Delivery is handled by the platform scheduler (enabled by your operations team in the internal admin dashboard)."
+          description="Pick who gets a short email when each shift ends."
         />
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted">Platform scheduler:</span>
+          <span className="text-muted">Sending:</span>
           {data?.platform_scheduler_enabled ? (
             <Badge className="bg-emerald-100 text-emerald-800">Active</Badge>
           ) : (
-            <Badge className="bg-slate-100 text-slate-700">Not enabled by admin yet</Badge>
+            <Badge className="bg-slate-100 text-slate-700">Not switched on yet — ask FloorBeat support</Badge>
           )}
           {!data?.email_delivery_configured && (
-            <Badge className="bg-amber-100 text-amber-900">Email provider not configured on server</Badge>
+            <Badge className="bg-amber-100 text-amber-900">Email is not set up yet — ask FloorBeat support</Badge>
           )}
         </div>
 
@@ -98,14 +98,14 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
               disabled={!canWriteFactory}
               onChange={(e) => setEnabled(e.target.checked)}
             />
-            Send shift report emails for this factory
+            Send the email after each shift
           </label>
 
           <div>
             <label className="text-sm font-medium" htmlFor="shift-report-emails">
-              Owner emails
+              Who gets the email
             </label>
-            <p className="text-xs text-muted">One per line or comma-separated.</p>
+            <p className="text-xs text-muted">Write one email address on each line.</p>
             <textarea
               id="shift-report-emails"
               className="mt-1 w-full max-w-lg rounded-lg border border-slate-200 p-2 font-mono text-sm"
@@ -119,7 +119,7 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
 
           {data?.shifts?.length ? (
             <div className="text-sm text-muted">
-              <p className="font-medium text-foreground">Shifts covered:</p>
+              <p className="font-medium text-foreground">Shifts:</p>
               <ul className="mt-1 list-disc pl-5">
                 {data.shifts.map((s) => (
                   <li key={s.shift_id}>

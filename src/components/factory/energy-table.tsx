@@ -1,17 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { ListGroup, ListRow } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
-import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -30,7 +26,7 @@ export function EnergyTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, lines } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -45,62 +41,53 @@ export function EnergyTable({
     staleTime: 0,
   });
 
-  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
-
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
-  const total = displayMachines.length;
-  const pageRows = displayMachines.slice((page - 1) * limit, (page - 1) * limit + limit);
+  const lineName = useMemo(() => new Map(lines.map((l) => [l.line_id, l.name])), [lines]);
+  const rows = useMemo(
+    () =>
+      [...filterMachinesByScope(data.machines, { machineId, lineId })].sort(
+        (a, b) => (b.energy_kwh ?? -1) - (a.energy_kwh ?? -1),
+      ),
+    [data, machineId, lineId],
+  );
+  const total = rows.reduce((s, m) => s + (m.energy_kwh ?? 0), 0);
 
   return (
-    <Card>
-      <CardHeader
-        title="Machine Energy Details"
-        action={
-          <div className="flex items-center gap-3">
-            <ExportCsvButton
-              filename="machine-energy"
-              headers={['Machine', 'Line', 'Energy (kWh)', 'Avg Amps', 'Peak Amps', 'Voltage (V)']}
-              rows={displayMachines.map((m) => [
-                m.machine_name,
-                m.line_id,
-                m.energy_kwh,
-                m.avg_amps,
-                m.peak_amps,
-                m.voltage_v,
-              ])}
-            />
-          </div>
-        }
-      />
-      <Table>
-        <THead>
-          <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Energy (kWh)</TH>
-            <TH>Avg Amps</TH>
-            <TH>Peak Amps</TH>
-            <TH>Voltage</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {pageRows.map((m) => (
-            <TR key={m.machine_id}>
-              <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
-              <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh) : '—'}</TD>
-              <TD>{m.avg_amps != null ? formatNumber(m.avg_amps, 2) : '—'}</TD>
-              <TD>{m.peak_amps != null ? formatNumber(m.peak_amps, 2) : '—'}</TD>
-              <TD>{m.voltage_v ?? '—'} V</TD>
-            </TR>
-          ))}
-        </TBody>
-      </Table>
-      <TablePagination total={total} page={page} limit={limit} />
-    </Card>
+    <ListGroup
+      title="Machines"
+      count={rows.length}
+      hint="Most power first"
+      action={
+        <ExportCsvButton
+          filename="machine-energy"
+          headers={['Machine', 'Line', 'Energy (kWh)', 'Avg Amps', 'Peak Amps', 'Voltage (V)']}
+          rows={rows.map((m) => [
+            m.machine_name,
+            lineName.get(m.line_id) ?? m.line_id,
+            m.energy_kwh,
+            m.avg_amps,
+            m.peak_amps,
+            m.voltage_v,
+          ])}
+        />
+      }
+    >
+      {rows.map((m) => (
+        <ListRow
+          key={m.machine_id}
+          href={`/factories/${factoryId}/machines/${m.machine_id}`}
+          title={m.machine_name}
+          tag={lineName.get(m.line_id) ?? m.line_id}
+          detail={
+            m.energy_kwh == null
+              ? 'No power reading'
+              : total > 0
+                ? `${Math.round((m.energy_kwh / total) * 100)}% of all power used`
+                : 'Used no power'
+          }
+          value={m.energy_kwh != null ? `${formatNumber(m.energy_kwh)} kWh` : '—'}
+          valueHint="used"
+        />
+      ))}
+    </ListGroup>
   );
 }

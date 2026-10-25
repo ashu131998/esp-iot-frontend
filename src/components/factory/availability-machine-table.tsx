@@ -1,19 +1,22 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQueries } from '@tanstack/react-query';
 
-import { MachineStatusBadge } from '@/components/ui/badge';
-import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { ListGroup, ListRow } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
-import { resolvePagination } from '@/lib/pagination';
+import {
+  RUN_BAD_PCT,
+  RUN_WARN_PCT,
+  STATE_WORD,
+  humanMinutes,
+  machineState,
+  runTone,
+  wholePercent,
+} from '@/lib/plain-words';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -21,8 +24,6 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { expandUptimeMachines } from '@/lib/uptime-streams';
-import { formatPercent, statusLabel } from '@/lib/utils';
 
 export function AvailabilityMachineTable({
   factoryId,
@@ -33,7 +34,7 @@ export function AvailabilityMachineTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, lines } = useFactoryRefs();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -41,7 +42,7 @@ export function AvailabilityMachineTable({
 
   const refetchInterval = useRefetchInterval(60_000);
 
-  // Both queries fire in parallel — availability and uptime no longer waterfall
+  // Availability for the window, and the last 24h only to know what each machine is doing now.
   const [{ data }, { data: uptimeData }] = useSuspenseQueries({
     queries: [
       {
@@ -72,85 +73,51 @@ export function AvailabilityMachineTable({
     ],
   });
 
-  const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
-
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
-  const total = displayMachines.length;
-  const offset = (page - 1) * limit;
-  const pageRows = displayMachines.slice(offset, offset + limit);
-
-  const uptimeByMachine = Object.fromEntries(uptimeData.machines.map((m) => [m.machine_id, m]));
-  const uptimeRowsByMachine = Object.fromEntries(
-    uptimeData.machines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
+  const lineName = useMemo(() => new Map(lines.map((l) => [l.line_id, l.name])), [lines]);
+  const nowState = useMemo(
+    () => new Map(uptimeData.machines.map((m) => [m.machine_id, machineState(m.timeline.at(-1)?.status)])),
+    [uptimeData],
+  );
+  const rows = useMemo(
+    () =>
+      [...filterMachinesByScope(data.machines, { machineId, lineId })].sort(
+        (a, b) => (a.availability_percent ?? -1) - (b.availability_percent ?? -1),
+      ),
+    [data, machineId, lineId],
   );
 
   return (
-    <Card>
-      <CardHeader
-        title="Machine Availability"
-        action={
-          <ExportCsvButton
-            filename="machine-availability"
-            headers={['Machine', 'Line', 'Uptime (min)', 'Downtime (min)', 'Availability', 'Current Status']}
-            rows={displayMachines.map((m) => [
-              m.machine_name,
-              m.line_id,
-              m.uptime_minutes,
-              m.downtime_minutes,
-              m.availability_percent,
-              statusLabel(uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'),
-            ])}
-          />
-        }
-      />
-      <Table>
-        <THead>
-          <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Uptime</TH>
-            <TH>Downtime</TH>
-            <TH>Availability</TH>
-            <TH>Last 24h</TH>
-            <TH>Current Status</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {pageRows.map((m) => (
-            <TR key={m.machine_id}>
-              <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
-              <TD>{m.uptime_minutes} min</TD>
-              <TD>{m.downtime_minutes} min</TD>
-              <TD>{formatPercent(m.availability_percent)}</TD>
-              <TD>
-                {(uptimeRowsByMachine[m.machine_id]?.length ?? 0) > 1 ? (
-                  <div className="flex flex-col gap-1">
-                    {uptimeRowsByMachine[m.machine_id]?.map((row) => (
-                      <div key={row.stream_key} className="flex items-center gap-2">
-                        <span className="max-w-[6rem] truncate text-[10px] text-muted">
-                          {row.label || row.display_name}
-                        </span>
-                        <MiniTimeline segments={row.timeline ?? []} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <MiniTimeline segments={uptimeByMachine[m.machine_id]?.timeline ?? []} />
-                )}
-              </TD>
-              <TD>
-                <MachineStatusBadge status={uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'} />
-              </TD>
-            </TR>
-          ))}
-        </TBody>
-      </Table>
-      <TablePagination total={total} page={page} limit={limit} />
-    </Card>
+    <ListGroup
+      title="Machines"
+      count={rows.length}
+      hint={`Red under ${RUN_BAD_PCT}% · amber under ${RUN_WARN_PCT}%`}
+      action={
+        <ExportCsvButton
+          filename="machine-availability"
+          headers={['Machine', 'Line', 'Ran (min)', 'Stopped (min)', 'Running time %', 'Now']}
+          rows={rows.map((m) => [
+            m.machine_name,
+            lineName.get(m.line_id) ?? m.line_id,
+            m.uptime_minutes,
+            m.downtime_minutes,
+            m.availability_percent,
+            STATE_WORD[nowState.get(m.machine_id) ?? 'no_signal'],
+          ])}
+        />
+      }
+    >
+      {rows.map((m) => (
+        <ListRow
+          key={m.machine_id}
+          href={`/factories/${factoryId}/machines/${m.machine_id}`}
+          tone={runTone(m.availability_percent)}
+          title={m.machine_name}
+          tag={lineName.get(m.line_id) ?? m.line_id}
+          detail={`${STATE_WORD[nowState.get(m.machine_id) ?? 'no_signal']} now · ran ${humanMinutes(m.uptime_minutes)} · stopped ${humanMinutes(m.downtime_minutes)}`}
+          value={wholePercent(m.availability_percent)}
+          valueHint="running"
+        />
+      ))}
+    </ListGroup>
   );
 }

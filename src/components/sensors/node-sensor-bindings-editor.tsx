@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import type { NodeDetailResponse, SensorBinding } from '@/lib/types';
 
 const SENSOR_TYPES = ['current', 'proximity', 'cycle', 'time'] as const;
@@ -65,6 +66,8 @@ export function NodeSensorBindingsEditor(props: EditorProps) {
 function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorProps) {
   const qc = useQueryClient();
   const queryKey = ['node-detail', apiMode, factoryId, deviceId];
+  const lines = useFactoryRefsOptional()?.lines;
+  const lineName = (lineId: string) => lines?.find((l) => l.line_id === lineId)?.name ?? lineId;
 
   const detailQuery = useQuery({
     queryKey,
@@ -119,7 +122,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
       await qc.invalidateQueries({ queryKey });
       await qc.invalidateQueries({ queryKey: ['sensor-bindings', factoryId] });
       setRows((res.bindings ?? []).map(toDraft));
-      setMessage('Sensor mapping saved.');
+      setMessage('Saved.');
     },
     onError: (e: Error) => setMessage(e.message),
   });
@@ -142,7 +145,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
       });
     }
     setRows([...(rows ?? []), ...added]);
-    setMessage(added.length ? `Added ${added.length} channel(s) from telemetry.` : 'No new channels to import.');
+    setMessage(added.length ? `Added ${added.length} sensor(s).` : 'No new sensors to add.');
   }
 
   const machineName = useMemo(
@@ -160,12 +163,12 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
   return (
     <Card className="p-6">
       <CardHeader
-        title={`Sensor → machine mapping · ${deviceId}`}
-        description="Each row is one telemetry stream on this node (channel + type). Assign a machine and label — factory uptime and status use these bindings."
+        title={`Sensors on ${deviceId}`}
+        description="Each row is one sensor on this box. Pick its machine and give it a name."
       />
       {discovered.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted">Seen on wire:</span>
+          <span className="text-muted">Sensors sending data:</span>
           {discovered.map((c) => (
             <Badge key={`${c.channel_slot}-${c.sensor_type}`} className="bg-slate-100 text-slate-800">
               {c.channel_slot || 'default'} · {sensorTypeLabel(c.sensor_type)}
@@ -178,7 +181,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
               className="text-primary text-sm hover:underline"
               onClick={importDiscovered}
             >
-              Import into table
+              Add them to the list
             </button>
           )}
         </div>
@@ -189,10 +192,10 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
           <TR>
             <TH>Channel</TH>
             <TH>Type</TH>
-            <TH>Label</TH>
+            <TH>Name</TH>
             <TH>Machine</TH>
-            <TH>On threshold</TH>
-            <TH>On</TH>
+            <TH>Running above (A)</TH>
+            <TH>Use</TH>
             {canWrite && <TH />}
           </TR>
         </THead>
@@ -262,7 +265,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
                   <option value="">— select —</option>
                   {machines.map((m) => (
                     <option key={m.machine_id} value={m.machine_id}>
-                      {m.name} ({m.line_id})
+                      {m.name} ({lineName(m.line_id)})
                     </option>
                   ))}
                 </select>
@@ -324,7 +327,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
             onClick={() => setRows([...(rows ?? []), emptyRow(deviceId)])}
           >
-            Add sensor row
+            Add a sensor
           </button>
           <button
             type="button"
@@ -332,17 +335,17 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
             disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? 'Saving…' : 'Save mapping'}
+            {saveMutation.isPending ? 'Saving…' : 'Save'}
           </button>
         </div>
       )}
 
       {(rows ?? []).some((r) => r.machine_id) && (
         <p className="mt-3 text-xs text-muted">
-          Preview:{' '}
+          Will show as:{' '}
           {(rows ?? [])
             .filter((r) => r.machine_id && r.label)
-            .map((r) => `${machineName[r.machine_id] ?? r.machine_id}: ${r.label}`)
+            .map((r) => r.label)
             .join(' · ') || '—'}
         </p>
       )}
@@ -361,7 +364,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
   );
 }
 
-/** Asks before a sensor row leaves the table; the removal is applied by Save mapping. */
+/** Asks before a sensor row leaves the table; the removal is applied by Save. */
 function RemoveRowDialog({
   row,
   machineName,
@@ -380,10 +383,10 @@ function RemoveRowDialog({
     <Modal
       open={row !== null}
       onClose={onCancel}
-      title="Remove this sensor row?"
+      title="Remove this sensor?"
       description={
         saved
-          ? `${channel} (${row?.sensor_type})${machine ? ` → ${machine}` : ''} stops feeding ${machine ?? 'its machine'} once you press Save mapping.`
+          ? `${channel} (${row?.sensor_type})${machine ? ` → ${machine}` : ''} stops counting for ${machine ?? 'its machine'} once you press Save.`
           : `${channel} is not saved yet, so nothing changes on the dashboard.`
       }
     >

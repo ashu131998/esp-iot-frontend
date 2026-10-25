@@ -85,7 +85,7 @@ export function FactoryAvailabilityTrend({
     yaxis: {
       min: 0,
       max: 100,
-      title: { text: 'Availability %', style: { fontWeight: 500 } },
+      title: { text: 'Running time %', style: { fontWeight: 500 } },
     },
     tooltip: {
       ...baseChartOptions.tooltip,
@@ -93,7 +93,7 @@ export function FactoryAvailabilityTrend({
         const d = chartData[dataPointIndex];
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
           <p class="font-medium">Date: ${d.date}${d.is_live ? ' (live)' : ''}</p>
-          <p style="color:#10b981">Availability: ${formatNumber(d.availability, 1)}%</p>
+          <p style="color:#10b981">Running time: ${formatNumber(d.availability, 1)}%</p>
         </div>`;
       },
     },
@@ -102,22 +102,22 @@ export function FactoryAvailabilityTrend({
   const hasLive = chartData.some((d) => d.is_live);
 
   const timeRangeDescription = hasLive
-    ? `Average machine availability per day · through ${format(now, 'h:mm a')} today`
-    : 'Average machine availability per day';
+    ? `How much the machines ran each day · up to ${format(now, 'h:mm a')} today`
+    : 'How much the machines ran each day';
 
   return (
     <Card>
       <CardHeader
-        title="Factory Availability Trend"
-        description={`${timeRangeDescription}.${hasLive ? " Orange dots = today's shift (still in progress)." : ''}`}
+        title="Day by day"
+        description={`${timeRangeDescription}.${hasLive ? ' Orange dot = today, not finished yet.' : ''}`}
       />
       {chartData.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-muted">
-          No data available for the selected period.
+          Nothing to show for these dates.
         </p>
       ) : (
         <div className="px-6 pb-6">
-          <ApexChart type="line" series={[{ name: 'Availability %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />
+          <ApexChart type="line" series={[{ name: 'Running time %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />
         </div>
       )}
     </Card>

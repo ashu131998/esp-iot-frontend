@@ -1,5 +1,5 @@
 import { LinesTable } from '@/components/factory/lines-table';
-import { Card, CardHeader } from '@/components/ui/card';
+import { ListEmpty, ListGroup } from '@/components/ui/simple';
 import { NavDim } from '@/lib/navigation-context';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { serverApi } from '@/lib/server-api';
@@ -25,10 +25,15 @@ async function LinesPage({
 
   return (
     <NavDim className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <Card>
-        <CardHeader
-          title="Production Lines"
-          description="Assembly and process lines configured for this factory"
+      {lines.length === 0 ? (
+        <ListGroup title="Lines">
+          <ListEmpty>No lines set up yet.</ListEmpty>
+        </ListGroup>
+      ) : (
+        <LinesTable
+          factoryId={factoryId}
+          lines={lines}
+          machineCountByLine={machineCountByLine}
           action={
             <ExportCsvButton
               filename="production-lines"
@@ -43,17 +48,7 @@ async function LinesPage({
             />
           }
         />
-
-        {lines.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No production lines configured yet.</p>
-        ) : (
-          <LinesTable
-            factoryId={factoryId}
-            lines={lines}
-            machineCountByLine={machineCountByLine}
-          />
-        )}
-      </Card>
+      )}
     </NavDim>
   );
 }

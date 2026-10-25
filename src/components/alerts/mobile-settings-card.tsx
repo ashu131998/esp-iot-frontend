@@ -116,7 +116,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   if (!draft) {
     return (
       <Card>
-        <CardHeader title="Mobile Alerts" description="Loading settings…" />
+        <CardHeader title="Phone alerts" description="Loading settings…" />
       </Card>
     );
   }
@@ -135,8 +135,8 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   return (
     <Card>
       <CardHeader
-        title="Mobile Alerts"
-        description="Shift reminders, machine down/up alerts and reason capture via the mobile app"
+        title="Phone alerts"
+        description="Messages on the phone app when a machine stops or a shift starts"
         action={
           draft.mobile_configured ? (
             <Badge className="bg-emerald-50 text-emerald-700">
@@ -144,7 +144,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
             </Badge>
           ) : (
             <Badge className="bg-amber-50 text-amber-700">
-              <MessageCircle className="mr-1 h-3 w-3" /> Simulation mode
+              <MessageCircle className="mr-1 h-3 w-3" /> Test mode
             </Badge>
           )
         }
@@ -154,18 +154,18 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         <Toggle
           checked={draft.mobile_enabled}
           onChange={(v) => update({ mobile_enabled: v })}
-          label="Enable mobile alerts"
-          description="Master switch for all outgoing alerts for this factory"
+          label="Send phone alerts"
+          description="Turn off to stop every alert from this factory"
         />
         <Toggle
           checked={draft.notify_owner_on_down}
           onChange={(v) => update({ notify_owner_on_down: v })}
-          label="Notify owners on machine down/up"
-          description="Owner contacts below get a heads-up whenever a loom stops or restarts"
+          label="Tell owners when a machine stops or starts"
+          description="The numbers below get a message each time"
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Shift reminder lead time (minutes)">
+          <Field label="Remind workers this many minutes before a shift">
             <Input
               type="number"
               min={5}
@@ -180,10 +180,10 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Owner / manager contacts</p>
+          <p className="mb-2 text-sm font-medium">Owner and manager numbers</p>
           {draft.owner_contacts.length === 0 && (
             <p className="mb-2 rounded-lg border border-dashed px-4 py-3 text-xs text-muted">
-              No owner numbers yet — add one to receive machine down/up alerts.
+              No numbers yet. Add one to get a message when a machine stops.
             </p>
           )}
           <ul className="space-y-2">
@@ -239,17 +239,17 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         </div>
 
         <div className="rounded-lg border bg-slate-50 p-4">
-          <p className="mb-1 text-sm font-medium">Send a test push to a worker</p>
+          <p className="mb-1 text-sm font-medium">Send a test message to a worker</p>
           <p className="mb-3 text-xs text-muted">
-            Delivers a push to the selected worker only — no other workers are notified.
+            Only this worker gets it.
           </p>
           {!draft.alertops_configured ? (
             <p className="text-xs text-amber-700">
-              Set ALERTOPS_INTEGRATION_KEY on the server to enable test pushes.
+              Phone alerts are not set up yet — ask FloorBeat support.
             </p>
           ) : workers.length === 0 ? (
             <p className="text-xs text-muted">
-              No active workers yet — add workers on the Scheduling page first.
+              No workers yet. Add them on the Scheduling page first.
             </p>
           ) : (
             <>
@@ -266,7 +266,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                     {workers.map((w) => (
                       <option key={w.worker_id} value={w.worker_id}>
                         {w.name}
-                        {w.alertops_user_id ? ' · app login ready' : ' · no app login'}
+                        {w.alertops_user_id ? ' · has the app' : ' · no app yet'}
                       </option>
                     ))}
                   </Select>
@@ -280,13 +280,13 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                   }}
                 >
                   <Send className="mr-1 h-4 w-4" />
-                  {testPush.isPending ? 'Sending…' : 'Send test push'}
+                  {testPush.isPending ? 'Sending…' : 'Send test'}
                 </Button>
               </div>
               {selectedWorker && !selectedWorker.alertops_user_id && (
                 <p className="mt-2 text-xs text-amber-700">
-                  This worker has no mobile app login — recreate them on Scheduling with
-                  email and password so sync-worker runs.
+                  This worker can&apos;t sign in to the app yet. Add them again on Scheduling
+                  with an email and password.
                 </p>
               )}
               {testPushResult && <p className="mt-2 text-xs text-muted">{testPushResult}</p>}
@@ -295,9 +295,9 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         </div>
 
         <div className="rounded-lg border bg-slate-50 p-4">
-          <p className="mb-1 text-sm font-medium">Send a legacy phone test</p>
+          <p className="mb-1 text-sm font-medium">Send a test text message</p>
           <p className="mb-3 text-xs text-muted">
-            Optional fallback when WhatsApp credentials are configured on the server.
+            Only works if text messages are set up for your factory.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[180px] flex-1">
@@ -322,9 +322,8 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
           {testResult && <p className="mt-2 text-xs text-muted">{testResult}</p>}
           {!draft.mobile_configured && (
             <p className="mt-2 text-xs text-amber-700">
-              The mobile alert bridge is not configured on the server yet — alerts are
-              simulated and logged in the feed. Set ALERTOPS_INTEGRATION_KEY (and provision
-              workers with app logins) to go live.
+              Phone alerts are not set up yet, so nothing is really sent — alerts only
+              show in the list above. Ask FloorBeat support to switch them on.
             </p>
           )}
         </div>

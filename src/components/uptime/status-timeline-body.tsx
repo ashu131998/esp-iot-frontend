@@ -10,7 +10,8 @@ import { api } from '@/lib/api';
 import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { formatAlertVia, formatPercent, statusLabel } from '@/lib/utils';
+import { wholePercent } from '@/lib/plain-words';
+import { formatAlertVia, statusLabel } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
 
@@ -47,18 +48,18 @@ function buildSegmentDetails(
       details.push({ label: 'Reason', value: report.reason_label });
       if (report.reported_by_name) {
         details.push({
-          label: 'Reported by',
+          label: 'Told by',
           value: `${report.reported_by_name} via ${formatAlertVia(report.reported_via)}`,
         });
       }
     } else if (report) {
-      details.push({ label: 'Reason', value: 'Awaiting worker reply on mobile app' });
+      details.push({ label: 'Reason', value: 'Waiting for the worker to give a reason' });
     }
   } else if (selection && new Date(selection.effective_from).getTime() <= segTo) {
-    details.push({ label: 'Configuration', value: selection.profile_name ?? selection.profile_id });
+    details.push({ label: 'Setting', value: selection.profile_name ?? selection.profile_id });
     if (selection.selected_by_name) {
       details.push({
-        label: 'Selected by',
+        label: 'Chosen by',
         value: `${selection.selected_by_name} via ${formatAlertVia(selection.selected_via)} · ${shortTime(selection.effective_from)}`,
       });
     }
@@ -70,7 +71,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const refetchInterval = useRefetchInterval(STATUS_TIMELINE_REFRESH_MS);
 
-  const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS}h window`;
+  const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS} hours`;
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
@@ -116,11 +117,11 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     filterMachinesByScope(data.machines, { machineId, lineId }),
   );
 
-  const detailLabel = `${UPTIME_DETAIL_HOURS}h window`;
+  const detailLabel = `${UPTIME_DETAIL_HOURS} hours`;
 
   function machineSubtitle(operatorNames: string, liveSince: string | null | undefined, currentStatus: string) {
     const parts: string[] = [];
-    if (operatorNames) parts.push(`Operator: ${operatorNames}`);
+    if (operatorNames) parts.push(`Worker: ${operatorNames}`);
     if (liveSince) parts.push(`${statusLabel(currentStatus)} since ${shortTime(liveSince)}`);
     return parts.length > 0 ? parts.join(' · ') : undefined;
   }
@@ -129,12 +130,12 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     <div className="space-y-6">
       <Card>
         <CardHeader
-          title="Status Timeline"
-          description={`24h overview (compressed) + ${UPTIME_DETAIL_HOURS}h detail — use detail chart for exact recent times`}
+          title="What each machine did"
+          description={`Last 24 hours, and the last ${UPTIME_DETAIL_HOURS} hours up close`}
         />
         {data.meta?.requires_filter && (
           <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            {data.meta.message ?? 'Too many machines — filter by line or machine to load timelines.'}
+            {data.meta.message ?? 'Too many machines to show at once. Pick a line or a machine above.'}
           </p>
         )}
         <div className="flex flex-wrap items-center gap-6 text-xs text-muted">
@@ -159,7 +160,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
 
       {displayRows.length === 0 && (
         <Card>
-          <p className="py-8 text-center text-sm text-muted">No timeline data available</p>
+          <p className="py-8 text-center text-sm text-muted">Nothing to show yet</p>
         </Card>
       )}
 
@@ -191,13 +192,13 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
                 <div className="flex flex-wrap items-center gap-3">
                   <MachineStatusBadge status={currentStatus} />
                   <span className="text-sm font-medium tabular-nums">
-                    {formatPercent(m.availability_percent)} running
+                    {wholePercent(m.availability_percent)} running
                   </span>
                 </div>
               }
             />
             <p className="mb-1 text-xs font-medium text-muted">
-              24h overview — short transitions are proportionally tiny; use detail below for exact times.
+              Last 24 hours
             </p>
             <UptimeTimeSeriesChart
               segments={m.timeline}
@@ -208,7 +209,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
             />
             <p className="mb-1 mt-4 text-xs font-medium text-muted">
-              Recent detail · last {UPTIME_DETAIL_HOURS} hours (exact times)
+              Last {UPTIME_DETAIL_HOURS} hours
             </p>
             <UptimeTimeSeriesChart
               segments={detailTimeline}

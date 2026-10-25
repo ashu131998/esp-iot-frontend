@@ -33,7 +33,7 @@ async function SchedulingPage({
     <NavDim>
       <PageHeader
         title="Scheduling"
-        description="Plan worker tasks across shifts, dates, looms and machine configuration profiles"
+        description="Who works on which machine, in which shift"
       />
       <div className="p-4 sm:p-6 lg:p-8">
         <SchedulingPanel

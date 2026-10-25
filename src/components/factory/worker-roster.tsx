@@ -71,7 +71,7 @@ export function WorkerRoster({
     },
     {
       accessorKey: 'employee_code',
-      header: 'Code',
+      header: 'Worker no.',
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee_code ?? '—'}</span>,
     },
     { accessorKey: 'role', header: 'Role' },
@@ -95,7 +95,7 @@ export function WorkerRoster({
     },
     {
       accessorKey: 'email',
-      header: 'App Login',
+      header: 'Email',
       enableSorting: false,
       cell: ({ row }) => (
         <span className="text-muted">
@@ -111,7 +111,7 @@ export function WorkerRoster({
       header: 'Status',
       cell: ({ row }) => (
         <Badge className={row.original.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-          {row.original.status}
+          {row.original.status === 'active' ? 'Working' : 'Not working'}
         </Badge>
       ),
     },
@@ -140,11 +140,11 @@ export function WorkerRoster({
     <Card>
       <CardHeader
         title="Workers"
-        description={`${workers.length} worker${workers.length === 1 ? '' : 's'} on the roster`}
+        description={`${workers.length} worker${workers.length === 1 ? '' : 's'}`}
         action={
           !readOnly && !open ? (
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-              + Add Worker
+              + Add a worker
             </Button>
           ) : undefined
         }
@@ -212,7 +212,7 @@ export function WorkerRoster({
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !canSubmit}
             >
-              {createMutation.isPending ? 'Saving…' : 'Add Worker'}
+              {createMutation.isPending ? 'Saving…' : 'Add'}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel

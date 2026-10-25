@@ -159,14 +159,14 @@ export function ScheduleForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} size="sm">
-        + Schedule Task
+        + Give a job
       </Button>
     );
   }
 
   return (
     <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">Schedule a Task</h4>
+      <h4 className="mb-4 text-sm font-semibold">Give a worker a job</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Worker">
           <Select
@@ -182,7 +182,7 @@ export function ScheduleForm({
           </Select>
         </Field>
 
-        <Field label="Function / Task">
+        <Field label="Job">
           <Input
             list="task-presets"
             placeholder="e.g. Operate looms"
@@ -320,7 +320,7 @@ export function ScheduleForm({
             ? 'Scheduling…'
             : scheduleDates.length > 1
               ? `Save Schedule (${scheduleDates.length} days)`
-              : 'Save Schedule'}
+              : 'Save'}
         </Button>
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Cancel

@@ -25,7 +25,7 @@ async function FactoryTeamPage({
 
   return (
     <NavDim>
-      <PageHeader title="Team" description="Manage employee access and approvals" />
+      <PageHeader title="Team" description="Who can open this dashboard" />
       <TeamPanel
         factoryId={factoryId}
         pendingUsers={pendingData.users ?? []}

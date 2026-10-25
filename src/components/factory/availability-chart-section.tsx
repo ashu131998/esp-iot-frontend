@@ -50,12 +50,12 @@ export function AvailabilityChartSection({
 
   return (
     <Card>
-      <CardHeader title="Uptime vs Downtime" description="Per machine" />
+      <CardHeader title="Ran and stopped" description="Green = ran, red = stopped (minutes)" />
       <StackedBarChart
         data={chartData}
         keys={[
-          { key: 'uptime', color: '#10b981', label: 'Uptime (min)' },
-          { key: 'downtime', color: '#ef4444', label: 'Downtime (min)' },
+          { key: 'uptime', color: '#10b981', label: 'Ran (min)' },
+          { key: 'downtime', color: '#ef4444', label: 'Stopped (min)' },
         ]}
       />
     </Card>

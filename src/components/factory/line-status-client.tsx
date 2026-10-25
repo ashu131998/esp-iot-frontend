@@ -1,37 +1,41 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { StatCard, MachineStatusBadge, Badge } from '@/components/ui/badge';
-import { Card, CardHeader } from '@/components/ui/card';
-import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { ListEmpty, ListGroup, ListRow, NumberTile, NumberTiles, SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
 import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
-import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import type {
-  AvailabilityMachine,
-  EnergyMachine,
-  Machine,
-  ProductionMachine,
-  UptimeMachine,
-} from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
-import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
+import {
+  STATE_TONE,
+  humanMinutes,
+  machineState,
+  periodPhrase,
+  plural,
+  runTone,
+  wholePercent,
+  type MachineState,
+} from '@/lib/plain-words';
+import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
+import type { Machine } from '@/lib/types';
+import { formatNumber, formatUnits } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
-// Summary cards per row, by how many are shown (literal class names for Tailwind).
-const GRID_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
+
+/** Order the groups appear in: problems first. */
+const GROUPS: { state: MachineState; title: string }[] = [
+  { state: 'stopped', title: 'Stopped now' },
+  { state: 'no_signal', title: 'No signal' },
+  { state: 'running', title: 'Running now' },
+];
 
 export function LineStatusClient({
   factoryId,
   lineId,
   machines,
-  configsByMachine,
   from,
   to,
   minDate,
@@ -39,7 +43,6 @@ export function LineStatusClient({
   factoryId: string;
   lineId: string;
   machines: Machine[];
-  configsByMachine: Record<string, number>;
   from?: string;
   to?: string;
   minDate?: string | null;
@@ -55,8 +58,9 @@ export function LineStatusClient({
   const shown = useShown();
   const energyOn = shown('energy');
   const productionOn = shown('production');
+  const period = periodPhrase(from, to);
 
-  const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
+  const { data, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['line-status', factoryId, lineId, from ?? null, to ?? null],
     queryFn: async ({ signal }) => {
       const now = new Date();
@@ -78,119 +82,99 @@ export function LineStatusClient({
 
   const { availability, energy, production, uptime24h } = data;
 
-  const machineRows = useMemo(() => sortByMachineName(machines), [machines]);
+  const rows = useMemo(() => {
+    const avail = new Map(availability.machines.map((m) => [m.machine_id, m]));
+    const prod = new Map(production.machines.map((m) => [m.machine_id, m]));
+    const live = new Map(uptime24h.machines.map((m) => [m.machine_id, m]));
+    return sortByMachineName(machines).map((machine) => {
+      const a = avail.get(machine.machine_id);
+      return {
+        machine,
+        avail: a,
+        prod: prod.get(machine.machine_id),
+        state: machineState(live.get(machine.machine_id)?.timeline.at(-1)?.status ?? a?.status),
+      };
+    });
+  }, [machines, availability, production, uptime24h]);
 
-  const availByMachine = availability.machines.reduce<Record<string, AvailabilityMachine>>(
-    (acc, m) => { acc[m.machine_id] = m; return acc; },
-    {},
-  );
-  const energyByMachine = energy.machines.reduce<Record<string, EnergyMachine>>(
-    (acc, m) => { acc[m.machine_id] = m; return acc; },
-    {},
-  );
-  const productionByMachine = production.machines.reduce<Record<string, ProductionMachine>>(
-    (acc, m) => { acc[m.machine_id] = m; return acc; },
-    {},
-  );
-  const uptimeByMachine = uptime24h.machines.reduce<Record<string, UptimeMachine>>(
-    (acc, m) => { acc[m.machine_id] = m; return acc; },
-    {},
-  );
+  const stopped = rows.filter((r) => r.state === 'stopped').length;
+  const noSignal = rows.filter((r) => r.state === 'no_signal').length;
+  const running = rows.length - stopped - noSignal;
+
+  const summary =
+    rows.length === 0
+      ? { tone: 'idle' as const, badge: undefined, title: 'No machines on this line yet' }
+      : stopped > 0
+        ? { tone: 'bad' as const, badge: stopped, title: `${plural(stopped, 'machine')} stopped` }
+        : noSignal > 0
+          ? { tone: 'warn' as const, badge: noSignal, title: `${plural(noSignal, 'machine')} not sending data` }
+          : { tone: 'good' as const, badge: undefined, title: rows.length === 1 ? 'The machine is running' : `All ${plural(rows.length, 'machine')} running` };
 
   return (
     <div className="space-y-6">
-      <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
-        {energyOn && (
-          <StatCard
-            label="Total Energy"
-            value={`${formatNumber(energy.total_energy_kwh)} kWh`}
-            sub="Estimated from current sensors"
-          />
-        )}
-        <StatCard
-          label="Avg Availability"
-          value={formatPercent(availability.avg_availability_percent)}
-          sub={`${formatNumber(availability.total_uptime_minutes, 0)} min running · ${formatNumber(availability.total_downtime_minutes, 0)} min stopped`}
+      <SummaryCard
+        tone={summary.tone}
+        badge={summary.badge}
+        title={summary.title}
+        subtitle={
+          rows.length === 0
+            ? undefined
+            : summary.tone === 'good'
+              ? 'Nothing needs attention'
+              : `${running} of ${rows.length} running right now`
+        }
+      />
+
+      <NumberTiles>
+        <NumberTile
+          label="Running time"
+          value={wholePercent(availability.avg_availability_percent)}
+          hint={`of ${period}`}
+          tone={runTone(availability.avg_availability_percent)}
         />
         {productionOn && (
-          <StatCard
-            label="Units Produced"
-            value={formatUnits(production.total_units, production.unit_label)}
-            sub="From proximity sensor detections"
-          />
+          <NumberTile label="Made" value={formatUnits(production.total_units, production.unit_label)} hint={period} />
         )}
-      </div>
-
-      <Card>
-        <CardHeader
-          title="Machine Status"
-          description={`Timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
-        />
-
-        {machineRows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No machines on this line.</p>
-        ) : (
-          <Table>
-            <THead>
-              <TR>
-                <TH>Machine</TH>
-                <TH>Current Status</TH>
-                {productionOn && <TH>Units Produced</TH>}
-                {energyOn && <TH>Energy (kWh)</TH>}
-                <TH>Availability</TH>
-                <TH>Last 24h</TH>
-                <TH>Config Entries</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {machineRows.map((machine) => {
-                const avail = availByMachine[machine.machine_id];
-                const eng = energyByMachine[machine.machine_id];
-                const prod = productionByMachine[machine.machine_id];
-                const uptime = uptimeByMachine[machine.machine_id];
-                const cfgCount = configsByMachine[machine.machine_id] ?? 0;
-                // Current status from the 24h timeline (Running / Stopped / No signal).
-                const status = uptime?.timeline.at(-1)?.status ?? 'no_data';
-
-                return (
-                  <TR key={machine.machine_id}>
-                    <TD className="font-medium">
-                      <Link
-                        href={`/factories/${machine.factory_id}/machines/${machine.machine_id}`}
-                        className="hover:underline text-blue-600"
-                      >
-                        {machine.name}
-                      </Link>
-                    </TD>
-                    <TD>
-                      <MachineStatusBadge status={status} />
-                    </TD>
-                    {productionOn && (
-                      <TD className="font-semibold">{prod ? formatUnits(prod.units_produced, prod.unit_label) : '—'}</TD>
-                    )}
-                    {energyOn && (
-                      <TD>
-                        {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
-                      </TD>
-                    )}
-                    <TD>{formatPercent(avail?.availability_percent ?? null)}</TD>
-                    <TD>
-                      <MiniTimeline segments={uptime?.timeline ?? []} />
-                    </TD>
-                    <TD>
-                      {cfgCount > 0 ? (
-                        <Badge className="bg-blue-50 text-blue-700">{cfgCount}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted">None</span>
-                      )}
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
+        {energyOn && (
+          <NumberTile label="Power used" value={`${formatNumber(energy.total_energy_kwh)} kWh`} hint={period} />
         )}
-      </Card>
+      </NumberTiles>
+
+      {rows.length === 0 ? (
+        <ListGroup title="Machines">
+          <ListEmpty>No machines on this line.</ListEmpty>
+        </ListGroup>
+      ) : (
+        GROUPS.map(({ state, title }) => {
+          const group = rows.filter((r) => r.state === state);
+          if (group.length === 0) return null;
+          return (
+            <ListGroup key={state} title={title} count={group.length}>
+              {group.map(({ machine, avail, prod }) => (
+                <ListRow
+                  key={machine.machine_id}
+                  href={`/factories/${machine.factory_id}/machines/${machine.machine_id}`}
+                  tone={STATE_TONE[state]}
+                  title={machine.name}
+                  detail={
+                    state === 'no_signal' && !avail?.uptime_minutes
+                      ? 'No signal from the sensor'
+                      : [
+                        `Ran ${humanMinutes(avail?.uptime_minutes ?? 0)}`,
+                        avail?.downtime_minutes ? `stopped ${humanMinutes(avail.downtime_minutes)}` : null,
+                        productionOn && prod ? `made ${formatUnits(prod.units_produced, prod.unit_label)}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                  }
+                  value={wholePercent(avail?.availability_percent)}
+                  valueHint="running"
+                />
+              ))}
+            </ListGroup>
+          );
+        })
+      )}
     </div>
   );
 }

@@ -48,10 +48,10 @@ export function EnergyChartSection({
 
   return (
     <Card>
-      <CardHeader title="Energy by Machine" description="kWh estimated from RMS current × voltage × time" />
+      <CardHeader title="Power used by each machine" description="In kWh" />
       <MetricBarChart
         data={chartData}
-        bars={[{ key: 'energy', color: '#f59e0b', label: 'Energy (kWh)' }]}
+        bars={[{ key: 'energy', color: '#f59e0b', label: 'Power used (kWh)' }]}
       />
     </Card>
   );

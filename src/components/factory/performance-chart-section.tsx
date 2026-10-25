@@ -37,13 +37,13 @@ export function PerformanceChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Performance Breakdown" description="Availability and throughput contribution per machine" />
+      <CardHeader title="Each machine" description="On target = running time × made vs target" />
       <MetricBarChart
         data={chartData}
         bars={[
-          { key: 'performance', color: '#6366f1', label: 'Performance %' },
-          { key: 'availability', color: '#10b981', label: 'Availability %' },
-          { key: 'throughput', color: '#3b82f6', label: 'Throughput %' },
+          { key: 'performance', color: '#6366f1', label: 'On target %' },
+          { key: 'availability', color: '#10b981', label: 'Running time %' },
+          { key: 'throughput', color: '#3b82f6', label: 'Made vs target %' },
         ]}
       />
     </Card>

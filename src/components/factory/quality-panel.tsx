@@ -1,5 +1,6 @@
 'use client';
 
+import { qualityCheckWord } from '@/lib/plain-words';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
@@ -69,8 +70,8 @@ export function QualityPanel({
     <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
       <Card>
         <CardHeader
-          title="Quality Records"
-          description="Manual QA entries and inspection results"
+          title="Quality checks"
+          description="Checks written down by your team"
           action={
             <div className="flex flex-wrap items-center gap-2">
               <ExportCsvButton
@@ -85,18 +86,18 @@ export function QualityPanel({
         />
 
         {records.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No quality records in this period. Adjust the date range or add a new record.</p>
+          <p className="py-8 text-center text-sm text-muted">No quality checks for these dates. Pick other dates or add one.</p>
         ) : (
           <>
             <Table className="mt-2 border-0">
               <THead>
                 <TR>
                   <TH>Machine</TH>
-                  <TH>Metric</TH>
+                  <TH>What was checked</TH>
                   <TH>Value</TH>
-                  <TH>Sample</TH>
-                  <TH>Source</TH>
-                  <TH>Recorded</TH>
+                  <TH>How many checked</TH>
+                  <TH>From</TH>
+                  <TH>When</TH>
                   <TH>Notes</TH>
                   <TH></TH>
                 </TR>
@@ -107,9 +108,9 @@ export function QualityPanel({
                   return (
                     <TR key={r.record_id}>
                       <TD className="font-medium">{machine?.name ?? r.machine_id}</TD>
-                      <TD className="capitalize">{r.metric.replace(/_/g, ' ')}</TD>
+                      <TD>{qualityCheckWord(r.metric)}</TD>
                       <TD>
-                        {formatNumber(r.value)} {r.unit}
+                        {formatNumber(r.value)} {r.unit === 'percent' ? '%' : r.unit === 'count' ? 'pieces' : r.unit}
                       </TD>
                       <TD>{r.sample_size ?? '—'}</TD>
                       <TD>

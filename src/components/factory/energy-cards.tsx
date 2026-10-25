@@ -2,11 +2,13 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { Zap } from 'lucide-react';
 
-import { StatCard } from '@/components/ui/badge';
+import { SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { periodPhrase } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -36,7 +38,7 @@ export function EnergyCards({
 
   const refetchInterval = useRefetchInterval(ENERGY_REFRESH_MS);
 
-  const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
+  const { data, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
     queryFn: ({ signal }) => api.energy(factoryId, apiRange, { signal }),
     refetchInterval,
@@ -46,14 +48,19 @@ export function EnergyCards({
   useSetRefreshInfo(dataUpdatedAt, ENERGY_REFRESH_SEC);
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
-
   const totalEnergy = displayMachines.reduce((s, m) => s + (m.energy_kwh ?? 0), 0);
+  const top = [...displayMachines].sort((a, b) => (b.energy_kwh ?? 0) - (a.energy_kwh ?? 0))[0];
 
   return (
-    <StatCard
-      label="Total Energy Consumption"
-      value={`${formatNumber(totalEnergy)} kWh`}
-      sub={`Estimated from current sensors${isFetching ? ' · updating…' : ''}`}
+    <SummaryCard
+      tone="warn"
+      icon={<Zap className="h-5 w-5" />}
+      title={`Used ${formatNumber(totalEnergy)} kWh of power in ${periodPhrase(from, to)}`}
+      subtitle={
+        top?.energy_kwh
+          ? `Used the most: ${top.machine_name} · ${formatNumber(top.energy_kwh)} kWh`
+          : 'Worked out from the current sensors'
+      }
     />
   );
 }

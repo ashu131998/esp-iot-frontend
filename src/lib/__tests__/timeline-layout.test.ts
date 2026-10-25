@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { placeSegments, segmentsSpan } from '@/lib/timeline-layout';
-import { placeMarks } from '@/lib/timeline-layout';
+import { placeMarks, placeSegments, segmentsSpan } from '@/lib/timeline-layout';
 
 const at = (hhmm: string, day = 25) => `2026-10-${day}T${hhmm}:00.000Z`;
 const seg = (from: string, to: string, status = 'up') => ({ from, to, status });

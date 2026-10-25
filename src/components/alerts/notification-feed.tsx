@@ -34,6 +34,7 @@ const TYPE_META: Record<string, { label: string; Icon: typeof BellRing; iconClas
   // Emails to the report recipients when a board goes silent / is back (query-api board-alert-mailer).
   board_offline: { label: 'Board offline · email', Icon: PowerOff, iconClass: 'text-red-500' },
   board_online: { label: 'Board back online · email', Icon: Power, iconClass: 'text-emerald-500' },
+  board_power_cut: { label: 'Board was powered off · email', Icon: PowerOff, iconClass: 'text-red-500' },
 };
 
 function statusBadge(n: NotificationItem) {

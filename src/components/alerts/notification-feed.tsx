@@ -7,6 +7,8 @@ import {
   BellRing,
   Clock,
   MessageCircle,
+  Power,
+  PowerOff,
   Reply,
   Send,
 } from 'lucide-react';
@@ -29,6 +31,9 @@ const TYPE_META: Record<string, { label: string; Icon: typeof BellRing; iconClas
   config_selection_reply: { label: 'Config selected', Icon: Reply, iconClass: 'text-violet-500' },
   test: { label: 'Test message', Icon: Send, iconClass: 'text-slate-400' },
   test_push: { label: 'Test push', Icon: Send, iconClass: 'text-blue-500' },
+  // Emails to the report recipients when a board goes silent / is back (query-api board-alert-mailer).
+  board_offline: { label: 'Board offline · email', Icon: PowerOff, iconClass: 'text-red-500' },
+  board_online: { label: 'Board back online · email', Icon: Power, iconClass: 'text-emerald-500' },
 };
 
 function statusBadge(n: NotificationItem) {

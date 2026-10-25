@@ -36,10 +36,15 @@ function rowDetail(n: NotificationItem) {
     hour: '2-digit',
     minute: '2-digit',
   });
+  const from = typeof n.payload?.from_email === 'string' ? n.payload.from_email : null;
+  const resendId = typeof n.payload?.email_id === 'string' ? n.payload.email_id : null;
   const bits = [
     who,
+    from ? `from ${from}` : null,
     n.machine_id,
     when,
+    n.status === 'sent' && n.channel === 'email' ? 'accepted by Resend (check spam if missing)' : null,
+    resendId ? `id ${resendId.slice(0, 8)}…` : null,
     n.status === 'simulated' ? 'simulated' : null,
     n.status === 'failed' && n.error ? `Error: ${n.error}` : null,
   ].filter(Boolean);

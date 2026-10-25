@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { normalizeMachineStatus, statusLabel } from '@/lib/utils';
+import { knownNumber, normalizeMachineStatus, statusLabel } from '@/lib/utils';
 import { ApexChart, baseChartOptions, formatAxisTick, type ApexOptions } from './apex';
 import { placeSegments } from '@/lib/timeline-layout';
 
 interface ChartData {
   name: string;
-  [key: string]: string | number;
+  /** null = unknown: drawn as no bar, never as 0. */
+  [key: string]: string | number | null;
 }
 
 interface MetricBarChartProps {
@@ -58,7 +59,7 @@ function barOptions(
     },
     tooltip: {
       ...baseChartOptions.tooltip,
-      y: { formatter: (v) => Number(v).toLocaleString() },
+      y: { formatter: (v) => (knownNumber(v) === null ? '—' : Number(v).toLocaleString()) },
     },
   };
 }
@@ -76,7 +77,7 @@ export function MetricBarChart({
 
   const series = bars.map((bar) => ({
     name: bar.label,
-    data: data.map((row) => Number(row[bar.key]) || 0),
+    data: data.map((row) => knownNumber(row[bar.key])),
   }));
 
   const chartHeight = data.length > 8 ? Math.max(height, 340) : height;

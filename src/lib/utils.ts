@@ -35,6 +35,25 @@ export function sumUnits(machines: Array<{ units_produced: number }>): number {
   return Math.round(machines.reduce((s, m) => s + (m.units_produced ?? 0), 0) * 100) / 100;
 }
 
+/**
+ * A figure as a number, or null when it is unknown (null, missing, empty, not a number).
+ * Charts draw null as no bar / no point: unknown must never be shown as 0.
+ */
+export function knownNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Average of the known figures, to one decimal; unknown ones (null) are left out rather
+ * than counted as 0 %. Null when none is known. The same rule as the API's averages.
+ */
+export function averageKnown(values: Array<number | null | undefined>): number | null {
+  const known = values.map(knownNumber).filter((v): v is number => v !== null);
+  return known.length > 0 ? Math.round((known.reduce((s, v) => s + v, 0) / known.length) * 10) / 10 : null;
+}
+
 export function formatPercent(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;

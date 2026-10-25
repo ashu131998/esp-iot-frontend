@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  averageKnown,
   formatNumber,
+  knownNumber,
   formatPercent,
   formatAlertVia,
   formatUnits,
@@ -101,4 +103,30 @@ describe('sharedUnitLabel / sumUnits', () => {
   it('returns null for plain units', () => expect(sharedUnitLabel([{ unit_label: null }, {}])).toBeNull());
   it('sums fractional units to 2 decimals', () =>
     expect(sumUnits([{ units_produced: 0.1 }, { units_produced: 0.2 }])).toBe(0.3));
+});
+
+// ── knownNumber / averageKnown: unknown is never 0 ───────────────────────────
+
+describe('knownNumber', () => {
+  it('keeps real numbers, zero included', () => {
+    expect(knownNumber(42.5)).toBe(42.5);
+    expect(knownNumber(0)).toBe(0);
+    expect(knownNumber('12.5')).toBe(12.5);   // Postgres NUMERIC arrives as text
+  });
+  it('turns unknown into null, never 0', () => {
+    for (const v of [null, undefined, '', 'abc', NaN, Infinity]) expect(knownNumber(v)).toBeNull();
+  });
+});
+
+describe('averageKnown', () => {
+  it('leaves unknown machines out instead of counting them as 0 %', () => {
+    // two machines known (50 %, 80 %), one with no data: 65 %, not (50 + 80 + 0) / 3 = 43.3 %
+    expect(averageKnown([50, null, 80])).toBe(65);
+  });
+  it('rounds to one decimal, like the API', () => expect(averageKnown([33.3, 33.4, 33.4])).toBe(33.4));
+  it('a known 0 % still counts', () => expect(averageKnown([0, 100])).toBe(50));
+  it('is null when nothing is known', () => {
+    expect(averageKnown([])).toBeNull();
+    expect(averageKnown([null, undefined])).toBeNull();
+  });
 });

@@ -15,6 +15,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { batteryClock, firmware, queue, supply, type StatusCell, type Tone } from '@/lib/board-status';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
@@ -155,6 +156,10 @@ function NodesFleetInner() {
       d.device_type,
       d.last_seen_at ?? '',
       d.is_stale ? 'stale' : 'ok',
+      firmware(d.beat),
+      batteryClock(d.beat).label,
+      queue(d.beat).label,
+      supply(d.beat).label,
     ]);
   }
 
@@ -173,7 +178,7 @@ function NodesFleetInner() {
               )}
               <ExportCsvButton
                 filename="esp-nodes"
-                headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status']}
+                headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status', 'Firmware', 'Battery clock', 'Queue', '24 V']}
                 fetchRows={fetchAllNodes}
                 rowCount={total}
               />
@@ -245,7 +250,7 @@ function NodesFleetInner() {
         {nodesQuery.isError ? (
           <p className="text-sm text-red-600">{(nodesQuery.error as Error).message}</p>
         ) : queryShowsTableLoading(nodesQuery) ? (
-          <TableSkeleton rows={8} cols={8} />
+          <TableSkeleton rows={8} cols={12} />
         ) : nodes.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No nodes match filters.</p>
         ) : (
@@ -260,6 +265,10 @@ function NodesFleetInner() {
                   <TH>Type</TH>
                   <TH>Last seen</TH>
                   <TH>Status</TH>
+                  <TH>Firmware</TH>
+                  <TH>Battery clock</TH>
+                  <TH>Queue</TH>
+                  <TH>24 V</TH>
                   <TH />
                 </TR>
               </THead>
@@ -308,6 +317,10 @@ function NodesFleetInner() {
                         {d.is_stale ? 'Stale' : 'OK'}
                       </Badge>
                     </TD>
+                    <TD className="font-mono text-xs">{firmware(d.beat)}</TD>
+                    <TD><StatusBadge cell={batteryClock(d.beat)} /></TD>
+                    <TD><StatusText cell={queue(d.beat)} /></TD>
+                    <TD><StatusText cell={supply(d.beat)} /></TD>
                     <TD>
                       <Link
                         href={nodeHref(d.factory_id, d.device_id, 'sensors')}
@@ -331,6 +344,35 @@ function NodesFleetInner() {
         defaultFactoryId={factoryFilter || undefined}
       />
     </div>
+  );
+}
+
+const TONE_BADGE: Record<Tone, string> = {
+  good: 'bg-emerald-50 text-emerald-700',
+  warn: 'bg-amber-50 text-amber-800',
+  bad: 'bg-red-50 text-red-700',
+  neutral: 'bg-slate-100 text-slate-600',
+};
+const TONE_TEXT: Record<Tone, string> = {
+  good: 'text-emerald-700',
+  warn: 'text-amber-700',
+  bad: 'text-red-700',
+  neutral: 'text-muted',
+};
+
+function StatusBadge({ cell }: { cell: StatusCell }) {
+  return (
+    <span title={cell.detail}>
+      <Badge className={TONE_BADGE[cell.tone]}>{cell.label}</Badge>
+    </span>
+  );
+}
+
+function StatusText({ cell }: { cell: StatusCell }) {
+  return (
+    <span className={`text-xs ${TONE_TEXT[cell.tone]}`} title={cell.detail}>
+      {cell.label}
+    </span>
   );
 }
 

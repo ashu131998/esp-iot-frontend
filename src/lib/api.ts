@@ -1,3 +1,4 @@
+import type { BoardBeat } from '@/lib/board-status';
 import type {
   ActiveAssignmentsResponse,
   AlertSettings,
@@ -816,6 +817,9 @@ export const api = {
         device_type: string;
         last_seen_at: string | null;
         is_stale: boolean;
+        /** Latest heartbeat and its summary (firmware, queue, battery clock, 24 V); null if none yet. */
+        last_beat_at?: string | null;
+        beat?: BoardBeat | null;
         machines?: Array<{
           machine_id: string;
           name: string;

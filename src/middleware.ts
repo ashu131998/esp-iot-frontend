@@ -2,6 +2,7 @@ import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ACCESS_COOKIE, CSRF_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
+import { loginRedirectPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
@@ -118,6 +119,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
+  // Not signed in (or the cookies did not come: a click from an email is cross-site and they
+  // are SameSite=Strict): the factory login, which renews the session if it can and comes back.
+  const redirectToLogin = (factoryId: string) => {
+    const [path, query] = loginRedirectPath(factoryId, pathname, req.nextUrl.search).split('?');
+    const url = req.nextUrl.clone();
+    url.pathname = path;
+    url.search = query ? `?${query}` : '';
+    return NextResponse.redirect(url);
+  };
+
   const identity = await getIdentity(req);
 
   const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup)\/?$/.test(pathname);
@@ -138,7 +149,7 @@ export async function middleware(req: NextRequest) {
   if (facMatch) {
     const factoryId = facMatch[1];
     const sub = facMatch[2] ?? '';
-    if (!identity) return redirectTo(`/f/${factoryId}/login`);
+    if (!identity) return redirectToLogin(factoryId);
     const allowed =
       isStaffRole(identity.role) || identity.factoryId === factoryId;
     if (!allowed) return redirectTo(homeFor(identity, req));
@@ -187,7 +198,7 @@ export async function middleware(req: NextRequest) {
   const fMatch = pathname.match(/^\/f\/([^/]+)(?:\/(.*))?$/);
   if (fMatch) {
     const factoryId = fMatch[1];
-    if (!identity) return redirectTo(`/f/${factoryId}/login`);
+    if (!identity) return redirectToLogin(factoryId);
     const allowed =
       isStaffRole(identity.role) || identity.factoryId === factoryId;
     if (!allowed) return redirectTo(homeFor(identity, req));

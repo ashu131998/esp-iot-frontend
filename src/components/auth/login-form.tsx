@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
+import { noteRestore, safeNextPath, shouldTryRestore } from '@/lib/auth-redirect';
+
+/** sessionStorage, or null where the browser blocks it. */
+function safeSessionStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 export function LoginForm({
   title,
@@ -36,10 +46,36 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Only a page inside this app (lib/auth-redirect.ts): never another site.
+  const next = safeNextPath(searchParams.get('next'));
+  const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
     fetch('/api/auth/login', { credentials: 'same-origin' }).catch(() => {});
   }, []);
+
+  // Already signed in? A link from an email arrives without the SameSite=Strict cookies, and
+  // the 15-minute access token may have run out: this same-site call renews the 7-day session
+  // if it is still there, and the page that was asked for opens with no password.
+  useEffect(() => {
+    const storage = safeSessionStorage();
+    let cancelled = false;
+    const renewed = shouldTryRestore(storage)
+      ? fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' }).then((res) => res.ok, () => false)
+      : Promise.resolve(false);
+    renewed.then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        noteRestore(storage);
+        window.location.replace(next ?? '/');
+        return;
+      }
+      setRestoring(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [next]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +87,6 @@ export function LoginForm({
         password,
         factory_id: platformStaff ? null : factoryId,
       });
-      const next = searchParams.get('next');
       if (next) {
         router.push(next);
       } else if (
@@ -81,6 +116,9 @@ export function LoginForm({
           <img src={logoSrc} alt="" className="mx-auto mb-4 h-14 max-w-[12rem] object-contain" />
         )}
         <CardHeader title={title} description={subtitle} />
+        {restoring ? (
+          <p className="mt-6 text-center text-sm text-muted" role="status">Signing you in…</p>
+        ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Field label="Username">
             <Input
@@ -106,6 +144,7 @@ export function LoginForm({
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
+        )}
       </Card>
     </div>
   );

@@ -28,7 +28,6 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
 
   const [lineForm, setLineForm] = useState({ line_id: '', name: '' });
   const emptyMachineForm = {
-    machine_id: '',
     line_id: '',
     name: '',
     type: 'loom',
@@ -74,7 +73,6 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   const createMachine = useMutation({
     mutationFn: () =>
       api.adminCreateMachine(factoryId, {
-        machine_id: machineForm.machine_id,
         line_id: machineForm.line_id,
         name: machineForm.name,
         type: machineForm.type,
@@ -291,7 +289,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
         open={machineModal}
         onClose={() => setMachineModal(false)}
         title="Onboard machine"
-        description="Machine ID must be unique across the platform."
+        description="Names can repeat across factories; the machine's ID is created automatically."
       >
         <form
           className="space-y-4"
@@ -313,14 +311,6 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
                 </option>
               ))}
             </Select>
-          </Field>
-          <Field label="Machine ID">
-            <Input
-              required
-              value={machineForm.machine_id}
-              placeholder="loom-12"
-              onChange={(e) => setMachineForm({ ...machineForm, machine_id: e.target.value })}
-            />
           </Field>
           <Field label="Name">
             <Input

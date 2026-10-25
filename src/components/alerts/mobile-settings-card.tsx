@@ -245,7 +245,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
           {!draft.alertops_configured ? (
             <p className="text-muted">Test push needs the mobile app bridge on the server.</p>
           ) : workers.length === 0 ? (
-            <p className="text-muted">Add workers on Scheduling first.</p>
+            <p className="text-muted">Add workers on Team first.</p>
           ) : (
             <div className="space-y-2">
               <p className="text-muted">Send one test push to a worker.</p>

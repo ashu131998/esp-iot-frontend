@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
+import type { Worker } from '@/lib/types';
 import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
@@ -18,16 +19,21 @@ async function FactoryTeamPage({
   const sp = await searchParams;
   const pagination = resolvePagination({ page: sp.page, limit: sp.limit });
 
-  const [pendingData, usersData] = await Promise.all([
+  const [pendingData, usersData, workersData] = await Promise.all([
     serverApi.factoryUsers(factoryId, 100, 0, 'pending'),
     serverApi.factoryUsers(factoryId, pagination.limit, pagination.offset),
+    serverApi.workers(factoryId, 200, 0).catch(() => ({ workers: [] as Worker[] })),
   ]);
 
   return (
     <NavDim>
-      <PageHeader title="Team" description="Manage employee access and approvals" />
+      <PageHeader
+        title="Team"
+        description="Floor workers (scheduling and mobile alerts) and dashboard user access"
+      />
       <TeamPanel
         factoryId={factoryId}
+        workers={workersData.workers ?? []}
         pendingUsers={pendingData.users ?? []}
         pendingTotal={resolveListTotal(
           pendingData.total,

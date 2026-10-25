@@ -7,7 +7,6 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Calendar, ChevronDown, Loader2, Search, X } from 'lucide-react';
 
 import { ScheduleForm } from '@/components/factory/schedule-form';
-import { WorkerRoster } from '@/components/factory/worker-roster';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -545,8 +544,6 @@ export function SchedulingPanel({
           }
         />
       </Card>
-
-      <WorkerRoster factoryId={factoryId} workers={workers} readOnly={!canWriteFactory} />
     </div>
   );
 }

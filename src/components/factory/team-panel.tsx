@@ -11,11 +11,14 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { WorkerRoster } from '@/components/factory/worker-roster';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { AuthUser } from '@/lib/auth-types';
+import type { Worker } from '@/lib/types';
 
 export function TeamPanel({
   factoryId,
+  workers,
   pendingUsers,
   pendingTotal,
   users,
@@ -24,6 +27,7 @@ export function TeamPanel({
   limit,
 }: {
   factoryId: string;
+  workers: Worker[];
   pendingUsers: AuthUser[];
   pendingTotal: number;
   users: AuthUser[];
@@ -61,6 +65,8 @@ export function TeamPanel({
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <WorkerRoster factoryId={factoryId} workers={workers} readOnly={!canWriteFactory} />
+
       <Card className="p-6">
         <CardHeader
           title="Pending approvals"

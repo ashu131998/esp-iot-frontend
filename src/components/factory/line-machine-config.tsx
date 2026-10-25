@@ -41,7 +41,7 @@ function ApplyProfileSection({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-blue-50 px-4 py-3">
-      <Field label="Select Profile">
+      <Field label="Saved setting">
         <Select
           value={selectedProfileId}
           onChange={(e) => setSelectedProfileId(e.target.value)}
@@ -57,7 +57,7 @@ function ApplyProfileSection({
 
       {selected && (
         <p className="pb-1 text-xs text-muted">
-          {selected.parameters.length} parameter{selected.parameters.length !== 1 ? 's' : ''}
+          {selected.parameters.length} setting{selected.parameters.length !== 1 ? 's' : ''}
         </p>
       )}
 
@@ -67,12 +67,12 @@ function ApplyProfileSection({
           onClick={() => applyMutation.mutate()}
           disabled={applyMutation.isPending || !selectedProfileId}
         >
-          {applyMutation.isPending ? 'Applying…' : 'Apply Profile'}
+          {applyMutation.isPending ? 'Saving…' : 'Use this'}
         </Button>
       </div>
 
       {applyMutation.isSuccess && (
-        <p className="pb-1 text-xs text-green-700">Profile applied.</p>
+        <p className="pb-1 text-xs text-green-700">Setting in use.</p>
       )}
       {applyMutation.isError && (
         <p className="pb-1 text-xs text-red-600">{applyMutation.error?.message}</p>
@@ -140,12 +140,12 @@ export function LineMachineConfig({
   return (
     <Card>
       <CardHeader
-        title="Machine Configurations"
-        description="Operator-entered settings for each machine on this line"
+        title="Machine settings"
+        description="Settings for each machine on this line. Workers pick a saved setting when their shift starts."
         action={
           !open ? (
             <Button size="sm" onClick={() => setOpen(true)}>
-              + Add Config
+              + Add a setting
             </Button>
           ) : undefined
         }
@@ -153,7 +153,7 @@ export function LineMachineConfig({
 
       {open && (
         <div className="mb-6 rounded-lg border bg-slate-50 p-4">
-          <h4 className="mb-4 text-sm font-semibold">Add Configuration</h4>
+          <h4 className="mb-4 text-sm font-semibold">Add a setting</h4>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Machine">
               <Select
@@ -168,7 +168,7 @@ export function LineMachineConfig({
               </Select>
             </Field>
 
-            <Field label="Parameter">
+            <Field label="Setting name">
               <Input
                 placeholder="e.g. speed_rpm, feed_rate"
                 value={form.key}
@@ -199,7 +199,7 @@ export function LineMachineConfig({
             </Field>
 
             <div className="sm:col-span-2">
-              <Field label="Description">
+              <Field label="Note">
                 <Textarea
                   rows={2}
                   placeholder="Optional notes for this setting"
@@ -215,7 +215,7 @@ export function LineMachineConfig({
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || !canSave}
             >
-              {mutation.isPending ? 'Saving…' : 'Save Configuration'}
+              {mutation.isPending ? 'Saving…' : 'Save'}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
@@ -237,7 +237,12 @@ export function LineMachineConfig({
 
             return (
               <div key={machine.machine_id}>
-                <h4 className="mb-3 text-sm font-semibold">{machine.name}</h4>
+                <h4 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold">
+                  {machine.name}
+                  <Badge className="bg-slate-100 font-normal text-slate-700">
+                    {machineProfiles.length === 0 ? 'None saved yet' : `${machineProfiles.length} saved`}
+                  </Badge>
+                </h4>
 
                 <ApplyProfileSection
                   factoryId={factoryId}
@@ -246,17 +251,17 @@ export function LineMachineConfig({
                 />
 
                 {configs.length === 0 ? (
-                  <p className="text-xs text-muted">No configuration recorded for this machine.</p>
+                  <p className="text-xs text-muted">No settings in use on this machine yet.</p>
                 ) : (
                   <Table className="border-0">
                     <THead>
                       <TR>
-                        <TH>Parameter</TH>
+                        <TH>Setting</TH>
                         <TH>Value</TH>
                         <TH>Unit</TH>
-                        <TH>Source</TH>
-                        <TH>Description</TH>
-                        <TH>Last Updated</TH>
+                        <TH>From</TH>
+                        <TH>Note</TH>
+                        <TH>Changed</TH>
                       </TR>
                     </THead>
                     <TBody>
@@ -272,7 +277,7 @@ export function LineMachineConfig({
                               </Badge>
                             ) : (
                               <Badge className="bg-slate-100 text-slate-600 text-xs">
-                                {c.source}
+                                {c.source === 'manual' ? 'Typed in' : c.source}
                               </Badge>
                             )}
                           </TD>

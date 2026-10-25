@@ -54,7 +54,7 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
       />
       {reports.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted">
-          No downtime recorded yet. When a loom stops, a report is opened here and the
+          No downtime recorded yet. When a machine stops, a report is opened here and the
           assigned worker is asked for the reason on the mobile app.
         </div>
       ) : (

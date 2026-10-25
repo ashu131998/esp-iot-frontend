@@ -61,7 +61,7 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
       ) : notifications.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted">
           No messages yet. Reminders go out automatically before each shift, and machine
-          down/up alerts fire the moment a loom changes state.
+          down/up alerts fire the moment a machine changes state.
         </div>
       ) : (
         <ul className="max-h-[480px] divide-y overflow-y-auto rounded-lg border">

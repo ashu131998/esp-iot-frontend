@@ -77,8 +77,8 @@ export function ConfigurationPanel({
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Card>
         <CardHeader
-          title="Machine settings"
-          description="Settings for each machine or line"
+          title="Configuration"
+          description="Operational parameters and setpoints per machine or line"
           action={
             <div className="flex flex-wrap items-center gap-2">
               <ExportCsvButton
@@ -103,13 +103,13 @@ export function ConfigurationPanel({
             <Table className="mt-2 border-0">
               <THead>
                 <TR>
-                  <TH>For</TH>
-                  <TH>Setting</TH>
+                  <TH>Target</TH>
+                  <TH>Parameter</TH>
                   <TH>Value</TH>
                   <TH>Unit</TH>
-                  <TH>Note</TH>
-                  <TH>From</TH>
-                  <TH>Changed</TH>
+                  <TH>Description</TH>
+                  <TH>Source</TH>
+                  <TH>Updated</TH>
                   {canWriteFactory && <TH></TH>}
                 </TR>
               </THead>

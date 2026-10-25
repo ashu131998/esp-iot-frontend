@@ -181,7 +181,7 @@ export function AddNodeModal({
             <Input
               required
               className="font-mono text-sm"
-              placeholder="loom-node-042"
+              placeholder="node-042"
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
             />

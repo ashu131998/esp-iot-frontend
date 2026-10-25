@@ -47,14 +47,14 @@ export function QualityForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} size="sm">
-        + Add a check
+        + Add Quality Record
       </Button>
     );
   }
 
   return (
     <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">Add a quality check</h4>
+      <h4 className="mb-4 text-sm font-semibold">Add Quality Record</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Machine">
           <Select
@@ -68,15 +68,15 @@ export function QualityForm({
             ))}
           </Select>
         </Field>
-        <Field label="What was checked">
+        <Field label="Metric">
           <Select
             value={form.metric}
             onChange={(e) => setForm({ ...form, metric: e.target.value })}
           >
-            <option value="defect_rate">Bad pieces</option>
-            <option value="first_pass_yield">Good first time</option>
-            <option value="scrap_rate">Thrown away</option>
-            <option value="rework_rate">Made again</option>
+            <option value="defect_rate">Defect Rate</option>
+            <option value="first_pass_yield">First Pass Yield</option>
+            <option value="scrap_rate">Scrap Rate</option>
+            <option value="rework_rate">Rework Rate</option>
           </Select>
         </Field>
         <Field label="Value">
@@ -92,12 +92,12 @@ export function QualityForm({
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value })}
           >
-            <option value="percent">%</option>
-            <option value="ppm">Per million</option>
-            <option value="count">Pieces</option>
+            <option value="percent">Percent</option>
+            <option value="ppm">PPM</option>
+            <option value="count">Count</option>
           </Select>
         </Field>
-        <Field label="How many checked">
+        <Field label="Sample Size">
           <Input
             type="number"
             value={form.sample_size ?? ''}
@@ -114,7 +114,7 @@ export function QualityForm({
       </div>
       <div className="mt-4 flex gap-2">
         <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving…' : 'Save'}
+          {mutation.isPending ? 'Saving…' : 'Save Record'}
         </Button>
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Cancel

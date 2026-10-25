@@ -53,10 +53,10 @@ export function ProductionChartSection({
 
   return (
     <Card>
-      <CardHeader title="Made by each machine" description="Counted by the sensor on each machine" />
+      <CardHeader title="Production by Machine" description="Units counted from proximity sensor rising edges" />
       <MetricBarChart
         data={chartData}
-        bars={[{ key: 'units', color: '#2563eb', label: `Made${unitSuffix}` }]}
+        bars={[{ key: 'units', color: '#2563eb', label: `Units Produced${unitSuffix}` }]}
         showAllXLabels
         xLabelRotate={-45}
         height={360}

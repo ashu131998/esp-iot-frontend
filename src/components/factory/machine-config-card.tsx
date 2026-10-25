@@ -41,7 +41,7 @@ function ApplyProfileSection({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-blue-50 px-4 py-3">
-      <Field label="Saved setting">
+      <Field label="Select Profile">
         <Select
           value={selectedProfileId}
           onChange={(e) => setSelectedProfileId(e.target.value)}
@@ -57,7 +57,7 @@ function ApplyProfileSection({
 
       {selected && (
         <p className="pb-1 text-xs text-muted">
-          {selected.parameters.length} setting{selected.parameters.length !== 1 ? 's' : ''}
+          {selected.parameters.length} parameter{selected.parameters.length !== 1 ? 's' : ''}
         </p>
       )}
 
@@ -67,12 +67,12 @@ function ApplyProfileSection({
           onClick={() => applyMutation.mutate()}
           disabled={applyMutation.isPending || !selectedProfileId}
         >
-          {applyMutation.isPending ? 'Saving…' : 'Use this'}
+          {applyMutation.isPending ? 'Applying…' : 'Apply Profile'}
         </Button>
       </div>
 
       {applyMutation.isSuccess && (
-        <p className="pb-1 text-xs text-green-700">Setting applied.</p>
+        <p className="pb-1 text-xs text-green-700">Profile applied.</p>
       )}
       {applyMutation.isError && (
         <p className="pb-1 text-xs text-red-600">{applyMutation.error?.message}</p>
@@ -124,12 +124,12 @@ export function MachineConfigCard({
   return (
     <Card>
       <CardHeader
-        title="Machine settings"
-        description="Settings now and before"
+        title="Machine Configuration"
+        description="Current and historical settings for this machine"
         action={
           !open ? (
             <Button size="sm" onClick={() => setOpen(true)}>
-              + Add a setting
+              + Add Config
             </Button>
           ) : undefined
         }
@@ -137,9 +137,9 @@ export function MachineConfigCard({
 
       {open && (
         <div className="mb-6 rounded-lg border bg-slate-50 p-4">
-          <h4 className="mb-4 text-sm font-semibold">Add a setting</h4>
+          <h4 className="mb-4 text-sm font-semibold">Add Configuration</h4>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Setting name">
+            <Field label="Parameter">
               <Input
                 placeholder="e.g. speed_rpm, feed_rate"
                 value={form.key}
@@ -172,7 +172,7 @@ export function MachineConfigCard({
             <div></div>
 
             <div className="sm:col-span-2">
-              <Field label="Note">
+              <Field label="Description">
                 <Textarea
                   rows={2}
                   placeholder="Optional notes for this setting"
@@ -188,7 +188,7 @@ export function MachineConfigCard({
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || !canSave}
             >
-              {mutation.isPending ? 'Saving…' : 'Save'}
+              {mutation.isPending ? 'Saving…' : 'Save Configuration'}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
@@ -202,10 +202,10 @@ export function MachineConfigCard({
 
       {lastConfig && (
         <div className="mb-6 rounded-lg border bg-green-50 px-4 py-3">
-          <p className="mb-1 text-xs font-semibold text-green-800">Newest setting</p>
+          <p className="mb-1 text-xs font-semibold text-green-800">Last Configuration</p>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-green-700">Setting</p>
+              <p className="text-xs text-green-700">Parameter</p>
               <p className="font-mono font-semibold">{lastConfig.key}</p>
             </div>
             <div>
@@ -215,12 +215,12 @@ export function MachineConfigCard({
               </p>
             </div>
             <div className="col-span-2">
-              <p className="text-xs text-green-700">Changed</p>
+              <p className="text-xs text-green-700">Updated</p>
               <p className="text-xs">{formatDate(lastConfig.updated_at)}</p>
             </div>
             {lastConfig.description && (
               <div className="col-span-2">
-                <p className="text-xs text-green-700">Note</p>
+                <p className="text-xs text-green-700">Description</p>
                 <p className="text-xs">{lastConfig.description}</p>
               </div>
             )}
@@ -231,19 +231,19 @@ export function MachineConfigCard({
       <ApplyProfileSection factoryId={factoryId} machine={machine} profiles={profiles} />
 
       {configurations.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted">No settings saved for this machine yet.</p>
+        <p className="py-4 text-center text-sm text-muted">No configuration recorded for this machine.</p>
       ) : (
         <div>
-          <h4 className="mb-3 text-sm font-semibold">Earlier settings</h4>
+          <h4 className="mb-3 text-sm font-semibold">Configuration History</h4>
           <Table className="border-0">
             <THead>
               <TR>
-                <TH>Setting</TH>
+                <TH>Parameter</TH>
                 <TH>Value</TH>
                 <TH>Unit</TH>
-                <TH>From</TH>
-                <TH>Note</TH>
-                <TH>Changed</TH>
+                <TH>Source</TH>
+                <TH>Description</TH>
+                <TH>Last Updated</TH>
               </TR>
             </THead>
             <TBody>

@@ -2,18 +2,18 @@ import { cn } from '@/lib/utils';
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('overflow-x-auto rounded-xl ring-1 ring-gray-100', className)}>
+    <div className={cn('overflow-x-auto rounded-lg border', className)}>
       <table className="w-full text-sm">{children}</table>
     </div>
   );
 }
 
 export function THead({ children }: { children: React.ReactNode }) {
-  return <thead className="border-b border-gray-100 bg-gray-50/70 text-left text-xs text-muted">{children}</thead>;
+  return <thead className="border-b bg-slate-50 text-left text-xs uppercase text-muted">{children}</thead>;
 }
 
 export function TBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-gray-100">{children}</tbody>;
+  return <tbody className="divide-y">{children}</tbody>;
 }
 
 export function TR({ children, className, ...props }: React.ComponentPropsWithoutRef<'tr'>) {

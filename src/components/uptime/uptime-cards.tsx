@@ -38,8 +38,8 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       <StatCard label="Overall Availability" value={formatPercent(overallAvailability)} />
-      <StatCard label="Loom Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
-      <StatCard label="Loom Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
+      <StatCard label="Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
+      <StatCard label="Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
     </div>
   );
 }

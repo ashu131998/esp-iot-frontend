@@ -41,13 +41,6 @@ export function AvailabilityDashboard({
         </QuerySuspense>
       )}
 
-      {/* Machine list, worst first — what a person on the floor looks for */}
-      {shown('availability.table') && (
-        <QuerySuspense fallback={<TableSkeleton rows={5} cols={4} />}>
-          <AvailabilityMachineTable factoryId={factoryId} from={from} to={to} />
-        </QuerySuspense>
-      )}
-
       {/* Bar chart — lazy JS bundle, shares the cached availability query */}
       {shown('availability.chart') && (
         <QuerySuspense fallback={<ChartSkeleton />}>
@@ -59,6 +52,13 @@ export function AvailabilityDashboard({
       {!machineId && shown('availability.trend') && (
         <QuerySuspense fallback={<ChartSkeleton />}>
           <FactoryAvailabilityTrend factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
+
+      {/* Machine table — lazy JS bundle, fires availability + uptime in parallel */}
+      {shown('availability.table') && (
+        <QuerySuspense fallback={<TableSkeleton rows={5} cols={7} />}>
+          <AvailabilityMachineTable factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
     </>

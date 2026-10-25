@@ -181,7 +181,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
       <Card className="p-6">
         <CardHeader
           title="Machines"
-          description="Onboard looms and other assets. Sensor bindings link ESP channels to these machines."
+          description="Onboard machines and other assets. Sensor bindings link ESP channels to these machines."
           action={
             canWrite && (
               <Button size="sm" onClick={() => setMachineModal(true)} disabled={lines.length === 0}>

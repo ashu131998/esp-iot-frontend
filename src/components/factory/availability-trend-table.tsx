@@ -61,9 +61,7 @@ export function AvailabilityTrendTable({
     [data, liveData, from, to],
   );
 
-  const columns = useMemo<ColumnDef<TrendRow, unknown>[]>(() => {
-    const todayKey = new Date().toLocaleDateString('en-CA');
-    return [
+  const columns = useMemo<ColumnDef<TrendRow, unknown>[]>(() => [
     {
       id: 'date',
       accessorFn: (row) => row.dateKey, // sort chronologically by the day key
@@ -73,7 +71,7 @@ export function AvailabilityTrendTable({
           {row.original.dateLabel}
           {row.original.is_live && (
             <Badge className="bg-amber-50 text-amber-700 text-xs">
-              {row.original.dateKey === todayKey ? 'Today' : 'Not final yet'}
+              {row.original.dateKey === new Date().toLocaleDateString('en-CA') ? 'Today' : 'Not final yet'}
             </Badge>
           )}
         </span>
@@ -81,19 +79,19 @@ export function AvailabilityTrendTable({
     },
     {
       accessorKey: 'availability',
-      header: 'Running time',
+      header: 'Availability',
       cell: ({ row }) => (
         <Badge className={badgeColor(row.original.availability)}>{formatPercent(row.original.availability)}</Badge>
       ),
     },
     {
       accessorKey: 'uptime',
-      header: 'Ran (min)',
+      header: 'Uptime (min)',
       cell: ({ row }) => formatNumber(row.original.uptime, 0),
     },
     {
       accessorKey: 'downtime',
-      header: 'Stopped (min)',
+      header: 'Downtime (min)',
       cell: ({ row }) => formatNumber(row.original.downtime, 0),
     },
     {
@@ -102,16 +100,15 @@ export function AvailabilityTrendTable({
       header: 'Total (min)',
       cell: ({ row }) => formatNumber(row.original.uptime + row.original.downtime, 0),
     },
-    ];
-  }, []);
+  ], []);
 
   if (isFetching || livePending) return <TableSkeleton rows={7} cols={5} />;
 
   return (
     <Card>
       <CardHeader
-        title="Each day"
-        description="Running time = time it ran ÷ (ran + stopped)"
+        title="Daily Availability Breakdown"
+        description="Availability = uptime / (uptime + downtime) × 100% per day"
         action={
           <ExportCsvButton
             filename="daily-availability"

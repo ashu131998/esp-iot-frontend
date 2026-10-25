@@ -13,6 +13,7 @@ import { resolveDateRange } from '@/lib/date-range';
 import { getQueryClient } from '@/lib/get-query-client';
 import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
+import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,14 @@ export default async function LineDetailPage({
     ? lineMachines.filter((m) => m.machine_id === sp.machine_id)
     : lineMachines;
 
+  const configsByMachine = configurations.reduce<Record<string, number>>(
+    (acc, c) => {
+      if (c.machine_id) acc[c.machine_id] = (acc[c.machine_id] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
+
   // Prefetch live metrics so the client component renders immediately on first load
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
@@ -84,7 +93,7 @@ export default async function LineDetailPage({
           href={`/factories/${factoryId}/lines`}
           className="hover:underline hover:text-foreground transition-colors"
         >
-          Lines
+          Production Lines
         </Link>
         <span>/</span>
         <span className="font-medium text-foreground">{line?.name ?? lineId}</span>
@@ -93,7 +102,11 @@ export default async function LineDetailPage({
       {line && (
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">{line.name}</h2>
+            <h2 className="text-xl font-bold">{line.name}</h2>
+            <p className="mt-0.5 font-mono text-xs text-muted">{line.line_id}</p>
+            {line.last_seen_at && (
+              <p className="mt-1 text-xs text-muted">Last seen {formatDate(line.last_seen_at)}</p>
+            )}
           </div>
           <Badge className="bg-blue-50 text-blue-700 shrink-0">
             {lineMachines.length} machine{lineMachines.length !== 1 ? 's' : ''}
@@ -118,7 +131,7 @@ export default async function LineDetailPage({
             fallback={
               <div className="space-y-6">
                 <StatGridSkeleton count={3} />
-                <TableSkeleton rows={lineMachines.length || 3} cols={4} />
+                <TableSkeleton rows={lineMachines.length || 3} cols={7} />
               </div>
             }
           >
@@ -126,6 +139,7 @@ export default async function LineDetailPage({
               factoryId={factoryId}
               lineId={activeLineId}
               machines={displayMachines}
+              configsByMachine={configsByMachine}
               from={sp.from}
               to={sp.to}
               minDate={factory.created_at}

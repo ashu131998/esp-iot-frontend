@@ -41,7 +41,7 @@ function ApplyProfileSection({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-blue-50 px-4 py-3">
-      <Field label="Saved setting">
+      <Field label="Select Profile">
         <Select
           value={selectedProfileId}
           onChange={(e) => setSelectedProfileId(e.target.value)}
@@ -57,7 +57,7 @@ function ApplyProfileSection({
 
       {selected && (
         <p className="pb-1 text-xs text-muted">
-          {selected.parameters.length} setting{selected.parameters.length !== 1 ? 's' : ''}
+          {selected.parameters.length} parameter{selected.parameters.length !== 1 ? 's' : ''}
         </p>
       )}
 
@@ -67,12 +67,12 @@ function ApplyProfileSection({
           onClick={() => applyMutation.mutate()}
           disabled={applyMutation.isPending || !selectedProfileId}
         >
-          {applyMutation.isPending ? 'Saving…' : 'Use this'}
+          {applyMutation.isPending ? 'Applying…' : 'Apply Profile'}
         </Button>
       </div>
 
       {applyMutation.isSuccess && (
-        <p className="pb-1 text-xs text-green-700">Setting applied.</p>
+        <p className="pb-1 text-xs text-green-700">Profile applied.</p>
       )}
       {applyMutation.isError && (
         <p className="pb-1 text-xs text-red-600">{applyMutation.error?.message}</p>
@@ -140,12 +140,12 @@ export function LineMachineConfig({
   return (
     <Card>
       <CardHeader
-        title="Machine settings"
-        description="Settings workers entered for each machine on this line"
+        title="Machine Configurations"
+        description="Operator-entered settings for each machine on this line"
         action={
           !open ? (
             <Button size="sm" onClick={() => setOpen(true)}>
-              + Add a setting
+              + Add Config
             </Button>
           ) : undefined
         }
@@ -153,7 +153,7 @@ export function LineMachineConfig({
 
       {open && (
         <div className="mb-6 rounded-lg border bg-slate-50 p-4">
-          <h4 className="mb-4 text-sm font-semibold">Add a setting</h4>
+          <h4 className="mb-4 text-sm font-semibold">Add Configuration</h4>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Machine">
               <Select
@@ -168,7 +168,7 @@ export function LineMachineConfig({
               </Select>
             </Field>
 
-            <Field label="Setting name">
+            <Field label="Parameter">
               <Input
                 placeholder="e.g. speed_rpm, feed_rate"
                 value={form.key}
@@ -199,7 +199,7 @@ export function LineMachineConfig({
             </Field>
 
             <div className="sm:col-span-2">
-              <Field label="Note">
+              <Field label="Description">
                 <Textarea
                   rows={2}
                   placeholder="Optional notes for this setting"
@@ -215,7 +215,7 @@ export function LineMachineConfig({
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || !canSave}
             >
-              {mutation.isPending ? 'Saving…' : 'Save'}
+              {mutation.isPending ? 'Saving…' : 'Save Configuration'}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
@@ -246,17 +246,17 @@ export function LineMachineConfig({
                 />
 
                 {configs.length === 0 ? (
-                  <p className="text-xs text-muted">No settings saved for this machine yet.</p>
+                  <p className="text-xs text-muted">No configuration recorded for this machine.</p>
                 ) : (
                   <Table className="border-0">
                     <THead>
                       <TR>
-                        <TH>Setting</TH>
+                        <TH>Parameter</TH>
                         <TH>Value</TH>
                         <TH>Unit</TH>
-                        <TH>From</TH>
-                        <TH>Note</TH>
-                        <TH>Changed</TH>
+                        <TH>Source</TH>
+                        <TH>Description</TH>
+                        <TH>Last Updated</TH>
                       </TR>
                     </THead>
                     <TBody>

@@ -72,7 +72,7 @@ export function ConfigurationForm({
 
   return (
     <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">Add a setting</h4>
+      <h4 className="mb-4 text-sm font-semibold">Add Configuration</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Scope">
           <Select

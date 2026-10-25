@@ -2,13 +2,11 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Package } from 'lucide-react';
 
-import { SummaryCard } from '@/components/ui/simple';
+import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
-import { periodPhrase } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -38,7 +36,7 @@ export function ProductionCards({
 
   const refetchInterval = useRefetchInterval(PRODUCTION_REFRESH_MS);
 
-  const { data, dataUpdatedAt } = useSuspenseQuery({
+  const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
     queryFn: ({ signal }) => api.production(factoryId, apiRange, { signal }),
     refetchInterval,
@@ -48,19 +46,14 @@ export function ProductionCards({
   useSetRefreshInfo(dataUpdatedAt, PRODUCTION_REFRESH_SEC);
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
+
   const totalUnits = sumUnits(displayMachines);
-  const top = [...displayMachines].sort((a, b) => b.units_produced - a.units_produced)[0];
 
   return (
-    <SummaryCard
-      tone="good"
-      icon={<Package className="h-5 w-5" />}
-      title={`Made ${formatUnits(totalUnits, sharedUnitLabel(displayMachines))} in ${periodPhrase(from, to)}`}
-      subtitle={
-        top?.units_produced
-          ? `Made the most: ${top.machine_name} · ${formatUnits(top.units_produced, top.unit_label)}`
-          : 'Counted by the sensors on each machine'
-      }
+    <StatCard
+      label="Total Units Produced"
+      value={formatUnits(totalUnits, sharedUnitLabel(displayMachines))}
+      sub={`From proximity sensor detections${isFetching ? ' · updating…' : ''}`}
     />
   );
 }

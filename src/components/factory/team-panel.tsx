@@ -14,8 +14,6 @@ import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { AuthUser } from '@/lib/auth-types';
 
-
-const STATUS_WORD: Record<string, string> = { active: 'Yes', pending: 'Waiting', disabled: 'No', rejected: 'No' };
 export function TeamPanel({
   factoryId,
   pendingUsers,
@@ -65,8 +63,8 @@ export function TeamPanel({
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Card className="p-6">
         <CardHeader
-          title="Waiting to join"
-          description="People who asked to use this factory's dashboard"
+          title="Pending approvals"
+          description="Employees awaiting access to this factory"
           action={
             <ExportCsvButton
               filename="pending-approvals"
@@ -77,7 +75,7 @@ export function TeamPanel({
           }
         />
         {pendingUsers.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">Nobody is waiting.</p>
+          <p className="mt-4 text-sm text-muted">No pending employee signups.</p>
         ) : (
           <Table className="mt-4">
             <THead>
@@ -116,7 +114,7 @@ export function TeamPanel({
 
       <Card className="p-6">
         <CardHeader
-          title="Everyone with access"
+          title="All factory users"
           action={
             <ExportCsvButton
               filename="factory-users"
@@ -127,23 +125,23 @@ export function TeamPanel({
           }
         />
         {users.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No one yet.</p>
+          <p className="mt-4 text-sm text-muted">No users found.</p>
         ) : (
           <>
             <Table className="mt-4 border-0">
               <THead>
                 <TR>
-                  <TH>Name</TH>
+                  <TH>Username</TH>
                   <TH>Role</TH>
-                  <TH>Can sign in?</TH>
+                  <TH>Status</TH>
                 </TR>
               </THead>
               <TBody>
                 {users.map((u) => (
                   <TR key={u.user_id}>
                     <TD>{u.username}</TD>
-                    <TD className="capitalize">{u.role}</TD>
-                    <TD>{STATUS_WORD[u.status] ?? u.status}</TD>
+                    <TD>{u.role}</TD>
+                    <TD>{u.status}</TD>
                   </TR>
                 ))}
               </TBody>

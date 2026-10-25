@@ -19,8 +19,8 @@ import type {
 
 /** Common floor tasks operators are scheduled for. */
 const TASK_PRESETS = [
-  'Operate looms',
-  'Loom setup / warp change',
+  'Operate machines',
+  'Machine setup / changeover',
   'Preventive maintenance',
   'Quality inspection',
   'Breakdown repair',
@@ -159,14 +159,14 @@ export function ScheduleForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} size="sm">
-        + Give a job
+        + Schedule Task
       </Button>
     );
   }
 
   return (
     <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">Give a worker a job</h4>
+      <h4 className="mb-4 text-sm font-semibold">Schedule a Task</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Worker">
           <Select
@@ -182,10 +182,10 @@ export function ScheduleForm({
           </Select>
         </Field>
 
-        <Field label="Job">
+        <Field label="Function / Task">
           <Input
             list="task-presets"
-            placeholder="e.g. Operate looms"
+            placeholder="e.g. Operate machines"
             value={form.task}
             onChange={(e) => setForm({ ...form, task: e.target.value })}
           />
@@ -250,7 +250,7 @@ export function ScheduleForm({
         </Field>
 
         <div className="sm:col-span-2">
-          <Field label={`Looms / Machines${(form.machine_ids?.length ?? 0) > 0 ? ` (${form.machine_ids!.length} selected)` : ''}`}>
+          <Field label={`Machines${(form.machine_ids?.length ?? 0) > 0 ? ` (${form.machine_ids!.length} selected)` : ''}`}>
             <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border bg-white p-3">
               {[...machinesByLine.entries()].map(([lineId, lineMachines]) => (
                 <div key={lineId}>
@@ -320,14 +320,14 @@ export function ScheduleForm({
             ? 'Scheduling…'
             : scheduleDates.length > 1
               ? `Save Schedule (${scheduleDates.length} days)`
-              : 'Save'}
+              : 'Save Schedule'}
         </Button>
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>
         {!canSave && (
           <p className="self-center text-xs text-muted">
-            Pick a worker, a task, a date, and at least one loom.
+            Pick a worker, a task, a date, and at least one machine.
           </p>
         )}
         {mutation.isError && (

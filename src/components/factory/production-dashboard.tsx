@@ -35,8 +35,8 @@ export function ProductionDashboard({
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={5} />}>
       {shown('production.cards') && <ProductionCards factoryId={factoryId} from={from} to={to} />}
-      {shown('production.table') && <ProductionTable factoryId={factoryId} from={from} to={to} />}
       {shown('production.chart') && <ProductionChartSection factoryId={factoryId} from={from} to={to} />}
+      {shown('production.table') && <ProductionTable factoryId={factoryId} from={from} to={to} />}
     </QuerySuspense>
   );
 }

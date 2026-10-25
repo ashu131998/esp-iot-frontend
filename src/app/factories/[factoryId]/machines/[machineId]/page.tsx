@@ -44,7 +44,7 @@ export default async function MachineDetailPage({
           href={`/factories/${factoryId}/lines`}
           className="hover:underline hover:text-foreground transition-colors"
         >
-          Lines
+          Production Lines
         </Link>
         {line && (
           <>
@@ -64,14 +64,32 @@ export default async function MachineDetailPage({
       {machine && (
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">{machine.name}</h2>
-            {line && <p className="mt-1 text-sm text-muted">{line.name}</p>}
+            <h2 className="text-xl font-bold">{machine.name}</h2>
+            <p className="mt-0.5 font-mono text-xs text-muted">{machine.machine_id}</p>
+            {machine.type && (
+              <p className="mt-1 text-xs text-muted">Type: {machine.type}</p>
+            )}
+            {line && (
+              <p className="mt-1 text-xs text-muted">Line: {line.name}</p>
+            )}
           </div>
-          {machine.target_units_per_hour ? (
-            <Badge className="shrink-0 bg-blue-50 text-blue-700">
-              Should make {[machine.target_units_per_hour, machine.unit_label].filter(Boolean).join(' ')} an hour
-            </Badge>
-          ) : null}
+          <div className="flex flex-col gap-2 shrink-0">
+            {machine.target_cycle_time_sec && (
+              <Badge className="bg-green-50 text-green-700">
+                Target Cycle: {machine.target_cycle_time_sec}s
+              </Badge>
+            )}
+            {machine.target_units_per_hour && (
+              <Badge className="bg-blue-50 text-blue-700">
+                Target: {machine.target_units_per_hour} {machine.unit_label || 'units'}/hr
+              </Badge>
+            )}
+            {((machine.rotations_per_unit ?? 1) !== 1 || machine.unit_label) && (
+              <Badge className="bg-slate-100 text-slate-700">
+                1 {machine.unit_label || 'unit'} = {machine.rotations_per_unit ?? 1} rotations
+              </Badge>
+            )}
+          </div>
         </div>
       )}
 

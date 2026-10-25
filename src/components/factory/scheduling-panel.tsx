@@ -185,14 +185,14 @@ function SchedulingFilterBar({
             machineId && 'border-primary/50 bg-primary/5',
           )}
         >
-          <span className="font-medium text-muted">Loom</span>
+          <span className="font-medium text-muted">Machine</span>
           <span className={cn('max-w-[120px] truncate font-medium', machineId ? 'text-primary' : 'text-foreground')}>
             {selectedMachine ? selectedMachine.name : 'All'}
           </span>
           {machineId ? (
             <span
               role="button"
-              aria-label="Clear loom filter"
+              aria-label="Clear machine filter"
               className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
               onClick={(e) => { e.stopPropagation(); applyMachine(undefined); }}
             >
@@ -216,7 +216,7 @@ function SchedulingFilterBar({
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Search looms…"
+                    placeholder="Search machines…"
                     className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
                     value={machineSearch}
                     onChange={(e) => setMachineSearch(e.target.value)}
@@ -232,7 +232,7 @@ function SchedulingFilterBar({
                     !machineId && 'bg-accent font-medium',
                   )}
                 >
-                  All Looms
+                  All Machines
                 </button>
                 {Object.entries(groupedMachines).map(([lineId, lineMs]) => (
                   <div key={lineId}>
@@ -255,7 +255,7 @@ function SchedulingFilterBar({
                   </div>
                 ))}
                 {filteredMachines.length === 0 && (
-                  <p className="px-3 py-4 text-center text-xs text-muted">No looms found</p>
+                  <p className="px-3 py-4 text-center text-xs text-muted">No machines found</p>
                 )}
               </div>
             </div>
@@ -396,7 +396,7 @@ export function SchedulingPanel({
         </span>
       ),
     },
-    { accessorKey: 'task', header: 'Job' },
+    { accessorKey: 'task', header: 'Task' },
     {
       id: 'shift',
       accessorFn: (s) => shiftName(s.shift_id),
@@ -421,7 +421,7 @@ export function SchedulingPanel({
     },
     {
       id: 'looms',
-      header: 'Looms',
+      header: 'Machines',
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex max-w-[14rem] flex-wrap gap-1">
@@ -498,8 +498,8 @@ export function SchedulingPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Jobs given" value={String(stats.total)} />
-        <StatCard label="Not done yet" value={String(stats.active)} />
+        <StatCard label="Total assignments" value={String(stats.total)} />
+        <StatCard label="Active (open)" value={String(stats.active)} />
         <StatCard label="Day shift" value={String(stats.dayShift)} sub="06:00 – 18:00" />
         <StatCard label="Night shift" value={String(stats.nightShift)} sub="18:00 – 06:00" />
       </div>
@@ -508,8 +508,8 @@ export function SchedulingPanel({
 
       <Card>
         <CardHeader
-          title="Who works where"
-          description="Give each worker a job, a shift, a day, the looms to run and the setting to use"
+          title="Task Schedule"
+          description="Assign each worker a function, shift, date, machines and a machine configuration profile"
           action={
             canWriteFactory ? (
               <ScheduleForm
@@ -525,7 +525,7 @@ export function SchedulingPanel({
 
         {deleteMutation.isError && (
           <p className="mx-4 mb-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            Couldn&apos;t delete job: {(deleteMutation.error as Error).message}
+            Couldn&apos;t delete task: {(deleteMutation.error as Error).message}
           </p>
         )}
 
@@ -540,8 +540,8 @@ export function SchedulingPanel({
           }
           emptyMessage={
             dateFilter || machineFilter
-              ? 'No jobs match this day or machine.'
-              : 'No jobs given yet. Press "Give a job" to add one.'
+              ? 'No tasks match the selected filters.'
+              : 'No tasks scheduled yet. Use "Schedule Task" to assign a worker.'
           }
         />
       </Card>

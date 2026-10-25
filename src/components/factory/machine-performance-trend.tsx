@@ -68,23 +68,23 @@ export function MachinePerformanceTrend({
   if (chartData.length === 0) {
     return (
       <Card>
-        <CardHeader title="On target, day by day" description="Nothing to show for these dates" />
-        <div className="px-6 py-4 text-center text-sm text-muted">No data yet</div>
+        <CardHeader title="Performance Trend" description="No data available for the selected period" />
+        <div className="px-6 py-4 text-center text-sm text-muted">No performance data</div>
       </Card>
     );
   }
 
   const series = [
-    { name: 'On target %', data: chartData.map((d) => d.performance) },
-    { name: 'Running time %', data: chartData.map((d) => d.availability) },
-    { name: 'Made vs target %', data: chartData.map((d) => d.throughput) },
+    { name: 'Performance (P)', data: chartData.map((d) => d.performance) },
+    { name: 'Availability (A)', data: chartData.map((d) => d.availability) },
+    { name: 'Throughput (A×P)', data: chartData.map((d) => d.throughput) },
   ];
 
   return (
     <Card>
       <CardHeader
-        title="On target, day by day"
-        description="On target = running time × made vs target"
+        title="Performance Trend"
+        description="Daily Performance (P), Availability (A) and Throughput (A × P) over the selected period"
       />
       <div className="px-6 pb-6">
         <ApexChart type="line" series={series} options={options} height={300} />

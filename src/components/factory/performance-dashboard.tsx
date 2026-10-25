@@ -27,8 +27,8 @@ export function PerformanceDashboard({ factoryId }: { factoryId: string }) {
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={7} />}>
       {shown('performance.cards') && <PerformanceCards factoryId={factoryId} />}
-      {shown('performance.table') && <PerformanceTable factoryId={factoryId} />}
       {shown('performance.chart') && <PerformanceChartSection factoryId={factoryId} />}
+      {shown('performance.table') && <PerformanceTable factoryId={factoryId} />}
     </QuerySuspense>
   );
 }

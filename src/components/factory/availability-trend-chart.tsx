@@ -69,7 +69,7 @@ export function AvailabilityTrendChart({
     yaxis: {
       min: 0,
       max: 100,
-      title: { text: 'Running time %', style: { fontWeight: 500 } },
+      title: { text: 'Availability %', style: { fontWeight: 500 } },
     },
     tooltip: {
       ...baseChartOptions.tooltip,
@@ -77,7 +77,7 @@ export function AvailabilityTrendChart({
         const d = chartData[dataPointIndex];
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
           <p class="font-medium">Date: ${d.date}${d.is_live ? ' (live)' : ''}</p>
-          <p style="color:#3b82f6">Running time: ${formatNumber(d.availability, 1)}%</p>
+          <p style="color:#3b82f6">Availability: ${formatNumber(d.availability, 1)}%</p>
         </div>`;
       },
     },
@@ -90,7 +90,7 @@ export function AvailabilityTrendChart({
   if (!chartData || chartData.length === 0) {
     return (
       <Card>
-        <CardHeader title="Running time, day by day" description="Nothing to show for these dates" />
+        <CardHeader title="Availability Trend" description="No data available for the selected period" />
         <div className="px-6 py-4 text-center text-sm text-muted">No availability data</div>
       </Card>
     );
@@ -99,17 +99,17 @@ export function AvailabilityTrendChart({
   const hasLive = chartData.some((d) => d.is_live);
 
   const timeRangeDescription = isShowingToday
-    ? `Today from 12:00 AM to ${format(toDate, 'h:mm a')}`
-    : 'How much this machine ran each day';
+    ? `12:00 AM to ${format(toDate, 'h:mm a')} today`
+    : 'Daily availability percentage over the selected period';
 
   return (
     <Card>
       <CardHeader
-        title="Running time, day by day"
-        description={`${timeRangeDescription}.${hasLive ? ' Orange dot = today, not finished yet.' : ''}`}
+        title="Availability Trend"
+        description={`${timeRangeDescription}.${hasLive ? " Orange dots = today's shift (still in progress)." : ''}`}
       />
       <div className="px-6 pb-6">
-        <ApexChart type="line" series={[{ name: 'Running time %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />
+        <ApexChart type="line" series={[{ name: 'Availability %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />
       </div>
     </Card>
   );

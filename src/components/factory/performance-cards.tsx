@@ -2,9 +2,8 @@
 
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { SummaryCard } from '@/components/ui/simple';
+import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { runTone, wholePercent } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -12,7 +11,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { averageKnown } from '@/lib/utils';
+import { averageKnown, formatPercent } from '@/lib/utils';
 
 const PERFORMANCE_REFRESH_MS = 60_000;
 const PERFORMANCE_REFRESH_SEC = 60;
@@ -40,15 +39,10 @@ export function PerformanceCards({ factoryId }: { factoryId: string }) {
       : data.avg_performance_percent;
 
   return (
-    <SummaryCard
-      tone={runTone(avgPerformance)}
-      badge={wholePercent(avgPerformance)}
-      title={avgPerformance == null ? 'Nothing to measure yet' : `Machines are ${wholePercent(avgPerformance)} on target`}
-      subtitle={
-        avgPerformance == null
-          ? 'Needs a target and a piece count on each machine'
-          : '100% = ran the whole time and made the full target'
-      }
+    <StatCard
+      label="Avg Performance (OEE-like)"
+      value={formatPercent(avgPerformance)}
+      sub="Availability × throughput vs target"
     />
   );
 }

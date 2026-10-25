@@ -14,7 +14,7 @@ import { api } from '@/lib/api';
 import type { CreateWorkerInput, Worker } from '@/lib/types';
 
 const ROLE_OPTIONS = [
-  'Loom Operator',
+  'Machine Operator',
   'Weaver',
   'Maintenance Technician',
   'Quality Inspector',
@@ -71,7 +71,7 @@ export function WorkerRoster({
     },
     {
       accessorKey: 'employee_code',
-      header: 'Worker no.',
+      header: 'Code',
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee_code ?? '—'}</span>,
     },
     { accessorKey: 'role', header: 'Role' },
@@ -95,7 +95,7 @@ export function WorkerRoster({
     },
     {
       accessorKey: 'email',
-      header: 'Email',
+      header: 'App Login',
       enableSorting: false,
       cell: ({ row }) => (
         <span className="text-muted">
@@ -111,7 +111,7 @@ export function WorkerRoster({
       header: 'Status',
       cell: ({ row }) => (
         <Badge className={row.original.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-          {row.original.status === 'active' ? 'Working' : 'Not working'}
+          {row.original.status}
         </Badge>
       ),
     },
@@ -140,11 +140,11 @@ export function WorkerRoster({
     <Card>
       <CardHeader
         title="Workers"
-        description={`${workers.length} worker${workers.length === 1 ? '' : 's'}`}
+        description={`${workers.length} worker${workers.length === 1 ? '' : 's'} on the roster`}
         action={
           !readOnly && !open ? (
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-              + Add a worker
+              + Add Worker
             </Button>
           ) : undefined
         }
@@ -212,7 +212,7 @@ export function WorkerRoster({
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !canSubmit}
             >
-              {createMutation.isPending ? 'Saving…' : 'Add'}
+              {createMutation.isPending ? 'Saving…' : 'Add Worker'}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel

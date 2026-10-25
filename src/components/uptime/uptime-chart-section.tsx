@@ -36,7 +36,7 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Loom Uptime vs Downtime" description="Running/stopped hours per machine" />
+      <CardHeader title="Uptime vs Downtime" description="Running/stopped hours per machine" />
       <StackedBarChart
         data={summaryData}
         keys={[

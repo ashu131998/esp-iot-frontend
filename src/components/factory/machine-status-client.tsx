@@ -2,65 +2,66 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
-import { ArrowDownCircle, ArrowUpCircle, WifiOff } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Settings2, WifiOff } from 'lucide-react';
 
+import { StatCard, MachineStatusBadge } from '@/components/ui/badge';
+import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { ListGroup, ListRow, NumberTile, NumberTiles, SummaryCard, TONE_DOT } from '@/components/ui/simple';
 import { MachineAvailabilityTrends } from '@/components/factory/machine-availability-trends';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
 import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
-import {
-  STATE_TONE,
-  STATE_WORD,
-  humanMinutes,
-  machineState,
-  periodPhrase,
-  plural,
-  runTone,
-  wholePercent,
-  type MachineState,
-} from '@/lib/plain-words';
-import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { unitsMade } from '@/lib/overview-figures';
-import { cn, formatAlertVia, formatNumber, formatUnits } from '@/lib/utils';
+import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
+import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
-import type { UptimeSegment } from '@/lib/types';
+import type { UptimeSegment, UptimeStatus } from '@/lib/types';
 
 const REFRESH_INTERVAL_MS = 60_000;
+// Summary cards per row, by how many are shown (literal class names for Tailwind).
+const GRID_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
 
-/** Worst first: a stopped sensor decides the headline over a running one. */
-const STATE_RANK: Record<MachineState, number> = { stopped: 0, no_signal: 1, running: 2 };
+function humanDuration(ms: number): string {
+  const min = Math.max(1, Math.round(ms / 60000));
+  const h = Math.floor(min / 60);
+  return h > 0 ? `${h}h ${min % 60}m` : `${min}m`;
+}
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
-/** What one sensor stream is doing now, for how long, and how often it stopped in the last 24h. */
-function streamStory(timeline: UptimeSegment[]) {
+/**
+ * Plain-language summary of the last 24h: current state + how long, plus
+ * stoppage count and total downtime, so the status is readable at a glance
+ * without decoding the timeline strip.
+ */
+function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
   const last = timeline.at(-1);
   if (!last) return null;
-  const state = machineState(last.status);
-  const forMin = (Date.now() - new Date(last.from).getTime()) / 60_000;
-  const stops = timeline.filter((s) => s.status === 'down');
-  const stoppedMin = stops.reduce((acc, s) => acc + s.duration_seconds, 0) / 60;
-  return {
-    state,
-    headline: `${STATE_WORD[state]} for ${humanMinutes(Math.max(1, forMin))}`,
-    since: `Since ${timeLabel(last.from)}`,
-    history:
-      stops.length === 0
-        ? 'No stops in the last 24 hours'
-        : `${plural(stops.length, 'stop')} in the last 24 hours · ${humanMinutes(stoppedMin)} in total`,
-  };
-}
 
-const STATE_ICON: Record<MachineState, React.ReactNode> = {
-  running: <ArrowUpCircle className="h-5 w-5" />,
-  stopped: <ArrowDownCircle className="h-5 w-5" />,
-  no_signal: <WifiOff className="h-5 w-5" />,
-};
+  const state: UptimeStatus = last.status;
+  const isRunning = state === 'up';
+  const isNoSignal = state === 'idle' || state === 'offline';
+  const sinceMs = Date.now() - new Date(last.from).getTime();
+  const downSegments = timeline.filter((s) => s.status === 'down');
+  const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);
+
+  const headline = isRunning
+    ? `${machineName} is running — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+    : isNoSignal
+      ? `${machineName} — no signal for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+      : `${machineName} is stopped — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`;
+
+  const history =
+    downSegments.length === 0
+      ? 'No stoppages in the last 24 hours.'
+      : `${downSegments.length} stoppage${downSegments.length === 1 ? '' : 's'} in the last 24 hours, ` +
+        `totalling ${humanDuration(totalDownSec * 1000)} of downtime.`;
+
+  return { state, isRunning, headline, history };
+}
 
 export function MachineStatusClient({
   factoryId,
@@ -86,9 +87,8 @@ export function MachineStatusClient({
   const shown = useShown();
   const energyOn = shown('energy');
   const productionOn = shown('production');
-  const period = periodPhrase(from, to);
 
-  const { data, dataUpdatedAt } = useSuspenseQuery({
+  const { data, isFetching, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['machine-status', factoryId, machineId, from ?? null, to ?? null],
     queryFn: async ({ signal }) => {
       const now = new Date();
@@ -126,106 +126,122 @@ export function MachineStatusClient({
 
   const { availability, energy, production, uptime24h } = data;
 
+  // The metrics endpoints return every machine in the factory (machine_id is not a server filter).
   const machineAvail = availability.machines.find((m) => m.machine_id === machineId);
   const machineEnergy = energy.machines.find((m) => m.machine_id === machineId);
   const machineProduction = production.machines.find((m) => m.machine_id === machineId);
-  const streams = expandUptimeMachines(uptime24h.machines).map((s) => ({ ...s, story: streamStory(s.timeline ?? []) }));
-  const lead = [...streams]
-    .filter((s) => s.story)
-    .sort((a, b) => STATE_RANK[a.story!.state] - STATE_RANK[b.story!.state])[0]?.story;
+  const uptimeRows = expandUptimeMachines(uptime24h.machines);
   const latestReport = reportsData?.reports?.[0];
   const openReport = latestReport && !latestReport.resolved_at ? latestReport : null;
   const currentConfig = selectionsData?.selections?.[0];
 
-  const details: { title: string; detail: string }[] = [];
-  if (lead?.state === 'stopped') {
-    details.push({
-      title: 'Why it stopped',
-      detail: openReport?.reason_label
-        ? `${openReport.reason_label}${openReport.reported_by_name ? ` · told by ${openReport.reported_by_name} (${formatAlertVia(openReport.reported_via)})` : ''}`
-        : 'Waiting for the worker to give a reason on the app',
-    });
-  }
-  if (lead?.state === 'running' && latestReport?.resolved_at && latestReport.reason_label) {
-    details.push({
-      title: 'Last stop',
-      detail: `${latestReport.reason_label}${latestReport.reported_by_name ? ` · told by ${latestReport.reported_by_name}` : ''} · fixed at ${timeLabel(latestReport.resolved_at)}`,
-    });
-  }
-  if (currentConfig) {
-    details.push({
-      title: 'Setting in use',
-      detail: `${currentConfig.profile_name ?? currentConfig.profile_id}${currentConfig.selected_by_name ? ` · chosen by ${currentConfig.selected_by_name}` : ''}`,
-    });
-  }
-
   return (
     <div className="space-y-6">
-      {lead ? (
-        <SummaryCard
-          tone={STATE_TONE[lead.state]}
-          icon={STATE_ICON[lead.state]}
-          title={lead.headline}
-          subtitle={`${lead.since} · ${lead.history}`}
-        />
-      ) : (
-        <SummaryCard tone="idle" icon={STATE_ICON.no_signal} title="No data from this machine yet" />
-      )}
-
-      {details.length > 0 && (
-        <ListGroup title="Details">
-          {details.map((d) => (
-            <ListRow key={d.title} title={d.title} detail={d.detail} />
-          ))}
-        </ListGroup>
-      )}
-
-      <NumberTiles>
-        <NumberTile
-          label="Running time"
-          value={wholePercent(machineAvail?.availability_percent)}
-          hint={`ran ${humanMinutes(machineAvail?.uptime_minutes ?? 0)} · stopped ${humanMinutes(machineAvail?.downtime_minutes ?? 0)}`}
-          tone={runTone(machineAvail?.availability_percent)}
+      {/* Summary stats */}
+      <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
+        {energyOn && (
+          <StatCard
+            label="Total Energy"
+            value={machineEnergy?.energy_kwh != null ? `${formatNumber(machineEnergy.energy_kwh)} kWh` : '—'}
+            sub={machineEnergy?.avg_amps != null ? `Avg: ${formatNumber(machineEnergy.avg_amps)}A` : 'No data'}
+          />
+        )}
+        <StatCard
+          label="Availability"
+          value={formatPercent(machineAvail?.availability_percent ?? null)}
+          sub={`${formatNumber(machineAvail?.uptime_minutes ?? 0, 0)}m up · ${formatNumber(machineAvail?.downtime_minutes ?? 0, 0)}m down`}
         />
         {productionOn && (
-          <NumberTile
-            label="Made"
+          <StatCard
+            label="Units Produced"
             value={formatUnits(unitsMade(machineProduction), machineProduction?.unit_label)}
-            hint={period}
+            sub="From proximity sensor detections"
           />
         )}
-        {energyOn && (
-          <NumberTile
-            label="Power used"
-            value={machineEnergy?.energy_kwh != null ? `${formatNumber(machineEnergy.energy_kwh)} kWh` : '—'}
-            hint={period}
-          />
-        )}
-      </NumberTiles>
+      </div>
 
-      {streams.length > 0 && (
-        <ListGroup title="Last 24 hours" hint="Green = running · red = stopped · grey = no signal">
-          {streams.map((s) => (
-            <div key={s.stream_key} className="flex flex-col gap-2 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span
-                  className={cn('h-2.5 w-2.5 shrink-0 rounded-full', TONE_DOT[STATE_TONE[s.story?.state ?? 'no_signal']])}
-                />
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-foreground">
-                    {streams.length === 1 ? 'This machine' : s.display_name}
-                  </p>
-                  <p className="truncate text-sm text-muted">
-                    {s.story ? `${s.story.headline} · ${s.story.history}` : 'No data'}
-                  </p>
-                </div>
-              </div>
-              <MiniTimeline segments={s.timeline ?? []} />
-            </div>
-          ))}
-        </ListGroup>
+      {uptimeRows.length > 1 && (
+        <p className="text-sm text-muted">
+          This machine has {uptimeRows.length} sensor streams — each timeline is shown below.
+        </p>
       )}
 
+      {uptimeRows.map((stream) => {
+        const streamNarrative = statusNarrative(stream.display_name, stream.timeline ?? []);
+        const streamStatus = stream.timeline.at(-1)?.status ?? 'no_data';
+        return (
+          <Card key={stream.stream_key}>
+            <CardHeader
+              title={stream.display_name}
+              description={`Current status · last 24h${isFetching ? ' · updating…' : ''}`}
+            />
+            <div className="px-6 py-4">
+              {streamNarrative && (
+                <div
+                  className={`mb-4 flex gap-3 rounded-lg border-l-4 p-4 ${
+                    streamNarrative.isRunning
+                      ? 'border-l-emerald-500 bg-emerald-50/60'
+                      : streamNarrative.state === 'idle' || streamNarrative.state === 'offline'
+                        ? 'border-l-gray-400 bg-gray-50'
+                        : 'border-l-red-500 bg-red-50/60'
+                  }`}
+                >
+                  {streamNarrative.isRunning ? (
+                    <ArrowUpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                  ) : streamNarrative.state === 'idle' || streamNarrative.state === 'offline' ? (
+                    <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
+                  ) : (
+                    <ArrowDownCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                  )}
+                  <div className="text-sm">
+                    <p className="font-semibold">{streamNarrative.headline}</p>
+                    {streamNarrative.state === 'down' && openReport && (
+                      <p className="mt-1 text-muted">
+                        {openReport.reason_label
+                          ? `Reported reason: ${openReport.reason_label}` +
+                            (openReport.reported_by_name
+                              ? ` (${openReport.reported_by_name} via ${formatAlertVia(openReport.reported_via)})`
+                              : '')
+                          : 'The assigned worker has been asked for the reason on the mobile app — no reply yet.'}
+                      </p>
+                    )}
+                    {streamNarrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (
+                      <p className="mt-1 text-muted">
+                        Last stoppage: {latestReport.reason_label}
+                        {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
+                        , resolved at {timeLabel(latestReport.resolved_at)}.
+                      </p>
+                    )}
+                    <p className="mt-1 text-muted">{streamNarrative.history}</p>
+                    {currentConfig && (
+                      <p className="mt-1 flex items-center gap-1.5 text-muted">
+                        <Settings2 className="h-3.5 w-3.5" />
+                        Running configuration:{' '}
+                        <span className="font-medium text-foreground">
+                          {currentConfig.profile_name ?? currentConfig.profile_id}
+                        </span>
+                        {currentConfig.selected_by_name
+                          ? ` — selected by ${currentConfig.selected_by_name} via ${currentConfig.selected_via}`
+                          : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
+                <span className="text-sm font-medium">Status</span>
+                <div className="flex justify-end">
+                  <MachineStatusBadge status={streamStatus} />
+                </div>
+                <span className="text-sm font-medium">Timeline (Last 24h)</span>
+                <MiniTimeline segments={stream.timeline ?? []} />
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+
+      {/* Lazy-loaded availability trends */}
       <MachineAvailabilityTrends
         factoryId={factoryId}
         machineId={machineId}

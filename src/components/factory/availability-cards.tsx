@@ -17,7 +17,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { averageKnown, formatNumber, formatPercent } from '@/lib/utils';
+import { averageKnown, formatPercent } from '@/lib/utils';
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
@@ -50,12 +50,21 @@ export function AvailabilityCards({
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
+  const machineCount = displayMachines.length;
   const totalUptime = displayMachines.reduce((s, m) => s + m.uptime_minutes, 0);
   const totalDowntime = displayMachines.reduce((s, m) => s + m.downtime_minutes, 0);
+  const uptimeMin =
+    machineCount > 0 ? totalUptime / machineCount : 0;
+  const downtimeMin =
+    machineCount > 0 ? totalDowntime / machineCount : 0;
   const avgAvailability =
-    displayMachines.length > 0
+    machineCount > 0
       ? averageKnown(displayMachines.map((m) => m.availability_percent))
       : data.avg_availability_percent;
+  const multiMachine = machineCount > 1;
+  const timeSubtitle = multiMachine
+    ? `Average per machine: ran ${humanMinutes(uptimeMin)} · stopped ${humanMinutes(downtimeMin)}`
+    : `Ran ${humanMinutes(uptimeMin)} · stopped ${humanMinutes(downtimeMin)}`;
 
   return (
     <>
@@ -65,15 +74,22 @@ export function AvailabilityCards({
         title={
           avgAvailability == null
             ? 'No running data yet'
-            : `Machines ran ${wholePercent(avgAvailability)} of ${periodPhrase(from, to)}`
+            : multiMachine
+              ? `On average, machines ran ${wholePercent(avgAvailability)} of ${periodPhrase(from, to)}`
+              : `Machine ran ${wholePercent(avgAvailability)} of ${periodPhrase(from, to)}`
         }
-        subtitle={`Ran ${humanMinutes(totalUptime)} · stopped ${humanMinutes(totalDowntime)} (all machines added up)`}
+        subtitle={timeSubtitle}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Avg Availability" value={formatPercent(avgAvailability)} />
-        <StatCard label="Uptime" value={`${formatNumber(totalUptime, 0)} min`} />
-        <StatCard label="Downtime" value={`${formatNumber(totalDowntime, 0)} min`} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          label={multiMachine ? 'Avg uptime per machine' : 'Uptime'}
+          value={humanMinutes(uptimeMin)}
+        />
+        <StatCard
+          label={multiMachine ? 'Avg downtime per machine' : 'Downtime'}
+          value={humanMinutes(downtimeMin)}
+        />
       </div>
 
       {data.by_shift && data.by_shift.length > 0 && !machineId && (

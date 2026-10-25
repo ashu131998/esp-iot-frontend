@@ -12,7 +12,8 @@ import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { humanMinutes } from '@/lib/plain-words';
+import { formatPercent } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
 
@@ -86,19 +87,19 @@ export function AvailabilityTrendTable({
     },
     {
       accessorKey: 'uptime',
-      header: 'Uptime (min)',
-      cell: ({ row }) => formatNumber(row.original.uptime, 0),
+      header: 'Uptime',
+      cell: ({ row }) => humanMinutes(row.original.uptime),
     },
     {
       accessorKey: 'downtime',
-      header: 'Downtime (min)',
-      cell: ({ row }) => formatNumber(row.original.downtime, 0),
+      header: 'Downtime',
+      cell: ({ row }) => humanMinutes(row.original.downtime),
     },
     {
       id: 'total',
       accessorFn: (row) => row.uptime + row.downtime,
-      header: 'Total (min)',
-      cell: ({ row }) => formatNumber(row.original.uptime + row.original.downtime, 0),
+      header: 'Total',
+      cell: ({ row }) => humanMinutes(row.original.uptime + row.original.downtime),
     },
   ], []);
 

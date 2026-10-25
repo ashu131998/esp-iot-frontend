@@ -22,6 +22,7 @@ import type {
   UptimeMachine,
 } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
+import { humanMinutes } from '@/lib/plain-words';
 import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -79,6 +80,12 @@ export function LineStatusClient({
 
   const { availability, energy, production, uptime24h } = data;
 
+  const lineMachineCount = availability.machines.length;
+  const lineUptimeMin =
+    lineMachineCount > 0 ? availability.total_uptime_minutes / lineMachineCount : 0;
+  const lineDowntimeMin =
+    lineMachineCount > 0 ? availability.total_downtime_minutes / lineMachineCount : 0;
+
   const machineRows = useMemo(() => sortByMachineName(machines), [machines]);
 
   const availByMachine = availability.machines.reduce<Record<string, AvailabilityMachine>>(
@@ -111,7 +118,7 @@ export function LineStatusClient({
         <StatCard
           label="Avg Availability"
           value={formatPercent(availability.avg_availability_percent)}
-          sub={`${formatNumber(availability.total_uptime_minutes, 0)} min running · ${formatNumber(availability.total_downtime_minutes, 0)} min stopped`}
+          sub={`${humanMinutes(lineUptimeMin)} running · ${humanMinutes(lineDowntimeMin)} stopped (avg per machine)`}
         />
         {productionOn && (
           <StatCard

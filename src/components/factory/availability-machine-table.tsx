@@ -22,6 +22,7 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
+import { humanMinutes } from '@/lib/plain-words';
 import { formatPercent, statusLabel } from '@/lib/utils';
 
 export function AvailabilityMachineTable({
@@ -124,8 +125,8 @@ export function AvailabilityMachineTable({
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
-              <TD>{m.uptime_minutes} min</TD>
-              <TD>{m.downtime_minutes} min</TD>
+              <TD>{humanMinutes(m.uptime_minutes)}</TD>
+              <TD>{humanMinutes(m.downtime_minutes)}</TD>
               <TD>{formatPercent(m.availability_percent)}</TD>
               <TD>
                 {(uptimeRowsByMachine[m.machine_id]?.length ?? 0) > 1 ? (

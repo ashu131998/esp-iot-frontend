@@ -13,6 +13,7 @@ import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
 import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
 import { unitsMade } from '@/lib/overview-figures';
+import { humanMinutes } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { formatAlertVia, formatNumber, formatPercent, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
@@ -149,7 +150,7 @@ export function MachineStatusClient({
         <StatCard
           label="Availability"
           value={formatPercent(machineAvail?.availability_percent ?? null)}
-          sub={`${formatNumber(machineAvail?.uptime_minutes ?? 0, 0)}m up · ${formatNumber(machineAvail?.downtime_minutes ?? 0, 0)}m down`}
+          sub={`${humanMinutes(machineAvail?.uptime_minutes ?? 0)} up · ${humanMinutes(machineAvail?.downtime_minutes ?? 0)} down`}
         />
         {productionOn && (
           <StatCard

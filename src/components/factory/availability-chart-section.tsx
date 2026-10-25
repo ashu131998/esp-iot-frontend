@@ -44,8 +44,8 @@ export function AvailabilityChartSection({
 
   const chartData = displayMachines.map((m) => ({
     name: m.machine_name,
-    uptime: m.uptime_minutes,
-    downtime: m.downtime_minutes,
+    uptime: m.uptime_minutes / 60,
+    downtime: m.downtime_minutes / 60,
   }));
 
   return (
@@ -54,8 +54,8 @@ export function AvailabilityChartSection({
       <StackedBarChart
         data={chartData}
         keys={[
-          { key: 'uptime', color: '#10b981', label: 'Uptime (min)' },
-          { key: 'downtime', color: '#ef4444', label: 'Downtime (min)' },
+          { key: 'uptime', color: '#10b981', label: 'Uptime (h)' },
+          { key: 'downtime', color: '#ef4444', label: 'Downtime (h)' },
         ]}
       />
     </Card>

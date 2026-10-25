@@ -24,6 +24,8 @@ interface AlertItem {
   id: string;
   severity: AlertSeverity;
   noSignal: boolean;
+  /** No current sensor mapped to it at all: it cannot be watched, which is not a lost signal. */
+  noSensor: boolean;
   machineId: string;
   machineName: string;
   lineId: string;
@@ -34,6 +36,7 @@ interface AlertItem {
 
 /** One plain sentence an operator can read at a glance. */
 function describe(alert: AlertItem): string {
+  if (alert.noSensor) return 'No sensor fitted — it cannot be watched';
   if (alert.noSignal) return 'No signal from the sensor';
   if (alert.uptimeMinutes === 0) return `Not running · stopped ${humanMinutes(alert.downtimeMinutes)}`;
   return `Stopped ${humanMinutes(alert.downtimeMinutes)} · ran ${humanMinutes(alert.uptimeMinutes)}`;
@@ -94,6 +97,7 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
         id: machine.machine_id,
         severity,
         noSignal,
+        noSensor: machine.status === 'no_sensor',
         machineId: machine.machine_id,
         machineName: machine.machine_name,
         lineId: machine.line_id,

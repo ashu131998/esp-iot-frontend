@@ -15,6 +15,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
+import { unitsMade } from '@/lib/overview-figures';
 import { sharedUnitLabel } from '@/lib/utils';
 
 export function ProductionChartSection({
@@ -43,7 +44,10 @@ export function ProductionChartSection({
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const chartData = displayMachines.map((m) => ({ name: m.machine_name, units: m.units_produced }));
+  // No production sensor: left off the chart; no count received: no bar. Neither is "made 0".
+  const chartData = displayMachines
+    .filter((m) => m.status !== 'no_sensor')
+    .map((m) => ({ name: m.machine_name, units: unitsMade(m) }));
   const unit = sharedUnitLabel(displayMachines);
   const unitSuffix = unit === 'mixed' ? ' (mixed units)' : unit ? ` (${unit})` : '';
 

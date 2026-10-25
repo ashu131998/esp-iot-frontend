@@ -3,8 +3,12 @@ import { format } from 'date-fns';
 import { productionDayStart } from '@/lib/date-range';
 import type { MachineDailyTrendDay } from '@/lib/types';
 
-/** One day of a machine's trend, keyed 'yyyy-MM-dd'; `is_live` = today, still running. */
-export type TrendDay = MachineDailyTrendDay & { key: string; is_live: boolean };
+/**
+ * One day of a machine's trend, keyed 'yyyy-MM-dd'. `is_live`: it is today, still
+ * running. `from_live`: its figures come from the live calculation (today, or a
+ * recent day whose shifts are not saved yet), so they may still change.
+ */
+export type TrendDay = MachineDailyTrendDay & { key: string; is_live: boolean; from_live: boolean };
 
 /**
  * The days a machine's trend shows — the chart and the table alike — within the
@@ -21,11 +25,13 @@ export function mergeTrendDays(
   const days = new Map<string, TrendDay>();
   for (const d of saved) {
     const key = d.date.slice(0, 10);
-    if (inRange(key)) days.set(key, { ...d, key, is_live: key === today });
+    if (inRange(key)) days.set(key, { ...d, key, is_live: key === today, from_live: false });
   }
   for (const d of live ?? []) {
     const key = d.date.slice(0, 10);
-    if (inRange(key) && (key === today || !days.has(key))) days.set(key, { ...d, key, is_live: key === today });
+    if (inRange(key) && (key === today || !days.has(key))) {
+      days.set(key, { ...d, key, is_live: key === today, from_live: true });
+    }
   }
   return [...days.values()].sort((a, b) => a.key.localeCompare(b.key));
 }

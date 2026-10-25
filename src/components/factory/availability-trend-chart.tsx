@@ -9,7 +9,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { ChartSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
-import { productionDayStart } from '@/lib/date-range';
+import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
 import { formatNumber } from '@/lib/utils';
 
 export function AvailabilityTrendChart({
@@ -33,40 +33,16 @@ export function AvailabilityTrendChart({
   }, [to]);
   const isShowingToday = isTodayDate(toDate);
 
-  const chartData = useMemo(() => {
-    // All keys are IST calendar days. The backend returns `date` as an IST-day
-    // ISO (…+05:30); the raw URL params are IST wall-clock — so slicing the
-    // first 10 chars of either yields the same day key with no UTC drift.
-    const today     = format(new Date(), 'yyyy-MM-dd');
-    const rangeFrom = from ? from.slice(0, 10) : format(productionDayStart(), 'yyyy-MM-dd');
-    const rangeTo   = to   ? to.slice(0, 10)   : today;
-
-    const dayMap = new Map(
-      data.days
-        .filter((d) => { const k = d.date.slice(0, 10); return k >= rangeFrom && k <= rangeTo; })
-        .map((d) => [d.date.slice(0, 10), { availability_percent: d.availability_percent, is_live: false as boolean }]),
-    );
-    if (liveData) {
-      for (const d of liveData.days) {
-        const key = d.date.slice(0, 10);
-        if (key < rangeFrom || key > rangeTo) continue;
-        const existing = dayMap.get(key);
-        if (key === today || !existing) {
-          dayMap.set(key, {
-            availability_percent: d.availability_percent,
-            is_live: key === today,
-          });
-        }
-      }
-    }
-    return [...dayMap.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, d]) => ({
-        date:         new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        availability: d.availability_percent,
-        is_live:      d.is_live,
-      }));
-  }, [data, liveData, from, to]);
+  // One rule for the machine page's days (trend-days.ts): the chart, the table and
+  // the performance trend show the same days with the same figures.
+  const chartData = useMemo(
+    () => mergeTrendDays(data.days, liveData?.days, trendDayRange(from, to)).map((d) => ({
+      date:         new Date(`${d.key}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      availability: d.availability_percent,
+      is_live:      d.is_live,
+    })),
+    [data, liveData, from, to],
+  );
 
   const options = useMemo<ApexOptions>(() => ({
     ...baseChartOptions,

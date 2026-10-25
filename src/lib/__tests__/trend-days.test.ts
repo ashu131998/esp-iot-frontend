@@ -12,19 +12,19 @@ const RANGE = { from: '2026-10-20', to: '2026-10-25', today: '2026-10-25' };
 describe('mergeTrendDays (machine page chart and table)', () => {
   it('settled days come from the saved totals', () => {
     const out = mergeTrendDays([day('2026-10-23')], [day('2026-10-23', { availability_percent: 99 })], RANGE);
-    expect(out).toEqual([{ ...day('2026-10-23'), key: '2026-10-23', is_live: false }]);
+    expect(out).toEqual([{ ...day('2026-10-23'), key: '2026-10-23', is_live: false, from_live: false }]);
   });
 
   it('today is the live day, taken whole: its performance never mixes with a saved part-day', () => {
     // saved has the night shift that ended this morning; live has today so far
     const saved = [day('2026-10-25', { availability_percent: 90, performance_percent: 85 })];
     const live = [day('2026-10-25', { availability_percent: 80, throughput_percent: 90, performance_percent: 72, units_produced: 2160 })];
-    expect(mergeTrendDays(saved, live, RANGE)).toEqual([{ ...live[0], key: '2026-10-25', is_live: true }]);
+    expect(mergeTrendDays(saved, live, RANGE)).toEqual([{ ...live[0], key: '2026-10-25', is_live: true, from_live: true }]);
   });
 
-  it('a recent day not saved yet is filled from live, and is not marked as today', () => {
+  it('a recent day not saved yet is filled from live: not today, but not final either', () => {
     const out = mergeTrendDays([], [day('2026-10-24', { availability_percent: 70 })], RANGE);
-    expect(out).toEqual([{ ...day('2026-10-24', { availability_percent: 70 }), key: '2026-10-24', is_live: false }]);
+    expect(out).toEqual([{ ...day('2026-10-24', { availability_percent: 70 }), key: '2026-10-24', is_live: false, from_live: true }]);
   });
 
   it('keeps to the selected range: live days outside it are not added', () => {
@@ -39,7 +39,7 @@ describe('mergeTrendDays (machine page chart and table)', () => {
   });
 
   it('today from saved totals still counts as today when the live answer is missing', () => {
-    expect(mergeTrendDays([day('2026-10-25')], undefined, RANGE)[0].is_live).toBe(true);
+    expect(mergeTrendDays([day('2026-10-25')], undefined, RANGE)[0]).toEqual(expect.objectContaining({ is_live: true, from_live: false }));
   });
 });
 

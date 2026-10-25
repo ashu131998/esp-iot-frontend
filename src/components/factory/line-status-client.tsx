@@ -21,6 +21,7 @@ import {
 } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import type { Machine } from '@/lib/types';
+import { unitsMade } from '@/lib/overview-figures';
 import { formatNumber, formatUnits } from '@/lib/utils';
 
 const REFRESH_INTERVAL_MS = 60_000;
@@ -162,7 +163,7 @@ export function LineStatusClient({
                       : [
                         `Ran ${humanMinutes(avail?.uptime_minutes ?? 0)}`,
                         avail?.downtime_minutes ? `stopped ${humanMinutes(avail.downtime_minutes)}` : null,
-                        productionOn && prod ? `made ${formatUnits(prod.units_produced, prod.unit_label)}` : null,
+                        productionOn && unitsMade(prod) !== null ? `made ${formatUnits(unitsMade(prod), prod?.unit_label)}` : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')

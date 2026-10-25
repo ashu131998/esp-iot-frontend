@@ -32,7 +32,7 @@ export function PerformanceChartSection({ factoryId }: { factoryId: string }) {
     name: m.machine_name,
     performance: m.performance_percent,
     availability: m.availability_percent,
-    throughput: m.throughput_percent ?? 0,
+    throughput: m.throughput_percent,   // unknown: no bar, not a 0 % one
   }));
 
   return (

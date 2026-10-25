@@ -23,6 +23,7 @@ import {
   type MachineState,
 } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
+import { unitsMade } from '@/lib/overview-figures';
 import { cn, formatAlertVia, formatNumber, formatUnits } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { UptimeSegment } from '@/lib/types';
@@ -189,14 +190,14 @@ export function MachineStatusClient({
         {productionOn && (
           <NumberTile
             label="Made"
-            value={formatUnits(machineProduction?.units_produced ?? 0, machineProduction?.unit_label)}
+            value={formatUnits(unitsMade(machineProduction), machineProduction?.unit_label)}
             hint={period}
           />
         )}
         {energyOn && (
           <NumberTile
             label="Power used"
-            value={`${formatNumber(machineEnergy?.energy_kwh ?? 0)} kWh`}
+            value={machineEnergy?.energy_kwh != null ? `${formatNumber(machineEnergy.energy_kwh)} kWh` : '—'}
             hint={period}
           />
         )}

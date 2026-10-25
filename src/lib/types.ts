@@ -111,9 +111,12 @@ export interface PerformanceMachine {
   machine_id: string;
   machine_name: string;
   line_id: string;
-  availability_percent: number;
+  /** null = unknown (no observed time); never shown as 0 %. */
+  availability_percent: number | null;
+  /** Speed while running vs the machine's target; null without a target or a production count. */
   throughput_percent: number | null;
-  performance_percent: number;
+  /** availability × throughput; null when either is unknown. */
+  performance_percent: number | null;
   units_produced: number;
   unit_label?: string | null;
   target_units: number;

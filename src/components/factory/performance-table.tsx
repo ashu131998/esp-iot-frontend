@@ -48,7 +48,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
       action={
         <ExportCsvButton
           filename="machine-performance"
-          headers={['Machine', 'Line', 'Performance (P)', 'Availability (A)', 'Throughput (A×P)', 'Units Produced', 'Target Units', 'Cycle Target (s)']}
+          headers={['Machine', 'Line', 'Performance (A × T)', 'Availability (A)', 'Throughput (T)', 'Units Produced', 'Target Units', 'Cycle Target (s)']}
           rows={rows.map((m) => [
             m.machine_name,
             lineName.get(m.line_id) ?? m.line_id,

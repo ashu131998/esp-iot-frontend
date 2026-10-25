@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { noEnergy, noProduction, offQuery } from '@/lib/display';
+import { noEnergy, noPerformance, noProduction, offQuery } from '@/lib/display';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { overviewFigures, unitsMade } from '@/lib/overview-figures';
 import {
   STATE_TONE,
   STATE_WORD,
@@ -33,7 +34,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatNumber, formatUnits, sharedUnitLabel, sumUnits } from '@/lib/utils';
+import { formatNumber, formatUnits } from '@/lib/utils';
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
@@ -76,6 +77,7 @@ export function FactoryOverviewSimple({
     { data: energy },
     { data: production },
     { data: uptime },
+    { data: performance },
   ] = useSuspenseQueries({
     queries: [
       {
@@ -118,6 +120,14 @@ export function FactoryOverviewSimple({
         refetchInterval,
         staleTime: 0,
       },
+      performanceOn
+        ? {
+          queryKey: ['performance', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryFn: ({ signal }: { signal: AbortSignal }) => api.performance(factoryId, apiRange, { signal }),
+          refetchInterval,
+          staleTime: 0,
+        }
+        : offQuery('performance', noPerformance(factoryId)),
     ],
   });
 
@@ -149,18 +159,15 @@ export function FactoryOverviewSimple({
   const running = count('running');
   const total = rows.length;
 
-  // Numbers for the tiles, over the machines in scope.
-  const windowHours = (new Date(range.to).getTime() - new Date(range.from).getTime()) / 3_600_000;
-  const scopedAvail = filterMachinesByScope(availability.machines, { machineId, lineId });
-  const avgAvailability = scopedAvail.length
-    ? scopedAvail.reduce((s, m) => s + (m.availability_percent ?? 0), 0) / scopedAvail.length
-    : availability.avg_availability_percent;
-  const scopedProduction = filterMachinesByScope(production.machines, { machineId, lineId });
-  const units = sumUnits(scopedProduction);
-  const targetUnits = scopedMachines.reduce((s, m) => s + (m.target_units_per_hour ?? 0) * windowHours, 0);
-  const throughputPct = targetUnits > 0 ? Math.min(100, (units / targetUnits) * 100) : 0;
-  const onTargetPct = ((avgAvailability ?? 0) / 100) * throughputPct;
-  const kwh = filterMachinesByScope(energy.machines, { machineId, lineId }).reduce((s, m) => s + (m.energy_kwh ?? 0), 0);
+  // Numbers for the tiles, over the machines in scope, each by its own page's rule.
+  const scope = { machineId, lineId };
+  const figures = overviewFigures({
+    availability: filterMachinesByScope(availability.machines, scope),
+    production: filterMachinesByScope(production.machines, scope),
+    energy: filterMachinesByScope(energy.machines, scope),
+    performance: filterMachinesByScope(performance.machines, scope),
+  });
+  const anyTarget = scopedMachines.some((m) => (m.target_units_per_hour ?? 0) > 0);
 
   const summary =
     total === 0
@@ -188,16 +195,18 @@ export function FactoryOverviewSimple({
 
       {shown('overview.cards') && (
         <NumberTiles>
-          <NumberTile label="Running time" value={wholePercent(avgAvailability)} hint={`of ${period}`} />
+          <NumberTile label="Running time" value={wholePercent(figures.runningPercent)} hint={`of ${period}`} />
           {productionOn && (
-            <NumberTile label="Made" value={formatUnits(units, sharedUnitLabel(scopedProduction))} hint={period} />
+            <NumberTile label="Made" value={formatUnits(figures.units, figures.unitLabel)} hint={period} />
           )}
-          {energyOn && <NumberTile label="Power used" value={`${formatNumber(kwh)} kWh`} hint={period} />}
+          {energyOn && (
+            <NumberTile label="Power used" value={figures.kwh === null ? '—' : `${formatNumber(figures.kwh)} kWh`} hint={period} />
+          )}
           {performanceOn && (
             <NumberTile
               label="On target"
-              value={targetUnits > 0 ? wholePercent(onTargetPct) : '—'}
-              hint={targetUnits > 0 ? '100% = hit the target' : 'No target set'}
+              value={wholePercent(figures.onTargetPercent)}
+              hint={figures.onTargetPercent !== null ? '100% = ran all the time at target speed' : anyTarget ? 'No count yet' : 'No target set'}
             />
           )}
         </NumberTiles>
@@ -243,7 +252,7 @@ export function FactoryOverviewSimple({
                 STATE_WORD[state],
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
-                ...(productionOn ? [prod?.units_produced ?? 0] : []),
+                ...(productionOn ? [unitsMade(prod)] : []),
               ])}
             />
             <Link href={`/factories/${factoryId}/configuration`} className="text-primary hover:underline">
@@ -260,11 +269,13 @@ export function FactoryOverviewSimple({
 function rowSentence(
   state: MachineState,
   avail?: { uptime_minutes: number; downtime_minutes: number },
-  prod?: { units_produced: number; unit_label?: string | null },
+  prod?: { units_produced: number; status: string; unit_label?: string | null },
 ): string {
   if (state === 'no_signal' && !avail?.uptime_minutes) return 'No signal from the sensor';
   const parts = [`Ran ${humanMinutes(avail?.uptime_minutes ?? 0)}`];
   if (avail?.downtime_minutes) parts.push(`stopped ${humanMinutes(avail.downtime_minutes)}`);
-  if (prod) parts.push(`made ${formatUnits(prod.units_produced ?? 0, prod.unit_label)}`);
+  // Only a count that arrived; no production sensor is not "made 0".
+  const made = unitsMade(prod);
+  if (made !== null) parts.push(`made ${formatUnits(made, prod?.unit_label)}`);
   return parts.join(' · ');
 }

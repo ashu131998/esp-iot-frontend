@@ -12,7 +12,7 @@
  * must not request it — see offQuery.
  */
 
-import type { EnergyResponse, ProductionResponse } from './types';
+import type { EnergyResponse, PerformanceResponse, ProductionResponse } from './types';
 
 export type Display = Record<string, boolean>;
 
@@ -114,4 +114,9 @@ export function noEnergy(factoryId: string): EnergyResponse {
 /** Empty production result for views where Production is switched off. */
 export function noProduction(factoryId: string): ProductionResponse {
   return { factory_id: factoryId, from: '', to: '', total_units: 0, machines: [] };
+}
+
+/** Empty performance result for views where Performance is switched off. */
+export function noPerformance(factoryId: string): PerformanceResponse {
+  return { factory_id: factoryId, from: '', to: '', avg_performance_percent: null, machines: [] };
 }

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
+import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
 import { formatNumber, formatPercent } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -46,22 +47,19 @@ export function AvailabilityTrendTable({
   const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
-  const trends = useMemo<TrendRow[]>(() => {
-    const dayMap = new Map(data.days.map((d) => [d.date.slice(0, 10), { ...d, is_live: false }]));
-    if (liveData) {
-      for (const d of liveData.days) {
-        dayMap.set(d.date.slice(0, 10), { ...d, is_live: true });
-      }
-    }
-    return [...dayMap.entries()].map(([key, d]) => ({
-      dateKey:      key,
-      dateLabel:    new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+  // The same days and figures as the chart above it (trend-days.ts): within the
+  // selected range, a saved day as saved, today and unsaved days from live.
+  const trends = useMemo<TrendRow[]>(
+    () => mergeTrendDays(data.days, liveData?.days, trendDayRange(from, to)).map((d) => ({
+      dateKey:      d.key,
+      dateLabel:    new Date(`${d.key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
       availability: d.availability_percent,
       uptime:       d.uptime_minutes,
       downtime:     d.downtime_minutes,
-      is_live:      d.is_live,
-    }));
-  }, [data, liveData]);
+      is_live:      d.from_live,
+    })),
+    [data, liveData, from, to],
+  );
 
   const columns = useMemo<ColumnDef<TrendRow, unknown>[]>(() => {
     const todayKey = new Date().toLocaleDateString('en-CA');

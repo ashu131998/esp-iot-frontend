@@ -2,14 +2,13 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
 
 import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/charts/apex';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ChartSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
-import { productionDayStart } from '@/lib/date-range';
+import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
 import { formatNumber } from '@/lib/utils';
 
 export function MachinePerformanceTrend({
@@ -27,42 +26,17 @@ export function MachinePerformanceTrend({
   const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
-  const chartData = useMemo(() => {
-    // IST calendar-day keys throughout (see availability-trend-chart for why).
-    const today     = format(new Date(), 'yyyy-MM-dd');
-    const rangeFrom = from ? from.slice(0, 10) : format(productionDayStart(), 'yyyy-MM-dd');
-    const rangeTo   = to   ? to.slice(0, 10)   : today;
-
-    const dayMap = new Map(
-      data.days
-        .filter((d) => { const k = d.date.slice(0, 10); return k >= rangeFrom && k <= rangeTo; })
-        .map((d) => [d.date.slice(0, 10), { ...d }]),
-    );
-    if (liveData) {
-      for (const d of liveData.days) {
-        const key = d.date.slice(0, 10);
-        if (key < rangeFrom || key > rangeTo) continue;
-        const existing = dayMap.get(key);
-        // For today: update availability from live (shift still in progress).
-        // For past days: only fill in if shift_aggregates has no entry yet.
-        if (key === today || !existing) {
-          dayMap.set(key, {
-            ...(existing ?? d),
-            availability_percent: d.availability_percent,
-            is_live: key === today,
-          });
-        }
-      }
-    }
-    return [...dayMap.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, d]) => ({
-        date:         new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        performance:  d.performance_percent,
-        availability: d.availability_percent,
-        throughput:   d.throughput_percent,
-      }));
-  }, [data, liveData, from, to]);
+  // Each day whole from one source (trend-days.ts): today's performance is never a
+  // saved part-day's beside today's live availability.
+  const chartData = useMemo(
+    () => mergeTrendDays(data.days, liveData?.days, trendDayRange(from, to)).map((d) => ({
+      date:         new Date(`${d.key}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      performance:  d.performance_percent,
+      availability: d.availability_percent,
+      throughput:   d.throughput_percent,
+    })),
+    [data, liveData, from, to],
+  );
 
   const options = useMemo<ApexOptions>(() => ({
     ...baseChartOptions,

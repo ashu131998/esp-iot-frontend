@@ -60,34 +60,6 @@ function UsersPanelInner() {
         <Card className="p-6">
           <CardHeader title="Staff accounts" description="Platform owner creates internal_admin and internal_viewer logins" />
           <StaffCreateForm />
-          {usersLoading ? (
-            <TableSkeleton rows={3} cols={4} />
-          ) : staff.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">No staff accounts yet besides owner.</p>
-          ) : (
-            <Table className="mt-4 border-0">
-              <THead>
-                <TR>
-                  <TH>Username</TH>
-                  <TH>Role</TH>
-                  <TH>Status</TH>
-                  <TH>Admin</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {staff.map((u) => (
-                  <TR key={u.user_id}>
-                    <TD>{u.username}</TD>
-                    <TD>{u.role}</TD>
-                    <TD>{u.status}</TD>
-                    <TD>
-                      <UserAdminActions target={u} />
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
         </Card>
       )}
 

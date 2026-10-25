@@ -57,7 +57,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
               m.availability_percent,
               m.throughput_percent,
               m.units_produced,
-              m.target_units,
+              m.target_units > 0 ? m.target_units : null,   // no target set: blank, not 0
               m.target_cycle_time_sec,
             ])}
           />
@@ -68,9 +68,9 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
           <TR>
             <TH>Machine</TH>
             <TH>Line</TH>
-            <TH>Performance (P)</TH>
+            <TH>Performance (A × T)</TH>
             <TH>Availability (A)</TH>
-            <TH>Throughput (A × P)</TH>
+            <TH>Throughput (T)</TH>
             <TH>Units / Target</TH>
             <TH>Cycle Target</TH>
           </TR>
@@ -84,7 +84,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
               <TD>{formatPercent(m.availability_percent)}</TD>
               <TD>{formatPercent(m.throughput_percent)}</TD>
               <TD>
-                {formatUnits(m.units_produced, m.unit_label)} / {formatUnits(m.target_units, m.unit_label)}
+                {formatUnits(m.units_produced, m.unit_label)} / {m.target_units > 0 ? formatUnits(m.target_units, m.unit_label) : '—'}
               </TD>
               <TD>{m.target_cycle_time_sec ? `${m.target_cycle_time_sec}s` : '—'}</TD>
             </TR>

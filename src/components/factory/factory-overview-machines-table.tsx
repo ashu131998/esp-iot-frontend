@@ -14,6 +14,7 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { unitsMade } from '@/lib/overview-figures';
 import {
   factoryMetricsApiRange,
   factoryScopeQueryKey,
@@ -160,7 +161,7 @@ export function FactoryOverviewMachinesTable({
                 machine.type,
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
-                ...(productionOn ? [prod?.units_produced ?? 0] : []),
+                ...(productionOn ? [unitsMade(prod)] : []),
                 currentStatus(uptime, avail),
               ])}
             />
@@ -196,7 +197,8 @@ export function FactoryOverviewMachinesTable({
               {energyOn && (
                 <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
               )}
-              {productionOn && <TD>{formatUnits(prod?.units_produced ?? 0, prod?.unit_label)}</TD>}
+              {/* No production sensor, or no count received: "—", not "made 0". */}
+              {productionOn && <TD>{formatUnits(unitsMade(prod), prod?.unit_label)}</TD>}
               <TD>
                 {(uptimeRowsByMachine[machine.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">

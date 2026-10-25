@@ -11,9 +11,10 @@ import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { FactoryAdminCreateForm } from '@/components/internal/factory-admin-create-form';
 import { StaffCreateForm } from '@/components/internal/staff-create-form';
 import { UserAdminActions } from '@/components/internal/user-admin-actions';
-import { isPlatformOwner } from '@/lib/internal-auth';
+import { isInternalAdmin, isPlatformOwner } from '@/lib/internal-auth';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
@@ -87,6 +88,16 @@ function UsersPanelInner() {
               </TBody>
             </Table>
           )}
+        </Card>
+      )}
+
+      {isInternalAdmin(user) && (
+        <Card className="p-6">
+          <CardHeader
+            title="Factory admins"
+            description="Add dashboard admins for a factory — a factory can have more than one"
+          />
+          <FactoryAdminCreateForm />
         </Card>
       )}
 

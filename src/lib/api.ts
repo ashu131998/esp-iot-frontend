@@ -909,6 +909,17 @@ export const api = {
       ...options,
     }),
 
+  createFactoryAdmin: (
+    factoryId: string,
+    body: { username: string; password: string; email?: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<import('./auth-types').AuthUser>(`/v1/admin/factories/${factoryId}/admins`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
   adminResetPassword: (userId: string, password: string, options?: ApiRequestOptions) =>
     request<import('./auth-types').AuthUser>(`/v1/admin/users/${userId}/password`, {
       method: 'POST',

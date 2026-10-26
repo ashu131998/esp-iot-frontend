@@ -3,6 +3,8 @@
  * (stored by the consumer; fields added over firmware versions, so any may be missing).
  */
 
+import type { BoardSettings } from '@/lib/board-settings';
+
 export interface BoardBeat {
   fw?: string;
   uptime_s?: number;
@@ -17,6 +19,37 @@ export interface BoardBeat {
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
+
+/** A board on the staff Boards page (GET /v1/admin/boards). */
+export interface AdminBoard {
+  board_id: string;
+  factory_id: string | null;
+  line_id: string | null;
+  last_beat_at: string | null;
+  beat: BoardBeat | null;
+  /** What the dashboard last sent it (null: never set from here). */
+  settings: BoardSettings | null;
+  cfg_version: number | null;
+  settings_sent_at: string | null;
+  /** A login of its own has been issued (it switches to it with firmware 2.1+). */
+  own_login: boolean;
+  login_issued_at: string | null;
+  /** From the broker: connected now, and with which login (null: broker unknown / never connected). */
+  online: boolean | null;
+  login: 'own' | 'shared' | null;
+  ip: string | null;
+  connected_at: number | string | null;
+}
+
+/** Which MQTT login the board uses, and whether a login of its own is waiting for it. */
+export function loginStatus(b: Pick<AdminBoard, 'login' | 'own_login'>): StatusCell {
+  if (b.login === 'own') return { label: 'Own', tone: 'good', detail: 'Connects with its own login: only its own topics' };
+  if (b.own_login) {
+    return { label: 'Issued, not in use', tone: 'warn', detail: 'Its own login was sent; the board switches with firmware 2.1+ (or has not been online since)' };
+  }
+  if (b.login === 'shared') return { label: 'Shared', tone: 'warn', detail: 'Uses the shared fleet login' };
+  return { label: '—', tone: 'neutral', detail: 'Not connected to the broker since it restarted' };
+}
 
 export interface StatusCell {
   label: string;

@@ -15,7 +15,8 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
-import { batteryClock, firmware, queue, supply, type StatusCell, type Tone } from '@/lib/board-status';
+import { batteryClock, firmware, queue, supply } from '@/lib/board-status';
+import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
 import { resolvePagination, resolveListTotal } from '@/lib/pagination';
@@ -344,35 +345,6 @@ function NodesFleetInner() {
         defaultFactoryId={factoryFilter || undefined}
       />
     </div>
-  );
-}
-
-const TONE_BADGE: Record<Tone, string> = {
-  good: 'bg-emerald-50 text-emerald-700',
-  warn: 'bg-amber-50 text-amber-800',
-  bad: 'bg-red-50 text-red-700',
-  neutral: 'bg-slate-100 text-slate-600',
-};
-const TONE_TEXT: Record<Tone, string> = {
-  good: 'text-emerald-700',
-  warn: 'text-amber-700',
-  bad: 'text-red-700',
-  neutral: 'text-muted',
-};
-
-function StatusBadge({ cell }: { cell: StatusCell }) {
-  return (
-    <span title={cell.detail}>
-      <Badge className={TONE_BADGE[cell.tone]}>{cell.label}</Badge>
-    </span>
-  );
-}
-
-function StatusText({ cell }: { cell: StatusCell }) {
-  return (
-    <span className={`text-xs ${TONE_TEXT[cell.tone]}`} title={cell.detail}>
-      {cell.label}
-    </span>
   );
 }
 

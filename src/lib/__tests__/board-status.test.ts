@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { batteryClock, firmware, formatBytes, queue, supply } from '@/lib/board-status';
+import { batteryClock, firmware, formatBytes, loginStatus, queue, supply } from '@/lib/board-status';
 
 describe('batteryClock', () => {
   it('kept through the last power-up: OK', () => {
@@ -48,5 +48,15 @@ describe('firmware and bytes', () => {
     expect(formatBytes(512)).toBe('512 B');
     expect(formatBytes(1536)).toBe('1.5 KB');
     expect(formatBytes(3 * 1024 * 1024)).toBe('3.0 MB');
+  });
+});
+
+describe('loginStatus', () => {
+  it('own login in use; issued but not in use yet; shared; unknown', () => {
+    expect(loginStatus({ login: 'own', own_login: true })).toMatchObject({ label: 'Own', tone: 'good' });
+    expect(loginStatus({ login: 'shared', own_login: true })).toMatchObject({ label: 'Issued, not in use', tone: 'warn' });
+    expect(loginStatus({ login: null, own_login: true }).label).toBe('Issued, not in use');
+    expect(loginStatus({ login: 'shared', own_login: false })).toMatchObject({ label: 'Shared', tone: 'warn' });
+    expect(loginStatus({ login: null, own_login: false }).label).toBe('—');
   });
 });

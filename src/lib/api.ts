@@ -1,4 +1,5 @@
-import type { BoardBeat } from '@/lib/board-status';
+import type { AdminBoard, BoardBeat } from '@/lib/board-status';
+import type { BoardSettings } from '@/lib/board-settings';
 import type {
   ActiveAssignmentsResponse,
   AlertSettings,
@@ -796,6 +797,22 @@ export const api = {
         updated_at: string | null;
       } | null;
     }>(`/v1/admin/health${qs(params)}`, options),
+
+  /** Real boards with their state (staff); see AdminBoard. */
+  adminBoards: (options?: ApiRequestOptions) =>
+    request<{ broker: 'ok' | 'unreachable' | 'unavailable'; boards: AdminBoard[] }>('/v1/admin/boards', options),
+
+  /** Super admin: send a board its settings (retained on its config topic). */
+  adminBoardSettings: (boardId: string, settings: BoardSettings, options?: ApiRequestOptions) =>
+    request<{ board: unknown }>(`/v1/admin/boards/${encodeURIComponent(boardId)}/settings`, {
+      method: 'PUT', body: JSON.stringify({ settings }), ...options,
+    }),
+
+  /** Super admin: give a board its own MQTT login (sent to it once, with its settings). */
+  adminBoardLogin: (boardId: string, options?: ApiRequestOptions) =>
+    request<{ ok: boolean; cfg_version: number }>(`/v1/admin/boards/${encodeURIComponent(boardId)}/login`, {
+      method: 'POST', body: '{}', ...options,
+    }),
 
   adminDevices: (
     params?: PaginationParams & {

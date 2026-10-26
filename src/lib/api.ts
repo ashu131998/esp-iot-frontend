@@ -1,4 +1,5 @@
 import type { AdminBoard, BoardBeat, BrokerLogins } from '@/lib/board-status';
+import type { FirmwareRelease, ReleaseSignature } from '@/lib/firmware';
 import type { BoardSettings } from '@/lib/board-settings';
 import type {
   ActiveAssignmentsResponse,
@@ -803,6 +804,24 @@ export const api = {
     request<{ broker: 'ok' | 'unreachable' | 'unavailable'; logins: BrokerLogins | null; boards: AdminBoard[] }>(
       '/v1/admin/boards', options,
     ),
+
+  /** Firmware releases uploaded for remote updates (staff). */
+  adminFirmware: (options?: ApiRequestOptions) => request<{ releases: FirmwareRelease[] }>('/v1/admin/firmware', options),
+
+  /** Super admin: upload a signed release (the image as base64, with its .sig.json). */
+  adminFirmwareUpload: (body: ReleaseSignature & { image_base64: string; notes?: string }, options?: ApiRequestOptions) =>
+    request<{ release: FirmwareRelease }>('/v1/admin/firmware', { method: 'POST', body: JSON.stringify(body), ...options }),
+
+  adminFirmwareDelete: (target: string, version: string, options?: ApiRequestOptions) =>
+    request<{ ok: boolean }>(`/v1/admin/firmware/${encodeURIComponent(target)}/${encodeURIComponent(version)}`, {
+      method: 'DELETE', ...options,
+    }),
+
+  /** Super admin: offer a board a firmware update (null withdraws the offer). */
+  adminBoardUpdate: (boardId: string, version: string | null, options?: ApiRequestOptions) =>
+    request<{ ok: boolean; version: string | null }>(`/v1/admin/boards/${encodeURIComponent(boardId)}/update`, {
+      method: 'POST', body: JSON.stringify({ version }), ...options,
+    }),
 
   /** Super admin: restrict the shared fleet MQTT login to new boards, or open it again. */
   adminSharedLogin: (restricted: boolean, options?: ApiRequestOptions) =>

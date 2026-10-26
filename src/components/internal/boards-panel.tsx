@@ -22,6 +22,7 @@ import {
   SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
   timeSource, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
+import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
 import { formatDate } from '@/lib/utils';
 
 const BOARDS_KEY = ['admin-boards'];
@@ -217,6 +218,58 @@ function ClaimDialog({ board, onClose }: { board: AdminBoard; onClose: () => voi
   );
 }
 
+function UpdateDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const releasesQuery = useQuery({ queryKey: ['admin-firmware'], queryFn: ({ signal }) => api.adminFirmware({ signal }) });
+  const choices = versionsFor(releasesQuery.data?.releases ?? [], board);
+  const [version, setVersion] = useState('');
+  const fw = board.beat?.fw;
+  const capable = installsRemoteUpdates(fw);
+  const target = boardTargetOf(board);
+  const send = useMutation({
+    mutationFn: (v: string | null) => api.adminBoardUpdate(board.board_id, v),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
+      onClose();
+    },
+  });
+  return (
+    <Modal open onClose={onClose} title={`Update · ${board.board_id}`}>
+      <p className="mb-3 text-sm">
+        It runs <span className="font-mono">{fw ?? 'unknown firmware'}</span>{target ? ` on ${targetLabel(target)}` : ''}.
+        Offered now, it gets the update when it is online, checks the signature, installs it and restarts; if the new
+        firmware does not prove healthy within 30 minutes it goes back to this one.
+      </p>
+      {!capable ? (
+        <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+          This firmware cannot install updates from the dashboard: it needs 2.2 or later, put on once over the LAN.
+        </p>
+      ) : choices.length === 0 ? (
+        <p className="text-xs text-muted">No other release uploaded for {target ? targetLabel(target) : 'its hardware'} (Firmware page).</p>
+      ) : (
+        <Field label="Version">
+          <Select value={version} onChange={(e) => setVersion(e.target.value)}>
+            <option value="">Choose…</option>
+            {choices.map((r) => <option key={r.version} value={r.version}>{r.version}{r.notes ? ` — ${r.notes}` : ''}</option>)}
+          </Select>
+        </Field>
+      )}
+      {send.isError && <p className="mt-3 text-xs text-red-700">{(send.error as Error).message}</p>}
+      <div className="mt-4 flex justify-end gap-2">
+        {board.ota_version && (
+          <Button variant="secondary" disabled={send.isPending} onClick={() => send.mutate(null)}>
+            Withdraw {board.ota_version}
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button disabled={!capable || !version || send.isPending} onClick={() => send.mutate(version)}>
+          {send.isPending ? 'Sending…' : 'Offer update'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
 function LoginConfirm({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   const queryClient = useQueryClient();
   const issue = useMutation({
@@ -359,6 +412,7 @@ export function BoardsPanel() {
   const [editing, setEditing] = useState<AdminBoard | null>(null);
   const [loginFor, setLoginFor] = useState<AdminBoard | null>(null);
   const [claiming, setClaiming] = useState<AdminBoard | null>(null);
+  const [updating, setUpdating] = useState<AdminBoard | null>(null);
   const boardsQuery = useQuery({
     queryKey: BOARDS_KEY,
     queryFn: ({ signal }) => api.adminBoards({ signal }),
@@ -387,14 +441,14 @@ export function BoardsPanel() {
         {boardsQuery.isError ? (
           <p className="text-sm text-red-600">{(boardsQuery.error as Error).message}</p>
         ) : boardsQuery.isPending ? (
-          <TableSkeleton rows={4} cols={11} />
+          <TableSkeleton rows={4} cols={12} />
         ) : boards.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No boards have reported yet.</p>
         ) : (
           <Table className="border-0">
             <THead>
               <TR>
-                <TH>Board</TH><TH>Where</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH>
+                <TH>Board</TH><TH>Where</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
                 <TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
                 {canChange && <TH />}
               </TR>
@@ -417,6 +471,7 @@ export function BoardsPanel() {
                   </TD>
                   <TD><StatusBadge cell={loginStatus(b)} /></TD>
                   <TD className="font-mono text-xs">{firmware(b.beat)}</TD>
+                  <TD><StatusText cell={updateStatus(b)} /></TD>
                   <TD><StatusBadge cell={batteryClock(b.beat)} /></TD>
                   <TD><StatusText cell={timeSource(b.beat)} /></TD>
                   <TD><StatusText cell={queue(b.beat)} /></TD>
@@ -439,6 +494,9 @@ export function BoardsPanel() {
                         >
                           Own login
                         </Button>
+                        <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setUpdating(b)}>
+                          Update
+                        </Button>
                       </div>
                     </TD>
                   )}
@@ -451,6 +509,7 @@ export function BoardsPanel() {
       {logins && <BrokerLoginsCard logins={logins} canChange={canChange} />}
       {editing && <SettingsEditor board={editing} onClose={() => setEditing(null)} />}
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
+      {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
     </div>
   );

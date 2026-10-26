@@ -20,6 +20,12 @@ export interface BoardBeat {
   vin_v?: number;
   /** Which MQTT login it connected with (firmware 2.1+). */
   login?: string;
+  /** Its hardware, and a remote update in progress (firmware 2.2+). */
+  hw?: string;
+  ota_state?: string;
+  ota_version?: string;
+  ota_error?: string;
+  ota_pct?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -38,6 +44,9 @@ export interface AdminBoard {
   /** A login of its own has been issued (it switches to it with firmware 2.1+). */
   own_login: boolean;
   login_issued_at: string | null;
+  /** The firmware update last offered to it from here (null: none, or withdrawn). */
+  ota_version: string | null;
+  ota_requested_at: string | null;
   /** From the broker: connected now, and with which login (null: broker unknown / never connected). */
   online: boolean | null;
   login: 'own' | 'shared' | null;

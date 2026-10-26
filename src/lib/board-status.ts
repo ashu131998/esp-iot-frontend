@@ -16,6 +16,8 @@ export interface BoardBeat {
   rtc_status?: number;
   rtc_set?: boolean;
   vin_v?: number;
+  /** Which MQTT login it connected with (firmware 2.1+). */
+  login?: string;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';

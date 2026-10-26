@@ -22,39 +22,19 @@ import { batteryClock, firmware, loginStatus, queue, supply, type AdminBoard } f
 import { formatDate } from '@/lib/utils';
 
 const BOARDS_KEY = ['admin-boards'];
+/** Where a new REV B reports until it is claimed (firmware 2.1+). */
+const UNCLAIMED = 'unclaimed';
 
-function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
+/** The settings form (channels and thresholds), shared by the Settings and Claim dialogs. */
+function SettingsFields({ draft, setDraft }: { draft: BoardSettings; setDraft: (f: (d: BoardSettings) => BoardSettings) => void }) {
   const problems = settingsProblems(draft);
-  const send = useMutation({
-    mutationFn: () => api.adminBoardSettings(board.board_id, draft),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
-      onClose();
-    },
-  });
-
   const setChannel = (i: number, patch: Partial<BoardChannel>) =>
     setDraft((d) => ({ ...d, channels: d.channels.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
   const removeChannel = (i: number) => setDraft((d) => ({ ...d, channels: d.channels.filter((_, j) => j !== i) }));
   const addChannel = (slot: string) => setDraft((d) => ({ ...d, channels: [...d.channels, newChannel(slot)] }));
   const free = freeSlots(draft);
-
   return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Settings · ${board.board_id}`}
-      description="Sent to the board over MQTT (it keeps them across restarts and gets them again each time it connects)."
-      className="max-w-3xl"
-    >
-      {!board.settings && (
-        <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
-          Never set from the dashboard: these are REV B defaults. Check each calibration against the CTs fitted
-          (e.g. 15 for SCT-013-015) before sending — wrong values scale every reading.
-        </p>
-      )}
+    <>
       <Table className="border-0">
         <THead>
           <TR>
@@ -69,8 +49,8 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
                   value={c.slot}
                   onChange={(e) => setChannel(i, { ...newChannel(e.target.value), name: c.name === c.slot ? e.target.value : c.name })}
                 >
-                  {CHANNEL_SLOTS.filter((s) => s === c.slot || free.includes(s)).map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                  {CHANNEL_SLOTS.filter((sl) => sl === c.slot || free.includes(sl)).map((sl) => (
+                    <option key={sl} value={sl}>{sl}</option>
                   ))}
                 </Select>
               </TD>
@@ -109,7 +89,7 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
         <div className="mt-2 flex items-center gap-2">
           <Select value="" onChange={(e) => e.target.value && addChannel(e.target.value)}>
             <option value="">Add a channel…</option>
-            {free.map((s) => <option key={s} value={s}>{s} · {KIND_LABEL[kindForSlot(s) ?? 'current']}</option>)}
+            {free.map((sl) => <option key={sl} value={sl}>{sl} · {KIND_LABEL[kindForSlot(sl) ?? 'current']}</option>)}
           </Select>
         </div>
       )}
@@ -130,11 +110,104 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
       {problems.length > 0 && (
         <ul className="mt-3 list-disc pl-5 text-xs text-red-700">{problems.map((p) => <li key={p}>{p}</li>)}</ul>
       )}
+    </>
+  );
+}
+
+function DefaultsWarning() {
+  return (
+    <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+      Never set from the dashboard: these are REV B defaults. Check each calibration against the CTs fitted
+      (e.g. 15 for SCT-013-015) before sending — wrong values scale every reading.
+    </p>
+  );
+}
+
+function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
+  const send = useMutation({
+    mutationFn: () => api.adminBoardSettings(board.board_id, draft),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
+      onClose();
+    },
+  });
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Settings · ${board.board_id}`}
+      description="Sent to the board over MQTT (it keeps them across restarts and gets them again each time it connects)."
+      className="max-w-3xl"
+    >
+      {!board.settings && <DefaultsWarning />}
+      <SettingsFields draft={draft} setDraft={setDraft} />
       {send.isError && <p className="mt-3 text-xs text-red-700">{(send.error as Error).message}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button disabled={problems.length > 0 || send.isPending} onClick={() => send.mutate()}>
+        <Button disabled={settingsProblems(draft).length > 0 || send.isPending} onClick={() => send.mutate()}>
           {send.isPending ? 'Sending…' : 'Send to board'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Claim a new board (or move one): factory, line and settings; it gets its own login with them. */
+function ClaimDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const unclaimed = board.factory_id === UNCLAIMED;
+  const [factoryId, setFactoryId] = useState(unclaimed ? '' : (board.factory_id ?? ''));
+  const [lineId, setLineId] = useState(unclaimed ? '' : (board.line_id ?? ''));
+  const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
+  const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
+  const linesQuery = useQuery({
+    queryKey: ['lines', factoryId],
+    queryFn: ({ signal }) => api.lines(factoryId, { limit: 200, offset: 0 }, { signal }),
+    enabled: Boolean(factoryId),
+  });
+  const claim = useMutation({
+    mutationFn: () => api.adminBoardClaim(board.board_id, { factory_id: factoryId, line_id: lineId, settings: draft }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
+      onClose();
+    },
+  });
+  const ready = Boolean(factoryId && lineId) && settingsProblems(draft).length === 0;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${unclaimed ? 'Claim' : 'Move'} · ${board.board_id}`}
+      description="The board gets its factory and line, these settings and a login of its own (firmware 2.1+), all at once."
+      className="max-w-3xl"
+    >
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <Field label="Factory">
+          <Select value={factoryId} onChange={(e) => { setFactoryId(e.target.value); setLineId(''); }}>
+            <option value="">Choose…</option>
+            {(factoriesQuery.data?.factories ?? []).map((f) => (
+              <option key={f.factory_id} value={f.factory_id}>{f.name ?? f.factory_id}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Line">
+          <Select value={lineId} disabled={!factoryId} onChange={(e) => setLineId(e.target.value)}>
+            <option value="">Choose…</option>
+            {(linesQuery.data?.lines ?? []).map((l) => (
+              <option key={l.line_id} value={l.line_id}>{l.name ?? l.line_id}</option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      {!board.settings && <DefaultsWarning />}
+      <SettingsFields draft={draft} setDraft={setDraft} />
+      {claim.isError && <p className="mt-3 text-xs text-red-700">{(claim.error as Error).message}</p>}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button disabled={!ready || claim.isPending} onClick={() => claim.mutate()}>
+          {claim.isPending ? 'Sending…' : unclaimed ? 'Claim board' : 'Move board'}
         </Button>
       </div>
     </Modal>
@@ -173,6 +246,7 @@ export function BoardsPanel() {
   const canChange = isSuperAdmin(user);
   const [editing, setEditing] = useState<AdminBoard | null>(null);
   const [loginFor, setLoginFor] = useState<AdminBoard | null>(null);
+  const [claiming, setClaiming] = useState<AdminBoard | null>(null);
   const boardsQuery = useQuery({
     queryKey: BOARDS_KEY,
     queryFn: ({ signal }) => api.adminBoards({ signal }),
@@ -216,7 +290,11 @@ export function BoardsPanel() {
               {boards.map((b) => (
                 <TR key={b.board_id}>
                   <TD className="font-mono text-xs">{b.board_id}</TD>
-                  <TD className="text-xs">{b.factory_id ?? '—'} / {b.line_id ?? '—'}</TD>
+                  <TD className="text-xs">
+                    {b.factory_id === UNCLAIMED
+                      ? <Badge className="bg-blue-50 text-blue-700">New — not claimed</Badge>
+                      : `${b.factory_id ?? '—'} / ${b.line_id ?? '—'}`}
+                  </TD>
                   <TD>
                     {b.online === null ? <span className="text-xs text-muted">—</span> : (
                       <Badge className={b.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
@@ -236,7 +314,10 @@ export function BoardsPanel() {
                   {canChange && (
                     <TD>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="secondary" disabled={broker !== 'ok'} onClick={() => setEditing(b)}>Settings</Button>
+                        <Button size="sm" variant={b.factory_id === UNCLAIMED ? 'primary' : 'secondary'} disabled={broker !== 'ok'} onClick={() => setClaiming(b)}>
+                          {b.factory_id === UNCLAIMED ? 'Claim' : 'Move'}
+                        </Button>
+                        <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>
                         <Button
                           size="sm" variant="secondary" disabled={broker !== 'ok' || !b.settings}
                           title={b.settings ? undefined : 'Send its settings first'}
@@ -255,6 +336,7 @@ export function BoardsPanel() {
       </Card>
       {editing && <SettingsEditor board={editing} onClose={() => setEditing(null)} />}
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
+      {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
     </div>
   );
 }

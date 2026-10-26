@@ -808,6 +808,17 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ settings }), ...options,
     }),
 
+  /** Super admin: claim a new board, or move one — factory, line, settings and its own login at once. */
+  adminBoardClaim: (
+    boardId: string,
+    body: { factory_id: string; line_id: string; settings: BoardSettings },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ ok: boolean; cfg_version: number; factory_id: string; line_id: string }>(
+      `/v1/admin/boards/${encodeURIComponent(boardId)}/claim`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
   /** Super admin: give a board its own MQTT login (sent to it once, with its settings). */
   adminBoardLogin: (boardId: string, options?: ApiRequestOptions) =>
     request<{ ok: boolean; cfg_version: number }>(`/v1/admin/boards/${encodeURIComponent(boardId)}/login`, {

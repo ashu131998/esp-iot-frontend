@@ -15,7 +15,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
-import { batteryClock, firmware, queue, supply } from '@/lib/board-status';
+import { batteryClock, firmware, queue, supply, timeSource } from '@/lib/board-status';
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
@@ -159,6 +159,7 @@ function NodesFleetInner() {
       d.is_stale ? 'stale' : 'ok',
       firmware(d.beat),
       batteryClock(d.beat).label,
+      timeSource(d.beat).label,
       queue(d.beat).label,
       supply(d.beat).label,
     ]);
@@ -179,7 +180,7 @@ function NodesFleetInner() {
               )}
               <ExportCsvButton
                 filename="esp-nodes"
-                headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status', 'Firmware', 'Battery clock', 'Queue', '24 V']}
+                headers={['Node', 'Factory', 'Line', 'Machine(s)', 'Type', 'Last seen', 'Status', 'Firmware', 'Battery clock', 'Time', 'Queue', '24 V']}
                 fetchRows={fetchAllNodes}
                 rowCount={total}
               />
@@ -251,7 +252,7 @@ function NodesFleetInner() {
         {nodesQuery.isError ? (
           <p className="text-sm text-red-600">{(nodesQuery.error as Error).message}</p>
         ) : queryShowsTableLoading(nodesQuery) ? (
-          <TableSkeleton rows={8} cols={12} />
+          <TableSkeleton rows={8} cols={13} />
         ) : nodes.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No nodes match filters.</p>
         ) : (
@@ -268,6 +269,7 @@ function NodesFleetInner() {
                   <TH>Status</TH>
                   <TH>Firmware</TH>
                   <TH>Battery clock</TH>
+                  <TH>Time</TH>
                   <TH>Queue</TH>
                   <TH>24 V</TH>
                   <TH />
@@ -320,6 +322,7 @@ function NodesFleetInner() {
                     </TD>
                     <TD className="font-mono text-xs">{firmware(d.beat)}</TD>
                     <TD><StatusBadge cell={batteryClock(d.beat)} /></TD>
+                    <TD><StatusText cell={timeSource(d.beat)} /></TD>
                     <TD><StatusText cell={queue(d.beat)} /></TD>
                     <TD><StatusText cell={supply(d.beat)} /></TD>
                     <TD>

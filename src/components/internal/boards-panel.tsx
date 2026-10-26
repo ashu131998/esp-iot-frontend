@@ -18,7 +18,7 @@ import {
   CHANNEL_SLOTS, KIND_LABEL, defaultBoardSettings, freeSlots, kindForSlot, newChannel, settingsProblems,
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
-import { batteryClock, firmware, loginStatus, queue, supply, type AdminBoard } from '@/lib/board-status';
+import { batteryClock, firmware, loginStatus, queue, supply, timeSource, type AdminBoard } from '@/lib/board-status';
 import { formatDate } from '@/lib/utils';
 
 const BOARDS_KEY = ['admin-boards'];
@@ -274,7 +274,7 @@ export function BoardsPanel() {
         {boardsQuery.isError ? (
           <p className="text-sm text-red-600">{(boardsQuery.error as Error).message}</p>
         ) : boardsQuery.isPending ? (
-          <TableSkeleton rows={4} cols={10} />
+          <TableSkeleton rows={4} cols={11} />
         ) : boards.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No boards have reported yet.</p>
         ) : (
@@ -282,7 +282,7 @@ export function BoardsPanel() {
             <THead>
               <TR>
                 <TH>Board</TH><TH>Where</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH>
-                <TH>Battery clock</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
+                <TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
                 {canChange && <TH />}
               </TR>
             </THead>
@@ -305,6 +305,7 @@ export function BoardsPanel() {
                   <TD><StatusBadge cell={loginStatus(b)} /></TD>
                   <TD className="font-mono text-xs">{firmware(b.beat)}</TD>
                   <TD><StatusBadge cell={batteryClock(b.beat)} /></TD>
+                  <TD><StatusText cell={timeSource(b.beat)} /></TD>
                   <TD><StatusText cell={queue(b.beat)} /></TD>
                   <TD><StatusText cell={supply(b.beat)} /></TD>
                   <TD className="text-xs">{b.last_beat_at ? formatDate(b.last_beat_at) : '—'}</TD>

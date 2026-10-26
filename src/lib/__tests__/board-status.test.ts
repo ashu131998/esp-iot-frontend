@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { batteryClock, firmware, formatBytes, loginStatus, queue, supply } from '@/lib/board-status';
+import { batteryClock, firmware, formatBytes, loginStatus, queue, supply, timeSource } from '@/lib/board-status';
 
 describe('batteryClock', () => {
   it('kept through the last power-up: OK', () => {
@@ -21,6 +21,24 @@ describe('batteryClock', () => {
     expect(batteryClock({ rtc: 'wrong' }).tone).toBe('warn');
     expect(batteryClock({}).label).toBe('—');
     expect(batteryClock(null).label).toBe('—');
+  });
+});
+
+describe('timeSource', () => {
+  it('internet time, or the server\'s where internet time is blocked: both right', () => {
+    expect(timeSource({ clock: 'ntp' })).toMatchObject({ label: 'Internet', tone: 'good' });
+    expect(timeSource({ clock: 'server' })).toMatchObject({ label: 'From server', tone: 'good' });
+  });
+
+  it('still the estimate from power-up, or no time at all', () => {
+    expect(timeSource({ clock: 'estimated' })).toMatchObject({ label: 'Estimated', tone: 'warn' });
+    expect(timeSource({ clock: 'none' })).toMatchObject({ label: 'No time', tone: 'bad' });
+  });
+
+  it('older firmware does not say; something new is shown as it is', () => {
+    expect(timeSource({ synced: true }).label).toBe('—');
+    expect(timeSource(null).label).toBe('—');
+    expect(timeSource({ clock: 'gps' })).toMatchObject({ label: 'gps', tone: 'neutral' });
   });
 });
 

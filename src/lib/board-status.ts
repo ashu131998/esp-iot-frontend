@@ -9,6 +9,8 @@ export interface BoardBeat {
   fw?: string;
   uptime_s?: number;
   synced?: boolean;
+  /** Where its time comes from (firmware 2.1.1+): none, estimated, ntp or server. */
+  clock?: string;
   boot_count?: number;
   reset_reason?: string;
   q_bytes?: number;
@@ -80,6 +82,24 @@ export function batteryClock(beat: BoardBeat | null | undefined): StatusCell {
       : { label: 'Not checked yet', tone: 'neutral', detail: 'Set from the internet now; checked at the next power cut' };
   }
   return { label: rtc, tone: 'neutral', detail: `Battery clock: ${rtc}` };
+}
+
+/**
+ * Where the board's time comes from now (firmware 2.1.1+). "server": internet time (NTP) is
+ * blocked on its network, so the server sets its clock instead — correct, nothing to fix.
+ */
+export function timeSource(beat: BoardBeat | null | undefined): StatusCell {
+  const c = beat?.clock;
+  if (!c) return NONE;
+  if (c === 'ntp') return { label: 'Internet', tone: 'good', detail: 'Set by an internet time server (NTP)' };
+  if (c === 'server') {
+    return { label: 'From server', tone: 'good', detail: 'Internet time (NTP) is blocked on its network: the server sets its clock, to within about a second' };
+  }
+  if (c === 'estimated') {
+    return { label: 'Estimated', tone: 'warn', detail: 'Running on the time it had at power-up, until internet time or the server confirms it (seconds when online)' };
+  }
+  if (c === 'none') return { label: 'No time', tone: 'bad', detail: 'No time yet: it records nothing until internet time or the server answers' };
+  return { label: c, tone: 'neutral', detail: `Clock: ${c}` };
 }
 
 /** Bytes as "512 B", "12.4 KB", "1.2 MB". */

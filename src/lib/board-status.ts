@@ -170,11 +170,12 @@ export function timeSource(beat: BoardBeat | null | undefined): StatusCell {
   return { label: c, tone: 'neutral', detail: `Clock: ${c}` };
 }
 
-/** Bytes as "512 B", "12.4 KB", "1.2 MB". */
+/** Bytes as "512 B", "12.4 KB", "1.2 MB", "37.3 GB". */
 export function formatBytes(n: number): string {
   if (n < 1024) return `${Math.round(n)} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 /** Where the queue is and how much it holds (firmware 2.3+); empty for older firmware. */

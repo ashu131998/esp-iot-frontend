@@ -86,6 +86,7 @@ describe('firmware and bytes', () => {
     expect(formatBytes(512)).toBe('512 B');
     expect(formatBytes(1536)).toBe('1.5 KB');
     expect(formatBytes(3 * 1024 * 1024)).toBe('3.0 MB');
+    expect(formatBytes(40e9)).toBe('37.3 GB');   // a server disk
   });
 });
 

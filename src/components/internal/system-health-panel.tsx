@@ -2,11 +2,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { StatusBadge } from '@/components/internal/board-status-cells';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
+import { formatBytes } from '@/lib/board-status';
+import { capacityVerdict, fullInLabel, growthLabel, machinesLabel } from '@/lib/capacity';
 import { formatDate } from '@/lib/utils';
 
 export function SystemHealthPanel() {
@@ -57,6 +60,52 @@ export function SystemHealthPanel() {
               </>
             )}
           </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <CardHeader
+          title="Capacity"
+          description="The server's disk, how fast it fills, and the machines it carries (hourly samples)"
+          action={data?.capacity ? <StatusBadge cell={capacityVerdict(data.capacity)} /> : undefined}
+        />
+        {!data?.capacity ? (
+          <p className="mt-4 text-sm text-muted">Not known yet (the server samples its disk every hour).</p>
+        ) : (
+          <>
+            <div className="mt-4">
+              <div className="mb-1 flex justify-between text-sm">
+                <span>Disk {data.capacity.disk.used_pct} % used</span>
+                <span className="text-muted">
+                  {formatBytes(data.capacity.disk.used)} of {formatBytes(data.capacity.disk.total)} · {formatBytes(data.capacity.disk.free)} free
+                </span>
+              </div>
+              <div className="h-2 w-full rounded bg-slate-100">
+                <div
+                  className={`h-2 rounded ${data.capacity.disk.used_pct >= 85 ? 'bg-red-500' : data.capacity.disk.used_pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                  style={{ width: `${Math.min(100, data.capacity.disk.used_pct)}%` }}
+                />
+              </div>
+            </div>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <dt className="text-muted">Growth</dt>
+                <dd className="font-semibold">{growthLabel(data.capacity)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Full in</dt>
+                <dd className="font-semibold">{fullInLabel(data.capacity)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Database</dt>
+                <dd className="font-semibold">{data.capacity.db_bytes !== null ? formatBytes(data.capacity.db_bytes) : '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Machines</dt>
+                <dd className="font-semibold">{machinesLabel(data.capacity)}</dd>
+              </div>
+            </dl>
+          </>
         )}
       </Card>
 

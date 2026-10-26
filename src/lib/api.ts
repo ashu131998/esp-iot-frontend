@@ -1,4 +1,5 @@
 import type { AdminBoard, BoardBeat, BrokerLogins } from '@/lib/board-status';
+import type { Capacity } from '@/lib/capacity';
 import type { FirmwareRelease, ReleaseSignature } from '@/lib/firmware';
 import type { BoardSettings } from '@/lib/board-settings';
 import type {
@@ -790,6 +791,8 @@ export const api = {
         device_stale_count: number;
         stale_threshold_minutes: number;
       };
+      /** The server's disk, database growth and machines (null: not known here). */
+      capacity?: Capacity | null;
       aggregator?: {
         pending_failures: number;
         failures_since: string | null;

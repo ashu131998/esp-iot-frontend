@@ -18,7 +18,10 @@ import {
   CHANNEL_SLOTS, KIND_LABEL, defaultBoardSettings, freeSlots, kindForSlot, newChannel, settingsProblems,
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
-import { batteryClock, firmware, loginStatus, queue, supply, timeSource, type AdminBoard } from '@/lib/board-status';
+import {
+  SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
+  timeSource, type AdminBoard, type BrokerLogins,
+} from '@/lib/board-status';
 import { formatDate } from '@/lib/utils';
 
 const BOARDS_KEY = ['admin-boards'];
@@ -241,6 +244,115 @@ function LoginConfirm({ board, onClose }: { board: AdminBoard; onClose: () => vo
   );
 }
 
+function SharedLoginConfirm({ logins, onClose }: { logins: BrokerLogins; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const restrict = !logins.shared.restricted;
+  const plan = restrictionPlan(logins);
+  const change = useMutation({
+    mutationFn: () => api.adminSharedLogin(restrict),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
+      onClose();
+    },
+  });
+  return (
+    <Modal open onClose={onClose} title={restrict ? 'Restrict the shared login' : 'Open the shared login again'}>
+      {restrict ? (
+        <div className="space-y-3 text-sm">
+          <p>
+            The shared login ({logins.shared.username}) is in every firmware image. Restricted, it only lets a new board
+            report as unclaimed and receive its claim; every other board needs its own login first.
+          </p>
+          {plan.blockedBy.length > 0 && (
+            <p className="rounded-md bg-red-50 p-2 text-xs text-red-800">Not yet: {plan.blockedBy.join('; ')}. All data would stop.</p>
+          )}
+          {plan.cutOff.length > 0 ? (
+            <div className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+              <p className="mb-1 font-medium">Cut off until they have their own login:</p>
+              <ul className="list-inside list-disc font-mono">
+                {plan.cutOff.map((c) => <li key={c.clientid}>{c.clientid}{c.ip ? ` (${c.ip})` : ''}</li>)}
+              </ul>
+              <p className="mt-1">Boards keep their data in flash meanwhile; open it again to let them back in.</p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted">Nothing connected now would be cut off.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm">
+          Anyone holding the shared password can then reach every factory again. Use it to let a board that was cut off
+          receive its own login.
+        </p>
+      )}
+      {change.isError && <p className="mt-3 text-xs text-red-700">{(change.error as Error).message}</p>}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button disabled={change.isPending || (restrict && plan.blockedBy.length > 0)} onClick={() => change.mutate()}>
+          {change.isPending ? 'Saving…' : restrict ? 'Restrict it' : 'Open it'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+/** The server's services and the shared fleet login on the broker. */
+function BrokerLoginsCard({ logins, canChange }: { logins: BrokerLogins; canChange: boolean }) {
+  const [confirming, setConfirming] = useState(false);
+  const { shared } = logins;
+  return (
+    <Card className="p-6">
+      <CardHeader
+        title="Broker logins"
+        description="Each board and server service gets a login of its own; the shared login is for new boards only once restricted"
+        action={canChange && (
+          <Button size="sm" variant={shared.restricted ? 'secondary' : 'primary'} onClick={() => setConfirming(true)}>
+            {shared.restricted ? 'Open shared login' : 'Restrict shared login'}
+          </Button>
+        )}
+      />
+      <Table className="border-0">
+        <THead>
+          <TR><TH>Who</TH><TH>Login</TH><TH>Status</TH></TR>
+        </THead>
+        <TBody>
+          {logins.services.map((s) => (
+            <TR key={s.service}>
+              <TD className="text-sm">{serviceName(s.service)}</TD>
+              <TD className="font-mono text-xs">{s.username}</TD>
+              <TD><StatusBadge cell={serviceLoginStatus(s)} /></TD>
+            </TR>
+          ))}
+          <TR>
+            <TD className="text-sm">Shared fleet login</TD>
+            <TD className="font-mono text-xs">{shared.username}</TD>
+            <TD>
+              <StatusBadge cell={shared.restricted
+                ? { label: 'New boards only', tone: 'good', detail: 'Only a new board reporting as unclaimed can use it' }
+                : { label: 'Open', tone: 'warn', detail: 'Anyone holding the shared password (in every firmware image) reaches every factory' }}
+              />
+            </TD>
+          </TR>
+        </TBody>
+      </Table>
+      <div className="mt-3 text-xs">
+        <p className="mb-1 font-medium">Connected with the shared login now:</p>
+        {shared.clients.length === 0 ? <p className="text-muted">Nobody.</p> : (
+          <ul className="space-y-0.5">
+            {shared.clients.map((c) => (
+              <li key={c.clientid}>
+                <span className="font-mono">{c.clientid}</span>
+                {c.ip && <span className="text-muted"> · {c.ip}</span>}
+                <span className="text-muted"> · {SHARED_CLIENT_KIND[c.kind]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {confirming && <SharedLoginConfirm logins={logins} onClose={() => setConfirming(false)} />}
+    </Card>
+  );
+}
+
 export function BoardsPanel() {
   const { user } = useAuth();
   const canChange = isSuperAdmin(user);
@@ -254,6 +366,7 @@ export function BoardsPanel() {
   });
   const boards = boardsQuery.data?.boards ?? [];
   const broker = boardsQuery.data?.broker;
+  const logins = boardsQuery.data?.logins ?? null;
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -335,6 +448,7 @@ export function BoardsPanel() {
           </Table>
         )}
       </Card>
+      {logins && <BrokerLoginsCard logins={logins} canChange={canChange} />}
       {editing && <SettingsEditor board={editing} onClose={() => setEditing(null)} />}
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}

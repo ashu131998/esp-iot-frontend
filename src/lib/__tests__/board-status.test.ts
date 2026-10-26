@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { batteryClock, firmware, formatBytes, loginStatus, queue, supply, timeSource } from '@/lib/board-status';
+import {
+  batteryClock, firmware, formatBytes, loginStatus, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
+  type BrokerLogins,
+} from '@/lib/board-status';
 
 describe('batteryClock', () => {
   it('kept through the last power-up: OK', () => {
@@ -76,5 +79,36 @@ describe('loginStatus', () => {
     expect(loginStatus({ login: null, own_login: true }).label).toBe('Issued, not in use');
     expect(loginStatus({ login: 'shared', own_login: false })).toMatchObject({ label: 'Shared', tone: 'warn' });
     expect(loginStatus({ login: null, own_login: false }).label).toBe('—');
+  });
+});
+
+describe('serviceLoginStatus', () => {
+  it('own login, still shared, not connected (the bridge missing is bad; the demo producer is optional)', () => {
+    expect(serviceLoginStatus({ service: 'bridge', username: 'svc-bridge', online: true, login: 'own' })).toMatchObject({ label: 'Own login', tone: 'good' });
+    expect(serviceLoginStatus({ service: 'bridge', username: 'svc-bridge', online: true, login: 'shared' })).toMatchObject({ label: 'Shared login', tone: 'warn' });
+    expect(serviceLoginStatus({ service: 'bridge', username: 'svc-bridge', online: false, login: null })).toMatchObject({ label: 'Not connected', tone: 'bad' });
+    expect(serviceLoginStatus({ service: 'mock', username: 'svc-mock', online: false, login: null }).tone).toBe('neutral');
+  });
+});
+
+describe('restrictionPlan', () => {
+  const logins = (services: BrokerLogins['services'], kinds: Array<'board' | 'new-board' | 'service' | 'other'>): BrokerLogins => ({
+    services,
+    shared: { username: 'espiot', restricted: false, clients: kinds.map((kind, i) => ({ clientid: `c${i}`, ip: null, kind })) },
+  });
+  const own = { service: 'bridge', username: 'svc-bridge', online: true, login: 'own' as const };
+
+  it('services on their own logins: allowed; cuts off every client but new boards', () => {
+    const plan = restrictionPlan(logins([own], ['new-board', 'board', 'other']));
+    expect(plan.blockedBy).toEqual([]);
+    expect(plan.cutOff.map((c) => c.clientid)).toEqual(['c1', 'c2']);
+  });
+
+  it('refused while the bridge uses the shared login or is not connected, or the demo producer uses it', () => {
+    expect(restrictionPlan(logins([{ ...own, login: 'shared' }], [])).blockedBy).toEqual(['Data bridge still uses it']);
+    expect(restrictionPlan(logins([{ ...own, online: false, login: null }], [])).blockedBy).toEqual(['Data bridge is not connected']);
+    expect(restrictionPlan(logins([own, { service: 'mock', username: 'svc-mock', online: true, login: 'shared' }], [])).blockedBy)
+      .toEqual(['Demo data producer still uses it']);
+    expect(restrictionPlan(logins([own, { service: 'mock', username: 'svc-mock', online: false, login: null }], [])).blockedBy).toEqual([]);
   });
 });

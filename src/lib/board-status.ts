@@ -45,6 +45,60 @@ export interface AdminBoard {
   connected_at: number | string | null;
 }
 
+/** The server's services on the broker (GET /v1/admin/boards → logins.services). */
+export interface ServiceLogin {
+  service: string;
+  username: string;
+  online: boolean;
+  login: 'own' | 'shared' | null;
+}
+
+/** A client on the shared fleet login: what restricting it would do to it depends on its kind. */
+export interface SharedLoginClient {
+  clientid: string;
+  ip: string | null;
+  kind: 'board' | 'new-board' | 'service' | 'other';
+}
+
+export interface BrokerLogins {
+  services: ServiceLogin[];
+  shared: { username: string; restricted: boolean; clients: SharedLoginClient[] };
+}
+
+const SERVICE_NAMES: Record<string, string> = { bridge: 'Data bridge', mock: 'Demo data producer' };
+
+export function serviceName(service: string): string {
+  return SERVICE_NAMES[service] ?? service;
+}
+
+/** A server service's broker login: its own (only its topics), or still the shared one. */
+export function serviceLoginStatus(s: ServiceLogin): StatusCell {
+  const name = serviceName(s.service);
+  if (!s.online) {
+    return { label: 'Not connected', tone: s.service === 'bridge' ? 'bad' : 'neutral', detail: `${name} is not connected to the broker` };
+  }
+  if (s.login === 'own') return { label: 'Own login', tone: 'good', detail: `${name} connects as ${s.username}: only its own topics` };
+  return { label: 'Shared login', tone: 'warn', detail: `${name} still uses the shared login; the server sets up its own when it starts` };
+}
+
+export const SHARED_CLIENT_KIND: Record<SharedLoginClient['kind'], string> = {
+  'new-board': 'New board: keeps working',
+  board: 'Board: cut off until it has its own login',
+  service: 'Server service: cut off',
+  other: 'Other client (a tool): cut off',
+};
+
+/**
+ * What restricting the shared login would do now: refused while a service still needs it
+ * (the bridge on it, or not connected: all data would stop); which clients it cuts off.
+ */
+export function restrictionPlan(l: BrokerLogins): { blockedBy: string[]; cutOff: SharedLoginClient[] } {
+  const blockedBy = l.services
+    .filter((s) => s.login === 'shared' || (s.service === 'bridge' && !s.online))
+    .map((s) => (s.online ? `${serviceName(s.service)} still uses it` : `${serviceName(s.service)} is not connected`));
+  return { blockedBy, cutOff: l.shared.clients.filter((c) => c.kind !== 'new-board') };
+}
+
 /** Which MQTT login the board uses, and whether a login of its own is waiting for it. */
 export function loginStatus(b: Pick<AdminBoard, 'login' | 'own_login'>): StatusCell {
   if (b.login === 'own') return { label: 'Own', tone: 'good', detail: 'Connects with its own login: only its own topics' };

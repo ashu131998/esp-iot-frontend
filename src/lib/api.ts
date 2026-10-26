@@ -1,4 +1,4 @@
-import type { AdminBoard, BoardBeat } from '@/lib/board-status';
+import type { AdminBoard, BoardBeat, BrokerLogins } from '@/lib/board-status';
 import type { BoardSettings } from '@/lib/board-settings';
 import type {
   ActiveAssignmentsResponse,
@@ -800,7 +800,15 @@ export const api = {
 
   /** Real boards with their state (staff); see AdminBoard. */
   adminBoards: (options?: ApiRequestOptions) =>
-    request<{ broker: 'ok' | 'unreachable' | 'unavailable'; boards: AdminBoard[] }>('/v1/admin/boards', options),
+    request<{ broker: 'ok' | 'unreachable' | 'unavailable'; logins: BrokerLogins | null; boards: AdminBoard[] }>(
+      '/v1/admin/boards', options,
+    ),
+
+  /** Super admin: restrict the shared fleet MQTT login to new boards, or open it again. */
+  adminSharedLogin: (restricted: boolean, options?: ApiRequestOptions) =>
+    request<{ ok: boolean; restricted: boolean; cut_off: string[] }>('/v1/admin/mqtt/shared-login', {
+      method: 'POST', body: JSON.stringify({ restricted }), ...options,
+    }),
 
   /** Super admin: send a board its settings (retained on its config topic). */
   adminBoardSettings: (boardId: string, settings: BoardSettings, options?: ApiRequestOptions) =>

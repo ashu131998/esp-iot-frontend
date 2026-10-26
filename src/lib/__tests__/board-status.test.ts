@@ -52,6 +52,23 @@ describe('queue', () => {
     expect(queue({ q_bytes: 200 * 1024 })).toMatchObject({ label: '200.0 KB waiting', tone: 'warn' });
     expect(queue({}).label).toBe('—');
   });
+
+  it('where it is and how much room (2.3+): a quarter of the room waiting is worth a look', () => {
+    const chip = { qloc: 'ext', q_cap: 12 * 1024 * 1024 };
+    expect(queue({ ...chip, q_bytes: 0 })).toEqual({
+      label: 'Empty', tone: 'good', detail: 'Everything it measured has reached the server. On the 16 MB flash chip (room for 12.0 MB).',
+    });
+    expect(queue({ ...chip, q_bytes: 200 * 1024 }).tone).toBe('neutral');        // 200 KB of 12 MB: fine
+    expect(queue({ ...chip, q_bytes: 4 * 1024 * 1024 }).tone).toBe('warn');      // a third of it
+    expect(queue({ qloc: 'int', q_cap: 768 * 1024, q_bytes: 0 }).detail).toMatch(/board's own flash \(room for 768\.0 KB\)/);
+    expect(queue({ qloc: 'none', q_bytes: 0 }).detail).toMatch(/only goes out live/);
+  });
+
+  it('anything a full queue dropped is said, and makes it worth a look', () => {
+    const r = queue({ qloc: 'ext', q_cap: 131072, q_bytes: 0, q_dropped: 319284 });
+    expect(r.tone).toBe('warn');
+    expect(r.detail).toMatch(/311\.8 KB dropped since it was set up/);
+  });
 });
 
 describe('supply', () => {

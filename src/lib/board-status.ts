@@ -26,6 +26,11 @@ export interface BoardBeat {
   ota_version?: string;
   ota_error?: string;
   ota_pct?: number;
+  /** Where its queue is (firmware 2.3+): ext = REV B's 16 MB chip, int = its own flash. */
+  qloc?: string;
+  q_cap?: number;
+  /** Lifetime: unconfirmed bytes dropped from a full queue (oldest first). */
+  q_dropped?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -172,15 +177,35 @@ export function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Data the board holds that the server has not confirmed yet (normally empty within seconds). */
+/** Where the queue is and how much it holds (firmware 2.3+); empty for older firmware. */
+function queuePlace(beat: BoardBeat): string {
+  const room = beat.q_cap ? ` (room for ${formatBytes(beat.q_cap)})` : '';
+  if (beat.qloc === 'ext') return `On the 16 MB flash chip${room}.`;
+  if (beat.qloc === 'int') return `On the board's own flash${room}.`;
+  if (beat.qloc === 'none') return 'No flash for it: what it measures only goes out live.';
+  return '';
+}
+
+/**
+ * Data the board holds that the server has not confirmed yet (normally empty within seconds).
+ * A quarter of its room or more waiting is worth a look; anything ever dropped from a full
+ * queue (a long outage) is said too.
+ */
 export function queue(beat: BoardBeat | null | undefined): StatusCell {
   const q = beat?.q_bytes;
-  if (q === undefined || q === null || !Number.isFinite(q)) return NONE;
-  if (q === 0) return { label: 'Empty', tone: 'good', detail: 'Everything it measured has reached the server' };
+  if (!beat || q === undefined || q === null || !Number.isFinite(q)) return NONE;
+  const dropped = beat.q_dropped && beat.q_dropped > 0 ? beat.q_dropped : 0;
+  const lost = dropped ? ` ${formatBytes(dropped)} dropped since it was set up: a long outage filled it (oldest first).` : '';
+  const where = queuePlace(beat);
+  const tail = `${where ? ` ${where}` : ''}${lost}`;
+  if (q === 0) {
+    return { label: 'Empty', tone: dropped ? 'warn' : 'good', detail: `Everything it measured has reached the server.${tail}` };
+  }
+  const big = beat.q_cap ? q > beat.q_cap / 4 : q > 64 * 1024;
   return {
     label: `${formatBytes(q)} waiting`,
-    tone: q > 64 * 1024 ? 'warn' : 'neutral',
-    detail: 'Saved on the board, not yet confirmed by the server',
+    tone: big || dropped ? 'warn' : 'neutral',
+    detail: `Saved on the board, not yet confirmed by the server.${tail}`,
   };
 }
 

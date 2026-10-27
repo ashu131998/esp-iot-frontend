@@ -706,8 +706,14 @@ export const api = {
       options,
     ),
 
-  onboardFactory: (body: Record<string, unknown>, options?: ApiRequestOptions) =>
-    request<{ factory: Factory; admin: import('./auth-types').AuthUser }>('/v1/admin/factories', {
+  /** A factory with its first admins; each admin is emailed their sign-in details. */
+  onboardFactory: (body: import('./onboarding').OnboardRequest, options?: ApiRequestOptions) =>
+    request<{
+      factory: Factory;
+      admins: import('./auth-types').AuthUser[];
+      emails: { username: string; email: string; sent: boolean; error?: string }[];
+      dashboard_url: string;
+    }>('/v1/admin/factories', {
       method: 'POST',
       body: JSON.stringify(body),
       ...options,

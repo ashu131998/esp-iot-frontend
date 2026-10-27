@@ -120,7 +120,8 @@ export function LoginForm({
           <p className="mt-6 text-center text-sm text-muted" role="status">Signing you in…</p>
         ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <Field label="Username">
+          {/* Factory admins onboarded from /internal/onboard sign in with their email by default. */}
+          <Field label={platformStaff ? 'Username' : 'Email or username'}>
             <Input
               id="username"
               autoComplete="username"

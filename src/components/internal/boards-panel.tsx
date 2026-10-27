@@ -71,7 +71,8 @@ function SettingsFields({ draft, setDraft }: { draft: BoardSettings; setDraft: (
                 )}
                 {c.type === 'proximity' && (
                   <Input
-                    type="number" placeholder="debounce µs (3000)" value={c.debounce_us ?? ''}
+                    type="number" placeholder="debounce µs (10000)" value={c.debounce_us ?? ''}
+                    title="One count per steel object, however long it stays. The sensor must be clear this long (µs) before the next one counts. Default 10000 (10 ms): up to 3,000 a minute. Firmware 2.3.2+"
                     onChange={(e) => setChannel(i, { debounce_us: e.target.value === '' ? undefined : Number(e.target.value) })}
                   />
                 )}

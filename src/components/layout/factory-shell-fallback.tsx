@@ -1,8 +1,4 @@
-import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
-
 import { PageHeader } from '@/components/layout/app-shell';
-import { FactoryNav } from '@/components/layout/factory-sidebar';
 import { FactoryPageSkeleton } from '@/components/ui/page-skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFactoryConfig } from '@/lib/factory-config';
@@ -42,17 +38,14 @@ export function FactoryShellFallback({
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="flex items-center justify-between border-b bg-white px-4 py-2.5 lg:hidden">
-          <Link
-            href="/overview"
-            className="flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to Platform
-          </Link>
+        {/* Phones: the top bar as FactoryMobileNav draws it; the bottom bar comes with the page. */}
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b bg-white px-4 lg:hidden">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{config.name}</p>
         </div>
-        <PageHeader title={config.name} description="Loading factory data…" />
-        <FactoryNav tabs={tabs} />
+        <div className="hidden lg:block">
+          <PageHeader title={config.name} description="Loading factory data…" />
+        </div>
         <div className="flex-1">
           <FactoryPageSkeleton />
         </div>

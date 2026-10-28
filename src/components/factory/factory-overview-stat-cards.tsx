@@ -100,13 +100,16 @@ export function FactoryOverviewStatCards({
   });
 
   const cards = 1 + Number(energyOn) + Number(productionOn) + Number(performanceOn);
+  // Two per row up to lg (phones too); with an odd count, availability takes a whole row.
+  const firstWide = cards > 1 && cards % 2 === 1;
 
   return (
-    <div className={`grid gap-4 ${cards > 1 ? 'sm:grid-cols-2' : ''} ${LG_COLS[cards]}`}>
+    <div className={`grid gap-3 sm:gap-4 ${cards > 1 ? 'grid-cols-2' : ''} ${LG_COLS[cards]}`}>
       <StatCard
         label="Availability"
         value={formatPercent(figures.runningPercent)}
         icon={<Activity className="h-4 w-4 text-muted" />}
+        className={firstWide ? 'col-span-2 lg:col-span-1' : undefined}
       />
       {energyOn && (
         <StatCard

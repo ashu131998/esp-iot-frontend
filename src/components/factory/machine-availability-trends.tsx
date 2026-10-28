@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { ChartSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
+import { useWideScreen } from '@/lib/use-wide-screen';
 
 const AvailabilityTrendChart = dynamic(
   () => import('@/components/factory/availability-trend-chart').then(m => ({ default: m.AvailabilityTrendChart })),
@@ -30,25 +31,31 @@ export function MachineAvailabilityTrends({
   from?: string;
   to?: string;
 }) {
+  // Phones: the daily table only; the charts need a wider screen (lib/use-wide-screen.ts).
+  const wide = useWideScreen();
   return (
     <>
-      <Suspense fallback={<ChartSkeleton />}>
-        <AvailabilityTrendChart
-          factoryId={factoryId}
-          machineId={machineId}
-          from={from}
-          to={to}
-        />
-      </Suspense>
+      {wide && (
+        <Suspense fallback={<ChartSkeleton />}>
+          <AvailabilityTrendChart
+            factoryId={factoryId}
+            machineId={machineId}
+            from={from}
+            to={to}
+          />
+        </Suspense>
+      )}
 
-      <Suspense fallback={<ChartSkeleton />}>
-        <MachinePerformanceTrend
-          factoryId={factoryId}
-          machineId={machineId}
-          from={from}
-          to={to}
-        />
-      </Suspense>
+      {wide && (
+        <Suspense fallback={<ChartSkeleton />}>
+          <MachinePerformanceTrend
+            factoryId={factoryId}
+            machineId={machineId}
+            from={from}
+            to={to}
+          />
+        </Suspense>
+      )}
 
       <Suspense fallback={<TableSkeleton rows={7} cols={5} />}>
         <AvailabilityTrendTable

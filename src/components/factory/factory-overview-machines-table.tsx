@@ -130,11 +130,12 @@ export function FactoryOverviewMachinesTable({
   const pageRows = machineRows.slice(offset, offset + limit);
   const total = scopedMachines.length;
 
-  function currentStatus(
+  // One rule for a machine's status now, in the table, the phone cards and the CSV.
+  function machineStatus(
     uptime?: (typeof uptime24h.machines)[0],
     avail?: (typeof availability.machines)[0],
   ) {
-    return statusLabel(uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data');
+    return uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data';
   }
 
   return (
@@ -143,7 +144,7 @@ export function FactoryOverviewMachinesTable({
         title="Machines"
         description="All machines registered for this factory"
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
             <ExportCsvButton
               filename="factory-machines"
               headers={[
@@ -162,7 +163,7 @@ export function FactoryOverviewMachinesTable({
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
                 ...(productionOn ? [unitsMade(prod)] : []),
-                currentStatus(uptime, avail),
+                statusLabel(machineStatus(uptime, avail)),
               ])}
             />
             <Link
@@ -174,7 +175,54 @@ export function FactoryOverviewMachinesTable({
           </div>
         }
       />
-      <Table>
+      {/* Phones: one card per machine, tapping through to it. */}
+      <ul className="-mx-4 divide-y border-t sm:hidden">
+        {pageRows.map(({ machine, avail, eng, prod, uptime }) => {
+          const streams = uptimeRowsByMachine[machine.machine_id] ?? [];
+          return (
+            <li key={machine.machine_id}>
+              <Link
+                href={`/factories/${factoryId}/machines/${machine.machine_id}`}
+                className="block px-4 py-3 active:bg-slate-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{machine.name}</p>
+                    <p className="truncate text-xs text-muted">
+                      {machine.line_id}
+                      {machine.type && <span className="capitalize"> · {machine.type}</span>}
+                    </p>
+                  </div>
+                  <MachineStatusBadge status={machineStatus(uptime, avail)} />
+                </div>
+                <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <Figure label="Availability" value={formatPercent(avail?.availability_percent)} />
+                  {energyOn && (
+                    <Figure
+                      label="Energy"
+                      value={eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
+                    />
+                  )}
+                  {productionOn && <Figure label="Units" value={formatUnits(unitsMade(prod), prod?.unit_label)} />}
+                </dl>
+                <div className="mt-2 space-y-1">
+                  {streams.length > 1 ? (
+                    streams.map((row) => (
+                      <div key={row.stream_key} className="flex items-center gap-2">
+                        <span className="w-16 shrink-0 truncate text-[10px] text-muted">{row.label || row.display_name}</span>
+                        <MiniTimeline segments={row.timeline ?? []} className="w-full" />
+                      </div>
+                    ))
+                  ) : (
+                    <MiniTimeline segments={uptime?.timeline ?? []} className="w-full" />
+                  )}
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <Table className="hidden sm:block">
         <THead>
           <TR>
             <TH>Machine</TH>
@@ -214,9 +262,7 @@ export function FactoryOverviewMachinesTable({
                 )}
               </TD>
               <TD>
-                <MachineStatusBadge
-                  status={uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data'}
-                />
+                <MachineStatusBadge status={machineStatus(uptime, avail)} />
               </TD>
             </TR>
           ))}
@@ -229,5 +275,14 @@ export function FactoryOverviewMachinesTable({
         onPaginationChange={setPaginationParams}
       />
     </Card>
+  );
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-1">
+      <dt className="text-muted">{label}</dt>
+      <dd className="font-medium">{value}</dd>
+    </div>
   );
 }

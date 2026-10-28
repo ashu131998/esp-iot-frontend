@@ -50,14 +50,16 @@ export function StatCard({
   value,
   sub,
   icon,
+  className,
 }: {
   label: string;
   value: string;
   sub?: string;
   icon?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card className="flex h-full flex-col gap-2">
+    <Card className={cn('flex h-full flex-col gap-2', className)}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted">{label}</span>
         {icon}

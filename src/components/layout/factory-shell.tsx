@@ -1,7 +1,6 @@
-import { SignOutButton } from '@/components/auth/sidebar-user-footer';
-import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
+import { FactoryMobileNav } from '@/components/layout/factory-mobile-nav';
 import { PageHeader } from '@/components/layout/page-header';
-import { FactoryNav, FactorySidebar } from '@/components/layout/factory-sidebar';
+import { FactorySidebar } from '@/components/layout/factory-sidebar';
 import { brandStyle, logoUrl, type FactoryBranding } from '@/lib/branding';
 import { FactoryRefsProvider, type FactoryRefs } from '@/lib/factory-refs-context';
 import { RefreshProvider } from '@/lib/refresh-context';
@@ -43,13 +42,19 @@ export function FactoryShell({
         />
       </aside>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="flex items-center justify-between border-b bg-white px-4 py-2.5 lg:hidden">
-          <FactoryPlatformBack factoryId={factoryId} />
-          <SignOutButton factoryId={factoryId} />
+        <FactoryMobileNav
+          factoryId={factoryId}
+          factoryName={factoryName}
+          logoSrc={logoUrl(factoryId, branding)}
+          location={location}
+          shifts={shifts}
+          tabs={tabs}
+        />
+        <div className="hidden lg:block">
+          <PageHeader title={factoryName} description={description} />
         </div>
-        <PageHeader title={factoryName} description={description} />
-        <FactoryNav tabs={tabs} />
-        <div className="flex-1">
+        {/* Phones: room under the content for the bottom bar. */}
+        <div className="flex-1 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           <FactoryRefsProvider value={refs}>
             <RefreshProvider>{children}</RefreshProvider>
           </FactoryRefsProvider>

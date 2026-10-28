@@ -5,14 +5,18 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
+  Cable,
   CalendarClock,
+  ClipboardCheck,
   Cog,
   Factory,
+  FileText,
   Gauge,
   LayoutDashboard,
-  Settings,
+  ShieldCheck,
   Thermometer,
   Timer,
+  Users,
   Waves,
   Workflow,
   Zap,
@@ -34,13 +38,19 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   temperature: Thermometer,
   performance: Gauge,
   production: Factory,
-  quality: AlertTriangle,
+  quality: ClipboardCheck,
   lines: Workflow,
   configuration: Cog,
   scheduling: CalendarClock,
-  compliance: Settings,
-  team: Settings,
+  'shift-reports': FileText,
+  'sensor-mapping': Cable,
+  compliance: ShieldCheck,
+  team: Users,
 };
+
+export function tabIcon(slug: string): React.ComponentType<{ className?: string }> {
+  return tabIcons[slug] ?? Activity;
+}
 
 export function FactorySidebar({
   factoryId,
@@ -98,7 +108,7 @@ export function FactorySidebar({
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
           {tabs.map((tab) => {
-            const Icon = tabIcons[tab.slug] ?? Activity;
+            const Icon = tabIcon(tab.slug);
             const active = pendingHref ? pendingHref === tab.href : pathname === tab.href;
             return (
               <li key={tab.href}>
@@ -125,46 +135,5 @@ export function FactorySidebar({
 
       <SidebarUserFooter factoryId={factoryId} />
     </aside>
-  );
-}
-
-export function FactoryNav({ tabs }: { tabs: Array<{ slug: string; label: string; href: string }> }) {
-  const pathname = usePathname();
-  const navigate = useNavigate();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPendingHref(null);
-  }, [pathname]);
-
-  return (
-    <div className="border-b bg-white lg:hidden">
-      <div className="flex gap-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {tabs.map((tab) => {
-          const Icon = tabIcons[tab.slug] ?? Activity;
-          const active = pendingHref ? pendingHref === tab.href : pathname === tab.href;
-          return (
-            <button
-              key={tab.href}
-              onClick={() => {
-                if (pathname !== tab.href) {
-                  setPendingHref(tab.href);
-                  navigate(tab.href);
-                }
-              }}
-              className={cn(
-                'flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                active
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:border-slate-200 hover:text-foreground',
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

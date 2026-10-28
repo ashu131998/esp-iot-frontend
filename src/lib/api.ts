@@ -982,7 +982,10 @@ export const api = {
     body: { username: string; password: string; email?: string },
     options?: ApiRequestOptions,
   ) =>
-    request<import('./auth-types').AuthUser>(`/v1/admin/factories/${factoryId}/admins`, {
+    request<import('./auth-types').AuthUser & {
+      /** The welcome email (sign-in details) when an email was given; null when not. */
+      welcome_email: { email: string; sent: boolean; error?: string } | null;
+    }>(`/v1/admin/factories/${factoryId}/admins`, {
       method: 'POST',
       body: JSON.stringify(body),
       ...options,

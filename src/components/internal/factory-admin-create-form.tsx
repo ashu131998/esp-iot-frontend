@@ -30,8 +30,13 @@ export function FactoryAdminCreateForm() {
         password: form.password,
         email: form.email || undefined,
       }),
-    onSuccess: () => {
-      setMessage('Factory admin created.');
+    onSuccess: (res) => {
+      const w = res.welcome_email;
+      setMessage(
+        !w ? 'Factory admin created.'
+          : w.sent ? `Factory admin created. Welcome email sent to ${w.email}.`
+            : `Factory admin created, but the welcome email to ${w.email} did not go (${w.error ?? 'not sent'}). Send them their sign-in details yourself.`,
+      );
       qc.invalidateQueries({ queryKey: ['admin-users'] });
       setForm((f) => ({ ...f, username: '', password: '', email: '' }));
     },
@@ -82,7 +87,7 @@ export function FactoryAdminCreateForm() {
           minLength={8}
         />
       </Field>
-      <Field label="Email (optional)">
+      <Field label="Email (optional — they get a welcome email with their sign-in details)">
         <Input
           type="email"
           value={form.email}

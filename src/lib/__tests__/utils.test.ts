@@ -6,6 +6,7 @@ import {
   formatPercent,
   formatAlertVia,
   formatUnits,
+  formatVolts,
   normalizeMachineStatus,
   sharedUnitLabel,
   sumUnits,
@@ -86,6 +87,16 @@ describe('statusLabel', () => {
 });
 
 // ── production units ─────────────────────────────────────────────────────────
+
+describe('formatVolts', () => {
+  it('adds the unit', () => expect(formatVolts(415)).toBe('415 V'));
+  it('keeps decimals as given', () => expect(formatVolts(230.5)).toBe('230.5 V'));
+  it('shows a dash alone when unknown', () => {
+    expect(formatVolts(null)).toBe('—');
+    expect(formatVolts(undefined)).toBe('—');
+    expect(formatVolts(Number.NaN)).toBe('—');
+  });
+});
 
 describe('formatUnits', () => {
   it('adds the unit name', () => expect(formatUnits(25.4, 'm')).toBe('25.4 m'));

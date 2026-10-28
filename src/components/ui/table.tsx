@@ -24,6 +24,9 @@ export function TR({ children, className, ...props }: React.ComponentPropsWithou
   );
 }
 
+/** For a column's TH and TD: left out on phones held upright (below sm). */
+export const PHONE_HIDDEN = 'hidden sm:table-cell';
+
 export function TH({ children, className }: { children?: React.ReactNode; className?: string }) {
   return <th className={cn('px-2 py-2 font-medium sm:px-4 sm:py-3', className)}>{children}</th>;
 }

@@ -53,7 +53,8 @@ export function QualityForm({
   }
 
   return (
-    <div className="rounded-lg border bg-slate-50 p-4">
+    // Opens in the card header's button row: full width there on phones.
+    <div className="w-full rounded-lg border bg-slate-50 p-4 sm:w-auto">
       <h4 className="mb-4 text-sm font-semibold">Add Quality Record</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Machine">

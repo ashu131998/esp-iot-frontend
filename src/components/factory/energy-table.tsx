@@ -6,7 +6,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
@@ -19,7 +19,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatVolts } from '@/lib/utils';
 
 export function EnergyTable({
   factoryId,
@@ -82,8 +82,8 @@ export function EnergyTable({
             <TH>Machine</TH>
             <TH>Line</TH>
             <TH>Energy (kWh)</TH>
-            <TH>Avg Amps</TH>
-            <TH>Peak Amps</TH>
+            <TH className={PHONE_HIDDEN}>Avg Amps</TH>
+            <TH className={PHONE_HIDDEN}>Peak Amps</TH>
             <TH>Voltage</TH>
           </TR>
         </THead>
@@ -93,9 +93,9 @@ export function EnergyTable({
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
               <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh) : '—'}</TD>
-              <TD>{m.avg_amps != null ? formatNumber(m.avg_amps, 2) : '—'}</TD>
-              <TD>{m.peak_amps != null ? formatNumber(m.peak_amps, 2) : '—'}</TD>
-              <TD>{m.voltage_v ?? '—'} V</TD>
+              <TD className={PHONE_HIDDEN}>{m.avg_amps != null ? formatNumber(m.avg_amps, 2) : '—'}</TD>
+              <TD className={PHONE_HIDDEN}>{m.peak_amps != null ? formatNumber(m.peak_amps, 2) : '—'}</TD>
+              <TD>{formatVolts(m.voltage_v)}</TD>
             </TR>
           ))}
         </TBody>

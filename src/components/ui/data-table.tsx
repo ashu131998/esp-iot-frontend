@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 
-import { Table, THead, TBody, TR, TH, TD } from './table';
+import { PHONE_HIDDEN, Table, THead, TBody, TR, TH, TD } from './table';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 
@@ -24,8 +24,6 @@ declare module '@tanstack/react-table' {
     phoneHidden?: boolean;
   }
 }
-
-const PHONE_HIDDEN = 'hidden sm:table-cell';
 
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];

@@ -6,7 +6,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
@@ -19,7 +19,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatUnits } from '@/lib/utils';
+import { cn, formatUnits } from '@/lib/utils';
 
 export function ProductionTable({
   factoryId,
@@ -82,7 +82,7 @@ export function ProductionTable({
             <TH>Machine</TH>
             <TH>Line</TH>
             <TH>Units Produced</TH>
-            <TH>Sensor</TH>
+            <TH className={PHONE_HIDDEN}>Sensor</TH>
             <TH>Data Points</TH>
           </TR>
         </THead>
@@ -92,7 +92,7 @@ export function ProductionTable({
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
               <TD className="font-semibold">{formatUnits(m.units_produced, m.unit_label)}</TD>
-              <TD className="font-mono text-xs">{m.device_id ?? '—'}</TD>
+              <TD className={cn('font-mono text-xs', PHONE_HIDDEN)}>{m.device_id ?? '—'}</TD>
               <TD>{m.data_points ?? '—'}</TD>
             </TR>
           ))}

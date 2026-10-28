@@ -71,7 +71,7 @@ export function AvailabilityTrendTable({
         <span className="flex items-center gap-2 font-medium">
           {row.original.dateLabel}
           {row.original.is_live && (
-            <Badge className="bg-amber-50 text-amber-700 text-xs">
+            <Badge className="hidden bg-amber-50 text-amber-700 text-xs sm:inline-flex">
               {row.original.dateKey === new Date().toLocaleDateString('en-CA') ? 'Today' : 'Not final yet'}
             </Badge>
           )}
@@ -88,17 +88,20 @@ export function AvailabilityTrendTable({
     {
       accessorKey: 'uptime',
       header: 'Uptime',
+      meta: { phoneHidden: true },
       cell: ({ row }) => humanMinutes(row.original.uptime),
     },
     {
       accessorKey: 'downtime',
       header: 'Downtime',
+      meta: { phoneHidden: true },
       cell: ({ row }) => humanMinutes(row.original.downtime),
     },
     {
       id: 'total',
       accessorFn: (row) => row.uptime + row.downtime,
       header: 'Total',
+      meta: { phoneHidden: true },
       cell: ({ row }) => humanMinutes(row.original.uptime + row.original.downtime),
     },
   ], []);

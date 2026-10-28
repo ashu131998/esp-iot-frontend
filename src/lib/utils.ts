@@ -23,6 +23,12 @@ export function formatUnits(value: number | null | undefined, label?: string | n
   return label ? `${n} ${label}` : n;
 }
 
+/** A voltage as "415 V"; "—" when unknown (not "— V"). */
+export function formatVolts(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  return `${value} V`;
+}
+
 /** The unit name the producing machines share: null when none, 'mixed' when they differ. */
 export function sharedUnitLabel(machines: Array<{ unit_label?: string | null; status?: string }>): string | null {
   const labels = new Set(machines.filter((m) => m.status !== 'no_sensor').map((m) => m.unit_label ?? null));

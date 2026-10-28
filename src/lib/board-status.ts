@@ -3,6 +3,8 @@
  * (stored by the consumer; fields added over firmware versions, so any may be missing).
  */
 
+import { format } from 'date-fns';
+
 import type { BoardSettings } from '@/lib/board-settings';
 
 export interface BoardBeat {
@@ -40,6 +42,8 @@ export interface AdminBoard {
   board_id: string;
   factory_id: string | null;
   line_id: string | null;
+  /** When it joined: the server first heard from it, or set it up here if that came first. */
+  onboarded_at: string | null;
   last_beat_at: string | null;
   beat: BoardBeat | null;
   /** What the dashboard last sent it (null: never set from here). */
@@ -222,4 +226,11 @@ export function supply(beat: BoardBeat | null | undefined): StatusCell {
 
 export function firmware(beat: BoardBeat | null | undefined): string {
   return beat?.fw ?? '—';
+}
+
+/** Its onboarding date and time, in the viewer's clock: "28 Oct 2026, 22:55". */
+export function onboarded(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime()) ? '—' : format(at, 'd MMM yyyy, HH:mm');
 }

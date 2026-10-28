@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  batteryClock, firmware, formatBytes, loginStatus, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
+  batteryClock, firmware, formatBytes, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
   type BrokerLogins,
 } from '@/lib/board-status';
 
@@ -87,6 +87,19 @@ describe('firmware and bytes', () => {
     expect(formatBytes(1536)).toBe('1.5 KB');
     expect(formatBytes(3 * 1024 * 1024)).toBe('3.0 MB');
     expect(formatBytes(40e9)).toBe('37.3 GB');   // a server disk
+  });
+});
+
+describe('onboarded', () => {
+  it('shows the date with its year and the time', () => {
+    expect(onboarded(new Date(2026, 9, 28, 22, 55, 30).toISOString())).toBe('28 Oct 2026, 22:55');
+    expect(onboarded(new Date(2025, 0, 3, 7, 5).toISOString())).toBe('3 Jan 2025, 07:05');
+  });
+
+  it('shows a dash when unknown', () => {
+    expect(onboarded(null)).toBe('—');
+    expect(onboarded(undefined)).toBe('—');
+    expect(onboarded('not a date')).toBe('—');
   });
 });
 

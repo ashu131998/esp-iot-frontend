@@ -19,7 +19,7 @@ import {
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
 import {
-  SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
+  SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
   timeSource, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
@@ -449,7 +449,7 @@ export function BoardsPanel() {
           <Table className="border-0">
             <THead>
               <TR>
-                <TH>Board</TH><TH>Where</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
+                <TH>Board</TH><TH>Where</TH><TH>Onboarded</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
                 <TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
                 {canChange && <TH />}
               </TR>
@@ -463,6 +463,7 @@ export function BoardsPanel() {
                       ? <Badge className="bg-blue-50 text-blue-700">New — not claimed</Badge>
                       : `${b.factory_id ?? '—'} / ${b.line_id ?? '—'}`}
                   </TD>
+                  <TD className="whitespace-nowrap text-xs">{onboarded(b.onboarded_at)}</TD>
                   <TD>
                     {b.online === null ? <span className="text-xs text-muted">—</span> : (
                       <Badge className={b.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>

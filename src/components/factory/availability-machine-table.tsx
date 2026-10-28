@@ -8,7 +8,7 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
@@ -116,7 +116,7 @@ export function AvailabilityMachineTable({
             <TH>Uptime</TH>
             <TH>Downtime</TH>
             <TH>Availability</TH>
-            <TH>Last 24h</TH>
+            <TH className={PHONE_HIDDEN}>Last 24h</TH>
             <TH>Current Status</TH>
           </TR>
         </THead>
@@ -128,7 +128,7 @@ export function AvailabilityMachineTable({
               <TD>{humanMinutes(m.uptime_minutes)}</TD>
               <TD>{humanMinutes(m.downtime_minutes)}</TD>
               <TD>{formatPercent(m.availability_percent)}</TD>
-              <TD>
+              <TD className={PHONE_HIDDEN}>
                 {(uptimeRowsByMachine[m.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">
                     {uptimeRowsByMachine[m.machine_id]?.map((row) => (

@@ -7,7 +7,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { StatCard, MachineStatusBadge, Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
@@ -146,8 +146,8 @@ export function LineStatusClient({
                 {productionOn && <TH>Units Produced</TH>}
                 {energyOn && <TH>Energy (kWh)</TH>}
                 <TH>Availability</TH>
-                <TH>Last 24h</TH>
-                <TH>Config Entries</TH>
+                <TH className={PHONE_HIDDEN}>Last 24h</TH>
+                <TH className={PHONE_HIDDEN}>Config Entries</TH>
               </TR>
             </THead>
             <TBody>
@@ -182,10 +182,10 @@ export function LineStatusClient({
                       </TD>
                     )}
                     <TD>{formatPercent(avail?.availability_percent ?? null)}</TD>
-                    <TD>
+                    <TD className={PHONE_HIDDEN}>
                       <MiniTimeline segments={uptime?.timeline ?? []} />
                     </TD>
-                    <TD>
+                    <TD className={PHONE_HIDDEN}>
                       {cfgCount > 0 ? (
                         <Badge className="bg-blue-50 text-blue-700">{cfgCount}</Badge>
                       ) : (

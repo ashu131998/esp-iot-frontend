@@ -177,9 +177,7 @@ export function FactoryOverviewMachinesTable({
       />
       {/* Phones: one card per machine, tapping through to it. */}
       <ul className="-mx-4 divide-y border-t sm:hidden">
-        {pageRows.map(({ machine, avail, eng, prod, uptime }) => {
-          const streams = uptimeRowsByMachine[machine.machine_id] ?? [];
-          return (
+        {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
             <li key={machine.machine_id}>
               <Link
                 href={`/factories/${factoryId}/machines/${machine.machine_id}`}
@@ -205,22 +203,9 @@ export function FactoryOverviewMachinesTable({
                   )}
                   {productionOn && <Figure label="Units" value={formatUnits(unitsMade(prod), prod?.unit_label)} />}
                 </dl>
-                <div className="mt-2 space-y-1">
-                  {streams.length > 1 ? (
-                    streams.map((row) => (
-                      <div key={row.stream_key} className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 truncate text-[10px] text-muted">{row.label || row.display_name}</span>
-                        <MiniTimeline segments={row.timeline ?? []} className="w-full" />
-                      </div>
-                    ))
-                  ) : (
-                    <MiniTimeline segments={uptime?.timeline ?? []} className="w-full" />
-                  )}
-                </div>
               </Link>
             </li>
-          );
-        })}
+        ))}
       </ul>
       <Table className="hidden sm:block">
         <THead>

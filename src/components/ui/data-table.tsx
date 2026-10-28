@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   type ColumnDef,
+  type RowData,
   type SortingState,
   flexRender,
   getCoreRowModel,
@@ -15,6 +16,16 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { Table, THead, TBody, TR, TH, TD } from './table';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- must match TanStack's generic signature
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Left out on phones held upright (below sm): only what matters fits there. */
+    phoneHidden?: boolean;
+  }
+}
+
+const PHONE_HIDDEN = 'hidden sm:table-cell';
 
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
@@ -74,7 +85,13 @@ export function DataTable<T>({
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
                 return (
-                  <TH key={header.id} className={cn(canSort && 'cursor-pointer select-none')}>
+                  <TH
+                    key={header.id}
+                    className={cn(
+                      canSort && 'cursor-pointer select-none',
+                      header.column.columnDef.meta?.phoneHidden && PHONE_HIDDEN,
+                    )}
+                  >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
@@ -103,7 +120,9 @@ export function DataTable<T>({
           {table.getRowModel().rows.map((row) => (
             <TR key={row.id} className={rowClassName?.(row.original)}>
               {row.getVisibleCells().map((cell) => (
-                <TD key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TD>
+                <TD key={cell.id} className={cn(cell.column.columnDef.meta?.phoneHidden && PHONE_HIDDEN)}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TD>
               ))}
             </TR>
           ))}

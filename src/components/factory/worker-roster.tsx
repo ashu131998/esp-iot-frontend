@@ -72,6 +72,7 @@ export function WorkerRoster({
     {
       accessorKey: 'employee_code',
       header: 'Code',
+      meta: { phoneHidden: true },
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee_code ?? '—'}</span>,
     },
     { accessorKey: 'role', header: 'Role' },
@@ -79,6 +80,7 @@ export function WorkerRoster({
       id: 'skills',
       header: 'Skills',
       enableSorting: false,
+      meta: { phoneHidden: true },
       cell: ({ row }) => (
         <div className="flex max-w-xs flex-wrap gap-1">
           {(row.original.skills ?? []).map((s) => (

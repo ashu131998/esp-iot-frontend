@@ -11,11 +11,8 @@ import {
   parseISO,
   startOfDay,
   startOfMonth,
-  subDays,
-  subHours,
-  subMonths,
 } from 'date-fns';
-import { currentShiftWindow, previousShiftWindow } from '@/lib/shifts';
+import { previousShiftWindow } from '@/lib/shifts';
 import { Calendar, ChevronDown, Clock, Loader2, Search, X } from 'lucide-react';
 
 import { MonthCalendar } from '@/components/ui/date-range-calendar';
@@ -27,53 +24,24 @@ import {
   isLiveRange,
   resolveDateRange,
 } from '@/lib/date-range';
+import {
+  CURRENT_SHIFT,
+  LAST_SHIFT,
+  aggregatesOnly,
+  buildPresets,
+  phonePresets,
+  presetSelection,
+  selectionRange,
+  type Preset,
+  type Selection,
+} from '@/lib/date-presets';
 import { useRefreshInfo } from '@/lib/refresh-context';
+import { useWideScreen } from '@/lib/use-wide-screen';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
 
 // ── Presets ──────────────────────────────────────────────────────────────────
-
-const CURRENT_SHIFT = 'current-shift';
-const LAST_SHIFT = 'last-shift';
-
-interface Preset {
-  id: string;
-  label: string;
-  hint?: string;
-  getDates: () => { from: Date; to: Date };
-}
-
-/** "Night Shift" → "Night"; custom names without the suffix pass through. */
-function shortShiftName(shift: Shift): string {
-  return shift.name.replace(/\s*shift$/i, '') || shift.name;
-}
-
-function buildPresets(shifts: Shift[] | undefined): Preset[] {
-  const now = new Date();
-  const cur = currentShiftWindow(shifts, now);
-  const prev = previousShiftWindow(shifts, now);
-  return [
-    {
-      id: CURRENT_SHIFT,
-      label: 'Current Shift',
-      hint: `${shortShiftName(cur.shift)} · since ${format(cur.from, 'HH:mm')}`,
-      getDates: () => ({ from: cur.from, to: new Date() }),
-    },
-    {
-      id: LAST_SHIFT,
-      label: 'Last Shift',
-      hint: `${shortShiftName(prev.shift)} · ${format(prev.from, 'HH:mm')}–${format(prev.to, 'HH:mm')}`,
-      getDates: () => ({ from: prev.from, to: prev.to }),
-    },
-    { id: '24h', label: 'Last 24 Hours', getDates: () => { const n = new Date(); return { from: subHours(n, 24), to: n }; } },
-    { id: 'today', label: 'Today',         getDates: () => { const n = new Date(); return { from: startOfDay(n), to: n }; } },
-    { id: '3d',  label: 'Last 3 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 3)), to: n }; } },
-    { id: '7d',  label: 'Last 7 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 7)), to: n }; } },
-    { id: '10d', label: 'Last 10 Days',  getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 10)), to: n }; } },
-    { id: '3m',  label: 'Last 3 Months', getDates: () => { const n = new Date(); return { from: startOfDay(subMonths(n, 3)), to: n }; } },
-  ];
-}
 
 /** Matches the URL range to a shift preset so reopening the panel highlights it. */
 function detectShiftPreset(
@@ -119,6 +87,7 @@ export function DateRangePicker({
   const navigate   = useNavigate();
   const isNavigating = useIsNavigating();
   const refreshInfo = useRefreshInfo();
+  const wide = useWideScreen();
 
   // Line / machine selector state
   const [lineOpen,      setLineOpen]      = useState(false);
@@ -335,30 +304,25 @@ export function DateRangePicker({
   // Reset to the app default: the current shift.
   const handleClear = () => handlePreset(presets[0]);
 
-  const timeCutoff  = startOfDay(subDays(new Date(), 3));
-  const timeDisabled = !!draftFrom && draftFrom < timeCutoff;
+  const timeDisabled = !!draftFrom && aggregatesOnly(draftFrom);
 
-  const handleApply = () => {
-    if (activePreset === CURRENT_SHIFT) {
+  // The panel's choice and a phone's one-tap preset go out the same way (lib/date-presets.ts).
+  const applySelection = (selection: Selection) => {
+    if (selection === 'live') {
       // No date params = live current shift, which rolls over at shift change.
       const params = new URLSearchParams();
       appendFilterParams(params);
       push(params);
-    } else if (draftFrom && draftTo) {
-      if (timeDisabled) {
-        applyRange(startOfDay(draftFrom), endOfDay(draftTo), true);
-      } else {
-        const fromDate = new Date(draftFrom);
-        const toDate   = new Date(draftTo);
-        const [fh, fm] = draftFromTime.split(':').map(Number);
-        const [th, tm] = draftToTime.split(':').map(Number);
-        fromDate.setHours(fh, fm, 0, 0);
-        toDate.setHours(th, tm, 59, 999);
-        applyRange(fromDate, toDate);
-      }
+    } else if (selection) {
+      applyRange(selection.from, selection.to, selection.dateOnly);
     }
     setOpen(false);
   };
+
+  const handleApply = () =>
+    applySelection(selectionRange(activePreset, draftFrom, draftTo, draftFromTime, draftToTime));
+
+  const applyPresetNow = (preset: Preset) => applySelection(presetSelection(preset));
 
   const rangeStart = draftFrom && !draftTo && hoverDate && isBefore(hoverDate, draftFrom)
     ? hoverDate : draftFrom;
@@ -549,8 +513,32 @@ export function DateRangePicker({
         </div>
       )}
 
+      {/* ── Phone panel: the periods only, one tap each ────────────────────── */}
+      {open && !hideDateRange && !wide && (
+        <div ref={panelRef} className="absolute inset-x-0 top-full z-50 mt-2 rounded-xl border bg-white p-3 shadow-2xl">
+          <div className="grid grid-cols-2 gap-2">
+            {phonePresets(presets).map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPresetNow(preset)}
+                className={cn(
+                  'rounded-lg border px-3 py-2.5 text-left text-sm',
+                  activePreset === preset.id
+                    ? 'border-blue-500 bg-blue-50 font-semibold text-blue-600'
+                    : 'text-gray-700 active:bg-gray-50',
+                )}
+              >
+                {preset.label}
+                {preset.hint && <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Calendar panel ───────────────────────────────────────────────── */}
-      {open && !hideDateRange && (
+      {open && !hideDateRange && wide && (
         <div
           ref={panelRef}
           className="absolute left-0 top-full z-50 mt-2 rounded-xl border bg-white shadow-2xl"

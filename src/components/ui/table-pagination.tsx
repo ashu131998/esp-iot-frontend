@@ -77,7 +77,8 @@ export function TablePagination({
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-xs text-muted">
+        {/* Phones: always the default 10 a page, with Previous and Next. */}
+        <label className="hidden items-center gap-2 text-xs text-muted sm:flex">
           Rows
           <Select
             className="h-8 w-auto min-w-[4.5rem] py-1 text-xs"

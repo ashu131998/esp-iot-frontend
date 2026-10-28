@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -44,86 +45,83 @@ export function QualityForm({
     },
   });
 
-  if (!open) {
-    return (
+  return (
+    <>
       <Button onClick={() => setOpen(true)} size="sm">
         + Add Quality Record
       </Button>
-    );
-  }
-
-  return (
-    // Opens in the card header's button row: full width there on phones.
-    <div className="w-full rounded-lg border bg-slate-50 p-4 sm:w-auto">
-      <h4 className="mb-4 text-sm font-semibold">Add Quality Record</h4>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Machine">
-          <Select
-            value={form.machine_id}
-            onChange={(e) => setForm({ ...form, machine_id: e.target.value })}
-          >
-            {machines.map((m) => (
-              <option key={m.machine_id} value={m.machine_id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Metric">
-          <Select
-            value={form.metric}
-            onChange={(e) => setForm({ ...form, metric: e.target.value })}
-          >
-            <option value="defect_rate">Defect Rate</option>
-            <option value="first_pass_yield">First Pass Yield</option>
-            <option value="scrap_rate">Scrap Rate</option>
-            <option value="rework_rate">Rework Rate</option>
-          </Select>
-        </Field>
-        <Field label="Value">
-          <Input
-            type="number"
-            step="0.1"
-            value={form.value}
-            onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
-          />
-        </Field>
-        <Field label="Unit">
-          <Select
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-          >
-            <option value="percent">Percent</option>
-            <option value="ppm">PPM</option>
-            <option value="count">Count</option>
-          </Select>
-        </Field>
-        <Field label="Sample Size">
-          <Input
-            type="number"
-            value={form.sample_size ?? ''}
-            onChange={(e) => setForm({ ...form, sample_size: Number(e.target.value) })}
-          />
-        </Field>
-        <Field label="Notes">
-          <Textarea
-            rows={2}
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          />
-        </Field>
-      </div>
-      <div className="mt-4 flex gap-2">
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving…' : 'Save Record'}
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-        {mutation.isError && (
-          <p className="self-center text-sm text-red-600">{mutation.error.message}</p>
-        )}
-      </div>
-    </div>
+      {open && (
+        <Sheet title="Add Quality Record" onClose={() => setOpen(false)}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Machine">
+              <Select
+                value={form.machine_id}
+                onChange={(e) => setForm({ ...form, machine_id: e.target.value })}
+              >
+                {machines.map((m) => (
+                  <option key={m.machine_id} value={m.machine_id}>
+                    {m.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Metric">
+              <Select
+                value={form.metric}
+                onChange={(e) => setForm({ ...form, metric: e.target.value })}
+              >
+                <option value="defect_rate">Defect Rate</option>
+                <option value="first_pass_yield">First Pass Yield</option>
+                <option value="scrap_rate">Scrap Rate</option>
+                <option value="rework_rate">Rework Rate</option>
+              </Select>
+            </Field>
+            <Field label="Value">
+              <Input
+                type="number"
+                step="0.1"
+                value={form.value}
+                onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Unit">
+              <Select
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              >
+                <option value="percent">Percent</option>
+                <option value="ppm">PPM</option>
+                <option value="count">Count</option>
+              </Select>
+            </Field>
+            <Field label="Sample Size">
+              <Input
+                type="number"
+                value={form.sample_size ?? ''}
+                onChange={(e) => setForm({ ...form, sample_size: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Notes">
+              <Textarea
+                rows={2}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              {mutation.isPending ? 'Saving…' : 'Save Record'}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            {mutation.isError && (
+              <p className="self-center text-sm text-red-600">{mutation.error.message}</p>
+            )}
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }

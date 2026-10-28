@@ -9,11 +9,11 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Button } from '@/components/ui/button';
 import { TablePagination } from '@/components/ui/table-pagination';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { Machine, QualityRecord } from '@/lib/types';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { cn, formatDate, formatNumber } from '@/lib/utils';
 
 export function QualityPanel({
   factoryId,
@@ -95,9 +95,9 @@ export function QualityPanel({
                   <TH>Metric</TH>
                   <TH>Value</TH>
                   <TH>Sample</TH>
-                  <TH>Source</TH>
-                  <TH>Recorded</TH>
-                  <TH>Notes</TH>
+                  <TH className={PHONE_HIDDEN}>Source</TH>
+                  <TH className={PHONE_HIDDEN}>Recorded</TH>
+                  <TH className={PHONE_HIDDEN}>Notes</TH>
                   <TH></TH>
                 </TR>
               </THead>
@@ -112,11 +112,11 @@ export function QualityPanel({
                         {formatNumber(r.value)} {r.unit}
                       </TD>
                       <TD>{r.sample_size ?? '—'}</TD>
-                      <TD>
+                      <TD className={PHONE_HIDDEN}>
                         <Badge className="bg-blue-50 text-blue-700">{r.source}</Badge>
                       </TD>
-                      <TD>{formatDate(r.recorded_at)}</TD>
-                      <TD className="max-w-xs truncate text-muted">{r.notes || '—'}</TD>
+                      <TD className={PHONE_HIDDEN}>{formatDate(r.recorded_at)}</TD>
+                      <TD className={cn('max-w-xs truncate text-muted', PHONE_HIDDEN)}>{r.notes || '—'}</TD>
                       <TD>
                         <Button
                           variant="ghost"

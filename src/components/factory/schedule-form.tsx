@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -156,184 +157,182 @@ export function ScheduleForm({
     scheduleDates.length > 0 &&
     (form.machine_ids?.length ?? 0) > 0;
 
-  if (!open) {
-    return (
+  return (
+    <>
       <Button onClick={() => setOpen(true)} size="sm">
         + Schedule Task
       </Button>
-    );
-  }
+      {open && (
+        <Sheet title="Schedule a Task" onClose={() => setOpen(false)}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Worker">
+              <Select
+                value={form.worker_id}
+                onChange={(e) => setForm({ ...form, worker_id: e.target.value })}
+              >
+                {workers.length === 0 && <option value="">No workers — add one first</option>}
+                {workers.map((w) => (
+                  <option key={w.worker_id} value={w.worker_id}>
+                    {w.name} — {w.role}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-  return (
-    <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">Schedule a Task</h4>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Worker">
-          <Select
-            value={form.worker_id}
-            onChange={(e) => setForm({ ...form, worker_id: e.target.value })}
-          >
-            {workers.length === 0 && <option value="">No workers — add one first</option>}
-            {workers.map((w) => (
-              <option key={w.worker_id} value={w.worker_id}>
-                {w.name} — {w.role}
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <Field label="Function / Task">
+              <Input
+                list="task-presets"
+                placeholder="e.g. Operate machines"
+                value={form.task}
+                onChange={(e) => setForm({ ...form, task: e.target.value })}
+              />
+              <datalist id="task-presets">
+                {TASK_PRESETS.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </Field>
 
-        <Field label="Function / Task">
-          <Input
-            list="task-presets"
-            placeholder="e.g. Operate machines"
-            value={form.task}
-            onChange={(e) => setForm({ ...form, task: e.target.value })}
-          />
-          <datalist id="task-presets">
-            {TASK_PRESETS.map((t) => (
-              <option key={t} value={t} />
-            ))}
-          </datalist>
-        </Field>
+            <Field label="Shift">
+              <Select value={form.shift_id} onChange={(e) => onShiftChange(e.target.value)}>
+                {DEFAULT_SHIFTS.map((s) => (
+                  <option key={s.shift_id} value={s.shift_id}>
+                    {s.name} ({s.label})
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-        <Field label="Shift">
-          <Select value={form.shift_id} onChange={(e) => onShiftChange(e.target.value)}>
-            {DEFAULT_SHIFTS.map((s) => (
-              <option key={s.shift_id} value={s.shift_id}>
-                {s.name} ({s.label})
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <Field label="Start Date">
+              <Input
+                type="date"
+                value={form.schedule_date}
+                onChange={(e) => {
+                  const start = e.target.value;
+                  setForm({ ...form, schedule_date: start });
+                  // Keep the end date from falling behind the start.
+                  if (start && (!endDate || endDate < start)) setEndDate(start);
+                }}
+              />
+            </Field>
 
-        <Field label="Start Date">
-          <Input
-            type="date"
-            value={form.schedule_date}
-            onChange={(e) => {
-              const start = e.target.value;
-              setForm({ ...form, schedule_date: start });
-              // Keep the end date from falling behind the start.
-              if (start && (!endDate || endDate < start)) setEndDate(start);
-            }}
-          />
-        </Field>
-
-        <Field label="End Date">
-          <Input
-            type="date"
-            min={form.schedule_date || undefined}
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-          {scheduleDates.length > 1 && (
-            <p className="mt-1 text-xs text-muted">
-              {scheduleDates.length} days — one task per day will be created.
-            </p>
-          )}
-        </Field>
-
-        <Field label="Start Time">
-          <Input
-            type="time"
-            value={form.start_time ?? ''}
-            onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-          />
-        </Field>
-
-        <Field label="End Time">
-          <Input
-            type="time"
-            value={form.end_time ?? ''}
-            onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-          />
-        </Field>
-
-        <div className="sm:col-span-2">
-          <Field label={`Machines${(form.machine_ids?.length ?? 0) > 0 ? ` (${form.machine_ids!.length} selected)` : ''}`}>
-            <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border bg-white p-3">
-              {[...machinesByLine.entries()].map(([lineId, lineMachines]) => (
-                <div key={lineId}>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    {lineName(lineId)}
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                    {lineMachines.map((m) => {
-                      const checked = form.machine_ids?.includes(m.machine_id) ?? false;
-                      return (
-                        <label
-                          key={m.machine_id}
-                          className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm hover:bg-slate-50"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleMachine(m.machine_id)}
-                          />
-                          <span className="truncate">{m.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              {machines.length === 0 && (
-                <p className="text-sm text-muted">No machines available.</p>
+            <Field label="End Date">
+              <Input
+                type="date"
+                min={form.schedule_date || undefined}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              {scheduleDates.length > 1 && (
+                <p className="mt-1 text-xs text-muted">
+                  {scheduleDates.length} days — one task per day will be created.
+                </p>
               )}
+            </Field>
+
+            <Field label="Start Time">
+              <Input
+                type="time"
+                value={form.start_time ?? ''}
+                onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+              />
+            </Field>
+
+            <Field label="End Time">
+              <Input
+                type="time"
+                value={form.end_time ?? ''}
+                onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+              />
+            </Field>
+
+            <div className="sm:col-span-2">
+              <Field label={`Machines${(form.machine_ids?.length ?? 0) > 0 ? ` (${form.machine_ids!.length} selected)` : ''}`}>
+                <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border bg-white p-3">
+                  {[...machinesByLine.entries()].map(([lineId, lineMachines]) => (
+                    <div key={lineId}>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                        {lineName(lineId)}
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                        {lineMachines.map((m) => {
+                          const checked = form.machine_ids?.includes(m.machine_id) ?? false;
+                          return (
+                            <label
+                              key={m.machine_id}
+                              className="flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm hover:bg-slate-50"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleMachine(m.machine_id)}
+                              />
+                              <span className="truncate">{m.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {machines.length === 0 && (
+                    <p className="text-sm text-muted">No machines available.</p>
+                  )}
+                </div>
+              </Field>
             </div>
-          </Field>
-        </div>
 
-        <Field label="Machine Configuration Profile">
-          <Select
-            value={form.config_profile_id ?? ''}
-            onChange={(e) => setForm({ ...form, config_profile_id: e.target.value })}
-          >
-            <option value="">— None —</option>
-            {profiles.map((p) => {
-              const machine = machines.find((m) => m.machine_id === p.machine_id);
-              return (
-                <option key={p.profile_id} value={p.profile_id}>
-                  {p.name}
-                  {machine ? ` · ${machine.name}` : ''}
-                </option>
-              );
-            })}
-          </Select>
-        </Field>
+            <Field label="Machine Configuration Profile">
+              <Select
+                value={form.config_profile_id ?? ''}
+                onChange={(e) => setForm({ ...form, config_profile_id: e.target.value })}
+              >
+                <option value="">— None —</option>
+                {profiles.map((p) => {
+                  const machine = machines.find((m) => m.machine_id === p.machine_id);
+                  return (
+                    <option key={p.profile_id} value={p.profile_id}>
+                      {p.name}
+                      {machine ? ` · ${machine.name}` : ''}
+                    </option>
+                  );
+                })}
+              </Select>
+            </Field>
 
-        <div className="sm:col-span-2">
-          <Field label="Notes">
-            <Textarea
-              rows={2}
-              placeholder="Optional instructions for this assignment"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </Field>
-        </div>
-      </div>
+            <div className="sm:col-span-2">
+              <Field label="Notes">
+                <Textarea
+                  rows={2}
+                  placeholder="Optional instructions for this assignment"
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canSave}>
-          {mutation.isPending
-            ? 'Scheduling…'
-            : scheduleDates.length > 1
-              ? `Save Schedule (${scheduleDates.length} days)`
-              : 'Save Schedule'}
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-        {!canSave && (
-          <p className="self-center text-xs text-muted">
-            Pick a worker, a task, a date, and at least one machine.
-          </p>
-        )}
-        {mutation.isError && (
-          <p className="self-center text-sm text-red-600">{mutation.error.message}</p>
-        )}
-      </div>
-    </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canSave}>
+              {mutation.isPending
+                ? 'Scheduling…'
+                : scheduleDates.length > 1
+                  ? `Save Schedule (${scheduleDates.length} days)`
+                  : 'Save Schedule'}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            {!canSave && (
+              <p className="self-center text-xs text-muted">
+                Pick a worker, a task, a date, and at least one machine.
+              </p>
+            )}
+            {mutation.isError && (
+              <p className="self-center text-sm text-red-600">{mutation.error.message}</p>
+            )}
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }

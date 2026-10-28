@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { Badge } from '@/components/ui/badge';
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
@@ -153,8 +154,8 @@ export function WorkerRoster({
       />
 
       {open && (
-        <div className="mb-4 rounded-lg border bg-slate-50 p-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Sheet title="Add Worker" onClose={() => setOpen(false)}>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Name">
               <Input
                 placeholder="Full name"
@@ -223,7 +224,7 @@ export function WorkerRoster({
               <p className="self-center text-sm text-red-600">{createMutation.error.message}</p>
             )}
           </div>
-        </div>
+        </Sheet>
       )}
 
       <DataTable

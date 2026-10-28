@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
+import { Sheet } from '@/components/ui/sheet';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
@@ -19,6 +20,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
 
   const [draft, setDraft] = useState<AlertSettings | null>(null);
   const [newContact, setNewContact] = useState<OwnerContact>({ name: '', phone: '' });
+  const [addingPhone, setAddingPhone] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testWorkerId, setTestWorkerId] = useState('');
@@ -121,6 +123,36 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     ? 'Shift reminders and machine stop/start go to workers on the app.'
     : 'Turn on to send reminders and machine alerts to the mobile app.';
 
+  // Owner phone fields, in the Add phone sheet (Add also closes it).
+  const ownerFields = (
+    <>
+      <Input
+        placeholder="Name"
+        className="min-w-[100px] flex-1"
+        value={newContact.name}
+        onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+      />
+      <Input
+        placeholder="+91 phone"
+        className="min-w-[120px] flex-1"
+        value={newContact.phone}
+        onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+      />
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!newContact.phone.trim()}
+        onClick={() => {
+          update({ owner_contacts: [...draft.owner_contacts, newContact] });
+          setNewContact({ name: '', phone: '' });
+          setAddingPhone(false);
+        }}
+      >
+        Add
+      </Button>
+    </>
+  );
+
   return (
     <div className="space-y-6">
       <SummaryCard tone={tone} title={statusTitle} subtitle={statusSub} />
@@ -212,31 +244,16 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
             />
           ))
         )}
-        <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 px-4 py-3">
-          <Input
-            placeholder="Name"
-            className="min-w-[100px] flex-1"
-            value={newContact.name}
-            onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-          />
-          <Input
-            placeholder="+91 phone"
-            className="min-w-[120px] flex-1"
-            value={newContact.phone}
-            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!newContact.phone.trim()}
-            onClick={() => {
-              update({ owner_contacts: [...draft.owner_contacts, newContact] });
-              setNewContact({ name: '', phone: '' });
-            }}
-          >
-            Add
+        <div className="border-t border-gray-100 px-4 py-3">
+          <Button variant="secondary" size="sm" onClick={() => setAddingPhone(true)}>
+            + Add phone
           </Button>
         </div>
+        {addingPhone && (
+          <Sheet title="Add owner phone" onClose={() => setAddingPhone(false)}>
+            <div className="flex flex-col gap-3">{ownerFields}</div>
+          </Sheet>
+        )}
       </ListGroup>
 
       <details className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-100">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
@@ -136,8 +137,7 @@ export function MachineConfigCard({
       />
 
       {open && (
-        <div className="mb-6 rounded-lg border bg-slate-50 p-4">
-          <h4 className="mb-4 text-sm font-semibold">Add a setting</h4>
+        <Sheet title="Add a setting" onClose={() => setOpen(false)}>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Setting name">
               <Input
@@ -197,7 +197,7 @@ export function MachineConfigCard({
               <p className="text-sm text-red-600">{mutation.error.message}</p>
             )}
           </div>
-        </div>
+        </Sheet>
       )}
 
       {lastConfig && (

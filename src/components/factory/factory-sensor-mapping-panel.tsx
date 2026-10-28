@@ -1,10 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
 import { Card, CardHeader } from '@/components/ui/card';
+import { Sheet } from '@/components/ui/sheet';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -13,11 +14,9 @@ import { formatDate } from '@/lib/utils';
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
 
   function configure(deviceId: string) {
     setSelectedDeviceId(deviceId);
-    requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
   const nodesQuery = useQuery({
@@ -26,7 +25,8 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
   });
 
   const nodes = nodesQuery.data?.nodes ?? [];
-  const activeDeviceId = selectedDeviceId ?? nodes[0]?.device_id ?? null;
+  // A node's editor opens over the page when its Configure is pressed.
+  const activeDeviceId = selectedDeviceId;
 
   const selected = useMemo(
     () => nodes.find((n) => n.device_id === activeDeviceId),
@@ -81,14 +81,14 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
       </Card>
 
       {activeDeviceId && selected && (
-        <div ref={editorRef} className="scroll-mt-4">
+        <Sheet title={`Configure ${activeDeviceId}`} onClose={() => setSelectedDeviceId(null)} size="lg">
           <NodeSensorBindingsEditor
             factoryId={factoryId}
             deviceId={activeDeviceId}
             apiMode="factory"
             canWrite={canWriteFactory}
           />
-        </div>
+        </Sheet>
       )}
     </div>
   );

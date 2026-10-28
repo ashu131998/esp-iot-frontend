@@ -30,7 +30,7 @@ export function FactoryShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden" style={brandStyle(branding)}>
+    <div className="flex h-screen overflow-hidden" style={brandStyle(branding)} data-sheet-root>
       <aside className="hidden h-screen w-64 shrink-0 lg:block">
         <FactorySidebar
           factoryId={factoryId}

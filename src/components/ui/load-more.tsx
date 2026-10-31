@@ -22,8 +22,8 @@ export function useShowMore(total: number, resetKey: string, step = SCROLL_STEP)
 }
 
 /**
- * The end of a list (user, 2026-10-31: "nothing in the table moves"): the next rows are asked for as
- * it comes into view (a little before, so they are usually there by the time the reader is); while
+ * The end of a list (user, 2026-10-31: "nothing in the table moves"): the next rows are asked for well
+ * before it comes into view (so they are usually there by the time the reader is); while
  * they load, a spinner holds their place, and they appear below the rows already shown, which never
  * move. Its height never changes. A button does the same for keyboards and old browsers.
  */
@@ -49,7 +49,7 @@ export function LoadMore({
     if (!el || !hasMore || loading || typeof IntersectionObserver === 'undefined') return;
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) onMore();
-    }, { rootMargin: '400px 0px' });
+    }, { rootMargin: '1200px 0px' });   // about a screen and a half ahead: a quick flick still finds them there
     io.observe(el);
     return () => io.disconnect();
     // A new observer after every step: if the end is still in view (a short page), the next step comes too.

@@ -78,7 +78,7 @@ export function InternalShell({ children }: { children: React.ReactNode }) {
           </aside>
         </div>
       )}
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
         <div className="flex items-center gap-2 border-b bg-white px-4 py-2.5 lg:hidden">
           <button type="button" onClick={() => setOpen(true)} className="rounded-md p-1 hover:bg-slate-100">
             <Menu className="h-5 w-5" />

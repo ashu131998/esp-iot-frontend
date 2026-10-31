@@ -41,7 +41,7 @@ export function FactoryShell({
           tabs={tabs}
         />
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
         <FactoryMobileNav
           factoryId={factoryId}
           factoryName={factoryName}

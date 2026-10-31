@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  boardTargetOf, fileToBase64, installsRemoteUpdates, parseReleaseSignature, updateStatus, versionsFor, type FirmwareRelease,
+  boardTargetOf, fileToBase64, installsRemoteUpdates, parseReleaseSignature, targetLabel, updateStatus, versionsFor, type FirmwareRelease,
 } from '@/lib/firmware';
 
 const SIG = { format: 'floorbeat-fw/1', target: 'rev-b', version: '2.2.1-uni', size: 1136464, sha256: 'ab', signature: 'MEQ=' };
@@ -29,6 +29,13 @@ describe('which boards take which releases', () => {
     expect(boardTargetOf({ board_id: 'x', beat: { hw: 'rev-a2' } })).toBe('rev-a2');
     expect(boardTargetOf({ board_id: 'revb-311d80', beat: { fw: '2.0.8-uni' } })).toBe('rev-b');
     expect(boardTargetOf({ board_id: 'loom-1', beat: null })).toBeNull();
+    expect(boardTargetOf({ board_id: 'rescue-a1b2c3', beat: { hw: 'rescue' } })).toBe('rescue');
+    expect(boardTargetOf({ board_id: 'rescue-a1b2c3', beat: null })).toBe('rescue');   // its name, before it said
+  });
+
+  it('the rescue box has a name of its own on the Firmware page', () => {
+    expect(targetLabel('rescue')).toBe('Rescue box');
+    expect(targetLabel('rev-b')).toBe('REV B');
   });
 
   it('its hardware\'s releases, newest first, without what it runs', () => {

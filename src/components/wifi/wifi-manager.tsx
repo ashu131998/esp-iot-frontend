@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Plus, Trash2, Wifi } from 'lucide-react';
+import { Eye, EyeOff, LifeBuoy, Plus, Trash2, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,8 @@ import { api } from '@/lib/api';
 import type { Tone } from '@/lib/board-status';
 import { formatDate } from '@/lib/utils';
 import {
-  MAX_NETWORKS, boardsOn, dropReason, listChanged, listProblem, listStatus, networkProblem, readiness, signal,
-  type WifiNetwork, type WifiPage,
+  MAX_NETWORKS, boardsOn, dropReason, listChanged, listProblem, listStatus, networkProblem, readiness, rescueCoverage,
+  rescueHeard, signal, type RescueBox, type WifiBoard, type WifiNetwork, type WifiPage,
 } from '@/lib/wifi';
 
 const dotTone = (t: Tone): DotTone => (t === 'neutral' ? 'idle' : t);
@@ -30,9 +30,28 @@ function ToneText({ label, tone, title }: { label: string; tone: Tone; title?: s
   );
 }
 
+/** A secret shown as dots until asked for. */
+function Secret({ value, label }: { value: string; label: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="inline-flex items-center gap-1 font-mono text-sm">
+      {show ? value : '••••••••'}
+      <button
+        type="button"
+        aria-label={show ? `Hide ${label}` : `Show ${label}`}
+        className="rounded p-1 text-muted hover:text-foreground"
+        onClick={() => setShow(!show)}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </span>
+  );
+}
+
 /**
- * A factory's WiFi for its boards (firmware 2.4+), in the factory app and in ops: the networks,
- * whether every board has the latest list, and the steps for changing WiFi without losing a board.
+ * A factory's WiFi for its boards (firmware 2.5+), in the factory app and in ops: the networks,
+ * whether every board has the latest list, the steps for changing WiFi without losing a board, and
+ * its rescue boxes for when the router was changed first.
  */
 export function WifiManager({ factoryId }: { factoryId: string }) {
   const qc = useQueryClient();
@@ -103,7 +122,7 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
           subtitle={[
             'Wait before changing the router.',
             r.waiting ? `${r.waiting} still to receive it (a board that is off gets it when it is back).` : '',
-            r.needsFirmware ? `${r.needsFirmware} need firmware 2.4 first.` : '',
+            r.needsFirmware ? `${r.needsFirmware} need firmware 2.5 first.` : '',
           ].filter(Boolean).join(' ')}
         />
       )}
@@ -122,7 +141,7 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
         <ul className="mt-4 space-y-1 text-xs text-muted">
           <li>Boards use 2.4 GHz WiFi only: they cannot see 5 GHz networks.</li>
           <li>With several networks, each board joins the strongest one it can hear.</li>
-          <li>If boards already lost their WiFi (the router was changed first), add the new network here anyway and contact FloorBeat.</li>
+          <li>Router already changed and boards offline? See <strong>Rescue boxes</strong> below.</li>
         </ul>
       </Card>
 
@@ -183,6 +202,7 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
                 <TH>Network</TH>
                 <TH className={PHONE_HIDDEN}>Signal</TH>
                 <TH>WiFi list</TH>
+                <TH className={PHONE_HIDDEN}>Rescue box</TH>
                 <TH className={PHONE_HIDDEN}>Last problem</TH>
               </TR>
             </THead>
@@ -190,6 +210,7 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
               {page.boards.map((b) => {
                 const sig = signal(b.online ? b.rssi : null);
                 const st = listStatus(b.list, b.online);
+                const box = rescueHeard(b.rescue);
                 return (
                   <TR key={b.board_id}>
                     <TD className="font-mono text-xs">{b.board_id}</TD>
@@ -206,6 +227,7 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
                     <TD className="text-sm">{b.ssid ?? '—'}{b.ssid && !b.online && <span className="text-muted"> (last)</span>}</TD>
                     <TD className={PHONE_HIDDEN}><ToneText label={sig.label} tone={sig.tone} /></TD>
                     <TD><ToneText label={st.label} tone={st.tone} /></TD>
+                    <TD className={PHONE_HIDDEN}><ToneText label={box.label} tone={box.tone} /></TD>
                     <TD className={`text-sm text-muted ${PHONE_HIDDEN}`}>{dropReason(b.last_drop) ?? '—'}</TD>
                   </TR>
                 );
@@ -215,8 +237,104 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
         )}
       </Card>
 
+      <RescueCard page={page} />
+
       {adding && <AddNetwork existing={list} onClose={() => setAdding(false)} onAdd={(n) => { edit([...list, n]); setAdding(false); }} />}
     </div>
+  );
+}
+
+/**
+ * Its rescue boxes: what they are for, whether every board hears one, each box's state and PIN,
+ * the password a phone needs for a box's page, and the steps for when boards lost their WiFi.
+ */
+function RescueCard({ page }: { page: WifiPage }) {
+  const boxes = page.boxes ?? [];
+  const coverage = rescueCoverage(page.boards);
+  return (
+    <Card>
+      <CardHeader
+        title="Rescue boxes"
+        description="If the router is changed before the list above has the new network, boards cannot connect. A rescue box hands them the latest list, and they move to the new network by themselves. They keep everything they measure meanwhile."
+      />
+      {boxes.length === 0 ? (
+        <SummaryCard tone="idle" icon={<LifeBuoy className="h-5 w-5" />} title="No rescue box in this factory yet"
+          subtitle="Ask FloorBeat for one: a small box that keeps your boards reachable if the WiFi changes unexpectedly." />
+      ) : (
+        <>
+          {coverage.looked > 0 && (
+            <p className={`mb-4 text-sm ${coverage.uncovered.length ? 'text-amber-700' : 'text-emerald-700'}`}>
+              {coverage.uncovered.length
+                ? `${coverage.covered} of ${coverage.looked} boards hear a rescue box. Not in range: ${coverage.uncovered.join(', ')}. Move a box closer to them, or add one.`
+                : `All ${coverage.looked} boards hear a rescue box.`}
+            </p>
+          )}
+          <BoxesTable boxes={boxes} boards={page.boards} />
+          {page.rescue && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg bg-slate-50 px-3 py-3 text-sm">
+              <span>Box WiFi names start with <span className="font-mono">{page.rescue.ssid_prefix}</span></span>
+              <span className="inline-flex items-center gap-2">Password <Secret value={page.rescue.password} label="password" /></span>
+            </div>
+          )}
+          <h4 className="mt-5 text-sm font-semibold">If boards lost their WiFi (the router was changed first)</h4>
+          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
+            <li>Add the new network under <strong>Networks</strong> above and press <strong>Save and send to boards</strong>.</li>
+            <li>
+              Go near a rescue box with your phone and join its WiFi (the name and password are above). Its page opens by
+              itself; if not, open <span className="font-mono">192.168.4.1</span>.
+            </li>
+            <li>Enter the box&apos;s PIN and the new WiFi&apos;s name and password. The box joins it and gets the new list.</li>
+            <li>Within about 5 minutes, every board near the box takes the list and joins the new network.</li>
+          </ol>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function BoxesTable({ boxes, boards }: { boxes: RescueBox[]; boards: WifiBoard[] }) {
+  return (
+    <Table>
+      <THead>
+        <TR>
+          <TH>Box</TH>
+          <TH className={PHONE_HIDDEN}>Status</TH>
+          <TH className={PHONE_HIDDEN}>Network</TH>
+          <TH>WiFi list</TH>
+          <TH className={PHONE_HIDDEN}>Nearest box for</TH>
+          <TH>PIN</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {boxes.map((x) => {
+          const st = listStatus(x.list, x.online);
+          const sig = signal(x.online ? x.rssi : null);
+          const inRange = boards.filter((b) => b.rescue?.box_id === x.box_id).length;
+          return (
+            <TR key={x.box_id}>
+              <TD className="font-mono text-xs">{x.box_id}</TD>
+              <TD className={PHONE_HIDDEN}>
+                <Badge className={x.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                  <span title={x.last_beat_at ? `Last heard ${formatDate(x.last_beat_at)}` : undefined}>
+                    {x.online ? 'Online' : 'Offline'}
+                  </span>
+                </Badge>
+              </TD>
+              <TD className={`text-sm ${PHONE_HIDDEN}`}>
+                {x.ssid ?? '—'}
+                {x.ssid && x.online && sig.label !== '—' && <span className="text-muted"> · {sig.label}</span>}
+                {x.ssid && !x.online && <span className="text-muted"> (last)</span>}
+              </TD>
+              <TD><ToneText label={st.label} tone={st.tone} /></TD>
+              <TD className={`text-sm ${PHONE_HIDDEN}`}>
+                {inRange} board{inRange === 1 ? '' : 's'}{x.on_it ? ` · ${x.on_it} on it now` : ''}
+              </TD>
+              <TD>{x.pin ? <Secret value={x.pin} label="PIN" /> : <span className="text-muted">—</span>}</TD>
+            </TR>
+          );
+        })}
+      </TBody>
+    </Table>
   );
 }
 

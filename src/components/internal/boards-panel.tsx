@@ -19,8 +19,8 @@ import {
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
 import {
-  SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
-  timeSource, wifi, type AdminBoard, type BrokerLogins,
+  SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
+  serviceName, supply, timeSource, wifi, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
 import { formatDate } from '@/lib/utils';
@@ -161,6 +161,56 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
 
 /** Claim a new board (or move one): factory, line and settings; it gets its own login with them. */
 function ClaimDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
+  if (isRescueBox(board)) return <ClaimBoxDialog box={board} onClose={onClose} />;
+  return <ClaimBoardDialog board={board} onClose={onClose} />;
+}
+
+/**
+ * Claim a rescue box (or move one): a factory alone. It gets the factory's WiFi list signed by the
+ * server, its rescue WiFi, a PIN for its setup page and a login of its own.
+ */
+function ClaimBoxDialog({ box, onClose }: { box: AdminBoard; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const unclaimed = box.factory_id === UNCLAIMED;
+  const [factoryId, setFactoryId] = useState(unclaimed ? '' : (box.factory_id ?? ''));
+  const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
+  const claim = useMutation({
+    mutationFn: () => api.adminBoardClaim(box.board_id, { factory_id: factoryId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
+      onClose();
+    },
+  });
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${unclaimed ? 'Claim' : 'Move'} rescue box · ${box.board_id}`}
+      description="It serves every board of the factory: it gets the factory's WiFi list signed by the server, starts its own WiFi with the factory's rescue password, and gets a PIN for its setup page and a login of its own."
+    >
+      <Field label="Factory">
+        <Select value={factoryId} onChange={(e) => setFactoryId(e.target.value)}>
+          <option value="">Choose…</option>
+          {(factoriesQuery.data?.factories ?? []).map((f) => (
+            <option key={f.factory_id} value={f.factory_id}>{f.name ?? f.factory_id}</option>
+          ))}
+        </Select>
+      </Field>
+      {!unclaimed && factoryId !== box.factory_id && (
+        <p className="mt-3 text-xs text-amber-800">Moved to another factory, it gets that factory&apos;s WiFi and a new PIN.</p>
+      )}
+      {claim.isError && <p className="mt-3 text-xs text-red-700">{(claim.error as Error).message}</p>}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button disabled={!factoryId || claim.isPending} onClick={() => claim.mutate()}>
+          {claim.isPending ? 'Sending…' : unclaimed ? 'Claim box' : 'Move box'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   const queryClient = useQueryClient();
   const unclaimed = board.factory_id === UNCLAIMED;
   const [factoryId, setFactoryId] = useState(unclaimed ? '' : (board.factory_id ?? ''));
@@ -419,7 +469,9 @@ export function BoardsPanel() {
     queryFn: ({ signal }) => api.adminBoards({ signal }),
     refetchInterval: 15_000,
   });
-  const boards = boardsQuery.data?.boards ?? [];
+  const all = boardsQuery.data?.boards ?? [];
+  const boards = all.filter((b) => !isRescueBox(b));
+  const boxes = all.filter(isRescueBox);
   const broker = boardsQuery.data?.broker;
   const logins = boardsQuery.data?.logins ?? null;
 
@@ -509,11 +561,96 @@ export function BoardsPanel() {
           </Table>
         )}
       </Card>
+      <RescueBoxesCard
+        boxes={boxes} broker={broker} canChange={canChange} loading={boardsQuery.isPending}
+        onClaim={setClaiming} onLogin={setLoginFor} onUpdate={setUpdating}
+      />
       {logins && <BrokerLoginsCard logins={logins} canChange={canChange} />}
       {editing && <SettingsEditor board={editing} onClose={() => setEditing(null)} />}
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
       {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
     </div>
+  );
+}
+
+/**
+ * Rescue boxes (firmware 2.5+): each placed in one factory, handing that factory's signed WiFi list to
+ * any of its boards that cannot join a network. No sensors, so no settings: claim/move, own login,
+ * update. Its PIN (for its setup page) only for the super admin; factory admins see it on their
+ * WiFi page.
+ */
+function RescueBoxesCard({
+  boxes, broker, canChange, loading, onClaim, onLogin, onUpdate,
+}: {
+  boxes: AdminBoard[];
+  broker: 'ok' | 'unreachable' | 'unavailable' | undefined;
+  canChange: boolean;
+  loading: boolean;
+  onClaim: (b: AdminBoard) => void;
+  onLogin: (b: AdminBoard) => void;
+  onUpdate: (b: AdminBoard) => void;
+}) {
+  return (
+    <Card className="p-6">
+      <CardHeader
+        title="Rescue boxes"
+        description="Each one serves every board of its factory: when the factory's WiFi changes before its list does, boards take the new list from a box. Flash a plain ESP32 DevKit with the rescue firmware, then claim it here into its factory."
+      />
+      {loading ? (
+        <TableSkeleton rows={2} cols={8} />
+      ) : boxes.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">No rescue boxes yet. A new one shows up here once it is online.</p>
+      ) : (
+        <Table className="border-0">
+          <THead>
+            <TR>
+              <TH>Box</TH><TH>Factory</TH><TH>Onboarded</TH><TH>Status</TH><TH>Network</TH><TH>Its WiFi</TH>
+              <TH>Login</TH><TH>Firmware</TH><TH>Update</TH><TH>Last heartbeat</TH>{canChange && <TH>PIN</TH>}{canChange && <TH />}
+            </TR>
+          </THead>
+          <TBody>
+            {boxes.map((b) => (
+              <TR key={b.board_id}>
+                <TD className="font-mono text-xs">{b.board_id}</TD>
+                <TD className="text-xs">
+                  {b.factory_id === UNCLAIMED ? <Badge className="bg-blue-50 text-blue-700">New — not claimed</Badge> : (b.factory_id ?? '—')}
+                </TD>
+                <TD className="whitespace-nowrap text-xs">{onboarded(b.onboarded_at)}</TD>
+                <TD>
+                  {b.online === null ? <span className="text-xs text-muted">—</span> : (
+                    <Badge className={b.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                      {b.online ? 'Online' : 'Offline'}
+                    </Badge>
+                  )}
+                </TD>
+                <TD className="whitespace-nowrap"><StatusText cell={wifi(b.beat, b.online)} /></TD>
+                <TD className="whitespace-nowrap"><StatusText cell={boxWifi(b.beat)} /></TD>
+                <TD><StatusBadge cell={loginStatus(b)} /></TD>
+                <TD className="font-mono text-xs">{firmware(b.beat)}</TD>
+                <TD><StatusText cell={updateStatus(b)} /></TD>
+                <TD className="text-xs">{b.last_beat_at ? formatDate(b.last_beat_at) : '—'}</TD>
+                {canChange && <TD className="font-mono text-xs">{b.pin ?? '—'}</TD>}
+                {canChange && (
+                  <TD>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant={b.factory_id === UNCLAIMED ? 'primary' : 'secondary'} disabled={broker !== 'ok'} onClick={() => onClaim(b)}>
+                        {b.factory_id === UNCLAIMED ? 'Claim' : 'Move'}
+                      </Button>
+                      <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => onLogin(b)}>
+                        Own login
+                      </Button>
+                      <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => onUpdate(b)}>
+                        Update
+                      </Button>
+                    </div>
+                  </TD>
+                )}
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      )}
+    </Card>
   );
 }

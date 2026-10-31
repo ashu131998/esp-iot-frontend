@@ -855,10 +855,13 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ settings }), ...options,
     }),
 
-  /** Super admin: claim a new board, or move one — factory, line, settings and its own login at once. */
+  /**
+   * Super admin: claim a new board, or move one — factory, line, settings and its own login at once.
+   * A rescue box: its factory alone (it gets the factory's signed WiFi list and a PIN).
+   */
   adminBoardClaim: (
     boardId: string,
-    body: { factory_id: string; line_id: string; settings: BoardSettings },
+    body: { factory_id: string; line_id?: string; settings?: BoardSettings },
     options?: ApiRequestOptions,
   ) =>
     request<{ ok: boolean; cfg_version: number; factory_id: string; line_id: string }>(

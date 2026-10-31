@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  MAX_NETWORKS, boardsOn, dropReason, listChanged, listProblem, listStatus, networkProblem, readiness, signal,
-  signalWord, type WifiBoard,
+  MAX_NETWORKS, boardsOn, dropReason, listChanged, listProblem, listStatus, networkProblem, readiness, rescueCoverage,
+  rescueHeard, signal, signalWord, type WifiBoard,
 } from '@/lib/wifi';
 
 const board = (over: Partial<WifiBoard>): WifiBoard => ({
@@ -70,7 +70,7 @@ describe('listStatus', () => {
     expect(listStatus('current', true)).toEqual({ label: 'Has the latest list', tone: 'good' });
     expect(listStatus('waiting', true).label).toBe('Receiving the list…');
     expect(listStatus('waiting', false).label).toBe('Gets it when back online');
-    expect(listStatus('update-firmware', true)).toMatchObject({ tone: 'bad' });
+    expect(listStatus('update-firmware', true)).toEqual({ label: 'Needs firmware 2.5', tone: 'bad' });
     expect(listStatus('not-set-up', false).label).toBe('Not set up yet');
   });
 });
@@ -81,6 +81,29 @@ describe('readiness: safe to change the router?', () => {
     expect(readiness([board({}), board({ list: 'waiting', online: false })])).toMatchObject({ waiting: 1, ready: false });
     expect(readiness([board({}), board({ list: 'update-firmware' })])).toMatchObject({ needsFirmware: 1, ready: false });
     expect(readiness([]).ready).toBe(false);
+  });
+});
+
+describe('rescue boxes: which one a board hears, and whether every board hears one', () => {
+  it('the box by name (its id when the server knows it), with how strong; none in range is a warning', () => {
+    expect(rescueHeard({ heard: 2, box_id: 'rescue-a1b2c3', ssid: 'FloorBeat-Rescue-7f3a-b2c3', rssi: -58 }))
+      .toEqual({ label: 'rescue-a1b2c3 · Strong', tone: 'good' });
+    expect(rescueHeard({ heard: 1, box_id: null, ssid: 'FloorBeat-Rescue-7f3a-ffff', rssi: -84 }))
+      .toEqual({ label: 'FloorBeat-Rescue-7f3a-ffff · Very weak', tone: 'bad' });
+    expect(rescueHeard({ heard: 1, box_id: 'rescue-a1b2c3', ssid: 'x', rssi: null })).toEqual({ label: 'rescue-a1b2c3', tone: 'good' });
+    expect(rescueHeard({ heard: 0, box_id: null, ssid: null, rssi: null })).toEqual({ label: 'None in range', tone: 'warn' });
+    expect(rescueHeard(null)).toEqual({ label: '—', tone: 'neutral' });   // has not looked (older firmware)
+  });
+
+  it('coverage counts only the boards that have looked', () => {
+    const boards = [
+      board({ board_id: 'a', rescue: { heard: 1, box_id: 'r1', ssid: 's', rssi: -60 } }),
+      board({ board_id: 'b', rescue: { heard: 0, box_id: null, ssid: null, rssi: null } }),
+      board({ board_id: 'c', rescue: null }),
+      board({ board_id: 'd' }),
+    ];
+    expect(rescueCoverage(boards)).toEqual({ looked: 2, covered: 1, uncovered: ['b'] });
+    expect(rescueCoverage([])).toEqual({ looked: 0, covered: 0, uncovered: [] });
   });
 });
 

@@ -39,8 +39,17 @@ export interface BoardBeat {
   wifi_rssi?: number;
   wifi_n?: number;
   wifi_rsn?: number;
-  /** The settings it applied (they carry its factory's WiFi list). */
+  /** The settings it applied (they carry its factory's WiFi list), and that list's version (2.5+). */
   cfg_version?: number;
+  wifi_v?: number;
+  /** 2.5+: its factory's rescue boxes it heard at its last look, and the strongest one. */
+  rsq_n?: number;
+  rsq?: string;
+  rsq_rssi?: number;
+  /** A rescue box: its own WiFi, the boards on it now, the lists it handed out since it started. */
+  ap?: string;
+  ap_n?: number;
+  served?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -52,6 +61,9 @@ export interface AdminBoard {
   line_id: string | null;
   /** When it joined: the server first heard from it, or set it up here if that came first. */
   onboarded_at: string | null;
+  /** A rescue box (firmware 2.5+) or a measuring board; a box's setup-page PIN (super admin only). */
+  kind?: 'board' | 'rescue';
+  pin?: string | null;
   last_beat_at: string | null;
   beat: BoardBeat | null;
   /** What the dashboard last sent it (null: never set from here). */
@@ -248,6 +260,25 @@ export function wifi(beat: BoardBeat | null | undefined, online: boolean | null)
   }
   const { word, tone } = signalWord(rssi);
   return { label: `${beat.ssid} · ${word}`, tone, detail: `On ${beat.ssid}, signal ${rssi} dBm.${more ? ` ${more}` : ''}` };
+}
+
+/** A rescue box (hardware "rescue"): claimed as one here, or saying so in its heartbeats. */
+export function isRescueBox(b: Pick<AdminBoard, 'kind' | 'beat'>): boolean {
+  return b.kind === 'rescue' || b.beat?.hw === 'rescue';
+}
+
+/** A rescue box's own WiFi: its name, with the boards on it now and the lists it handed out. */
+export function boxWifi(beat: BoardBeat | null | undefined): StatusCell {
+  if (!beat?.ap) {
+    return { label: 'Off', tone: 'neutral', detail: 'Its WiFi starts once it is claimed into a factory' };
+  }
+  const on = beat.ap_n ?? 0;
+  const served = beat.served ?? 0;
+  return {
+    label: `${beat.ap} · ${on} on it`,
+    tone: 'good',
+    detail: `${on} board${on === 1 ? '' : 's'} on its WiFi now; ${served} list${served === 1 ? '' : 's'} handed out since it started`,
+  };
 }
 
 export function firmware(beat: BoardBeat | null | undefined): string {

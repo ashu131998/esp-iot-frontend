@@ -24,7 +24,7 @@ export interface ReleaseSignature {
   signature: string;
 }
 
-export const TARGET_LABEL: Record<string, string> = { 'rev-b': 'REV B', 'rev-a2': 'REV A2' };
+export const TARGET_LABEL: Record<string, string> = { 'rev-b': 'REV B', 'rev-a2': 'REV A2', rescue: 'Rescue box' };
 
 export function targetLabel(target: string): string {
   return TARGET_LABEL[target] ?? target;
@@ -50,7 +50,8 @@ export function parseReleaseSignature(text: string): ReleaseSignature {
 /** The hardware a board runs on: what it says (2.2+), else what its name says. */
 export function boardTargetOf(b: Pick<AdminBoard, 'board_id' | 'beat'>): string | null {
   const hw = b.beat?.hw;
-  if (hw === 'rev-b' || hw === 'rev-a2') return hw;
+  if (hw === 'rev-b' || hw === 'rev-a2' || hw === 'rescue') return hw;
+  if (b.board_id.startsWith('rescue-')) return 'rescue';
   return b.board_id.startsWith('revb-') ? 'rev-b' : null;
 }
 

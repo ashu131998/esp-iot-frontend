@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   batteryClock, firmware, formatBytes, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
-  wifi, type BrokerLogins,
+  boxWifi, isRescueBox, wifi, type BrokerLogins,
 } from '@/lib/board-status';
 
 describe('batteryClock', () => {
@@ -96,6 +96,21 @@ describe('wifi', () => {
   it('firmware before 2.4 does not say', () => {
     expect(wifi({ fw: '2.3.2-uni' }, true).label).toBe('—');
     expect(wifi(null, null).label).toBe('—');
+  });
+});
+
+describe('rescue boxes', () => {
+  it('a box: claimed as one, or saying so in its heartbeats', () => {
+    expect(isRescueBox({ kind: 'rescue', beat: null })).toBe(true);
+    expect(isRescueBox({ kind: 'board', beat: { hw: 'rescue' } })).toBe(true);
+    expect(isRescueBox({ beat: { hw: 'rev-b' } })).toBe(false);
+  });
+
+  it('its own WiFi: off until placed in a factory; then its name, the boards on it and the lists handed out', () => {
+    expect(boxWifi({ fw: '2.5.0-rescue' })).toMatchObject({ label: 'Off', tone: 'neutral' });
+    const on = boxWifi({ ap: 'FloorBeat-Rescue-7f3a-b2c3', ap_n: 1, served: 14 });
+    expect(on).toEqual({ label: 'FloorBeat-Rescue-7f3a-b2c3 · 1 on it', tone: 'good', detail: '1 board on its WiFi now; 14 lists handed out since it started' });
+    expect(boxWifi({ ap: 'X', ap_n: 0 }).detail).toBe('0 boards on its WiFi now; 0 lists handed out since it started');
   });
 });
 

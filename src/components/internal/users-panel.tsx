@@ -4,8 +4,8 @@ import { Suspense } from 'react';
 
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
-import { LoadMore } from '@/components/ui/load-more';
-import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
+import { TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
@@ -40,8 +40,6 @@ function UsersPanelInner() {
     return allUsers.map((u) => [u.username, u.role, u.factory_id, u.status]);
   }
 
-  const staff = users.filter((u) => !u.factory_id);
-  const factoryUsers = users.filter((u) => u.factory_id);
   const usersLoading = queryShowsTableLoading(usersQuery);
 
   return (
@@ -77,11 +75,11 @@ function UsersPanelInner() {
         />
         {usersLoading ? (
           <TableSkeleton rows={8} cols={5} />
-        ) : factoryUsers.length === 0 && staff.length === 0 ? (
+        ) : users.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No users found.</p>
         ) : (
           <>
-            <Table className="mt-4 border-0">
+            <ScrollTable className="mt-4 border-0" rowCount={users.length}>
               <THead>
                 <TR>
                   <TH>Username</TH>
@@ -92,7 +90,8 @@ function UsersPanelInner() {
                 </TR>
               </THead>
               <TBody>
-                {[...staff, ...factoryUsers].map((u) => (
+                {/* In the server's order: grouping staff first would slot a later page's staff in above rows already shown. */}
+                {users.map((u) => (
                   <TR key={u.user_id}>
                     <TD>{u.username}</TD>
                     <TD>{u.role}</TD>
@@ -104,7 +103,7 @@ function UsersPanelInner() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={users.length} total={usersTotal} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

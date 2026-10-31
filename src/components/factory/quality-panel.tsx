@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Button } from '@/components/ui/button';
-import { LoadMore } from '@/components/ui/load-more';
-import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { useInfiniteList, type ListPage } from '@/lib/use-infinite-list';
@@ -102,7 +102,7 @@ export function QualityPanel({
           <p className="py-8 text-center text-sm text-muted">No quality records in this period. Adjust the date range or add a new record.</p>
         ) : (
           <>
-            <Table className="mt-2 border-0">
+            <ScrollTable className="mt-2 border-0" rowCount={records.length} resetKey={listKey.join('|')}>
               <THead>
                 <TR>
                   <TH>Machine</TH>
@@ -145,7 +145,7 @@ export function QualityPanel({
                   );
                 })}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={records.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

@@ -33,6 +33,9 @@ export function useInfiniteList<T>({
     getNextPageParam: (last, pages) =>
       nextOffset(pages.reduce((n, p) => n + p.items.length, 0), last.total, last.items.length),
     ...(first ? { initialData: { pages: [first], pageParams: [0] }, staleTime: 30_000 } : {}),
+    // Not again on coming back to the tab: every loaded page would be fetched anew and rows the reader
+    // is looking at could move. A change made here refetches them (invalidate the key).
+    refetchOnWindowFocus: false,
   });
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const total = query.data?.pages.at(-1)?.total ?? 0;

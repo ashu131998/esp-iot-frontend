@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { LoadMore } from '@/components/ui/load-more';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
@@ -140,7 +140,7 @@ export function TeamPanel({
           <p className="mt-4 text-sm text-muted">No users found.</p>
         ) : (
           <>
-            <Table className="mt-4 border-0">
+            <ScrollTable className="mt-4 border-0" rowCount={users.length}>
               <THead>
                 <TR>
                   <TH>Username</TH>
@@ -157,7 +157,7 @@ export function TeamPanel({
                   </TR>
                 ))}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={users.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

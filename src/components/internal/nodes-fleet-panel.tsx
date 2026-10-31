@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
-import { LoadMore } from '@/components/ui/load-more';
-import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
+import { TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { batteryClock, firmware, queue, supply, timeSource } from '@/lib/board-status';
@@ -240,7 +240,7 @@ function NodesFleetInner() {
           <p className="py-8 text-center text-sm text-muted">No nodes match filters.</p>
         ) : (
           <>
-            <Table className="border-0">
+            <ScrollTable className="border-0" rowCount={nodes.length} resetKey={[factoryFilter, lineFilter, machineFilter, statusFilter, deviceQ].join('|')}>
               <THead>
                 <TR>
                   <TH>Node</TH>
@@ -319,7 +319,7 @@ function NodesFleetInner() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={nodes.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

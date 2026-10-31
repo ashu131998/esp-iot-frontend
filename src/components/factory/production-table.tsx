@@ -5,8 +5,8 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { LoadMore, useShowMore } from '@/components/ui/load-more';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
+import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
@@ -47,7 +47,8 @@ export function ProductionTable({
 
   const total = displayMachines.length;
   // Infinite scroll: the first rows, then more as the table's end comes into view (all are loaded).
-  const { shown, more, hasMore } = useShowMore(total, [from, to, ...scopeKey].join('|'));
+  const listKey = [from, to, ...scopeKey].join('|');
+  const { shown, more, hasMore } = useShowMore(total, listKey);
   const pageRows = displayMachines.slice(0, shown);
 
   return (
@@ -71,7 +72,7 @@ export function ProductionTable({
           </div>
         }
       />
-      <Table>
+      <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>Machine</TH>
@@ -92,7 +93,7 @@ export function ProductionTable({
             </TR>
           ))}
         </TBody>
-      </Table>
+      </ScrollTable>
       <LoadMore shown={shown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );

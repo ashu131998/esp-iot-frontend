@@ -6,8 +6,8 @@ import { Suspense } from 'react';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
-import { LoadMore } from '@/components/ui/load-more';
-import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
+import { TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
@@ -155,7 +155,7 @@ function AuditInner() {
           <p className="mt-4 text-sm text-muted">No audit entries match filters.</p>
         ) : (
           <>
-            <Table className="mt-4 border-0">
+            <ScrollTable className="mt-4 border-0" rowCount={entries.length} resetKey={[actionFilter, actorFilter, fromFilter, toFilter].join('|')}>
               <THead>
                 <TR>
                   <TH>Time</TH>
@@ -179,7 +179,7 @@ function AuditInner() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={entries.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

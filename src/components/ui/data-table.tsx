@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 
-import { LoadMore, useShowMore } from './load-more';
+import { LoadMore, ScrollTable, useShowMore } from './load-more';
 import { PHONE_HIDDEN, Table, THead, TBody, TR, TH, TD } from './table';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +70,7 @@ export function DataTable<T>({
 
   return (
     <>
-      <Table className={className}>
+      <TableFor scroll={scrollStep != null} className={className} rowCount={shown} resetKey={resetKey ?? String(data.length)}>
         <THead>
           {table.getHeaderGroups().map((group) => (
             <TR key={group.id}>
@@ -120,9 +120,18 @@ export function DataTable<T>({
             </TR>
           ))}
         </TBody>
-      </Table>
+      </TableFor>
 
       {scrollStep != null && <LoadMore shown={shown} total={rows.length} hasMore={hasMore} onMore={more} />}
     </>
   );
+}
+
+/** A table that grows as it scrolls holds its column widths (ScrollTable); one shown whole does not need to. */
+function TableFor({
+  scroll, className, rowCount, resetKey, children,
+}: { scroll: boolean; className?: string; rowCount: number; resetKey: string; children: React.ReactNode }) {
+  return scroll
+    ? <ScrollTable className={className} rowCount={rowCount} resetKey={resetKey}>{children}</ScrollTable>
+    : <Table className={className}>{children}</Table>;
 }

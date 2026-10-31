@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
-import { LoadMore } from '@/components/ui/load-more';
-import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable } from '@/components/ui/load-more';
+import { TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { resolveListTotal } from '@/lib/pagination';
@@ -154,7 +154,7 @@ function FleetInner() {
           <p className="py-8 text-center text-sm text-muted">No devices match filters.</p>
         ) : (
           <>
-            <Table className="border-0">
+            <ScrollTable className="border-0" rowCount={devices.length} resetKey={[factoryFilter, String(staleOnly), deviceQ].join('|')}>
               <THead>
                 <TR>
                   <TH>Device</TH>
@@ -192,7 +192,7 @@ function FleetInner() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
+            </ScrollTable>
             <LoadMore shown={devices.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}

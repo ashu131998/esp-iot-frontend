@@ -8,8 +8,8 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { LoadMore, useShowMore } from '@/components/ui/load-more';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
+import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
+import { TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
@@ -62,12 +62,14 @@ export function FactoryOverviewMachinesTable({
 
   // Infinite scroll: the first rows, then more as the table's end comes into view. Their figures are
   // all loaded at once; the 24-hour strips are worked out per machine, so they come a batch at a
-  // time for the rows shown (the first batch with the page, each later one as it scrolls in).
+  // time (the first with the page). A later batch's rows appear only once its strips are there,
+  // complete, below the rows already shown (a spinner holds their place): nothing on screen moves.
   const total = scopedMachines.length;
-  const { shown: rowsShown, more, hasMore } = useShowMore(total, [from ?? 'live', to ?? 'live', ...scopeKey].join('|'));
+  const listKey = [from ?? 'live', to ?? 'live', ...scopeKey].join('|');
+  const { shown: rowsAsked, more } = useShowMore(total, listKey);
   const idBatches = useMemo(
-    () => inBatches(scopedMachines.slice(0, rowsShown).map((m) => m.machine_id)),
-    [scopedMachines, rowsShown],
+    () => inBatches(scopedMachines.slice(0, rowsAsked).map((m) => m.machine_id)),
+    [scopedMachines, rowsAsked],
   );
   const firstBatchKey = (idBatches[0] ?? []).join(',');
 
@@ -120,6 +122,14 @@ export function FactoryOverviewMachinesTable({
     }),
   });
   const uptimeMachines = [...uptime24h.machines, ...laterUptime.flatMap((q) => q.data?.machines ?? [])];
+  // Rows shown: the first batch, then each later one once it has arrived (one that failed shows
+  // without its strips rather than holding the list up), in order.
+  let rowsShown = idBatches[0]?.length ?? 0;
+  for (const [i, q] of laterUptime.entries()) {
+    if (q.data === undefined && !q.isError) break;
+    rowsShown += idBatches[i + 1].length;
+  }
+  const loadingRows = rowsShown < rowsAsked;
 
   const uptimeByMachine = Object.fromEntries(
     uptimeMachines.map((m) => [m.machine_id, m]),
@@ -215,7 +225,7 @@ export function FactoryOverviewMachinesTable({
             </li>
         ))}
       </ul>
-      <Table className="hidden sm:block">
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>Machine</TH>
@@ -260,8 +270,8 @@ export function FactoryOverviewMachinesTable({
             </TR>
           ))}
         </TBody>
-      </Table>
-      <LoadMore shown={rowsShown} total={total} hasMore={hasMore} onMore={more} />
+      </ScrollTable>
+      <LoadMore shown={rowsShown} total={total} hasMore={rowsShown < total} onMore={more} loading={loadingRows} />
     </Card>
   );
 }

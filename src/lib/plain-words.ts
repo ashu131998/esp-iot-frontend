@@ -54,6 +54,17 @@ export function wholePercent(value: number | null | undefined): string {
   return value == null || Number.isNaN(value) ? '—' : `${Math.round(value)}%`;
 }
 
+/**
+ * A machine's share of the window spent running, as its Status Timeline card says it ("92% running");
+ * nothing at all when it did not run or there is no data (beside "No signal" a "— running" or
+ * "0% running" only confuses).
+ */
+export function runningShare(value: number | null | undefined): string | null {
+  if (value == null || Number.isNaN(value)) return null;
+  const pct = Math.round(value);
+  return pct > 0 ? `${pct}% running` : null;
+}
+
 export const QUALITY_CHECK_WORD: Record<string, string> = {
   defect_rate: 'Bad pieces',
   first_pass_yield: 'Good first time',

@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
 import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
-import { wholePercent } from '@/lib/plain-words';
+import { runningShare } from '@/lib/plain-words';
 import { formatAlertVia, statusLabel } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
@@ -198,9 +198,9 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               action={
                 <div className="flex flex-wrap items-center gap-3">
                   <MachineStatusBadge status={currentStatus} />
-                  <span className="text-sm font-medium tabular-nums">
-                    {wholePercent(m.availability_percent)} running
-                  </span>
+                  {runningShare(m.availability_percent) && (
+                    <span className="text-sm font-medium tabular-nums">{runningShare(m.availability_percent)}</span>
+                  )}
                 </div>
               }
             />

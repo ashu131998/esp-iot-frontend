@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore } from '@/components/ui/load-more';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
@@ -19,8 +19,9 @@ import { batteryClock, firmware, queue, supply, timeSource } from '@/lib/board-s
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
-import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { resolveListTotal } from '@/lib/pagination';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
+import { useInfiniteList } from '@/lib/use-infinite-list';
 import { formatDate } from '@/lib/utils';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 
@@ -35,10 +36,6 @@ function NodesFleetInner() {
   const [addNodeOpen, setAddNodeOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pagination = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const factoryFilter = searchParams.get('factory_id') ?? '';
   const lineFilter = searchParams.get('line_id') ?? '';
   const machineFilter = searchParams.get('machine_id') ?? '';
@@ -71,42 +68,28 @@ function NodesFleetInner() {
     return list.filter((m) => m.line_id === lineFilter);
   }, [machinesQuery.data?.machines, lineFilter]);
 
-  const nodesQuery = useQuery({
-    queryKey: [
-      'admin-devices',
-      factoryFilter,
-      lineFilter,
-      machineFilter,
-      statusFilter,
-      deviceQ,
-      pagination.page,
-      pagination.limit,
-    ],
-    queryFn: ({ signal }) =>
+  // Infinite scroll: the first nodes, then more as the list's end comes into view.
+  const { items: nodes, total, hasMore, more, loading, query: nodesQuery } = useInfiniteList({
+    queryKey: ['admin-devices', 'nodes', factoryFilter, lineFilter, machineFilter, statusFilter, deviceQ],
+    fetchPage: ({ limit, offset, signal }) =>
       api.adminDevices(
         {
           factory_id: factoryFilter || undefined,
           line_id: lineFilter || undefined,
           machine_id: machineFilter || undefined,
-          limit: pagination.limit,
-          offset: pagination.offset,
+          limit,
+          offset,
           stale_minutes: 15,
           stale_only: statusFilter === 'stale' ? '1' : undefined,
           fresh_only: statusFilter === 'ok' ? '1' : undefined,
           q: deviceQ || undefined,
         },
         { signal },
-      ),
+      ).then((r) => ({
+        items: r.devices ?? [],
+        total: resolveListTotal(r.total, r.devices?.length ?? 0, limit, offset),
+      })),
   });
-
-  const nodes = nodesQuery.data?.devices ?? [];
-
-  const total = resolveListTotal(
-    nodesQuery.data?.total,
-    nodes.length,
-    pagination.limit,
-    pagination.offset,
-  );
 
   function setQuery(patch: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -337,7 +320,7 @@ function NodesFleetInner() {
                 ))}
               </TBody>
             </Table>
-            <TablePagination total={total} page={pagination.page} limit={pagination.limit} />
+            <LoadMore shown={nodes.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}
       </Card>

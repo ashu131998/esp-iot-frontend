@@ -1,17 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
-import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -47,13 +45,10 @@ export function EnergyTable({
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const total = displayMachines.length;
-  const pageRows = displayMachines.slice((page - 1) * limit, (page - 1) * limit + limit);
+  // Infinite scroll: the first rows, then more as the table's end comes into view (all are loaded).
+  const { shown, more, hasMore } = useShowMore(total, [from, to, ...scopeKey].join('|'));
+  const pageRows = displayMachines.slice(0, shown);
 
   return (
     <Card>
@@ -100,7 +95,7 @@ export function EnergyTable({
           ))}
         </TBody>
       </Table>
-      <TablePagination total={total} page={page} limit={limit} />
+      <LoadMore shown={shown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );
 }

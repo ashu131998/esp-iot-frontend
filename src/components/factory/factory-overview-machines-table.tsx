@@ -2,17 +2,18 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useSuspenseQueries } from '@tanstack/react-query';
+import { useQueries, useSuspenseQueries } from '@tanstack/react-query';
 
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
+import { LoadMore, useShowMore } from '@/components/ui/load-more';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
+import { inBatches } from '@/lib/infinite';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
 import { unitsMade } from '@/lib/overview-figures';
 import {
@@ -22,11 +23,18 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useClientPagination } from '@/lib/use-client-pagination';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
 
 const REFRESH_MS = 60_000;
+
+/** Machines' last 24 hours (the table's strips), for a comma-separated batch of machine ids. */
+function fetchUptime24h(factoryId: string, idsKey: string, signal: AbortSignal) {
+  if (!idsKey) return Promise.resolve({ machines: [] });
+  const now = new Date();
+  const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  return api.uptime(factoryId, { from: from24h, to: now.toISOString(), machine_ids: idsKey }, { signal });
+}
 
 export function FactoryOverviewMachinesTable({
   factoryId,
@@ -52,13 +60,16 @@ export function FactoryOverviewMachinesTable({
   const energyOn = shown('energy');
   const productionOn = shown('production');
 
-  const { page, limit, offset, setPaginationParams } = useClientPagination();
-
-  const pageMachineIds = useMemo(
-    () => scopedMachines.slice(offset, offset + limit).map((m) => m.machine_id),
-    [scopedMachines, offset, limit],
+  // Infinite scroll: the first rows, then more as the table's end comes into view. Their figures are
+  // all loaded at once; the 24-hour strips are worked out per machine, so they come a batch at a
+  // time for the rows shown (the first batch with the page, each later one as it scrolls in).
+  const total = scopedMachines.length;
+  const { shown: rowsShown, more, hasMore } = useShowMore(total, [from ?? 'live', to ?? 'live', ...scopeKey].join('|'));
+  const idBatches = useMemo(
+    () => inBatches(scopedMachines.slice(0, rowsShown).map((m) => m.machine_id)),
+    [scopedMachines, rowsShown],
   );
-  const pageMachineIdsKey = pageMachineIds.join(',');
+  const firstBatchKey = (idBatches[0] ?? []).join(',');
 
   const [{ data: availability }, { data: energy }, { data: production }, { data: uptime24h }] =
     useSuspenseQueries({
@@ -89,34 +100,32 @@ export function FactoryOverviewMachinesTable({
           }
           : offQuery('production', noProduction(factoryId)),
         {
-          queryKey: ['uptime-24h-overview', factoryId, page, limit, pageMachineIdsKey, ...scopeKey],
-          queryFn: ({ signal }: { signal: AbortSignal }) => {
-            if (pageMachineIds.length === 0) {
-              return Promise.resolve({ machines: [] });
-            }
-            const now = new Date();
-            const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-            return api.uptime(
-              factoryId,
-              {
-                from: from24h,
-                to: now.toISOString(),
-                machine_ids: pageMachineIdsKey,
-              },
-              { signal },
-            );
-          },
+          queryKey: ['uptime-24h-overview', factoryId, firstBatchKey, ...scopeKey],
+          queryFn: ({ signal }: { signal: AbortSignal }) => fetchUptime24h(factoryId, firstBatchKey, signal),
           refetchInterval,
           staleTime: 0,
         },
       ],
     });
+  // Later batches: without holding up the rows already shown (their strips appear when they arrive).
+  const laterUptime = useQueries({
+    queries: idBatches.slice(1).map((ids) => {
+      const idsKey = ids.join(',');
+      return {
+        queryKey: ['uptime-24h-overview', factoryId, idsKey, ...scopeKey],
+        queryFn: ({ signal }: { signal: AbortSignal }) => fetchUptime24h(factoryId, idsKey, signal),
+        refetchInterval,
+        staleTime: 0,
+      };
+    }),
+  });
+  const uptimeMachines = [...uptime24h.machines, ...laterUptime.flatMap((q) => q.data?.machines ?? [])];
 
   const uptimeByMachine = Object.fromEntries(
-    uptime24h.machines.map((m) => [m.machine_id, m]),
+    uptimeMachines.map((m) => [m.machine_id, m]),
   );
   const uptimeRowsByMachine = Object.fromEntries(
-    uptime24h.machines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
+    uptimeMachines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
   );
 
   const machineRows = scopedMachines.map((m) => {
@@ -127,8 +136,7 @@ export function FactoryOverviewMachinesTable({
     return { machine: m, avail, eng, prod, uptime };
   });
 
-  const pageRows = machineRows.slice(offset, offset + limit);
-  const total = scopedMachines.length;
+  const pageRows = machineRows.slice(0, rowsShown);
 
   // One rule for a machine's status now, in the table, the phone cards and the CSV.
   function machineStatus(
@@ -253,12 +261,7 @@ export function FactoryOverviewMachinesTable({
           ))}
         </TBody>
       </Table>
-      <TablePagination
-        total={total}
-        page={page}
-        limit={limit}
-        onPaginationChange={setPaginationParams}
-      />
+      <LoadMore shown={rowsShown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );
 }

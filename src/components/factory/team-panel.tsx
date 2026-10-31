@@ -1,18 +1,19 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore } from '@/components/ui/load-more';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { WorkerRoster } from '@/components/factory/worker-roster';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { useInfiniteList, type ListPage } from '@/lib/use-infinite-list';
 import type { AuthUser } from '@/lib/auth-types';
 import type { Worker } from '@/lib/types';
 
@@ -21,26 +22,31 @@ export function TeamPanel({
   workers,
   pendingUsers,
   pendingTotal,
-  users,
-  total,
-  page,
-  limit,
+  firstUsers,
 }: {
   factoryId: string;
   workers: Worker[];
   pendingUsers: AuthUser[];
   pendingTotal: number;
-  users: AuthUser[];
-  total: number;
-  page: number;
-  limit: number;
+  /** The first users, rendered on the server; more load as the list scrolls (useInfiniteList). */
+  firstUsers: ListPage<AuthUser>;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { canWriteFactory } = useAuth();
+  const { items: users, total, hasMore, more, loading } = useInfiniteList<AuthUser>({
+    queryKey: ['factory-users-list', factoryId],
+    first: firstUsers,
+    fetchPage: ({ limit, offset, signal }) =>
+      api.factoryUsers(factoryId, { limit, offset }, { signal }).then((r) => ({ items: r.users ?? [], total: r.total ?? 0 })),
+  });
 
   const approve = useMutation({
     mutationFn: (userId: string) => api.approveUser(factoryId, userId),
-    onSuccess: () => router.refresh(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['factory-users-list', factoryId] });
+      router.refresh();
+    },
   });
 
   async function fetchPendingRows() {
@@ -152,7 +158,7 @@ export function TeamPanel({
                 ))}
               </TBody>
             </Table>
-            <TablePagination total={total} page={page} limit={limit} />
+            <LoadMore shown={users.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}
       </Card>

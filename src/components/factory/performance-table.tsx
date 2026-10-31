@@ -1,14 +1,12 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
-import { resolvePagination } from '@/lib/pagination';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -33,14 +31,10 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
 
   const allMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const total = allMachines.length;
-  const offset = (page - 1) * limit;
-  const pageRows = allMachines.slice(offset, offset + limit);
+  // Infinite scroll: the first rows, then more as the table's end comes into view (all are loaded).
+  const { shown, more, hasMore } = useShowMore(total, [live ? 'live' : range.from, live ? 'live' : range.to, ...scopeKey].join('|'));
+  const pageRows = allMachines.slice(0, shown);
 
   return (
     <Card>
@@ -91,7 +85,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
           ))}
         </TBody>
       </Table>
-      <TablePagination total={total} page={page} limit={limit} />
+      <LoadMore shown={shown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );
 }

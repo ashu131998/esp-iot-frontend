@@ -1,19 +1,19 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore } from '@/components/ui/load-more';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
-import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { resolveListTotal } from '@/lib/pagination';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
+import { useInfiniteList } from '@/lib/use-infinite-list';
 import { formatDate } from '@/lib/utils';
 
 export type AuditEntry = {
@@ -44,46 +44,30 @@ function formatAuditDetails(details: Record<string, unknown>): string {
 function AuditInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pagination = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const actionFilter = searchParams.get('action') ?? '';
   const actorFilter = searchParams.get('actor') ?? '';
   const fromFilter = searchParams.get('from') ?? '';
   const toFilter = searchParams.get('to') ?? '';
 
-  const auditQuery = useQuery({
-    queryKey: [
-      'admin-audit',
-      pagination.page,
-      pagination.limit,
-      actionFilter,
-      actorFilter,
-      fromFilter,
-      toFilter,
-    ],
-    queryFn: ({ signal }) =>
+  // Infinite scroll: the newest entries, then older ones as the list's end comes into view.
+  const { items: entries, total, hasMore, more, loading, query: auditQuery } = useInfiniteList<AuditEntry>({
+    queryKey: ['admin-audit', actionFilter, actorFilter, fromFilter, toFilter],
+    fetchPage: ({ limit, offset, signal }) =>
       api.adminAudit(
         {
-          limit: pagination.limit,
-          offset: pagination.offset,
+          limit,
+          offset,
           action: actionFilter || undefined,
           actor: actorFilter || undefined,
           from: fromFilter || undefined,
           to: toFilter || undefined,
         },
         { signal },
-      ),
+      ).then((r) => {
+        const items = (r.entries ?? []) as AuditEntry[];
+        return { items, total: resolveListTotal(r.total, items.length, limit, offset) };
+      }),
   });
-
-  const entries = (auditQuery.data?.entries ?? []) as AuditEntry[];
-  const total = resolveListTotal(
-    auditQuery.data?.total,
-    entries.length,
-    pagination.limit,
-    pagination.offset,
-  );
 
   function setFilter(key: string, value: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -196,7 +180,7 @@ function AuditInner() {
                 ))}
               </TBody>
             </Table>
-            <TablePagination total={total} page={pagination.page} limit={pagination.limit} />
+            <LoadMore shown={entries.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}
       </Card>

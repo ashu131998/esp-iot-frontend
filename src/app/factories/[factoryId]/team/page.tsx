@@ -1,6 +1,7 @@
 import { TeamPanel } from '@/components/factory/team-panel';
 import { PageHeader } from '@/components/layout/app-shell';
-import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { SCROLL_STEP } from '@/lib/infinite';
+import { resolveListTotal } from '@/lib/pagination';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
 import type { Worker } from '@/lib/types';
@@ -8,20 +9,12 @@ import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-async function FactoryTeamPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ factoryId: string }>;
-  searchParams: Promise<{ page?: string; limit?: string }>;
-}) {
+async function FactoryTeamPage({ params }: { params: Promise<{ factoryId: string }> }) {
   const { factoryId } = await params;
-  const sp = await searchParams;
-  const pagination = resolvePagination({ page: sp.page, limit: sp.limit });
 
   const [pendingData, usersData, workersData] = await Promise.all([
     serverApi.factoryUsers(factoryId, 100, 0, 'pending'),
-    serverApi.factoryUsers(factoryId, pagination.limit, pagination.offset),
+    serverApi.factoryUsers(factoryId, SCROLL_STEP, 0),   // the first users; more load as the list scrolls
     serverApi.workers(factoryId, 200, 0).catch(() => ({ workers: [] as Worker[] })),
   ]);
 
@@ -41,15 +34,10 @@ async function FactoryTeamPage({
           100,
           0,
         )}
-        users={usersData.users ?? []}
-        total={resolveListTotal(
-          usersData.total,
-          usersData.users?.length ?? 0,
-          pagination.limit,
-          pagination.offset,
-        )}
-        page={pagination.page}
-        limit={pagination.limit}
+        firstUsers={{
+          items: usersData.users ?? [],
+          total: resolveListTotal(usersData.total, usersData.users?.length ?? 0, SCROLL_STEP, 0),
+        }}
       />
     </NavDim>
   );

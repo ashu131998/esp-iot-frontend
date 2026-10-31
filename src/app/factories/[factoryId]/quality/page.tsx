@@ -4,7 +4,8 @@ import { QualityPanel } from '@/components/factory/quality-panel';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { NavDim } from '@/lib/navigation-context';
 import { resolveDateRange } from '@/lib/date-range';
-import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { SCROLL_STEP } from '@/lib/infinite';
+import { resolveListTotal } from '@/lib/pagination';
 import { serverApi } from '@/lib/server-api';
 import { factoryPage } from '@/lib/server/factory-page';
 
@@ -14,16 +15,12 @@ async function QualityContent({
   factoryId,
   from,
   to,
-  page,
-  limit,
   machineId,
   lineId,
 }: {
   factoryId: string;
   from?: string;
   to?: string;
-  page?: string;
-  limit?: string;
   machineId?: string;
   lineId?: string;
 }) {
@@ -35,32 +32,19 @@ async function QualityContent({
       ? allMachines.filter((m) => m.machine_id === machineId)
       : allMachines;
   const range = resolveDateRange({ from, to }, factory.created_at, factory.shifts);
-  const pagination = resolvePagination({ page, limit });
-  const data = await serverApi.quality(
-    factoryId,
-    range.from,
-    range.to,
-    pagination.limit,
-    pagination.offset,
-    machineId,
-    lineId,
-  );
+  // The first records; the panel loads more as the list scrolls (infinite scroll).
+  const data = await serverApi.quality(factoryId, range.from, range.to, SCROLL_STEP, 0, machineId, lineId);
+  const records = data.records ?? [];
 
   return (
     <QualityPanel
       factoryId={factoryId}
       machines={machines}
-      records={data.records ?? []}
+      first={{ items: records, total: resolveListTotal(data.total, records.length, SCROLL_STEP, 0) }}
       from={range.from}
       to={range.to}
-      total={resolveListTotal(
-        data.total,
-        data.records?.length ?? 0,
-        pagination.limit,
-        pagination.offset,
-      )}
-      page={pagination.page}
-      limit={pagination.limit}
+      machineId={machineId}
+      lineId={lineId}
     />
   );
 }
@@ -70,7 +54,7 @@ async function QualityPage({
   searchParams,
 }: {
   params: Promise<{ factoryId: string }>;
-  searchParams: Promise<{ from?: string; to?: string; page?: string; limit?: string; machine_id?: string; line_id?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId } = await params;
   const sp = await searchParams;
@@ -86,8 +70,6 @@ async function QualityPage({
             factoryId={factoryId}
             from={sp.from}
             to={sp.to}
-            page={sp.page}
-            limit={sp.limit}
             machineId={sp.machine_id}
             lineId={sp.line_id}
           />

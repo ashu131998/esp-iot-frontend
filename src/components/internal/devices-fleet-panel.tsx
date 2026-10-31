@@ -9,14 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore } from '@/components/ui/load-more';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
-import { resolvePagination, resolveListTotal } from '@/lib/pagination';
+import { resolveListTotal } from '@/lib/pagination';
+import { useInfiniteList } from '@/lib/use-infinite-list';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
 import { formatDate } from '@/lib/utils';
+
+/** A device is stale after this long without telemetry (sent with the request). */
+const STALE_MINUTES = 15;
 
 function deviceHref(factoryId: string, deviceId: string) {
   return `/internal/devices/${encodeURIComponent(factoryId)}/${encodeURIComponent(deviceId)}`;
@@ -25,10 +29,6 @@ function deviceHref(factoryId: string, deviceId: string) {
 function FleetInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pagination = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const factoryFilter = searchParams.get('factory_id') ?? '';
   const staleOnly = searchParams.get('stale') === '1';
   const deviceQ = searchParams.get('q') ?? '';
@@ -38,30 +38,25 @@ function FleetInner() {
     queryFn: ({ signal }) => api.adminFactories({ signal }),
   });
 
-  const devicesQuery = useQuery({
-    queryKey: ['admin-devices', factoryFilter, staleOnly, deviceQ, pagination.page, pagination.limit],
-    queryFn: ({ signal }) =>
+  // Infinite scroll: the first devices, then more as the list's end comes into view.
+  const { items: devices, total, hasMore, more, loading, query: devicesQuery } = useInfiniteList({
+    queryKey: ['admin-devices', 'devices', factoryFilter, staleOnly, deviceQ],
+    fetchPage: ({ limit, offset, signal }) =>
       api.adminDevices(
         {
           factory_id: factoryFilter || undefined,
-          limit: pagination.limit,
-          offset: pagination.offset,
-          stale_minutes: 15,
+          limit,
+          offset,
+          stale_minutes: STALE_MINUTES,
           stale_only: staleOnly ? '1' : undefined,
           q: deviceQ || undefined,
         },
         { signal },
-      ),
+      ).then((r) => ({
+        items: r.devices ?? [],
+        total: resolveListTotal(r.total, r.devices?.length ?? 0, limit, offset),
+      })),
   });
-
-  const devices = devicesQuery.data?.devices ?? [];
-
-  const total = resolveListTotal(
-    devicesQuery.data?.total,
-    devices.length,
-    pagination.limit,
-    pagination.offset,
-  );
 
   function setQuery(patch: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -86,7 +81,7 @@ function FleetInner() {
           factory_id: factoryFilter || undefined,
           limit,
           offset,
-          stale_minutes: 15,
+          stale_minutes: STALE_MINUTES,
           stale_only: staleOnly ? '1' : undefined,
           q: deviceQ || undefined,
         })
@@ -107,7 +102,7 @@ function FleetInner() {
       <Card className="p-6">
         <CardHeader
           title="Fleet"
-          description={`Stale if no telemetry for ${devicesQuery.data?.stale_threshold_minutes ?? 15} minutes`}
+          description={`Stale if no telemetry for ${STALE_MINUTES} minutes`}
           action={
             <ExportCsvButton
               filename="device-fleet"
@@ -198,7 +193,7 @@ function FleetInner() {
                 ))}
               </TBody>
             </Table>
-            <TablePagination total={total} page={pagination.page} limit={pagination.limit} />
+            <LoadMore shown={devices.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}
       </Card>

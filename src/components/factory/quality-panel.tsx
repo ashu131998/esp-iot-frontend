@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 import { QualityForm } from '@/components/factory/quality-form';
@@ -8,33 +8,47 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Button } from '@/components/ui/button';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore } from '@/components/ui/load-more';
 import { PHONE_HIDDEN, TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { useInfiniteList, type ListPage } from '@/lib/use-infinite-list';
 import type { Machine, QualityRecord } from '@/lib/types';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
 
 export function QualityPanel({
   factoryId,
   machines,
-  records,
+  first,
   from,
   to,
-  total,
-  page,
-  limit,
+  machineId,
+  lineId,
 }: {
   factoryId: string;
   machines: Machine[];
-  records: QualityRecord[];
+  /** The first records, rendered on the server; more load as the list scrolls (useInfiniteList). */
+  first: ListPage<QualityRecord>;
   from: string;
   to: string;
-  total: number;
-  page: number;
-  limit: number;
+  machineId?: string;
+  lineId?: string;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const listKey = ['quality-records', factoryId, from, to, machineId ?? '', lineId ?? ''];
+  const { items: records, total, hasMore, more, loading } = useInfiniteList<QualityRecord>({
+    queryKey: listKey,
+    first,
+    fetchPage: ({ limit, offset, signal }) =>
+      api.quality(factoryId, { from, to, limit, offset, machine_id: machineId, line_id: lineId }, { signal })
+        .then((r) => ({ items: r.records ?? [], total: r.total ?? 0 })),
+  });
+  // Added or deleted: every loaded page again (and the rest of the page from the server).
+  const refreshList = () => {
+    void queryClient.invalidateQueries({ queryKey: ['quality-records', factoryId] });
+    router.refresh();
+  };
 
   function recordToRow(r: QualityRecord) {
     const machine = machines.find((m) => m.machine_id === r.machine_id);
@@ -62,7 +76,7 @@ export function QualityPanel({
 
   const deleteMutation = useMutation({
     mutationFn: (recordId: string) => api.deleteQuality(factoryId, recordId),
-    onSuccess: () => router.refresh(),
+    onSuccess: refreshList,
   });
 
   return (
@@ -79,7 +93,7 @@ export function QualityPanel({
                 fetchRows={fetchAllRows}
                 rowCount={total}
               />
-              <QualityForm factoryId={factoryId} machines={machines} />
+              <QualityForm factoryId={factoryId} machines={machines} onSuccess={refreshList} />
             </div>
           }
         />
@@ -132,7 +146,7 @@ export function QualityPanel({
                 })}
               </TBody>
             </Table>
-            <TablePagination total={total} page={page} limit={limit} />
+            <LoadMore shown={records.length} total={total} hasMore={hasMore} onMore={more} loading={loading} />
           </>
         )}
       </Card>

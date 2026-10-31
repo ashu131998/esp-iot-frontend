@@ -374,7 +374,7 @@ export const api = {
 
   quality: (
     factoryId: string,
-    params?: DateRangeParams & PaginationParams & { machine_id?: string },
+    params?: DateRangeParams & PaginationParams & { machine_id?: string; line_id?: string },
     options?: ApiRequestOptions,
   ) =>
     request<{ factory_id: string; records: QualityRecord[] } & PaginatedMeta>(

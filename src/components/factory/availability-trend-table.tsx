@@ -7,6 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { DataTable } from '@/components/ui/data-table';
+import { SCROLL_STEP } from '@/lib/infinite';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
@@ -15,7 +16,6 @@ import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
 import { humanMinutes } from '@/lib/plain-words';
 import { formatPercent } from '@/lib/utils';
 
-const PAGE_SIZE = 10;
 
 function badgeColor(v: number | null): string {
   if (v == null) return 'bg-gray-50 text-gray-700';
@@ -125,7 +125,7 @@ export function AvailabilityTrendTable({
       <DataTable
         columns={columns}
         data={trends}
-        pageSize={PAGE_SIZE}
+        scrollStep={SCROLL_STEP}
         initialSorting={[{ id: 'date', desc: true }]}
         emptyMessage="No data available for the selected period."
       />

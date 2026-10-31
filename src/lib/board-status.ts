@@ -6,6 +6,7 @@
 import { format } from 'date-fns';
 
 import type { BoardSettings } from '@/lib/board-settings';
+import { dropReason, signalWord } from '@/lib/wifi';
 
 export interface BoardBeat {
   fw?: string;
@@ -33,6 +34,13 @@ export interface BoardBeat {
   q_cap?: number;
   /** Lifetime: unconfirmed bytes dropped from a full queue (oldest first). */
   q_dropped?: number;
+  /** Its WiFi (firmware 2.4+): the network, its signal, how many networks it knows, why it last left one. */
+  ssid?: string;
+  wifi_rssi?: number;
+  wifi_n?: number;
+  wifi_rsn?: number;
+  /** The settings it applied (they carry its factory's WiFi list). */
+  cfg_version?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -222,6 +230,24 @@ export function supply(beat: BoardBeat | null | undefined): StatusCell {
   return v >= 20
     ? { label, tone: 'good', detail: '24 V supply' }
     : { label, tone: 'warn', detail: 'Below 20 V: low supply, or powered without 24 V (bench)' };
+}
+
+/**
+ * Its WiFi (firmware 2.4+): the network and how strong; the tooltip adds the dBm, how many
+ * networks it knows and why it last left one. Offline, or not known to be online (no broker):
+ * the network it was last on.
+ */
+export function wifi(beat: BoardBeat | null | undefined, online: boolean | null): StatusCell {
+  if (!beat?.ssid) return NONE;
+  const rssi = typeof beat.wifi_rssi === 'number' && beat.wifi_rssi < 0 ? beat.wifi_rssi : null;
+  const known = beat.wifi_n ? `Knows ${beat.wifi_n} network${beat.wifi_n === 1 ? '' : 's'}.` : '';
+  const drop = dropReason(beat.wifi_rsn ?? null);
+  const more = [known, drop ? `Last left a network: ${drop}.` : ''].filter(Boolean).join(' ');
+  if (online !== true || rssi === null) {
+    return { label: `${beat.ssid} (last)`, tone: 'neutral', detail: `Last on ${beat.ssid}.${more ? ` ${more}` : ''}` };
+  }
+  const { word, tone } = signalWord(rssi);
+  return { label: `${beat.ssid} · ${word}`, tone, detail: `On ${beat.ssid}, signal ${rssi} dBm.${more ? ` ${more}` : ''}` };
 }
 
 export function firmware(beat: BoardBeat | null | undefined): string {

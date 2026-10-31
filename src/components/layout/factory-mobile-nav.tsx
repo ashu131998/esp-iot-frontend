@@ -8,6 +8,8 @@ import { SignOutButton } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { tabIcon } from '@/components/layout/factory-sidebar';
+import { useAuth } from '@/lib/auth-context';
+import { tabsFor } from '@/lib/display';
 import { bottomBarTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -25,7 +27,7 @@ export function FactoryMobileNav({
   logoSrc,
   location,
   shifts,
-  tabs,
+  tabs: allTabs,
 }: {
   factoryId: string;
   factoryName: string;
@@ -36,6 +38,8 @@ export function FactoryMobileNav({
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
+  const { canWriteFactory } = useAuth();
+  const tabs = tabsFor(allTabs, canWriteFactory);
   // Both belong to the page they were set on, so arriving on another page clears them.
   const [pending, setPending] = useState<{ href: string; on: string } | null>(null);
   const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null);

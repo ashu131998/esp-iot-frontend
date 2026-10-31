@@ -47,6 +47,7 @@ import {
   fetchWithSignal,
   isAbortError,
 } from './request-signal';
+import type { WifiNetwork, WifiPage } from '@/lib/wifi';
 
 export type { ApiRequestOptions };
 
@@ -807,6 +808,16 @@ export const api = {
         updated_at: string | null;
       } | null;
     }>(`/v1/admin/health${qs(params)}`, options),
+
+  /** A factory's WiFi networks and where each of its boards stands (its admins and the super admin). */
+  factoryWifi: (factoryId: string, options?: ApiRequestOptions) =>
+    request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, options),
+
+  /** Save a factory's WiFi networks: sent at once to every board placed in it. */
+  saveFactoryWifi: (factoryId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
+    request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, {
+      method: 'PUT', body: JSON.stringify({ networks }), ...options,
+    }),
 
   /** Real boards with their state (staff); see AdminBoard. */
   adminBoards: (options?: ApiRequestOptions) =>

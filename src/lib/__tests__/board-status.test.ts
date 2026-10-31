@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   batteryClock, firmware, formatBytes, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
-  type BrokerLogins,
+  wifi, type BrokerLogins,
 } from '@/lib/board-status';
 
 describe('batteryClock', () => {
@@ -76,6 +76,26 @@ describe('supply', () => {
     expect(supply({ vin_v: 23.9 })).toMatchObject({ label: '23.9 V', tone: 'good' });
     expect(supply({ vin_v: 3.1 })).toMatchObject({ label: '3.1 V', tone: 'warn' });
     expect(supply(undefined).label).toBe('—');
+  });
+});
+
+describe('wifi', () => {
+  it('online: the network and how strong, with the details in the tooltip', () => {
+    const cell = wifi({ ssid: 'Mill-2G', wifi_rssi: -67, wifi_n: 3, wifi_rsn: 201 }, true);
+    expect(cell).toMatchObject({ label: 'Mill-2G · Good', tone: 'good' });
+    expect(cell.detail).toBe('On Mill-2G, signal -67 dBm. Knows 3 networks. Last left a network: Network not found.');
+    expect(wifi({ ssid: 'Mill-2G', wifi_rssi: -84, wifi_n: 1 }, true)).toMatchObject({ label: 'Mill-2G · Very weak', tone: 'bad' });
+  });
+
+  it('offline, not known to be online, or no signal reading: the network it was last on, not judged', () => {
+    expect(wifi({ ssid: 'Mill-2G', wifi_rssi: -55 }, false)).toEqual({ label: 'Mill-2G (last)', tone: 'neutral', detail: 'Last on Mill-2G.' });
+    expect(wifi({ ssid: 'Mill-2G', wifi_rssi: -55 }, null).label).toBe('Mill-2G (last)');   // broker not answering
+    expect(wifi({ ssid: 'Mill-2G', wifi_rssi: 0 }, true).label).toBe('Mill-2G (last)');
+  });
+
+  it('firmware before 2.4 does not say', () => {
+    expect(wifi({ fw: '2.3.2-uni' }, true).label).toBe('—');
+    expect(wifi(null, null).label).toBe('—');
   });
 });
 

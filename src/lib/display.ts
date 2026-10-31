@@ -77,9 +77,18 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'scheduling', label: 'Scheduling' },
   { slug: 'shift-reports', label: 'Shift reports' },
   { slug: 'sensor-mapping', label: 'Sensor mapping' },
+  { slug: 'wifi', label: 'WiFi' },
   { slug: 'team', label: 'Team' },
   { slug: 'compliance', label: 'Compliance' },
 ];
+
+/** Pages only for people who can change the factory (its admins and our super admin): WiFi shows the passwords. */
+const ADMIN_PAGES: readonly string[] = ['wifi'];
+
+/** The menu as this person sees it: admin-only pages left out for everyone else. */
+export function tabsFor<T extends { slug: string }>(tabs: readonly T[], canWrite: boolean): T[] {
+  return tabs.filter((t) => canWrite || !ADMIN_PAGES.includes(t.slug));
+}
 
 /** The factory's menu: its pages that are switched on. */
 export function factoryTabs(

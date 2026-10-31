@@ -18,12 +18,15 @@ import {
   Timer,
   Users,
   Waves,
+  Wifi,
   Workflow,
   Zap,
 } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
+import { useAuth } from '@/lib/auth-context';
+import { tabsFor } from '@/lib/display';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -44,6 +47,7 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   scheduling: CalendarClock,
   'shift-reports': FileText,
   'sensor-mapping': Cable,
+  wifi: Wifi,
   compliance: ShieldCheck,
   team: Users,
 };
@@ -70,6 +74,7 @@ export function FactorySidebar({
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
+  const { canWriteFactory } = useAuth();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,7 +112,7 @@ export function FactorySidebar({
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
-          {tabs.map((tab) => {
+          {tabsFor(tabs, canWriteFactory).map((tab) => {
             const Icon = tabIcon(tab.slug);
             const active = pendingHref ? pendingHref === tab.href : pathname === tab.href;
             return (

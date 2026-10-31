@@ -20,7 +20,7 @@ import {
 } from '@/lib/board-settings';
 import {
   SHARED_CLIENT_KIND, batteryClock, firmware, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, serviceName, supply,
-  timeSource, type AdminBoard, type BrokerLogins,
+  timeSource, wifi, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
 import { formatDate } from '@/lib/utils';
@@ -449,7 +449,7 @@ export function BoardsPanel() {
           <Table className="border-0">
             <THead>
               <TR>
-                <TH>Board</TH><TH>Where</TH><TH>Onboarded</TH><TH>Online</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
+                <TH>Board</TH><TH>Where</TH><TH>Onboarded</TH><TH>Status</TH><TH>WiFi</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
                 <TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
                 {canChange && <TH />}
               </TR>
@@ -471,6 +471,7 @@ export function BoardsPanel() {
                       </Badge>
                     )}
                   </TD>
+                  <TD className="whitespace-nowrap"><StatusText cell={wifi(b.beat, b.online)} /></TD>
                   <TD><StatusBadge cell={loginStatus(b)} /></TD>
                   <TD className="font-mono text-xs">{firmware(b.beat)}</TD>
                   <TD><StatusText cell={updateStatus(b)} /></TD>

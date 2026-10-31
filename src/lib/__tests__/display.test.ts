@@ -9,6 +9,7 @@ import {
   noProduction,
   offQuery,
   resolveDisplay,
+  tabsFor,
   type DisplayPage,
 } from '@/lib/display';
 
@@ -66,6 +67,13 @@ describe('factoryTabs', () => {
     expect(slugs).not.toContain('energy');
     expect(slugs).not.toContain('compliance');
     expect(slugs).toContain('team');
+  });
+
+  it('shows WiFi (it has the passwords) only to people who can change the factory', () => {
+    const tabs = factoryTabs('f1', {});
+    expect(tabsFor(tabs, true).map((t) => t.slug)).toContain('wifi');
+    expect(tabsFor(tabs, false).map((t) => t.slug)).not.toContain('wifi');
+    expect(tabsFor(tabs, false)).toHaveLength(tabs.length - 1);
   });
 
   it('links Overview to the factory root and other pages below it', () => {

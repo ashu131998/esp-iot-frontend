@@ -59,7 +59,9 @@ export function LoadMore({
   return (
     <div
       ref={ref}
-      className={cn('flex h-12 items-center justify-between gap-3 border-t px-2 text-xs text-muted sm:px-4', className)}
+      // [overflow-anchor:none]: the browser never keeps this footer still while rows are added above it
+      // (that would push everything the reader sees up by the new rows); it keeps a row still instead.
+      className={cn('flex h-12 items-center justify-between gap-3 border-t px-2 text-xs text-muted [overflow-anchor:none] sm:px-4', className)}
       aria-live="polite"
     >
       {loading ? (

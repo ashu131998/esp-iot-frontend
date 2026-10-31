@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { FACTORY_PAGES, factoryTabs } from '@/lib/display';
-import { BOTTOM_BAR_SIZE, bottomBarTabs, shortLabel } from '@/lib/mobile-nav';
+import { BOTTOM_BAR_SIZE, bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 
 const tab = (slug: string) => ({ slug, label: slug, href: `/factories/f1/${slug}` });
 const slugs = (tabs: Array<{ slug: string }>) => tabs.map((t) => t.slug);
@@ -26,6 +26,22 @@ describe('bottomBarTabs', () => {
     const bar = bottomBarTabs(factoryTabs('f1', null));
     expect(bar.length).toBe(BOTTOM_BAR_SIZE);
     expect(new Set(slugs(bar)).size).toBe(bar.length);
+  });
+});
+
+describe('moreTabs', () => {
+  it('holds every page that is not on the bar, in menu order, and nothing twice', () => {
+    const all = factoryTabs('f1', null);
+    const more = moreTabs(all);
+    expect(slugs(more)).not.toContain('overview');
+    expect(slugs(more)).not.toContain('alerts');
+    expect(slugs(more)[0]).toBe('energy');
+    expect(slugs(more).length + bottomBarTabs(all).length).toBe(all.length);
+    expect(slugs([...bottomBarTabs(all), ...more]).sort()).toEqual(slugs(all).sort());
+  });
+
+  it('is empty when the bar holds every page', () => {
+    expect(moreTabs(['overview', 'team'].map(tab))).toEqual([]);
   });
 });
 

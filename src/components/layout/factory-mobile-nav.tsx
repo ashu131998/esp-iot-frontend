@@ -10,7 +10,7 @@ import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { tabIcon } from '@/components/layout/factory-sidebar';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
-import { bottomBarTabs, shortLabel } from '@/lib/mobile-nav';
+import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -136,7 +136,7 @@ export function FactoryMobileNav({
             </div>
 
             <ul className="grid grid-cols-3 gap-2 p-3">
-              {tabs.map((tab) => {
+              {moreTabs(tabs).map((tab) => {
                 const Icon = tabIcon(tab.slug);
                 const active = current === tab.href;
                 return (

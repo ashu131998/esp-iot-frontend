@@ -1,7 +1,7 @@
 /**
  * The phone's bottom bar (below lg): up to four of the factory's pages — these first when
- * the factory has them switched on, then the next ones in menu order. Every page, these
- * included, is also in the menu behind "More".
+ * the factory has them switched on, then the next ones in menu order. The menu behind
+ * "More" holds the rest (moreTabs).
  */
 const BAR_FIRST: readonly string[] = ['overview', 'alerts', 'status-timeline', 'availability'];
 export const BOTTOM_BAR_SIZE = 4;
@@ -21,6 +21,12 @@ export function bottomBarTabs<T extends { slug: string }>(tabs: readonly T[]): T
     if (!picked.includes(t)) picked.push(t);
   }
   return picked.slice(0, BOTTOM_BAR_SIZE);
+}
+
+/** The menu behind "More": the pages not on the bottom bar, in menu order. */
+export function moreTabs<T extends { slug: string }>(tabs: readonly T[]): T[] {
+  const bar = bottomBarTabs(tabs);
+  return tabs.filter((t) => !bar.includes(t));
 }
 
 export function shortLabel(tab: { slug: string; label: string }): string {

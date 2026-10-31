@@ -292,11 +292,11 @@ export function UptimeTimeSeriesChart({
     <div className="space-y-1">
       <div className="relative" style={{ contain: 'layout' }}>
         {cuts.map((c) => (
-          // A red dot above the bar: visible on every colour, even on a stopped (red) loom.
+          // A red dot above the bar where the power went: visible on every colour, even on a stopped (red) loom.
           <span
             key={`dot-${c.from}`}
             className="absolute -top-1.5 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-white bg-red-600"
-            style={{ left: `${c.leftPct + c.widthPct / 2}%` }}
+            style={{ left: `${c.leftPct}%` }}
             title={cutTitle(c.from, c.to)}
             aria-label={cutTitle(c.from, c.to)}
           />
@@ -342,11 +342,12 @@ export function UptimeTimeSeriesChart({
             );
           })}
           {cuts.map((c) => (
-            // The cut itself, at least 2 px wide: a second is far less than a pixel on 24 hours.
+            // A thin line where the power went, however long it stayed off: the time without power
+            // shows as No signal (grey) like any other, so a long cut does not paint the bar black.
             <div
               key={`cut-${c.from}`}
-              className="absolute top-0 bottom-0 z-10 bg-slate-900"
-              style={{ left: `${c.leftPct}%`, width: `max(2px, ${c.widthPct}%)` }}
+              className="absolute top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-slate-900"
+              style={{ left: `${c.leftPct}%` }}
               title={cutTitle(c.from, c.to)}
             />
           ))}

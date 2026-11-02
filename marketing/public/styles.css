@@ -173,6 +173,56 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .login-footer a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .login-footer a:hover { text-decoration: underline; }
 
+/* First week (homepage) */
+.rollout { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.rollout li { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+.rollout h3 { margin-top: 10px; }
+.rollout p { color: var(--muted); margin: 0; font-size: 0.94rem; }
+.rollout-day { display: inline-block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); background: rgba(255, 90, 31, 0.1); border-radius: 999px; padding: 4px 10px; }
+
+/* Monthly results example (homepage) */
+.report-card { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 28px; box-shadow: var(--shadow); }
+.report-eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.report-big { font-size: clamp(2rem, 4vw, 2.6rem); font-weight: 800; color: var(--ink); letter-spacing: -0.02em; margin: 0; }
+.report-sub { color: var(--muted); margin: 0 0 18px; }
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.report-grid div { background: var(--bg-alt); border-radius: 12px; padding: 12px 14px; }
+.report-grid dt { font-size: 0.8rem; color: var(--muted); }
+.report-grid dd { margin: 2px 0 0; font-size: 1.25rem; font-weight: 750; color: var(--ink); }
+.report-note { margin: 14px 0 0; font-size: 0.8rem; color: var(--muted); }
+
+/* Inner pages (ROI calculator, partners) */
+.page-head { padding: 72px 0 40px; }
+.page-title { font-size: clamp(2rem, 4.4vw, 3rem); }
+.hero-short { padding: 72px 0 80px; }
+.lead-center { margin-inline: auto; }
+.cards-3 { grid-template-columns: repeat(3, 1fr); }
+.nav-links a[aria-current="page"] { color: #fff; }
+
+.calc-section { padding-top: 56px; }
+.calc { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 32px; align-items: start; }
+.calc-form { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 28px; display: grid; gap: 16px; }
+.calc-h { font-size: 1.05rem; margin: 6px 0 0; }
+.field { display: grid; gap: 6px; }
+.field span { font-weight: 650; font-size: 0.92rem; color: var(--ink); }
+.field small { color: var(--muted); font-size: 0.84rem; }
+.field input, .field select { font: inherit; height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-alt); color: var(--ink); outline: none; }
+.field input:focus, .field select:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 90, 31, 0.14); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.calc-out { position: sticky; top: 92px; background: var(--ink); color: #e6eaf3; border-radius: 20px; padding: 28px; display: grid; gap: 18px; box-shadow: var(--shadow); }
+.calc-out.is-waiting .calc-figures, .calc-out.is-waiting .calc-verdict { opacity: 0.35; }
+.calc-hint { margin: 0; color: #ffb08c; font-size: 0.9rem; }
+.calc-hint:empty { display: none; }
+.calc-figures { display: grid; gap: 12px; margin: 0; }
+.calc-figures div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 10px; }
+.calc-figures dt { color: #aab3c7; font-size: 0.92rem; }
+.calc-figures dd { margin: 0; font-weight: 750; color: #fff; text-align: right; }
+.calc-figures .calc-big { display: grid; justify-content: stretch; gap: 4px; }
+.calc-figures .calc-big dd { text-align: left; font-size: 2rem; letter-spacing: -0.02em; color: #6ee7a0; }
+.calc-figures .calc-big small { font-size: 0.9rem; font-weight: 500; color: #aab3c7; letter-spacing: 0; }
+.calc-verdict { margin: 0; color: #e6eaf3; }
+.calc-verdict strong { color: #fff; }
+
 /* Responsive */
 @media (max-width: 980px) {
   .hero-grid, .split { grid-template-columns: 1fr; }
@@ -181,11 +231,17 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   .cards { grid-template-columns: repeat(2, 1fr); }
   .strip-grid { grid-template-columns: repeat(2, 1fr); }
   .nav-links { display: none; }
+  .rollout { grid-template-columns: repeat(2, 1fr); }
+  .cards-3 { grid-template-columns: 1fr; }
+  .calc { grid-template-columns: 1fr; }
+  .calc-out { position: static; }
 }
 @media (max-width: 640px) {
   .hero { padding: 56px 0 72px; }
   .section { padding: 72px 0; }
   .steps, .cards { grid-template-columns: 1fr; }
+  .rollout, .field-row { grid-template-columns: 1fr; }
+  .calc-form, .calc-out { padding: 22px; }
   .alert-toast { position: static; margin-top: 16px; max-width: none; }
   .nav-cta .link-quiet { display: none; }
 }

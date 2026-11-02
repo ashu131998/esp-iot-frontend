@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { factoryExists, factoryLoginUrl, readCookie, signedInHome } from './redirect';
+import { alwaysShown, factoryExists, factoryLoginUrl, readCookie, signedInHome } from './redirect';
 
 function respond(status: number, body: unknown): typeof fetch {
   return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
@@ -82,5 +82,14 @@ describe('readCookie', () => {
     expect(readCookie('xfb_home=/internal; fb_home=/factories/a', 'fb_home')).toBe(
       '/factories/a',
     );
+  });
+});
+
+describe('alwaysShown', () => {
+  it('keeps the ROI calculator and partners page open to signed-in visitors', () => {
+    for (const p of ['/roi', '/roi.html', '/roi/', '/partners', '/partners.html']) expect(alwaysShown(p)).toBe(true);
+  });
+  it('sends signed-in visitors on from every other page', () => {
+    for (const p of ['/', '/index.html', '/login', '/roi-calc.js', '/partnersx']) expect(alwaysShown(p)).toBe(false);
   });
 });

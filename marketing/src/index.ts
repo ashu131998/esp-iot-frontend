@@ -1,4 +1,4 @@
-import { factoryExists, factoryLoginUrl, signedInHome, type Origins } from './redirect';
+import { alwaysShown, factoryExists, factoryLoginUrl, signedInHome, type Origins } from './redirect';
 
 interface Env extends Origins {
   ASSETS: Fetcher;
@@ -52,7 +52,9 @@ export default {
 
     // The hint cookie lives on floorbeat.in and is written by production only,
     // so on stage/dev it would send visitors to the wrong environment.
-    const home = env.NON_PRODUCTION === 'true' ? null : signedInHome(req.headers.get('cookie'), env);
+    const home = env.NON_PRODUCTION === 'true' || alwaysShown(url.pathname)
+      ? null
+      : signedInHome(req.headers.get('cookie'), env);
     if (home) return redirect(home);
 
     if (url.pathname === '/login' && url.searchParams.has('factory')) {

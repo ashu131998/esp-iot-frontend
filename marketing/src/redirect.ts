@@ -70,3 +70,14 @@ export function factoryLoginUrl(factory: string | null, origins: Origins): strin
   if (!FACTORY_ID_RE.test(id)) return null;
   return `${origins.APP_ORIGIN}/f/${id}/login`;
 }
+
+/**
+ * Pages a signed-in visitor still sees instead of being sent to their dashboard: the ROI
+ * calculator and the partners page are shared with prospects, and staff open them signed in.
+ */
+const ALWAYS_SHOWN = new Set(['/roi', '/partners']);
+
+export function alwaysShown(pathname: string): boolean {
+  const path = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+  return ALWAYS_SHOWN.has(path);
+}

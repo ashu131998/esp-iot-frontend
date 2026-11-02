@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { forgotPasswordPathFor, newPasswordProblem, resetLinkMessage, signInPathFor } from '@/lib/auth-reset';
+import { forgotPasswordPathFor, newPasswordProblem, resetLinkMessage, signInPathFor, staffBaseFrom } from '@/lib/auth-reset';
 
 describe('signInPathFor / forgotPasswordPathFor', () => {
   it('send factory accounts to their factory pages', () => {
@@ -12,10 +12,28 @@ describe('signInPathFor / forgotPasswordPathFor', () => {
     expect(signInPathFor(undefined)).toBe('/internal/login');
     expect(forgotPasswordPathFor(null)).toBe('/internal/forgot-password');
   });
+  it('send staff to the ops host when given its origin (the customer host has no staff pages)', () => {
+    expect(signInPathFor(null, 'https://ops.floorbeat.in')).toBe('https://ops.floorbeat.in/internal/login');
+    expect(forgotPasswordPathFor(null, 'https://ops.floorbeat.in')).toBe('https://ops.floorbeat.in/internal/forgot-password');
+    expect(signInPathFor('mill-01', 'https://ops.floorbeat.in')).toBe('/f/mill-01/login');
+  });
   it('never builds a path from a factory id that is not one', () => {
     expect(signInPathFor('../etc')).toBe('/internal/login');
     expect(signInPathFor('a b')).toBe('/internal/login');
     expect(signInPathFor('')).toBe('/internal/login');
+  });
+});
+
+describe('staffBaseFrom', () => {
+  it('takes the origin of STAFF_URL', () => {
+    expect(staffBaseFrom('https://ops.floorbeat.in/internal')).toBe('https://ops.floorbeat.in');
+    expect(staffBaseFrom('https://stage-ops.floorbeat.in/internal/')).toBe('https://stage-ops.floorbeat.in');
+    expect(staffBaseFrom('https://ops.floorbeat.in')).toBe('https://ops.floorbeat.in');
+  });
+  it('is empty when unset or not a URL', () => {
+    expect(staffBaseFrom(undefined)).toBe('');
+    expect(staffBaseFrom('  ')).toBe('');
+    expect(staffBaseFrom('/internal')).toBe('');
   });
 });
 

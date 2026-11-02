@@ -1,6 +1,8 @@
 /**
  * Where the forgot-password / reset pages send people. Pure, so the routing is tested.
- * Staff accounts have no factory (factory_id null) and sign in at the internal console.
+ * Staff accounts have no factory (factory_id null) and sign in at the internal console, which only
+ * the ops host serves: on the customer host (where reset emails land) their links take `staffBase`,
+ * the ops origin.
  */
 
 const FACTORY_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -10,15 +12,25 @@ function factoryPathSegment(factoryId: string | null | undefined): string | null
 }
 
 /** The sign-in page for an account: its factory's, or the staff console's. */
-export function signInPathFor(factoryId: string | null | undefined): string {
+export function signInPathFor(factoryId: string | null | undefined, staffBase = ''): string {
   const f = factoryPathSegment(factoryId);
-  return f ? `/f/${f}/login` : '/internal/login';
+  return f ? `/f/${f}/login` : `${staffBase}/internal/login`;
 }
 
 /** The forgot-password page for an account's factory, or the staff console's. */
-export function forgotPasswordPathFor(factoryId: string | null | undefined): string {
+export function forgotPasswordPathFor(factoryId: string | null | undefined, staffBase = ''): string {
   const f = factoryPathSegment(factoryId);
-  return f ? `/f/${f}/forgot-password` : '/internal/forgot-password';
+  return f ? `/f/${f}/forgot-password` : `${staffBase}/internal/forgot-password`;
+}
+
+/**
+ * The staff console's origin from STAFF_URL ("https://ops.floorbeat.in/internal" → "https://ops.floorbeat.in");
+ * '' where it is not set (the ops host itself, local development): links stay on this host.
+ */
+export function staffBaseFrom(staffUrl: string | null | undefined): string {
+  const url = (staffUrl ?? '').trim();
+  if (!/^https?:\/\//.test(url)) return '';
+  return url.replace(/\/+$/, '').replace(/\/internal$/, '');
 }
 
 export type ResetLinkReason = 'expired' | 'invalid' | 'used';

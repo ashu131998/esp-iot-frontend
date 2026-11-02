@@ -21,7 +21,7 @@ type Check =
  * The page a reset email opens. It first asks the server whether the link still works, so an old
  * link gets a plain message instead of a form that fails on Save.
  */
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ staffBase = '' }: { staffBase?: string }) {
   const { t } = useT();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
@@ -89,7 +89,7 @@ export function ResetPasswordForm() {
     body = (
       <div className="mt-6 space-y-3 text-sm" role="status">
         <p className="font-medium text-foreground">{t('Your password is set. Sign in with it now.')}</p>
-        <Link href={signInPathFor(done.factoryId)} className="inline-block rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground">
+        <Link href={signInPathFor(done.factoryId, staffBase)} className="inline-block rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground">
           {t('Sign in')}
         </Link>
       </div>
@@ -101,10 +101,10 @@ export function ResetPasswordForm() {
       <div className="mt-6 space-y-3 text-sm">
         <p className="text-foreground">{t(resetLinkMessage(check.reason))}</p>
         <div className="flex flex-wrap gap-4">
-          <Link href={forgotPasswordPathFor(factoryForLinks)} className="text-primary hover:underline">
+          <Link href={forgotPasswordPathFor(factoryForLinks, staffBase)} className="text-primary hover:underline">
             {t('Request a new link')}
           </Link>
-          <Link href={signInPathFor(factoryForLinks)} className="text-primary hover:underline">
+          <Link href={signInPathFor(factoryForLinks, staffBase)} className="text-primary hover:underline">
             {t('Back to sign in')}
           </Link>
         </div>

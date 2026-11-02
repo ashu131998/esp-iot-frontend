@@ -32,10 +32,10 @@ function update() {
   }
   out.classList.remove('is-waiting');
   show('out-hint', '');
-  show('out-stop-hours', `${formatNumber(figures.stopHours)} loom-hours`);
+  show('out-stop-hours', `${formatNumber(figures.stopHours)} machine-hours`);
   show('out-lost', formatRupees(figures.lostRupees));
   show('out-win-pct', `${formatNumber(read('win-back'), 1)}%`);
-  show('out-won-hours', `${formatNumber(figures.wonBackHours, 1)} loom-hours`);
+  show('out-won-hours', `${formatNumber(figures.wonBackHours, 1)} machine-hours`);
   show('out-won-rupees', formatRupees(figures.wonBackRupees));
   show('out-break-even', formatRupees(figures.breakEvenFee));
 

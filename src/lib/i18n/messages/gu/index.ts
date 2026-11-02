@@ -9,6 +9,7 @@ import { factory_admin } from './factory-admin';
 import { factory_metrics } from './factory-metrics';
 import { nav } from './nav';
 import { pages } from './pages';
+import { results } from './results';
 import { sensors } from './sensors';
 
 /** Every Gujarati message, by its English text. Loaded on the server only (lib/i18n/server.ts). */
@@ -23,6 +24,7 @@ export const GU_NAMESPACES: Record<string, Messages> = {
   auth,
   calibration,
   pages,
+  results,
 };
 
 export const gu: Messages = Object.assign({}, ...Object.values(GU_NAMESPACES));

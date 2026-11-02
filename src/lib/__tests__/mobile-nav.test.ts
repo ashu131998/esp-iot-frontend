@@ -35,7 +35,7 @@ describe('moreTabs', () => {
     const more = moreTabs(all);
     expect(slugs(more)).not.toContain('overview');
     expect(slugs(more)).not.toContain('alerts');
-    expect(slugs(more)[0]).toBe('energy');
+    expect(slugs(more)[0]).toBe('results');
     expect(slugs(more).length + bottomBarTabs(all).length).toBe(all.length);
     expect(slugs([...bottomBarTabs(all), ...more]).sort()).toEqual(slugs(all).sort());
   });

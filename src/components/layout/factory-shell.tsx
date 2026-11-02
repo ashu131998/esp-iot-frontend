@@ -30,8 +30,8 @@ export function FactoryShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden" style={brandStyle(branding)} data-sheet-root>
-      <aside className="hidden h-screen w-64 shrink-0 lg:block">
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible" style={brandStyle(branding)} data-sheet-root>
+      <aside className="hidden h-screen w-64 shrink-0 lg:block print:hidden">
         <FactorySidebar
           factoryId={factoryId}
           factoryName={factoryName}
@@ -41,7 +41,7 @@ export function FactoryShell({
           tabs={tabs}
         />
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable] print:block print:overflow-visible">
         <FactoryMobileNav
           factoryId={factoryId}
           factoryName={factoryName}
@@ -50,11 +50,11 @@ export function FactoryShell({
           shifts={shifts}
           tabs={tabs}
         />
-        <div className="hidden lg:block">
+        <div className="hidden lg:block print:block">
           <PageHeader title={factoryName} description={description} />
         </div>
         {/* Phones: room under the content for the bottom bar. */}
-        <div className="flex-1 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <div className="flex-1 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:pb-0">
           <FactoryRefsProvider value={refs}>
             <RefreshProvider>{children}</RefreshProvider>
           </FactoryRefsProvider>

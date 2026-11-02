@@ -63,6 +63,7 @@ export function displayOf(
 /** Factory pages in menu order. Team sits before Compliance and is always shown. */
 export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'overview', label: 'Overview' },
+  { slug: 'results', label: 'Results' },
   { slug: 'status-timeline', label: 'Status Timeline' },
   { slug: 'availability', label: 'Availability' },
   { slug: 'alerts', label: 'Alerts' },

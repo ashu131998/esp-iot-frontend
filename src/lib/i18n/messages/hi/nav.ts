@@ -3,6 +3,7 @@ import type { Messages } from '../../translate';
 /** Hindi for the menu: page names (lib/display.ts FACTORY_PAGES), phone bar short names, the shell. */
 export const nav: Messages = {
   'Overview': 'सारांश',
+  'Results': 'नतीजे',
   'Status Timeline': 'स्थिति समयरेखा',
   'Timeline': 'समयरेखा',
   'Availability': 'उपलब्धता',

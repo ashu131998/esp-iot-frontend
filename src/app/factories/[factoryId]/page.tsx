@@ -7,6 +7,7 @@ import { isShown } from '@/lib/display';
 import { getQueryClient } from '@/lib/get-query-client';
 import { NavDim } from '@/lib/navigation-context';
 import { overviewQueryKey } from '@/lib/overview-queries';
+import { resultsSummaryQueryKey, setupProgressQueryKey } from '@/lib/results';
 import { factoryPage } from '@/lib/server/factory-page';
 import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
@@ -40,6 +41,16 @@ async function FactoryOverviewPage({
   const show = (key: string) => isShown(display, key);
 
   const queryClient = getQueryClient();
+  // The rollout checklist and this month's recovered hours, fetched alongside the stat cards so
+  // neither card pops in after the first paint (and neither holds the page up on its own).
+  const extraCards = Promise.all([
+    show('overview.setup')
+      ? queryClient.prefetchQuery({ queryKey: setupProgressQueryKey(factoryId), queryFn: () => serverApi.setupProgress(factoryId) })
+      : null,
+    show('results') && show('overview.recovered')
+      ? queryClient.prefetchQuery({ queryKey: resultsSummaryQueryKey(factoryId), queryFn: () => serverApi.resultsSummary(factoryId) })
+      : null,
+  ]);
   let ssrCards = false;
   if (show('overview.cards')) {
     const wanted: Array<{ key: readonly unknown[]; fetch: () => Promise<unknown> }> = [
@@ -54,6 +65,7 @@ async function FactoryOverviewPage({
     // Only with every figure in hand: one missing would have the browser-only API called while rendering here.
     ssrCards = wanted.every((w) => queryClient.getQueryData(w.key) !== undefined);
   }
+  await extraCards;
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">

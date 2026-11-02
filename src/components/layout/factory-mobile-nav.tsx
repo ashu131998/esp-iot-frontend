@@ -71,7 +71,7 @@ export function FactoryMobileNav({
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur lg:hidden print:hidden">
         {logoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
           <img src={logoSrc} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
@@ -95,7 +95,7 @@ export function FactoryMobileNav({
 
       <nav
         aria-label={t('Main pages')}
-        className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden"
       >
         <ul className="flex">
           {bar.map((tab) => {

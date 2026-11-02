@@ -73,7 +73,7 @@ export function OnboardPanel() {
 
   const [step, setStep] = useState(0);
   const [tried, setTried] = useState(false);   // show errors only after a Next on that step
-  const [factory, setFactory] = useState<FactoryDraft>({ factory_id: '', name: '', location: '' });
+  const [factory, setFactory] = useState<FactoryDraft>({ factory_id: '', name: '', location: '', referred_by: '' });
   const [idEdited, setIdEdited] = useState(false);
   const [shifts, setShifts] = useState<ShiftDraft[]>(SHIFT_PRESETS[0].shifts);
   const [admins, setAdmins] = useState<AdminDraft[]>(() => [newAdmin()]);
@@ -112,7 +112,7 @@ export function OnboardPanel() {
   const reset = () => {
     setStep(0);
     setTried(false);
-    setFactory({ factory_id: '', name: '', location: '' });
+    setFactory({ factory_id: '', name: '', location: '', referred_by: '' });
     setIdEdited(false);
     setShifts(SHIFT_PRESETS[0].shifts);
     setAdmins([newAdmin()]);
@@ -180,6 +180,19 @@ export function OnboardPanel() {
                     <p className="text-xs text-muted">
                       Part of the factory&apos;s own address: app.floorbeat.in/f/
                       <span className="font-mono">{factory.factory_id.trim() || '…'}</span>. It cannot be changed later.
+                    </p>
+                  </Field>
+                </div>
+                <div className="md:col-span-2">
+                  <Field label="Referred by (partner, optional)">
+                    <Input
+                      value={factory.referred_by ?? ''}
+                      maxLength={120}
+                      placeholder="Patel Loom Services, Surat"
+                      onChange={(e) => setFactory((f) => ({ ...f, referred_by: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted">
+                      The loom dealer or electrician who brought this factory in. Shown on the factory list; can be changed later.
                     </p>
                   </Field>
                 </div>
@@ -345,6 +358,12 @@ export function OnboardPanel() {
                   {factory.location.trim() && <span className="text-muted"> · {factory.location.trim()}</span>}
                   <div className="font-mono text-xs text-muted">{factory.factory_id.trim()}</div>
                 </dd>
+                {(factory.referred_by ?? '').trim() && (
+                  <>
+                    <dt className="text-muted">Referred by</dt>
+                    <dd>{(factory.referred_by ?? '').trim()}</dd>
+                  </>
+                )}
                 <dt className="text-muted">Shifts</dt>
                 <dd className="space-y-0.5">
                   {[...shifts].sort((x, y) => x.start_hour - y.start_hour).map((s) => (

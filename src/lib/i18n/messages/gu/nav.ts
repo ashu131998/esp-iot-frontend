@@ -3,6 +3,7 @@ import type { Messages } from '../../translate';
 /** Gujarati for the menu: page names (lib/display.ts FACTORY_PAGES), phone bar short names, the shell. */
 export const nav: Messages = {
   'Overview': 'સારાંશ',
+  'Results': 'પરિણામ',
   'Status Timeline': 'સ્થિતિ સમયરેખા',
   'Timeline': 'સમયરેખા',
   'Availability': 'ઉપલબ્ધતા',

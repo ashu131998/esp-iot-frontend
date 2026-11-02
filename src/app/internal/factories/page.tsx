@@ -39,6 +39,11 @@ export default async function FactoriesPage() {
               </div>
               <Badge className="capitalize bg-slate-100 text-slate-700">{f.tier}</Badge>
             </div>
+            {f.referred_by && (
+              <p className="mt-2 text-sm text-muted">
+                Referred by <span className="font-medium text-foreground">{f.referred_by}</span>
+              </p>
+            )}
             <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
               <div>
                 <dt className="text-muted">Machines</dt>

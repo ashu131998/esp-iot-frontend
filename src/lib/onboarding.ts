@@ -23,6 +23,8 @@ export interface FactoryDraft {
   factory_id: string;
   name: string;
   location: string;
+  /** The partner (loom dealer, electrician) who brought the factory in; empty when none. */
+  referred_by?: string;
 }
 
 /** "Shree Ganesh Mills, Surat" → "shree-ganesh-mills-surat" (a suggested factory ID). */
@@ -213,15 +215,18 @@ export interface OnboardRequest {
   location: string;
   shifts: ShiftDraft[];
   admins: { email: string; username: string; password: string }[];
+  referred_by?: string;
 }
 
 export function buildOnboardRequest(f: FactoryDraft, shifts: ShiftDraft[], admins: AdminDraft[]): OnboardRequest {
+  const referredBy = (f.referred_by ?? '').replace(/\s+/g, ' ').trim();
   return {
     factory_id: f.factory_id.trim(),
     name: f.name.trim(),
     location: f.location.trim(),
     shifts: shifts.map((s) => ({ ...s, shift_id: s.shift_id.trim(), name: s.name.trim() })),
     admins: admins.map((a) => ({ email: a.email.trim().toLowerCase(), username: a.username.trim(), password: a.password })),
+    ...(referredBy ? { referred_by: referredBy } : {}),
   };
 }
 

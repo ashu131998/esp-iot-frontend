@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 
 import { FactoryOverviewStatCards } from '@/components/factory/factory-overview-stat-cards';
+import { RecoveredCard } from '@/components/results/recovered-card';
+import { SetupChecklistCard } from '@/components/results/setup-checklist-card';
 import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
@@ -30,11 +32,15 @@ export function FactoryOverviewDashboard({
   const shown = useShown();
   return (
     <>
+      {shown('overview.setup') && <SetupChecklistCard factoryId={factoryId} />}
+
       {shown('overview.cards') && (
         <QuerySuspense ssr={ssrCards} fallback={<StatGridSkeleton count={4} />}>
           <FactoryOverviewStatCards factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
+
+      {shown('results') && shown('overview.recovered') && <RecoveredCard factoryId={factoryId} />}
 
       {shown('overview.table') && (
         <QuerySuspense fallback={<TableSkeleton rows={5} cols={8} />}>

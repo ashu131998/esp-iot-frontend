@@ -2,14 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { StopFollowUpTiles } from '@/components/results/stop-follow-up-tiles';
 import { Select } from '@/components/ui/input';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { humanMinutes } from '@/lib/plain-words';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { DowntimeReport } from '@/lib/types';
+
+/** The stop follow-up figures cover this many days back from now. */
+const FOLLOW_UP_DAYS = 7;
 
 const REFRESH_MS = 30_000;
 
@@ -39,7 +44,32 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
   const setReason = useMutation({
     mutationFn: ({ reportId, code }: { reportId: string; code: string }) =>
       api.setDowntimeReason(factoryId, reportId, { reason_code: code }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['downtime-reports', factoryId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['downtime-reports', factoryId] });
+      queryClient.invalidateQueries({ queryKey: ['stop-follow-up', factoryId] });
+    },
+  });
+
+  // "Fixed": someone confirms the stop was dealt with (phones send the same from the back-up alert).
+  const { canWriteFactory } = useAuth();
+  const setFixed = useMutation({
+    mutationFn: (reportId: string) => api.setDowntimeFixed(factoryId, reportId, true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['downtime-reports', factoryId] });
+      queryClient.invalidateQueries({ queryKey: ['stop-follow-up', factoryId] });
+    },
+  });
+
+  // The window moves with each refetch; the key stays put so the figures refresh in place.
+  const { data: followUp } = useQuery({
+    queryKey: ['stop-follow-up', factoryId, FOLLOW_UP_DAYS],
+    queryFn: ({ signal }) => {
+      const to = new Date();
+      const from = new Date(to.getTime() - FOLLOW_UP_DAYS * 86_400_000);
+      return api.stopFollowUp(factoryId, { from: from.toISOString(), to: to.toISOString() }, { signal });
+    },
+    refetchInterval,
+    staleTime: 0,
   });
 
   const reports = data?.reports ?? [];
@@ -69,6 +99,14 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
     <div className="space-y-6">
       <SummaryCard tone={tone} badge={waitingReason.length || undefined} title={summaryTitle} subtitle={summarySub} />
 
+      {followUp && followUp.stops > 0 && (
+        <ListGroup title={t('Follow-up, last {days} days', { days: FOLLOW_UP_DAYS })} count={followUp.stops}>
+          <div className="p-4">
+            <StopFollowUpTiles data={followUp} />
+          </div>
+        </ListGroup>
+      )}
+
       <ListGroup title={t('Recent stops')} count={reports.length}>
         {reports.length === 0 ? (
           <ListEmpty>{t('Stops will show up here with time and duration.')}</ListEmpty>
@@ -80,12 +118,26 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
             const reasonLine = r.reason_label
               ? `${r.reason_label}${r.reported_by_name ? ` · ${r.reported_by_name}` : ''}`
               : null;
+            const fixedLine = r.fixed_at
+              ? (r.fixed_by_name ? t('Fixed by {name}', { name: r.fixed_by_name }) : t('Fixed'))
+              : null;
             const needsReason = !r.reason_label && reasons.length > 0;
+            const canMarkFixed = canWriteFactory && !r.fixed_at && !needsReason;
+            const fixButton = canMarkFixed ? (
+              <button
+                type="button"
+                disabled={setFixed.isPending}
+                onClick={() => setFixed.mutate(r.report_id)}
+                className="ml-2 rounded-md border px-2 py-0.5 text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50"
+              >
+                {t('Mark fixed')}
+              </button>
+            ) : null;
 
             return (
               <ListRow
                 key={r.report_id}
-                href={needsReason ? undefined : `/factories/${factoryId}/machines/${r.machine_id}`}
+                href={needsReason || canMarkFixed ? undefined : `/factories/${factoryId}/machines/${r.machine_id}`}
                 tone={rowTone}
                 title={r.machine_name ?? r.machine_id}
                 tag={openRow ? t('Still down') : t('Back up')}
@@ -117,6 +169,8 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
                     <>
                       {timeLine}
                       {reasonLine ? ` · ${reasonLine}` : ''}
+                      {fixedLine ? ` · ${fixedLine}` : ''}
+                      {fixButton}
                     </>
                   )
                 }

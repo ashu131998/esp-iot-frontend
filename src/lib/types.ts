@@ -27,6 +27,8 @@ export interface Factory {
   line_count: number;
   last_seen_at: string | null;
   created_at: string | null;
+  /** The partner (loom dealer, electrician) who brought the factory in; staff lists only. */
+  referred_by?: string | null;
 }
 
 export interface ProductionLine {
@@ -560,6 +562,10 @@ export interface DowntimeReport {
   reported_by_name: string | null;
   reported_via: string | null;
   reason_reported_at: string | null;
+  /** Someone confirmed the stop was fixed ("I fixed it" on the phone, or the dashboard). */
+  fixed_at?: string | null;
+  fixed_by_name?: string | null;
+  fixed_via?: string | null;
   created_at: string;
 }
 

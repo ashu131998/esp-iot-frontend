@@ -137,6 +137,17 @@ describe('buildOnboardRequest', () => {
       admins: [{ email: 'ravi@mill.in', username: 'Ravi', password: ' pw with space ' }],
     });
   });
+
+  it('names the referring partner only when there is one', () => {
+    const shifts = [{ shift_id: 'A', name: 'All', start_hour: 0, duration_hours: 24 }];
+    const admins = [admin('ravi@mill.in', 'password1')];
+    const withPartner = buildOnboardRequest(
+      { factory_id: 'mill-01', name: 'Mill', location: '', referred_by: '  Patel Loom Services,\n Surat ' }, shifts, admins,
+    );
+    expect(withPartner.referred_by).toBe('Patel Loom Services, Surat');
+    const without = buildOnboardRequest({ factory_id: 'mill-01', name: 'Mill', location: '', referred_by: '  ' }, shifts, admins);
+    expect('referred_by' in without).toBe(false);
+  });
 });
 
 describe('signInDetailsText', () => {

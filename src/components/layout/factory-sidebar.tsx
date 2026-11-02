@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Thermometer,
   Timer,
+  TrendingUp,
   Users,
   Waves,
   Wifi,
@@ -34,6 +35,7 @@ import type { Shift } from '@/lib/types';
 
 const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   overview: LayoutDashboard,
+  results: TrendingUp,
   availability: Activity,
   'status-timeline': Timer,
   alerts: AlertTriangle,

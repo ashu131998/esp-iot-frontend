@@ -55,6 +55,7 @@ import {
   isAbortError,
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
+import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
 
 export type { ApiRequestOptions };
 
@@ -727,6 +728,43 @@ export const api = {
       ...options,
     }),
 
+  /** Confirm (or take back) that a stop was fixed; first confirmation stands. Factory admins. */
+  setDowntimeFixed: (factoryId: string, reportId: string, fixed: boolean, options?: ApiRequestOptions) =>
+    request<DowntimeReport>(
+      `/v1/factories/${factoryId}/downtime-reports/${encodeURIComponent(reportId)}/fixed`,
+      { method: 'PUT', body: JSON.stringify({ fixed }), ...options },
+    ),
+
+  /** How the stops that began in [from, to) were followed up (at most 92 days). */
+  stopFollowUp: (factoryId: string, params: { from: string; to: string }, options?: ApiRequestOptions) =>
+    request<StopFollowUp>(
+      `/v1/factories/${factoryId}/stop-follow-up?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}`,
+      options,
+    ),
+
+  // ── Results: what the service gave the factory back ───────────────────────────────
+  /** A month's results ('YYYY-MM'; this month when left out). Rupees only for admins and staff. */
+  results: (factoryId: string, month?: string, options?: ApiRequestOptions) =>
+    request<ResultsResponse>(
+      `/v1/factories/${factoryId}/results${month ? `?month=${encodeURIComponent(month)}` : ''}`,
+      options,
+    ),
+
+  /** This month's results without stops and the totals since the first month (the overview card). */
+  resultsSummary: (factoryId: string, options?: ApiRequestOptions) =>
+    request<ResultsResponse>(`/v1/factories/${factoryId}/results?summary=1`, options),
+
+  saveResultsSettings: (factoryId: string, body: Partial<ResultsSettings>, options?: ApiRequestOptions) =>
+    request<{ settings: ResultsSettings }>(`/v1/factories/${factoryId}/results/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  /** The first-week rollout checklist (shown to admins and staff until every loom is live). */
+  setupProgress: (factoryId: string, options?: ApiRequestOptions) =>
+    request<SetupProgress>(`/v1/factories/${factoryId}/setup-progress`, options),
+
   configSelections: (
     factoryId: string,
     params?: PaginationParams & { machine_id?: string; latest?: string },
@@ -801,6 +839,13 @@ export const api = {
     request<{ factory_id: string; branding: import('./branding').FactoryBranding }>(
       `/v1/admin/factories/${factoryId}/branding`,
       { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Set or clear the partner (loom dealer, electrician) who referred a factory. Staff only. */
+  adminSetFactoryReferral: (factoryId: string, referredBy: string | null, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; referred_by: string | null }>(
+      `/v1/admin/factories/${factoryId}/referral`,
+      { method: 'PUT', body: JSON.stringify({ referred_by: referredBy }), ...options },
     ),
 
   /** Every page that can be switched per factory, with its sections. Staff only. */

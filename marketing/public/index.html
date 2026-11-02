@@ -4,34 +4,60 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FloorBeat — Machine Monitoring as a Service</title>
-  <meta name="description" content="Machine Monitoring as a Service for Indian factories. We fit the sensors, every machine is live in the first week, and each month you get a report of the machine-hours won back. One monthly fee per machine, no hardware to buy, no PLC, no rewiring.">
-  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="Machine Monitoring as a Service for factories. We fit the sensors, every machine is live in the first week, and each month you get a report of the machine-hours won back. One monthly fee per machine, no hardware to buy, no PLC, no rewiring.">
+  <meta name="theme-color" content="#ffffff">
   <meta property="og:title" content="FloorBeat — Machine Monitoring as a Service">
-  <meta property="og:description" content="Know which machines are running right now. One monthly fee per machine; every machine live in the first week; a monthly report of the hours won back.">
+  <meta property="og:description" content="Machine Monitoring as a Service for factories. We fit the sensors, every machine is live in the first week, and each month you get a report of the machine-hours won back. One monthly fee per machine, no hardware to buy, no PLC, no rewiring.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://floorbeat.in/">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/site.js"></script>
 </head>
 <body>
-  <header class="nav">
+  <div class="announce">
+    <div class="wrap">
+      <span class="announce-long">Machine Monitoring as a Service: every machine live in the first week.</span>
+      <span class="announce-short">Every machine live in the first week.</span>
+      <a href="/roi">Work out what stops cost you</a>
+    </div>
+  </div>
+  <header class="site-header">
     <div class="wrap nav-inner">
       <a class="brand" href="/" aria-label="FloorBeat home">
-        <img class="brand-mark" src="/favicon.svg" alt="" width="30" height="30">
+        <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32">
         <span>FloorBeat</span>
       </a>
       <nav class="nav-links" aria-label="Main">
-        <a href="#service">The service</a>
-        <a href="#rollout">First week</a>
-        <a href="#features">Features</a>
-        <a href="/roi">ROI calculator</a>
+        <a href="/#service">The service</a>
+        <a href="/#how">How it works</a>
+        <a href="/#rollout">First week</a>
+        <a href="/#results">Results</a>
         <a href="/partners">Partners</a>
       </nav>
-      <div class="nav-cta">
-        <a class="link-quiet" href="/login">Log in</a>
-        <a class="btn btn-primary btn-sm" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a pilot</a>
+      <div class="nav-actions">
+        <a class="nav-login" href="/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Log in</span></a>
+        <a class="btn btn-outline btn-sm nav-roi" href="/roi">ROI calculator</a>
+        <a class="btn btn-primary btn-sm nav-cta" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a pilot<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+        <details class="menu">
+          <summary aria-label="Menu"><svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></summary>
+          <div class="menu-panel">
+            <a class="menu-link" href="/#service">The service<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#how">How it works<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#rollout">First week<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#results">Results<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#features">Features<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/roi">ROI calculator<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/partners">Partners<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <div class="menu-buttons">
+              <a class="btn btn-primary btn-block" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot</a>
+              <a class="btn btn-outline btn-block" href="/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Log in</a>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </header>
@@ -40,87 +66,121 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="dot dot-live"></span> Machine Monitoring as a Service</p>
-          <h1>Know which machines are running. <span class="accent">Right now.</span></h1>
+          <p class="eyebrow">Machine Monitoring as a Service</p>
+          <h1>Know which machines are running. <span class="accent nowrap">Right now.</span></h1>
           <p class="lead">We fit FloorBeat to your machines and you see, live on any phone, which are running, which are stopped, and for how long. You pay one monthly fee per machine; the sensors stay ours. Every month we report the hours you won back.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot</a>
-            <a class="btn btn-ghost" href="/roi">What do stops cost you?</a>
+            <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+            <a class="btn btn-outline" href="/roi">What do stops cost you?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
           </div>
-          <ul class="hero-points">
-            <li>Every machine live in the first week</li>
-            <li>No hardware to buy</li>
-            <li>In English, Hindi and Gujarati</li>
+          <ul class="checks">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Every machine live in the first week</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>No hardware to buy</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>In English, Hindi and Gujarati</li>
           </ul>
         </div>
 
         <div class="hero-visual" aria-hidden="true">
           <div class="panel">
             <div class="panel-head">
-              <span>Shop floor — Line 2</span>
+              <div>Shop floor · Line 2<small>Live, updated every few seconds</small></div>
               <span class="pill pill-live"><span class="dot dot-live"></span> Live</span>
             </div>
-            <div class="panel-stat">
+            <div class="panel-stats">
               <div><small>Availability today</small><strong>87.4%</strong></div>
-              <div><small>Running</small><strong class="ok">11 / 12</strong></div>
+              <div><small>Running now</small><strong class="ok">11 / 12</strong></div>
+              <div><small>Stops today</small><strong>23</strong></div>
             </div>
-            <svg class="pulse" viewBox="0 0 300 60" preserveAspectRatio="none"><path d="M0 34 L40 34 L52 34 L60 12 L70 52 L80 34 L130 34 L140 34 L148 18 L158 46 L166 34 L220 34 L228 34 L236 8 L246 56 L254 34 L300 34"/></svg>
             <ul class="machines">
-              <li><span class="dot dot-ok"></span>CNC 01<em>Running · 6h 12m</em></li>
-              <li><span class="dot dot-ok"></span>Press 02<em>Running · 5h 48m</em></li>
-              <li><span class="dot dot-bad"></span>Moulder 03<em>Stopped · 14 min</em></li>
-              <li><span class="dot dot-ok"></span>Packer 04<em>Running · 6h 31m</em></li>
+              <li><span class="name"><span class="dot dot-ok"></span>CNC 01</span><span class="tl tl-1"></span><em>Running · 6h 12m</em></li>
+              <li><span class="name"><span class="dot dot-ok"></span>Press 02</span><span class="tl tl-2"></span><em>Running · 5h 48m</em></li>
+              <li><span class="name"><span class="dot dot-bad"></span>Moulder 03</span><span class="tl tl-3"></span><em>Stopped · 14 min</em></li>
+              <li><span class="name"><span class="dot dot-ok"></span>Packer 04</span><span class="tl tl-4"></span><em>Running · 6h 31m</em></li>
             </ul>
-            <div class="alert-toast"><span class="dot dot-bad"></span> Moulder 03 stopped for 10 min — supervisor notified</div>
+            <div class="toast"><span class="dot dot-bad"></span><div>Moulder 03 stopped for 10 min<small>Supervisor notified · reason asked</small></div></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="strip">
-      <div class="wrap strip-grid">
-        <div><strong>No PLC needed</strong><span>Reads the machine's own power draw</span></div>
-        <div><strong>No rewiring</strong><span>Clamp-on sensors, DIN-rail node</span></div>
-        <div><strong>Wi-Fi or 4G</strong><span>Works where your machines are</span></div>
-        <div><strong>No hardware to buy</strong><span>Sensors and boards are part of the service</span></div>
+    <section class="benefits" aria-label="Why it is easy to start">
+      <div class="wrap benefit-grid">
+        <div class="benefit">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></span>
+          <div><h3>No PLC needed</h3><p>Reads the machine's own power draw</p></div>
+        </div>
+        <div class="benefit">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M12 6V3"/></svg></span>
+          <div><h3>No rewiring</h3><p>Clamp-on sensors, DIN-rail node</p></div>
+        </div>
+        <div class="benefit">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M1.5 9a16 16 0 0 1 21 0"/><path d="M8.5 16.1a6 6 0 0 1 7 0"/><path d="M12 20h.01"/></svg></span>
+          <div><h3>Wi-Fi or 4G</h3><p>Works where your machines are</p></div>
+        </div>
+        <div class="benefit">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg></span>
+          <div><h3>No hardware to buy</h3><p>Sensors and boards are part of the service</p></div>
+        </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="wrap narrow center">
-        <p class="eyebrow">The problem</p>
-        <h2>Your machines are idle more than you think.</h2>
-        <p class="lead">Most factories still rely on supervisors' notes and end-of-day counts. Short stops, slow restarts and silent breakdowns never make it onto paper — so the real cost of downtime stays invisible.</p>
+    <section class="section soft" id="problem">
+      <div class="wrap">
+        <div class="section-head left">
+          <p class="eyebrow">The problem</p>
+          <h2>Your machines are idle more than you think.</h2>
+          <div class="statement"><p>Most factories still rely on supervisors' notes and end-of-day counts. Short stops, slow restarts and silent breakdowns never make it onto paper, so the real cost of downtime stays invisible.</p></div>
+        </div>
+        <div class="problem-grid">
+          <div class="compare before">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Without FloorBeat</h3>
+            <ul>
+              <li>Supervisor notes and end-of-day counts</li>
+              <li>Short stops and slow restarts go unrecorded</li>
+              <li>A breakdown is found when someone walks past</li>
+              <li>The cost of downtime is a guess</li>
+            </ul>
+          </div>
+          <div class="compare after">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>With FloorBeat</h3>
+            <ul>
+              <li>Every start and stop timed from the machine's own power draw</li>
+              <li>The operator's phone asks why it stopped</li>
+              <li>Owners see every line live, on any phone</li>
+              <li>A monthly report states the hours won back</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="section alt" id="how">
+    <section class="section" id="how">
       <div class="wrap">
         <div class="section-head center">
           <p class="eyebrow">How it works</p>
           <h2>From clamp to dashboard in three steps</h2>
         </div>
         <ol class="steps">
-          <li>
-            <span class="step-n">1</span>
-            <h3>Clip</h3>
-            <p>A current sensor clamps around the machine's power cable inside the panel. Nothing is cut, nothing is reprogrammed. One FloorBeat node on a DIN rail covers several machines.</p>
-          </li>
-          <li>
-            <span class="step-n">2</span>
-            <h3>Connect</h3>
-            <p>The node detects when each machine starts and stops, and sends it to the FloorBeat cloud over Wi-Fi or 4G — every few seconds.</p>
-          </li>
-          <li>
-            <span class="step-n">3</span>
-            <h3>See</h3>
-            <p>Owners, managers and supervisors see live status, availability and downtime on any phone or laptop — and get alerts and shift reports without asking anyone.</p>
-          </li>
+        <li class="step">
+          <div class="step-top"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M12 6V3"/></svg></span><span class="step-n">STEP 01</span></div>
+          <h3>Clip</h3>
+          <p>A current sensor clamps around the machine's power cable inside the panel. Nothing is cut, nothing is reprogrammed. One FloorBeat node on a DIN rail covers several machines.</p>
+        </li>
+        <li class="step">
+          <div class="step-top"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2a6 6 0 0 1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg></span><span class="step-n">STEP 02</span></div>
+          <h3>Connect</h3>
+          <p>The node detects when each machine starts and stops, and sends it to the FloorBeat cloud over Wi-Fi or 4G, every few seconds.</p>
+        </li>
+        <li class="step">
+          <div class="step-top"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span><span class="step-n">STEP 03</span></div>
+          <h3>See</h3>
+          <p>Owners, managers and supervisors see live status, availability and downtime on any phone or laptop, and get alerts and shift reports without asking anyone.</p>
+        </li>
         </ol>
       </div>
     </section>
 
-    <section class="section" id="service">
+    <section class="section soft" id="service">
       <div class="wrap">
         <div class="section-head center">
           <p class="eyebrow">The service</p>
@@ -128,27 +188,31 @@
           <p class="lead">FloorBeat is Machine Monitoring as a Service: you do not buy hardware or software, you pay for monitored machines, month by month.</p>
         </div>
         <div class="cards">
-          <article class="card">
-            <h3>Sensors and boards</h3>
-            <p>Clamp-on current sensors and an industrial board for every few machines. They stay ours: a faulty board is replaced, not billed.</p>
-          </article>
-          <article class="card">
-            <h3>Fitting and calibration</h3>
-            <p>We fit them, map every board to its machines and calibrate running, idle and off for each machine type.</p>
-          </article>
-          <article class="card">
-            <h3>Dashboard and phone alerts</h3>
-            <p>Live status, availability and the stop timeline for owners and managers. Stop alerts go to the operator on the machine.</p>
-          </article>
-          <article class="card">
-            <h3>Reports that prove it</h3>
-            <p>A PDF after every shift, and every month the machine-hours won back against your first month, in hours and rupees.</p>
-          </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span>
+          <h3>Sensors and boards</h3>
+          <p>Clamp-on current sensors and an industrial board for every few machines. They stay ours: a faulty board is replaced, not billed.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg></span>
+          <h3>Fitting and calibration</h3>
+          <p>We fit them, map every board to its machines and calibrate running, idle and off for each machine type.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span>
+          <h3>Dashboard and phone alerts</h3>
+          <p>Live status, availability and the stop timeline for owners and managers. Stop alerts go to the operator on the machine.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></span>
+          <h3>Reports that prove it</h3>
+          <p>A PDF after every shift, and every month the machine-hours won back against your first month, in hours and rupees.</p>
+        </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt" id="rollout">
+    <section class="section" id="rollout">
       <div class="wrap">
         <div class="section-head center">
           <p class="eyebrow">The first week</p>
@@ -156,35 +220,61 @@
           <p class="lead">A dated plan, not a project. Your dashboard shows the same checklist, day by day, until every step is done.</p>
         </div>
         <ol class="rollout">
-          <li><span class="rollout-day">Day 1</span><h3>Boards fitted</h3><p>Sensors clamped in the panels, boards on the DIN rail, online over Wi-Fi or 4G.</p></li>
-          <li><span class="rollout-day">Day 2–3</span><h3>Every machine mapped</h3><p>Each sensor named after its machine and calibrated: running, idle and off.</p></li>
-          <li><span class="rollout-day">Day 4</span><h3>Alerts on phones</h3><p>Operators get a stop alert and tap the reason; when the machine runs again, they confirm the fix.</p></li>
-          <li><span class="rollout-day">Day 5</span><h3>Reports in your inbox</h3><p>A shift report after every shift, for the owner and the managers.</p></li>
-          <li><span class="rollout-day">Day 7</span><h3>Every machine live</h3><p>Your first month starts: the baseline every later month is measured against.</p></li>
+        <li>
+          <span class="rollout-mark"></span>
+          <span class="rollout-day">Day 1</span>
+          <h3>Boards fitted</h3>
+          <p>Sensors clamped in the panels, boards on the DIN rail, online over Wi-Fi or 4G.</p>
+        </li>
+        <li>
+          <span class="rollout-mark"></span>
+          <span class="rollout-day">Day 2–3</span>
+          <h3>Every machine mapped</h3>
+          <p>Each sensor named after its machine and calibrated: running, idle and off.</p>
+        </li>
+        <li>
+          <span class="rollout-mark"></span>
+          <span class="rollout-day">Day 4</span>
+          <h3>Alerts on phones</h3>
+          <p>Operators get a stop alert and tap the reason; when the machine runs again, they confirm the fix.</p>
+        </li>
+        <li>
+          <span class="rollout-mark"></span>
+          <span class="rollout-day">Day 5</span>
+          <h3>Reports in your inbox</h3>
+          <p>A shift report after every shift, for the owner and the managers.</p>
+        </li>
+        <li>
+          <span class="rollout-mark"></span>
+          <span class="rollout-day">Day 7</span>
+          <h3>Every machine live</h3>
+          <p>Your first month starts: the baseline every later month is measured against.</p>
+        </li>
         </ol>
       </div>
     </section>
 
-    <section class="section" id="results">
+    <section class="section soft" id="results">
       <div class="wrap split">
         <div>
           <p class="eyebrow">What you get back</p>
           <h2>A monthly report of hours won back</h2>
           <p class="lead">Dashboards are easy to ignore. Every month FloorBeat states what the service returned, so you can judge it in rupees.</p>
           <ul class="ticks">
-            <li>Machine-hours won back against your own first month, machine by machine</li>
-            <li>What they are worth at your rupees per machine-hour, against the fee</li>
-            <li>How many stop alerts your team acted on, and how fast machines ran again</li>
-            <li>Holidays and closed days left out, so they never count as lost time</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Machine-hours won back against your own first month, machine by machine</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>What they are worth at your rupees per machine-hour, against the fee</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>How many stop alerts your team acted on, and how fast machines ran again</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Holidays and closed days left out, so they never count as lost time</li>
           </ul>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="/roi">Work out your numbers</a>
+            <a class="btn btn-primary" href="/roi">Work out your numbers<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
           </div>
         </div>
         <div class="report-card" aria-hidden="true">
           <p class="report-eyebrow">Monthly results · example</p>
-          <p class="report-big">+412 machine-hours</p>
+          <p class="report-big"><span>+412</span> machine-hours</p>
           <p class="report-sub">against the first month</p>
+          <div class="report-bars"><i class="h55"></i><i class="h45"></i><i class="h60"></i><i class="h50"></i><i class="h55"></i><i class="h45"></i><i class="h65"></i><i class="h70"></i><i class="h75"></i><i class="h80"></i><i class="h85"></i><i class="h95"></i></div>
           <dl class="report-grid">
             <div><dt>Running</dt><dd>70.6%</dd></div>
             <div><dt>First month</dt><dd>68.2%</dd></div>
@@ -203,43 +293,51 @@
           <h2>Everything you need to run a tighter floor</h2>
         </div>
         <div class="cards">
-          <article class="card">
-            <h3>Live machine status</h3>
-            <p>Running or stopped, for every machine, updated every few seconds — across lines and factories.</p>
-          </article>
-          <article class="card">
-            <h3>Availability &amp; uptime</h3>
-            <p>Hour-by-hour availability per machine, line and shift. See exactly where production time goes.</p>
-          </article>
-          <article class="card">
-            <h3>Downtime alerts</h3>
-            <p>Get notified when a machine has been stopped too long — scoped to the factory, line or machine you care about.</p>
-          </article>
-          <article class="card">
-            <h3>Automatic shift reports</h3>
-            <p>A clear PDF for every shift, emailed to owners and managers on schedule. No spreadsheets, no chasing.</p>
-          </article>
-          <article class="card">
-            <h3>Status timeline</h3>
-            <p>A minute-by-minute history of every start and stop, so you can find patterns and fix root causes.</p>
-          </article>
-          <article class="card">
-            <h3>Factory → line → machine</h3>
-            <p>Drill from the whole factory down to a single machine. Built for one site or many.</p>
-          </article>
-          <article class="card">
-            <h3>Team access</h3>
-            <p>Invite managers and supervisors with the right permissions. Everyone sees the same numbers.</p>
-          </article>
-          <article class="card">
-            <h3>Ready to grow</h3>
-            <p>Add energy, temperature, vibration, production counts and quality as you need them — on the same platform.</p>
-          </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+          <h3>Live machine status</h3>
+          <p>Running or stopped, for every machine, updated every few seconds, across lines and factories.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17v-4M13 17V8M18 17v-7"/></svg></span>
+          <h3>Availability and uptime</h3>
+          <p>Hour-by-hour availability per machine, line and shift. See exactly where production time goes.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4M12 17h.01"/></svg></span>
+          <h3>Downtime alerts</h3>
+          <p>Get notified when a machine has been stopped too long, scoped to the factory, line or machine you care about.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></span>
+          <h3>Automatic shift reports</h3>
+          <p>A clear PDF for every shift, emailed to owners and managers on schedule. No spreadsheets, no chasing.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <h3>Status timeline</h3>
+          <p>A minute-by-minute history of every start and stop, so you can find patterns and fix root causes.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+          <h3>Factory, line, machine</h3>
+          <p>Drill from the whole factory down to a single machine. Built for one site or many.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
+          <h3>Team access</h3>
+          <p>Invite managers and supervisors with the right permissions. Everyone sees the same numbers.</p>
+        </article>
+        <article class="card">
+          <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
+          <h3>Ready to grow</h3>
+          <p>Add energy, temperature, vibration, production counts and quality as you need them, on the same platform.</p>
+        </article>
         </div>
       </div>
     </section>
 
-    <section class="section alt" id="industries">
+    <section class="section soft" id="industries">
       <div class="wrap">
         <div class="section-head center">
           <p class="eyebrow">Industries</p>
@@ -263,52 +361,95 @@
         <div>
           <p class="eyebrow">Hardware</p>
           <h2>Industrial-grade, designed in India</h2>
-          <p class="lead">The FloorBeat node is built for the factory floor — not a hobby board in a plastic box.</p>
+          <p class="lead">The FloorBeat node is built for the factory floor, not a hobby board in a plastic box.</p>
           <ul class="ticks">
-            <li>DIN-rail mounted, fits inside your existing panel</li>
-            <li>Clamp-on current sensors and proximity inputs</li>
-            <li>24 V industrial supply, surge protection and watchdog</li>
-            <li>Wi-Fi built in, 4G and RS485 / Modbus expansion</li>
-            <li>Firmware updates over the air</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>DIN-rail mounted, fits inside your existing panel</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Clamp-on current sensors and proximity inputs</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>24 V industrial supply, surge protection and watchdog</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Wi-Fi built in, 4G and RS485 / Modbus expansion</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Firmware updates over the air</li>
           </ul>
         </div>
-        <div class="node-card" aria-hidden="true">
-          <div class="node">
-            <div class="node-leds"><span class="dot dot-ok"></span><span class="dot dot-ok"></span><span class="dot dot-live"></span></div>
-            <div class="node-label">FloorBeat Node</div>
-            <div class="node-ports"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          </div>
-          <div class="rail"></div>
+        <div class="hw-card">
+          <svg viewBox="0 0 520 310" role="img" aria-label="A FloorBeat node on a DIN rail with four clamp-on current sensors">
+            <rect x="16" y="112" width="488" height="26" rx="4" fill="#dfe4ec"/>
+            <rect x="16" y="120" width="488" height="10" fill="#cfd6e1"/>
+            <rect x="150" y="32" width="220" height="184" rx="18" fill="#ffffff" stroke="#d3d8e1" stroke-width="2"/>
+            <circle cx="182" cy="64" r="6" fill="#16a34a"/>
+            <circle cx="202" cy="64" r="6" fill="#16a34a"/>
+            <circle cx="222" cy="64" r="6" fill="#f5561e"/>
+            <text x="260" y="128" text-anchor="middle" font-family="Inter, sans-serif" font-size="19" font-weight="700" fill="#0b1220">FloorBeat node</text>
+            <text x="260" y="152" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" fill="#5b6478">Wi-Fi · 4G · RS485</text>
+            <rect x="171" y="186" width="24" height="18" rx="3" fill="#eef2f7" stroke="#d3d8e1"/>
+            <rect x="207" y="186" width="24" height="18" rx="3" fill="#eef2f7" stroke="#d3d8e1"/>
+            <rect x="243" y="186" width="24" height="18" rx="3" fill="#eef2f7" stroke="#d3d8e1"/>
+            <rect x="279" y="186" width="24" height="18" rx="3" fill="#eef2f7" stroke="#d3d8e1"/>
+            <rect x="315" y="186" width="24" height="18" rx="3" fill="#eef2f7" stroke="#d3d8e1"/>
+            <path d="M183 204c0 34-74 26-74 56" fill="none" stroke="#8a93a6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M219 204c0 30-22 28-22 56" fill="none" stroke="#8a93a6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M255 204c0 30 30 28 30 56" fill="none" stroke="#8a93a6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M291 204c0 34 82 26 82 56" fill="none" stroke="#8a93a6" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M109 244v66M197 244v66M285 244v66M373 244v66" stroke="#5b6478" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="109" cy="276" r="15" fill="none" stroke="#f5561e" stroke-width="5"/>
+            <circle cx="197" cy="276" r="15" fill="none" stroke="#f5561e" stroke-width="5"/>
+            <circle cx="285" cy="276" r="15" fill="none" stroke="#f5561e" stroke-width="5"/>
+            <circle cx="373" cy="276" r="15" fill="none" stroke="#f5561e" stroke-width="5"/>
+          </svg>
         </div>
       </div>
     </section>
 
     <section class="cta">
       <div class="wrap narrow center">
+        <p class="eyebrow">Free pilot</p>
         <h2>See FloorBeat on your own machines</h2>
         <p class="lead">We fit a pilot on a few machines, every one live within the first week, and show you what your stops really cost.</p>
         <div class="hero-actions center">
-          <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot</a>
-          <a class="btn btn-ghost-light" href="mailto:support@floorbeat.in">support@floorbeat.in</a>
+          <a class="btn btn-primary" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+          <a class="btn btn-outline" href="/roi">Work out your numbers<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
         </div>
+        <ul class="cta-points">
+          <li>No hardware to buy</li>
+          <li>Every machine live in the first week</li>
+          <li>A monthly report of hours won back</li>
+        </ul>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="wrap footer-inner">
-      <a class="brand" href="/">
-        <img class="brand-mark" src="/favicon.svg" alt="" width="30" height="30">
-        <span>FloorBeat</span>
-      </a>
-      <nav class="footer-links" aria-label="Footer">
-        <a href="#service">The service</a>
-        <a href="/roi">ROI calculator</a>
-        <a href="/partners">Partners</a>
-        <a href="/login">Log in</a>
-        <a href="mailto:support@floorbeat.in">Contact</a>
-      </nav>
-      <p class="muted">© 2026 FloorBeat. Made in India.</p>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-about">
+          <a class="brand" href="/">
+            <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32">
+            <span>FloorBeat</span>
+          </a>
+          <p>Machine Monitoring as a Service for factories: every machine live in the first week, and a monthly report of the hours won back.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="/#service">The service</a>
+          <a href="/#how">How it works</a>
+          <a href="/#rollout">First week</a>
+          <a href="/#features">Features</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="/roi">ROI calculator</a>
+          <a href="/partners">Partners</a>
+          <a href="mailto:support@floorbeat.in">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Account</h4>
+          <a href="/login">Log in</a>
+          <a href="/login/staff">Staff sign in</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 FloorBeat. Made in India.</span>
+        <a href="mailto:support@floorbeat.in">support@floorbeat.in</a>
+      </div>
     </div>
   </footer>
 </body>

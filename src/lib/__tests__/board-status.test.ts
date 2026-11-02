@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   batteryClock, firmware, formatBytes, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus, supply, timeSource,
-  boxWifi, isRescueBox, wifi, type BrokerLogins,
+  boxWifi, isRescueBox, selfTest, wifi, type BrokerLogins,
 } from '@/lib/board-status';
 
 describe('batteryClock', () => {
@@ -76,6 +76,33 @@ describe('supply', () => {
     expect(supply({ vin_v: 23.9 })).toMatchObject({ label: '23.9 V', tone: 'good' });
     expect(supply({ vin_v: 3.1 })).toMatchObject({ label: '3.1 V', tone: 'warn' });
     expect(supply(undefined).label).toBe('—');
+  });
+});
+
+describe('selfTest', () => {
+  it('pass: green, with what it measured in the tooltip', () => {
+    const cell = selfTest({ st: 'pass', st_ct: '1.66,1.65,-,-', st_i2c: '48,68' });
+    expect(cell).toMatchObject({ label: 'Pass', tone: 'good' });
+    expect(cell.detail).toContain('CT1 1.66 V, CT2 1.65 V, CT3 not checked, CT4 not checked');
+    expect(cell.detail).toContain('I2C chips answering: 0x48, 0x68.');
+  });
+
+  it('fail: red, the failed checks named short in the label and in full in the tooltip', () => {
+    const cell = selfTest({ st: 'fail', st_fail: 'rtc,vin,ct2', st_ct: '1.66,0.02,1.65,1.66', st_i2c: '48' });
+    expect(cell).toMatchObject({ label: 'Fail: clock chip, 24 V, CT2', tone: 'bad' });
+    expect(cell.detail).toContain('battery clock chip (DS3231) not answering; 24 V supply missing or out of range (18-30 V); CT2 input bias out of range');
+    expect(cell.detail).toContain('CT2 0.02 V');
+  });
+
+  it('an unknown code is shown as sent; no I2C chips at all is said', () => {
+    const cell = selfTest({ st: 'fail', st_fail: 'newthing', st_i2c: '' });
+    expect(cell.label).toBe('Fail: newthing');
+    expect(cell.detail).toContain('I2C chips answering: none.');
+  });
+
+  it('older firmware or no heartbeat: a dash', () => {
+    expect(selfTest({ vin_v: 24 }).label).toBe('—');
+    expect(selfTest(null).label).toBe('—');
   });
 });
 

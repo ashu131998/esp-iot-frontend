@@ -20,7 +20,7 @@ import {
 } from '@/lib/board-settings';
 import {
   SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
-  serviceName, supply, timeSource, wifi, type AdminBoard, type BrokerLogins,
+  selfTest, serviceName, supply, timeSource, wifi, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
 import { formatDate } from '@/lib/utils';
@@ -494,7 +494,7 @@ export function BoardsPanel() {
         {boardsQuery.isError ? (
           <p className="text-sm text-red-600">{(boardsQuery.error as Error).message}</p>
         ) : boardsQuery.isPending ? (
-          <TableSkeleton rows={4} cols={12} />
+          <TableSkeleton rows={4} cols={13} />
         ) : boards.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">No boards have reported yet.</p>
         ) : (
@@ -502,7 +502,7 @@ export function BoardsPanel() {
             <THead>
               <TR>
                 <TH>Board</TH><TH>Where</TH><TH>Onboarded</TH><TH>Status</TH><TH>WiFi</TH><TH>Login</TH><TH>Firmware</TH><TH>Update</TH>
-                <TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
+                <TH>Self-test</TH><TH>Battery clock</TH><TH>Time</TH><TH>Queue</TH><TH>24 V</TH><TH>Last heartbeat</TH><TH>Settings</TH>
                 {canChange && <TH />}
               </TR>
             </THead>
@@ -527,6 +527,7 @@ export function BoardsPanel() {
                   <TD><StatusBadge cell={loginStatus(b)} /></TD>
                   <TD className="font-mono text-xs">{firmware(b.beat)}</TD>
                   <TD><StatusText cell={updateStatus(b)} /></TD>
+                  <TD className="whitespace-nowrap"><StatusBadge cell={selfTest(b.beat)} /></TD>
                   <TD><StatusBadge cell={batteryClock(b.beat)} /></TD>
                   <TD><StatusText cell={timeSource(b.beat)} /></TD>
                   <TD><StatusText cell={queue(b.beat)} /></TD>

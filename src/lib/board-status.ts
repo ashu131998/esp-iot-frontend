@@ -50,6 +50,16 @@ export interface BoardBeat {
   ap?: string;
   ap_n?: number;
   served?: number;
+  /**
+   * Its start-up self-test (firmware 2.7+, REV B / IIoT base): pass or fail, the failed checks (adc, rtc,
+   * xflash, vin, flash, ct1..ct4), the bias on the four CT inputs ("1.66,1.65,-,-") and the I2C chips that answered.
+   */
+  st?: string;
+  st_fail?: string;
+  st_ct?: string;
+  st_i2c?: string;
+  /** The ESP32's revision (3 = ECO3, which secure boot v2 needs). */
+  chip_rev?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -192,6 +202,58 @@ export function timeSource(beat: BoardBeat | null | undefined): StatusCell {
   }
   if (c === 'none') return { label: 'No time', tone: 'bad', detail: 'No time yet: it records nothing until internet time or the server answers' };
   return { label: c, tone: 'neutral', detail: `Clock: ${c}` };
+}
+
+const SELF_TEST_CHECK: Record<string, string> = {
+  adc: 'CT converter (ADS1115) not answering',
+  rtc: 'battery clock chip (DS3231) not answering',
+  xflash: '16 MB queue flash not answering',
+  vin: '24 V supply missing or out of range (18-30 V)',
+  flash: 'ESP32 module flash under 4 MB (wrong module)',
+  ct1: 'CT1 input bias out of range',
+  ct2: 'CT2 input bias out of range',
+  ct3: 'CT3 input bias out of range',
+  ct4: 'CT4 input bias out of range',
+};
+const SELF_TEST_SHORT: Record<string, string> = {
+  adc: 'CT ADC', rtc: 'clock chip', xflash: 'queue flash', vin: '24 V', flash: 'module flash',
+  ct1: 'CT1', ct2: 'CT2', ct3: 'CT3', ct4: 'CT4',
+};
+
+/** What the self-test measured, for the tooltip: CT input bias (V) and the I2C chips that answered. */
+function selfTestMeasured(beat: BoardBeat): string {
+  const parts: string[] = [];
+  if (beat.st_ct) {
+    const bias = beat.st_ct.split(',').map((v, i) => `CT${i + 1} ${v === '-' ? 'not checked' : `${v} V`}`).join(', ');
+    parts.push(`CT input bias: ${bias}.`);
+  }
+  if (beat.st_i2c !== undefined) parts.push(`I2C chips answering: ${beat.st_i2c ? beat.st_i2c.split(',').map((a) => `0x${a}`).join(', ') : 'none'}.`);
+  return parts.join(' ');
+}
+
+/**
+ * The start-up self-test (firmware 2.7+): every start-up checks the board's own chips, the 24 V supply and the
+ * bias on its CT inputs. A board not yet claimed checks all four CT inputs (the end-of-line bench fixture puts a
+ * CT or a wire link on each pair); a claimed board checks the channels its settings use.
+ */
+export function selfTest(beat: BoardBeat | null | undefined): StatusCell {
+  const st = beat?.st;
+  if (!beat || !st) return { label: '—', tone: 'neutral', detail: 'Not reported: firmware before 2.7, or a board without the self-test' };
+  const measured = selfTestMeasured(beat);
+  if (st === 'pass') {
+    return { label: 'Pass', tone: 'good', detail: `Passed its start-up self-test.${measured ? ` ${measured}` : ''}` };
+  }
+  if (st === 'fail') {
+    const codes = (beat.st_fail ?? '').split(',').filter(Boolean);
+    const short = codes.map((c) => SELF_TEST_SHORT[c] ?? c).join(', ');
+    const long = codes.map((c) => SELF_TEST_CHECK[c] ?? c).join('; ');
+    return {
+      label: short ? `Fail: ${short}` : 'Fail',
+      tone: 'bad',
+      detail: `Failed its start-up self-test${long ? `: ${long}` : ''}.${measured ? ` ${measured}` : ''}`,
+    };
+  }
+  return { label: st, tone: 'neutral', detail: `Self-test: ${st}` };
 }
 
 /** Bytes as "512 B", "12.4 KB", "1.2 MB", "37.3 GB". */

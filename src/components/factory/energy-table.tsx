@@ -10,6 +10,7 @@ import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -29,6 +30,7 @@ export function EnergyTable({
   to?: string;
 }) {
   const { minDate, shifts } = useFactoryRefs();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -54,12 +56,12 @@ export function EnergyTable({
   return (
     <Card>
       <CardHeader
-        title="Machine Energy Details"
+        title={t('Machine Energy Details')}
         action={
           <div className="flex items-center gap-3">
             <ExportCsvButton
               filename="machine-energy"
-              headers={['Machine', 'Line', 'Energy (kWh)', 'Avg Amps', 'Peak Amps', 'Voltage (V)']}
+              headers={[t('Machine'), t('Line'), t('Energy (kWh)'), t('Avg Amps'), t('Peak Amps'), t('Voltage (V)')]}
               rows={displayMachines.map((m) => [
                 m.machine_name,
                 m.line_id,
@@ -75,12 +77,12 @@ export function EnergyTable({
       <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Energy (kWh)</TH>
-            <TH className={PHONE_HIDDEN}>Avg Amps</TH>
-            <TH className={PHONE_HIDDEN}>Peak Amps</TH>
-            <TH>Voltage</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Energy (kWh)')}</TH>
+            <TH className={PHONE_HIDDEN}>{t('Avg Amps')}</TH>
+            <TH className={PHONE_HIDDEN}>{t('Peak Amps')}</TH>
+            <TH>{t('Voltage')}</TH>
           </TR>
         </THead>
         <TBody>
@@ -88,9 +90,9 @@ export function EnergyTable({
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
-              <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh) : '—'}</TD>
-              <TD className={PHONE_HIDDEN}>{m.avg_amps != null ? formatNumber(m.avg_amps, 2) : '—'}</TD>
-              <TD className={PHONE_HIDDEN}>{m.peak_amps != null ? formatNumber(m.peak_amps, 2) : '—'}</TD>
+              <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh, 1, locale) : '—'}</TD>
+              <TD className={PHONE_HIDDEN}>{m.avg_amps != null ? formatNumber(m.avg_amps, 2, locale) : '—'}</TD>
+              <TD className={PHONE_HIDDEN}>{m.peak_amps != null ? formatNumber(m.peak_amps, 2, locale) : '—'}</TD>
               <TD>{formatVolts(m.voltage_v)}</TD>
             </TR>
           ))}

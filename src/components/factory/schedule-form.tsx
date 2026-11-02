@@ -8,6 +8,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 import type {
@@ -66,6 +67,7 @@ export function ScheduleForm({
   profiles: MachineConfigProfile[];
 }) {
   const router = useRouter();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   const emptyForm = useMemo<CreateScheduleInput>(
@@ -160,29 +162,29 @@ export function ScheduleForm({
   return (
     <>
       <Button onClick={() => setOpen(true)} size="sm">
-        + Schedule Task
+        + {t('Schedule Task')}
       </Button>
       {open && (
-        <Sheet title="Schedule a Task" onClose={() => setOpen(false)}>
+        <Sheet title={t('Schedule a Task')} onClose={() => setOpen(false)}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Worker">
+            <Field label={t('Worker')}>
               <Select
                 value={form.worker_id}
                 onChange={(e) => setForm({ ...form, worker_id: e.target.value })}
               >
-                {workers.length === 0 && <option value="">No workers — add one first</option>}
+                {workers.length === 0 && <option value="">{t('No workers — add one first')}</option>}
                 {workers.map((w) => (
                   <option key={w.worker_id} value={w.worker_id}>
-                    {w.name} — {w.role}
+                    {w.name} — {t(w.role)}
                   </option>
                 ))}
               </Select>
             </Field>
 
-            <Field label="Function / Task">
+            <Field label={t('Function / Task')}>
               <Input
                 list="task-presets"
-                placeholder="e.g. Operate machines"
+                placeholder={t('e.g. Operate machines')}
                 value={form.task}
                 onChange={(e) => setForm({ ...form, task: e.target.value })}
               />
@@ -193,17 +195,17 @@ export function ScheduleForm({
               </datalist>
             </Field>
 
-            <Field label="Shift">
+            <Field label={t('Shift')}>
               <Select value={form.shift_id} onChange={(e) => onShiftChange(e.target.value)}>
                 {DEFAULT_SHIFTS.map((s) => (
                   <option key={s.shift_id} value={s.shift_id}>
-                    {s.name} ({s.label})
+                    {t(s.name)} ({s.label})
                   </option>
                 ))}
               </Select>
             </Field>
 
-            <Field label="Start Date">
+            <Field label={t('Start Date')}>
               <Input
                 type="date"
                 value={form.schedule_date}
@@ -216,7 +218,7 @@ export function ScheduleForm({
               />
             </Field>
 
-            <Field label="End Date">
+            <Field label={t('End Date')}>
               <Input
                 type="date"
                 min={form.schedule_date || undefined}
@@ -225,12 +227,12 @@ export function ScheduleForm({
               />
               {scheduleDates.length > 1 && (
                 <p className="mt-1 text-xs text-muted">
-                  {scheduleDates.length} days — one task per day will be created.
+                  {t('{count} days — one task per day will be created.', { count: scheduleDates.length })}
                 </p>
               )}
             </Field>
 
-            <Field label="Start Time">
+            <Field label={t('Start Time')}>
               <Input
                 type="time"
                 value={form.start_time ?? ''}
@@ -238,7 +240,7 @@ export function ScheduleForm({
               />
             </Field>
 
-            <Field label="End Time">
+            <Field label={t('End Time')}>
               <Input
                 type="time"
                 value={form.end_time ?? ''}
@@ -247,7 +249,7 @@ export function ScheduleForm({
             </Field>
 
             <div className="sm:col-span-2">
-              <Field label={`Machines${(form.machine_ids?.length ?? 0) > 0 ? ` (${form.machine_ids!.length} selected)` : ''}`}>
+              <Field label={(form.machine_ids?.length ?? 0) > 0 ? t('Machines ({count} selected)', { count: form.machine_ids!.length }) : t('Machines')}>
                 <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border bg-white p-3">
                   {[...machinesByLine.entries()].map(([lineId, lineMachines]) => (
                     <div key={lineId}>
@@ -275,18 +277,18 @@ export function ScheduleForm({
                     </div>
                   ))}
                   {machines.length === 0 && (
-                    <p className="text-sm text-muted">No machines available.</p>
+                    <p className="text-sm text-muted">{t('No machines available.')}</p>
                   )}
                 </div>
               </Field>
             </div>
 
-            <Field label="Machine Configuration Profile">
+            <Field label={t('Machine Configuration Profile')}>
               <Select
                 value={form.config_profile_id ?? ''}
                 onChange={(e) => setForm({ ...form, config_profile_id: e.target.value })}
               >
-                <option value="">— None —</option>
+                <option value="">{t('— None —')}</option>
                 {profiles.map((p) => {
                   const machine = machines.find((m) => m.machine_id === p.machine_id);
                   return (
@@ -300,10 +302,10 @@ export function ScheduleForm({
             </Field>
 
             <div className="sm:col-span-2">
-              <Field label="Notes">
+              <Field label={t('Notes')}>
                 <Textarea
                   rows={2}
-                  placeholder="Optional instructions for this assignment"
+                  placeholder={t('Optional instructions for this assignment')}
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 />
@@ -314,17 +316,17 @@ export function ScheduleForm({
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canSave}>
               {mutation.isPending
-                ? 'Scheduling…'
+                ? t('Scheduling…')
                 : scheduleDates.length > 1
-                  ? `Save Schedule (${scheduleDates.length} days)`
-                  : 'Save Schedule'}
+                  ? t('Save Schedule ({count} days)', { count: scheduleDates.length })
+                  : t('Save Schedule')}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             {!canSave && (
               <p className="self-center text-xs text-muted">
-                Pick a worker, a task, a date, and at least one machine.
+                {t('Pick a worker, a task, a date, and at least one machine.')}
               </p>
             )}
             {mutation.isError && (

@@ -1,13 +1,17 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
+import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
 import { noteRestore, safeNextPath, shouldTryRestore } from '@/lib/auth-redirect';
+import { forgotPasswordPathFor } from '@/lib/auth-reset';
+import { useT } from '@/lib/i18n/context';
 
 /** sessionStorage, or null where the browser blocks it. */
 function safeSessionStorage(): Storage | null {
@@ -40,6 +44,7 @@ export function LoginForm({
 }) {
   const platformStaff = staffLogin || isSuperAdmin;
   const { login } = useAuth();
+  const { t } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState('');
@@ -102,26 +107,26 @@ export function LoginForm({
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : t('Login failed'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4" style={brand}>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4" style={brand}>
       <Card className="w-full max-w-md p-6">
         {logoSrc && (
           // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
-          <img src={logoSrc} alt="" className="mx-auto mb-4 h-14 max-w-[12rem] object-contain" />
+          <img src={logoSrc} alt="" height={56} fetchPriority="high" className="mx-auto mb-4 h-14 max-w-[12rem] object-contain" />
         )}
         <CardHeader title={title} description={subtitle} />
         {restoring ? (
-          <p className="mt-6 text-center text-sm text-muted" role="status">Signing you in…</p>
+          <p className="mt-6 text-center text-sm text-muted" role="status">{t('Signing you in…')}</p>
         ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {/* Factory admins onboarded from /internal/onboard sign in with their email by default. */}
-          <Field label={platformStaff ? 'Username' : 'Email or username'}>
+          <Field label={platformStaff ? t('Username') : t('Email or username')}>
             <Input
               id="username"
               autoComplete="username"
@@ -130,7 +135,7 @@ export function LoginForm({
               required
             />
           </Field>
-          <Field label="Password">
+          <Field label={t('Password')}>
             <Input
               id="password"
               type="password"
@@ -140,13 +145,23 @@ export function LoginForm({
               required
             />
           </Field>
+          <div className="-mt-2 flex justify-end">
+            <Link
+              href={forgotPasswordPathFor(platformStaff ? null : factoryId ?? null)}
+              className="text-xs text-primary hover:underline"
+            >
+              {t('Forgot password?')}
+            </Link>
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? t('Signing in…') : t('Sign in')}
           </Button>
         </form>
         )}
       </Card>
+      {/* A Hindi speaker switches before signing in; the choice is kept for the dashboard. */}
+      <LanguageToggle />
     </div>
   );
 }

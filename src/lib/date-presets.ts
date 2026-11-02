@@ -1,5 +1,6 @@
 import { endOfDay, format, startOfDay, subDays, subHours, subMonths } from 'date-fns';
 
+import { englishTranslator, type Translate } from '@/lib/i18n/translate';
 import { currentShiftWindow, previousShiftWindow } from '@/lib/shifts';
 import type { Shift } from '@/lib/types';
 
@@ -13,7 +14,9 @@ export const LAST_SHIFT = 'last-shift';
 
 export interface Preset {
   id: string;
+  /** English; the picker shows it through t(). */
   label: string;
+  /** Already in the page's language when a translator was given. */
   hint?: string;
   getDates: () => { from: Date; to: Date };
 }
@@ -23,7 +26,15 @@ function shortShiftName(shift: Shift): string {
   return shift.name.replace(/\s*shift$/i, '') || shift.name;
 }
 
-export function buildPresets(shifts: Shift[] | undefined, clock: () => Date = () => new Date()): Preset[] {
+/**
+ * The periods, with the shift hints in the page's language when `t` is given (the labels stay
+ * English: the picker translates them where it shows them, so the ids and tests do not change).
+ */
+export function buildPresets(
+  shifts: Shift[] | undefined,
+  clock: () => Date = () => new Date(),
+  t: Translate = englishTranslator.t,
+): Preset[] {
   const now = clock();
   const cur = currentShiftWindow(shifts, now);
   const prev = previousShiftWindow(shifts, now);
@@ -35,13 +46,17 @@ export function buildPresets(shifts: Shift[] | undefined, clock: () => Date = ()
     {
       id: CURRENT_SHIFT,
       label: 'Current Shift',
-      hint: `${shortShiftName(cur.shift)} · since ${format(cur.from, 'HH:mm')}`,
+      hint: t('{shift} · since {time}', { shift: t(shortShiftName(cur.shift)), time: format(cur.from, 'HH:mm') }),
       getDates: () => ({ from: cur.from, to: clock() }),
     },
     {
       id: LAST_SHIFT,
       label: 'Last Shift',
-      hint: `${shortShiftName(prev.shift)} · ${format(prev.from, 'HH:mm')}–${format(prev.to, 'HH:mm')}`,
+      hint: t('{shift} · {from}–{to}', {
+        shift: t(shortShiftName(prev.shift)),
+        from: format(prev.from, 'HH:mm'),
+        to: format(prev.to, 'HH:mm'),
+      }),
       getDates: () => ({ from: prev.from, to: prev.to }),
     },
     { id: '24h', label: 'Last 24 Hours', getDates: back((n) => subHours(n, 24)) },

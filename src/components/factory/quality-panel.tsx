@@ -12,9 +12,18 @@ import { LoadMore, ScrollTable } from '@/components/ui/load-more';
 import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
+import { useT } from '@/lib/i18n/context';
 import { useInfiniteList, type ListPage } from '@/lib/use-infinite-list';
 import type { Machine, QualityRecord } from '@/lib/types';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
+
+/** The checks as the form names them (English keys, translated where shown). */
+export const QUALITY_METRIC_LABEL: Record<string, string> = {
+  defect_rate: 'Defect Rate',
+  first_pass_yield: 'First Pass Yield',
+  scrap_rate: 'Scrap Rate',
+  rework_rate: 'Rework Rate',
+};
 
 export function QualityPanel({
   factoryId,
@@ -36,6 +45,8 @@ export function QualityPanel({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t, locale } = useT();
+  const metricLabel = (metric: string) => (QUALITY_METRIC_LABEL[metric] ? t(QUALITY_METRIC_LABEL[metric]) : metric.replace(/_/g, ' '));
   const listKey = ['quality-records', factoryId, from, to, machineId ?? '', lineId ?? ''];
   const { items: records, total, hasMore, more, loading } = useInfiniteList<QualityRecord>({
     queryKey: listKey,
@@ -54,7 +65,7 @@ export function QualityPanel({
     const machine = machines.find((m) => m.machine_id === r.machine_id);
     return [
       machine?.name ?? r.machine_id,
-      r.metric.replace(/_/g, ' '),
+      metricLabel(r.metric),
       r.value,
       r.unit,
       r.sample_size,
@@ -83,13 +94,13 @@ export function QualityPanel({
     <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
       <Card>
         <CardHeader
-          title="Quality Records"
-          description="Manual QA entries and inspection results"
+          title={t('Quality Records')}
+          description={t('Manual QA entries and inspection results')}
           action={
             <div className="flex flex-wrap items-center gap-2">
               <ExportCsvButton
                 filename="quality-records"
-                headers={['Machine', 'Metric', 'Value', 'Unit', 'Sample', 'Source', 'Recorded', 'Notes']}
+                headers={[t('Machine'), t('Metric'), t('Value'), t('Unit'), t('Sample'), t('Source'), t('Recorded'), t('Notes')]}
                 fetchRows={fetchAllRows}
                 rowCount={total}
               />
@@ -99,19 +110,19 @@ export function QualityPanel({
         />
 
         {records.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No quality records in this period. Adjust the date range or add a new record.</p>
+          <p className="py-8 text-center text-sm text-muted">{t('No quality records in this period. Adjust the date range or add a new record.')}</p>
         ) : (
           <>
             <ScrollTable className="mt-2 border-0" rowCount={records.length} resetKey={listKey.join('|')}>
               <THead>
                 <TR>
-                  <TH>Machine</TH>
-                  <TH>Metric</TH>
-                  <TH>Value</TH>
-                  <TH>Sample</TH>
-                  <TH className={PHONE_HIDDEN}>Source</TH>
-                  <TH className={PHONE_HIDDEN}>Recorded</TH>
-                  <TH className={PHONE_HIDDEN}>Notes</TH>
+                  <TH>{t('Machine')}</TH>
+                  <TH>{t('Metric')}</TH>
+                  <TH>{t('Value')}</TH>
+                  <TH>{t('Sample')}</TH>
+                  <TH className={PHONE_HIDDEN}>{t('Source')}</TH>
+                  <TH className={PHONE_HIDDEN}>{t('Recorded')}</TH>
+                  <TH className={PHONE_HIDDEN}>{t('Notes')}</TH>
                   <TH></TH>
                 </TR>
               </THead>
@@ -121,15 +132,15 @@ export function QualityPanel({
                   return (
                     <TR key={r.record_id}>
                       <TD className="font-medium">{machine?.name ?? r.machine_id}</TD>
-                      <TD className="capitalize">{r.metric.replace(/_/g, ' ')}</TD>
+                      <TD>{metricLabel(r.metric)}</TD>
                       <TD>
-                        {formatNumber(r.value)} {r.unit}
+                        {formatNumber(r.value, 1, locale)} {r.unit}
                       </TD>
                       <TD>{r.sample_size ?? '—'}</TD>
                       <TD className={PHONE_HIDDEN}>
                         <Badge className="bg-blue-50 text-blue-700">{r.source}</Badge>
                       </TD>
-                      <TD className={PHONE_HIDDEN}>{formatDate(r.recorded_at)}</TD>
+                      <TD className={PHONE_HIDDEN}>{formatDate(r.recorded_at, locale)}</TD>
                       <TD className={cn('max-w-xs truncate text-muted', PHONE_HIDDEN)}>{r.notes || '—'}</TD>
                       <TD>
                         <Button
@@ -138,7 +149,7 @@ export function QualityPanel({
                           className="text-red-600"
                           onClick={() => deleteMutation.mutate(r.record_id)}
                         >
-                          Delete
+                          {t('Delete')}
                         </Button>
                       </TD>
                     </TR>

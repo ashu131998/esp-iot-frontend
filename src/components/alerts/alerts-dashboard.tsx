@@ -12,6 +12,8 @@ import { Badge, StatCard } from '@/components/ui/badge';
 import { FactoryLineMachineAlertFilters } from '@/components/alerts/alert-scope-filters';
 import { StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { machineInAlertScope } from '@/lib/alert-machine-scope';
+import { formatTimeWithSeconds } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { formatPercent } from '@/lib/utils';
 
 const WARN_THRESHOLD = 85;
@@ -68,6 +70,7 @@ function AlertsDashboardBody({
   lineFilter: string;
   machineFilter: string;
 }) {
+  const { t, tn, locale } = useT();
   const { data: factoriesData, dataUpdatedAt } = useSuspenseQuery({
     queryKey: ['factories-for-alerts'],
     queryFn: ({ signal }) => api.factories({ signal }),
@@ -180,21 +183,18 @@ function AlertsDashboardBody({
   const warningCount = alerts.filter((a) => a.severity === 'warning').length;
   const factoryLabel =
     factoriesInScope.length === 1
-      ? (factoriesInScope[0]?.name ?? factoriesInScope[0]?.factory_id ?? 'factory')
-      : `${factoriesInScope.length} factories`;
-  const lastUpdated = new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+      ? (factoriesInScope[0]?.name ?? factoriesInScope[0]?.factory_id ?? t('factory'))
+      : tn(factoriesInScope.length, '{count} factory', '{count} factories');
+  const lastUpdated = formatTimeWithSeconds(dataUpdatedAt, locale);
+  const filtered = Boolean(factoryFilter || lineFilter || machineFilter);
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Critical"
+          label={t('Critical')}
           value={String(criticalCount)}
-          sub={criticalCount > 0 ? 'Needs immediate attention' : 'All clear'}
+          sub={criticalCount > 0 ? t('Needs immediate attention') : t('All clear')}
           icon={
             <XCircle
               className={`h-4 w-4 ${criticalCount > 0 ? 'text-red-500' : 'text-muted'}`}
@@ -202,9 +202,9 @@ function AlertsDashboardBody({
           }
         />
         <StatCard
-          label="Warning"
+          label={t('Warning')}
           value={String(warningCount)}
-          sub={`Below ${WARN_THRESHOLD}% availability`}
+          sub={t('Below {pct}% availability', { pct: String(WARN_THRESHOLD) })}
           icon={
             <AlertTriangle
               className={`h-4 w-4 ${warningCount > 0 ? 'text-amber-500' : 'text-muted'}`}
@@ -212,7 +212,7 @@ function AlertsDashboardBody({
           }
         />
         <StatCard
-          label="Machines Monitored"
+          label={t('Machines Monitored')}
           value={String(totalMachines)}
           sub={factoryLabel}
           icon={<Activity className="h-4 w-4 text-muted" />}
@@ -221,9 +221,9 @@ function AlertsDashboardBody({
 
       <Card>
         <CardHeader
-          title="Active Alerts"
-          description={`Last 24 h · warn < ${WARN_THRESHOLD}% · critical < ${CRIT_THRESHOLD}%${
-            factoryFilter || lineFilter || machineFilter ? ' · filtered view' : ''
+          title={t('Active Alerts')}
+          description={`${t('Last 24 h · warn < {warn}% · critical < {crit}%', { warn: String(WARN_THRESHOLD), crit: String(CRIT_THRESHOLD) })}${
+            filtered ? ` · ${t('filtered view')}` : ''
           }`}
           action={
             <span className="flex items-center gap-1.5 text-xs text-muted">
@@ -238,13 +238,10 @@ function AlertsDashboardBody({
             <CheckCircle className="h-10 w-10 text-emerald-500" />
             <div>
               <p className="font-semibold">
-                {factoryFilter || lineFilter || machineFilter
-                  ? 'No alerts for this filter'
-                  : 'No active alerts'}
+                {filtered ? t('No alerts for this filter') : t('No active alerts')}
               </p>
               <p className="mt-0.5 text-sm text-muted">
-                All {totalMachines} machine{totalMachines === 1 ? '' : 's'} in scope are within healthy
-                thresholds.
+                {tn(totalMachines, 'The {count} machine in scope is within healthy thresholds.', 'All {count} machines in scope are within healthy thresholds.')}
               </p>
             </div>
           </div>
@@ -261,9 +258,9 @@ function AlertsDashboardBody({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">{alert.machineName}</span>
-                      <Badge className={badge}>{label}</Badge>
+                      <Badge className={badge}>{t(label)}</Badge>
                       {alert.type === 'offline' && (
-                        <Badge className="bg-slate-100 text-slate-600">No signal</Badge>
+                        <Badge className="bg-slate-100 text-slate-600">{t('No signal')}</Badge>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted">
@@ -271,21 +268,21 @@ function AlertsDashboardBody({
                     </p>
                     <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
                       <span>
-                        Availability:{' '}
+                        {t('Availability')}:{' '}
                         <span className="font-medium text-foreground">
-                          {formatPercent(alert.availability)}
+                          {formatPercent(alert.availability, locale)}
                         </span>
                       </span>
                       <span>
-                        Uptime:{' '}
+                        {t('Uptime')}:{' '}
                         <span className="font-medium text-foreground">
-                          {alert.uptimeMinutes} min
+                          {t('{n} min', { n: alert.uptimeMinutes })}
                         </span>
                       </span>
                       <span>
-                        Downtime:{' '}
+                        {t('Downtime')}:{' '}
                         <span className="font-medium text-foreground">
-                          {alert.downtimeMinutes} min
+                          {t('{n} min', { n: alert.downtimeMinutes })}
                         </span>
                       </span>
                     </div>
@@ -294,7 +291,7 @@ function AlertsDashboardBody({
                     href={`/factories/${alert.factoryId}/availability`}
                     className="shrink-0 text-xs font-medium text-primary hover:underline"
                   >
-                    View →
+                    {t('View')} →
                   </Link>
                 </div>
               );

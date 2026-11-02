@@ -10,6 +10,8 @@ import { DataTable } from '@/components/ui/data-table';
 import { SCROLL_STEP } from '@/lib/infinite';
 import { Badge } from '@/components/ui/badge';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
+import { dayKeyToDate, formatWeekdayDayMonth, todayKey } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
@@ -45,6 +47,7 @@ export function AvailabilityTrendTable({
   to?: string;
 }) {
   const shifts = useFactoryRefsOptional()?.shifts;
+  const { t, locale } = useT();
   const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
@@ -53,26 +56,26 @@ export function AvailabilityTrendTable({
   const trends = useMemo<TrendRow[]>(
     () => mergeTrendDays(data.days, liveData?.days, trendDayRange(from, to)).map((d) => ({
       dateKey:      d.key,
-      dateLabel:    new Date(`${d.key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      dateLabel:    formatWeekdayDayMonth(dayKeyToDate(d.key), locale),
       availability: d.availability_percent,
       uptime:       d.uptime_minutes,
       downtime:     d.downtime_minutes,
       is_live:      d.from_live,
     })),
-    [data, liveData, from, to],
+    [data, liveData, from, to, locale],
   );
 
   const columns = useMemo<ColumnDef<TrendRow, unknown>[]>(() => [
     {
       id: 'date',
       accessorFn: (row) => row.dateKey, // sort chronologically by the day key
-      header: 'Date',
+      header: t('Date'),
       cell: ({ row }) => (
         <span className="flex items-center gap-2 font-medium">
           {row.original.dateLabel}
           {row.original.is_live && (
             <Badge className="hidden bg-amber-50 text-amber-700 text-xs sm:inline-flex">
-              {row.original.dateKey === new Date().toLocaleDateString('en-CA') ? 'Today' : 'Not final yet'}
+              {row.original.dateKey === todayKey() ? t('Today') : t('Not final yet')}
             </Badge>
           )}
         </span>
@@ -80,44 +83,44 @@ export function AvailabilityTrendTable({
     },
     {
       accessorKey: 'availability',
-      header: 'Availability',
+      header: t('Availability'),
       cell: ({ row }) => (
-        <Badge className={badgeColor(row.original.availability)}>{formatPercent(row.original.availability)}</Badge>
+        <Badge className={badgeColor(row.original.availability)}>{formatPercent(row.original.availability, locale)}</Badge>
       ),
     },
     {
       accessorKey: 'uptime',
-      header: 'Uptime',
+      header: t('Uptime'),
       meta: { phoneHidden: true },
-      cell: ({ row }) => humanMinutes(row.original.uptime),
+      cell: ({ row }) => humanMinutes(row.original.uptime, t),
     },
     {
       accessorKey: 'downtime',
-      header: 'Downtime',
+      header: t('Downtime'),
       meta: { phoneHidden: true },
-      cell: ({ row }) => humanMinutes(row.original.downtime),
+      cell: ({ row }) => humanMinutes(row.original.downtime, t),
     },
     {
       id: 'total',
       accessorFn: (row) => row.uptime + row.downtime,
-      header: 'Total',
+      header: t('Total'),
       meta: { phoneHidden: true },
-      cell: ({ row }) => humanMinutes(row.original.uptime + row.original.downtime),
+      cell: ({ row }) => humanMinutes(row.original.uptime + row.original.downtime, t),
     },
-  ], []);
+  ], [t, locale]);
 
   if (isFetching || livePending) return <TableSkeleton rows={7} cols={5} />;
 
   return (
     <Card>
       <CardHeader
-        title="Daily Availability Breakdown"
-        description="Availability = uptime / (uptime + downtime) × 100% per day"
+        title={t('Daily Availability Breakdown')}
+        description={t('Availability = uptime / (uptime + downtime) × 100% per day')}
         action={
           <ExportCsvButton
             filename="daily-availability"
-            headers={['Date', 'Availability (%)', 'Uptime (min)', 'Downtime (min)', 'Total Time (min)']}
-            rows={trends.map((t) => [t.dateLabel, t.availability, t.uptime, t.downtime, t.uptime + t.downtime])}
+            headers={[t('Date'), t('Availability (%)'), t('Uptime (min)'), t('Downtime (min)'), t('Total Time (min)')]}
+            rows={trends.map((row) => [row.dateLabel, row.availability, row.uptime, row.downtime, row.uptime + row.downtime])}
           />
         }
       />
@@ -127,7 +130,7 @@ export function AvailabilityTrendTable({
         data={trends}
         scrollStep={SCROLL_STEP}
         initialSorting={[{ id: 'date', desc: true }]}
-        emptyMessage="No data available for the selected period."
+        emptyMessage={t('No data available for the selected period.')}
       />
     </Card>
   );

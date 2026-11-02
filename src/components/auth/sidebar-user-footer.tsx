@@ -2,8 +2,10 @@
 
 import { LogOut } from 'lucide-react';
 
+import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
 import type { AuthUser } from '@/lib/auth-types';
+import { useT } from '@/lib/i18n/context';
 import { isStaffRole } from '@/lib/internal-auth';
 
 function loginPathFor(user: AuthUser | null, factoryId?: string): string {
@@ -31,6 +33,7 @@ export function SignOutButton({
   className?: string;
 }) {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const signOut = useSignOut(factoryId);
 
   if (loading || !user) return null;
@@ -45,27 +48,32 @@ export function SignOutButton({
       }
     >
       <LogOut className="h-4 w-4" />
-      Sign out
+      {t('Sign out')}
     </button>
   );
 }
 
 export function SidebarUserFooter({ factoryId }: { factoryId?: string }) {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const signOut = useSignOut(factoryId);
 
   if (loading || !user) return null;
 
   return (
     <div className="border-t border-white/10 px-5 py-4">
-      <p className="mb-2 truncate text-xs text-slate-400">Signed in as {user.username}</p>
+      <p className="mb-2 truncate text-xs text-slate-400">{t('Signed in as {name}', { name: user.username })}</p>
+      <div className="mb-2 px-3">
+        <p className="mb-1 text-xs text-slate-400">{t('Language')}</p>
+        <LanguageToggle tone="dark" fill />
+      </div>
       <button
         type="button"
         onClick={signOut}
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
       >
         <LogOut className="h-4 w-4" />
-        Sign out
+        {t('Sign out')}
       </button>
     </div>
   );

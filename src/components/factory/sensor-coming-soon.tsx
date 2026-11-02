@@ -1,7 +1,10 @@
+'use client';
+
 import type { LucideIcon } from 'lucide-react';
 import { Radio } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
+import { useT } from '@/lib/i18n/context';
 
 export interface PlannedMetric {
   label: string;
@@ -52,6 +55,7 @@ export function SensorComingSoon({
   accent: SensorAccent;
 }) {
   const a = ACCENTS[accent];
+  const { t } = useT();
 
   return (
     <div className="space-y-6">
@@ -68,7 +72,7 @@ export function SensorComingSoon({
                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${a.chip}`}
               >
                 <Radio className="h-3 w-3" />
-                Awaiting sensors
+                {t('Awaiting sensors')}
               </span>
             </div>
             <p className="mt-1 text-sm font-medium text-muted">{tagline}</p>
@@ -79,7 +83,7 @@ export function SensorComingSoon({
 
       {/* Planned metrics preview */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-foreground">What this page will show</h3>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">{t('What this page will show')}</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {plannedMetrics.map((m) => (
             <Card key={m.label} className="flex h-full flex-col gap-2 opacity-70">
@@ -96,19 +100,19 @@ export function SensorComingSoon({
 
       {/* Hardware context */}
       <Card>
-        <h3 className="text-sm font-semibold text-foreground">Hardware</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('Hardware')}</h3>
         <dl className="mt-3 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">Sensor</dt>
+            <dt className="text-xs uppercase tracking-wide text-muted">{t('Sensor')}</dt>
             <dd className="mt-0.5 font-medium text-foreground">{hardware.part}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">Connection</dt>
+            <dt className="text-xs uppercase tracking-wide text-muted">{t('Connection')}</dt>
             <dd className="mt-0.5 font-medium text-foreground">{hardware.connection}</dd>
           </div>
           {hardware.note && (
             <div className="sm:col-span-2">
-              <dt className="text-xs uppercase tracking-wide text-muted">Note</dt>
+              <dt className="text-xs uppercase tracking-wide text-muted">{t('Note')}</dt>
               <dd className="mt-0.5 text-muted">{hardware.note}</dd>
             </div>
           )}

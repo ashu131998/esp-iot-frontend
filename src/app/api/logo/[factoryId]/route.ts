@@ -6,8 +6,9 @@ const IMAGE_TYPE = /^image\/(png|jpeg|webp)$/;
  * A factory's logo (set by our staff), served from our own origin so the
  * dashboard and the sign-in page can show it under their CSP. Public: the
  * sign-in page needs it before anyone has logged in. Pages request it with
- * `?v=<logo_version>`, which changes on every save, so each version can be
- * cached for a day.
+ * `?v=<logo_version>`, which changes on every save, so each version is cached
+ * for good: the sign-in page's largest image then comes from the browser or
+ * Cloudflare's edge, not from Germany.
  */
 export async function GET(
   _req: Request,
@@ -29,7 +30,7 @@ export async function GET(
   return new Response(await upstream.arrayBuffer(), {
     headers: {
       'content-type': type,
-      'cache-control': 'public, max-age=86400',
+      'cache-control': 'public, max-age=31536000, immutable',
       'x-content-type-options': 'nosniff',
       'content-security-policy': "default-src 'none'",
     },

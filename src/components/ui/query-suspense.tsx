@@ -5,9 +5,12 @@ import { Component, Suspense, useSyncExternalStore, type ReactNode } from 'react
 
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/table';
+import { useT } from '@/lib/i18n/context';
+import type { Translate } from '@/lib/i18n/translate';
 
 class QueryErrorBoundary extends Component<
-  { children: ReactNode; onReset: () => void },
+  // A class component cannot call useT(): the page's translator comes in as a prop.
+  { children: ReactNode; onReset: () => void; t: Translate },
   { hasError: boolean; message: string }
 > {
   state = { hasError: false, message: '' };
@@ -24,9 +27,10 @@ class QueryErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
+      const { t } = this.props;
       return (
         <div className="space-y-4 p-4 sm:p-6 lg:p-8">
-          <ErrorState message={this.state.message || 'Something went wrong'} />
+          <ErrorState message={this.state.message || t('Something went wrong')} />
           <Button
             variant="secondary"
             size="sm"
@@ -35,7 +39,7 @@ class QueryErrorBoundary extends Component<
               this.setState({ hasError: false, message: '' });
             }}
           >
-            Retry
+            {t('Retry')}
           </Button>
         </div>
       );
@@ -63,12 +67,13 @@ export function QuerySuspense({
   ssr?: boolean;
 }) {
   const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const { t } = useT();
   if (!ssr && !isClient) return <>{fallback}</>;
 
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
-        <QueryErrorBoundary onReset={reset}>
+        <QueryErrorBoundary onReset={reset} t={t}>
           <Suspense fallback={fallback}>{children}</Suspense>
         </QueryErrorBoundary>
       )}

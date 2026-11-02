@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
 import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { unitsMade } from '@/lib/overview-figures';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import type {
@@ -47,6 +48,7 @@ export function LineStatusClient({
   minDate?: string | null;
 }) {
   const shifts = useFactoryRefsOptional()?.shifts;
+  const { t, locale } = useT();
   const range = useMemo(
     () => resolveDateRange({ from, to }, minDate, shifts),
     [from, to, minDate, shifts],
@@ -110,44 +112,44 @@ export function LineStatusClient({
       <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
         {energyOn && (
           <StatCard
-            label="Total Energy"
-            value={`${formatNumber(energy.total_energy_kwh)} kWh`}
-            sub="Estimated from current sensors"
+            label={t('Total Energy')}
+            value={`${formatNumber(energy.total_energy_kwh, 1, locale)} kWh`}
+            sub={t('Estimated from current sensors')}
           />
         )}
         <StatCard
-          label="Avg Availability"
-          value={formatPercent(availability.avg_availability_percent)}
-          sub={`${humanMinutes(lineUptimeMin)} running · ${humanMinutes(lineDowntimeMin)} stopped (avg per machine)`}
+          label={t('Avg Availability')}
+          value={formatPercent(availability.avg_availability_percent, locale)}
+          sub={t('{up} running · {down} stopped (avg per machine)', { up: humanMinutes(lineUptimeMin, t), down: humanMinutes(lineDowntimeMin, t) })}
         />
         {productionOn && (
           <StatCard
-            label="Units Produced"
-            value={formatUnits(production.total_units, production.unit_label)}
-            sub="From proximity sensor detections"
+            label={t('Units Produced')}
+            value={formatUnits(production.total_units, production.unit_label, locale, t('(mixed units)'))}
+            sub={t('From proximity sensor detections')}
           />
         )}
       </div>
 
       <Card>
         <CardHeader
-          title="Machine Status"
-          description={`Timeline shows last 24h${isFetching ? ' · updating…' : ''}`}
+          title={t('Machine Status')}
+          description={`${t('Timeline shows last 24h')}${isFetching ? ` · ${t('updating…')}` : ''}`}
         />
 
         {machineRows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No machines on this line.</p>
+          <p className="py-8 text-center text-sm text-muted">{t('No machines on this line.')}</p>
         ) : (
           <Table>
             <THead>
               <TR>
-                <TH>Machine</TH>
-                <TH>Current Status</TH>
-                {productionOn && <TH>Units Produced</TH>}
-                {energyOn && <TH>Energy (kWh)</TH>}
-                <TH>Availability</TH>
-                <TH className={PHONE_HIDDEN}>Last 24h</TH>
-                <TH className={PHONE_HIDDEN}>Config Entries</TH>
+                <TH>{t('Machine')}</TH>
+                <TH>{t('Current Status')}</TH>
+                {productionOn && <TH>{t('Units Produced')}</TH>}
+                {energyOn && <TH>{t('Energy (kWh)')}</TH>}
+                <TH>{t('Availability')}</TH>
+                <TH className={PHONE_HIDDEN}>{t('Last 24h')}</TH>
+                <TH className={PHONE_HIDDEN}>{t('Config Entries')}</TH>
               </TR>
             </THead>
             <TBody>
@@ -174,14 +176,14 @@ export function LineStatusClient({
                       <MachineStatusBadge status={status} />
                     </TD>
                     {productionOn && (
-                      <TD className="font-semibold">{formatUnits(unitsMade(prod), prod?.unit_label)}</TD>
+                      <TD className="font-semibold">{formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)'))}</TD>
                     )}
                     {energyOn && (
                       <TD>
-                        {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
+                        {eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : '—'}
                       </TD>
                     )}
-                    <TD>{formatPercent(avail?.availability_percent ?? null)}</TD>
+                    <TD>{formatPercent(avail?.availability_percent ?? null, locale)}</TD>
                     <TD className={PHONE_HIDDEN}>
                       <MiniTimeline segments={uptime?.timeline ?? []} />
                     </TD>
@@ -189,7 +191,7 @@ export function LineStatusClient({
                       {cfgCount > 0 ? (
                         <Badge className="bg-blue-50 text-blue-700">{cfgCount}</Badge>
                       ) : (
-                        <span className="text-xs text-muted">None</span>
+                        <span className="text-xs text-muted">{t('None')}</span>
                       )}
                     </TD>
                   </TR>

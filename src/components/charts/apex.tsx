@@ -3,6 +3,9 @@
 import dynamic from 'next/dynamic';
 import type { ApexOptions } from 'apexcharts';
 
+import { formatCompact, formatUpTo } from '@/lib/format';
+import type { Locale } from '@/lib/i18n/locale';
+
 // ApexCharts references `window` at import time, so it must never run during SSR.
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
@@ -56,13 +59,11 @@ export const baseChartOptions: ApexOptions = {
   tooltip: { theme: 'light', style: { fontSize: '12px' } },
 };
 
-/** Compact axis tick formatter (mirrors the old recharts formatChartAxisTick). */
-export function formatAxisTick(value: number): string {
+/** Compact axis tick: 1200 → "1.2K", 123456 → "1.2L" (Hindi: "1.2 लाख"), 42.25 → "42.3". */
+export function formatAxisTick(value: number, locale: Locale = 'en'): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   if (n === 0) return '0';
-  if (Math.abs(n) >= 1000) {
-    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
-  }
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  if (Math.abs(n) >= 1000) return formatCompact(n, locale);
+  return formatUpTo(n, 1, locale);
 }

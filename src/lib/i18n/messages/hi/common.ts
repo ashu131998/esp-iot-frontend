@@ -1,0 +1,101 @@
+import type { Messages } from '../../translate';
+
+/**
+ * Hindi for the words every page shares: machine states, buttons, list footers, sign-in/out.
+ * Key = the exact English text in the code (see lib/i18n/README.md).
+ */
+export const common: Messages = {
+  // Machine states — the only three a factory sees
+  'Running': 'चल रही है',
+  'Stopped': 'रुकी हुई है',
+  'No signal': 'सिग्नल नहीं',
+  'running': 'चल रही',
+  'stopped': 'रुकी',
+  '{pct}% running': '{pct}% चली',
+
+  // Buttons and actions
+  'Save': 'सहेजें',
+  'Saving…': 'सहेज रहे हैं…',
+  'Saved.': 'सहेज लिया।',
+  'Cancel': 'रद्द करें',
+  'Close': 'बंद करें',
+  'Retry': 'फिर कोशिश करें',
+  'Edit': 'बदलें',
+  'Delete': 'हटाएँ',
+  'Remove': 'हटाएँ',
+  'Add': 'जोड़ें',
+  'Apply': 'लागू करें',
+  'Back': 'वापस',
+  'Next': 'आगे',
+  'Done': 'हो गया',
+  'Skip': 'छोड़ें',
+  'Start': 'शुरू करें',
+  'Stop': 'रोकें',
+  'Confirm': 'पुष्टि करें',
+  'Yes': 'हाँ',
+  'No': 'नहीं',
+  'OK': 'ठीक है',
+  'Search…': 'खोजें…',
+  'Export CSV': 'CSV निकालें',
+  'Refresh': 'ताज़ा करें',
+  'Try again': 'फिर कोशिश करें',
+
+  // Loading, empty and error states
+  'Loading…': 'लोड हो रहा है…',
+  'Loading more…': 'और लोड हो रहा है…',
+  'Something went wrong': 'कुछ गड़बड़ हो गई',
+  'Not found': 'नहीं मिला',
+  'No data yet': 'अभी कोई डेटा नहीं',
+  'No data': 'कोई डेटा नहीं',
+  'Show more': 'और दिखाएँ',
+  'Showing {shown} of {total}': '{total} में से {shown} दिखा रहे हैं',
+  'All {total} shown': 'सभी {total} दिखाए गए',
+  'updating…': 'अपडेट हो रहा है…',
+  'Updated {time}': '{time} पर अपडेट हुआ',
+  'Last updated {time}': 'पिछली बार {time} पर अपडेट हुआ',
+
+  // Sign-in / sign-out
+  'Sign in': 'साइन इन',
+  'Signing in…': 'साइन इन हो रहा है…',
+  'Sign out': 'साइन आउट',
+  'Signed in as {name}': '{name} के रूप में साइन इन',
+  'Signing you in…': 'आपको साइन इन कर रहे हैं…',
+
+  // Common nouns
+  'Machine': 'मशीन',
+  'Machines': 'मशीनें',
+  'machine': 'मशीन',
+  'machines': 'मशीनें',
+  '{count} machine': '{count} मशीन',
+  '{count} machines': '{count} मशीनें',
+  'Line': 'लाइन',
+  'Lines': 'लाइनें',
+  'All': 'सभी',
+  'Shift': 'शिफ्ट',
+  'Shifts': 'शिफ्टें',
+  'Day Shift': 'दिन की शिफ्ट',
+  'Night Shift': 'रात की शिफ्ट',
+  'Day': 'दिन',
+  'Night': 'रात',
+  'Today': 'आज',
+  'Yesterday': 'कल',
+  'Now': 'अभी',
+  'units': 'यूनिट',
+  'Units': 'यूनिट',
+  '(mixed units)': '(अलग-अलग यूनिट)',
+  'Total': 'कुल',
+  'Status': 'स्थिति',
+  'Name': 'नाम',
+  'Type': 'प्रकार',
+  'Actions': 'कार्य',
+  'Details': 'विवरण',
+  'Settings': 'सेटिंग',
+  'Language': 'भाषा',
+
+  // Durations (plain-words.humanMinutes)
+  '{h} h {m} m': '{h} घं {m} मि',
+  '{h} h': '{h} घं',
+  '{m} m': '{m} मि',
+  'this shift': 'इस शिफ्ट में',
+  'selected time': 'चुने गए समय में',
+};

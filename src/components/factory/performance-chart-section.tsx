@@ -5,6 +5,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { MetricBarChart } from '@/components/charts/metric-chart';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -14,6 +15,7 @@ import {
 } from '@/lib/use-factory-date-range';
 
 export function PerformanceChartSection({ factoryId }: { factoryId: string }) {
+  const { t } = useT();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
@@ -37,13 +39,13 @@ export function PerformanceChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Performance Breakdown" description="Availability and throughput contribution per machine" />
+      <CardHeader title={t('Performance Breakdown')} description={t('Availability and throughput contribution per machine')} />
       <MetricBarChart
         data={chartData}
         bars={[
-          { key: 'performance', color: '#6366f1', label: 'Performance %' },
-          { key: 'availability', color: '#10b981', label: 'Availability %' },
-          { key: 'throughput', color: '#3b82f6', label: 'Throughput %' },
+          { key: 'performance', color: '#6366f1', label: t('Performance %') },
+          { key: 'availability', color: '#10b981', label: t('Availability %') },
+          { key: 'throughput', color: '#3b82f6', label: t('Throughput %') },
         ]}
       />
     </Card>

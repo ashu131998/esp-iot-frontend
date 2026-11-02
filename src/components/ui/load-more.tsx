@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useT } from '@/lib/i18n/context';
 import { SCROLL_STEP, nextShown } from '@/lib/infinite';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +44,7 @@ export function LoadMore({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useT();
 
   useEffect(() => {
     const el = ref.current;
@@ -67,17 +69,17 @@ export function LoadMore({
       {loading ? (
         <span className="flex w-full items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Loading more…
+          {t('Loading more…')}
         </span>
       ) : hasMore ? (
         <>
-          <span>Showing {shown} of {total}</span>
+          <span>{t('Showing {shown} of {total}', { shown, total })}</span>
           <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onMore}>
-            Show more
+            {t('Show more')}
           </Button>
         </>
       ) : (
-        <span>All {total} shown</span>
+        <span>{t('All {total} shown', { total })}</span>
       )}
     </div>
   );

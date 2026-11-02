@@ -6,6 +6,13 @@ import type {
   ActiveAssignmentsResponse,
   AlertSettings,
   AvailabilityResponse,
+  CalibrationContext,
+  CountSamplesResponse,
+  CurrentSamplesResponse,
+  SaveCountCalibrationBody,
+  SaveCountCalibrationResponse,
+  SaveCurrentCalibrationBody,
+  SaveCurrentCalibrationResponse,
   ConfigSelection,
   DowntimeReason,
   DowntimeReport,
@@ -309,6 +316,57 @@ export const api = {
     request<{ factory_id: string; machine: Machine }>(
       `/v1/admin/factories/${factoryId}/machines`,
       { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  // ── Calibration from the dashboard (factory admins) ──────────────────────────────
+  calibrationContext: (factoryId: string, machineId: string, options?: ApiRequestOptions) =>
+    request<CalibrationContext>(
+      `/v1/factories/${factoryId}/calibration/machines/${encodeURIComponent(machineId)}`,
+      options,
+    ),
+
+  /** One-minute current windows of a channel that began at or after `since`. */
+  calibrationCurrentSamples: (
+    factoryId: string,
+    params: { binding_id: string; since: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<CurrentSamplesResponse>(
+      `/v1/factories/${factoryId}/calibration/current-samples?binding_id=${encodeURIComponent(params.binding_id)}&since=${encodeURIComponent(params.since)}`,
+      options,
+    ),
+
+  /** A machine's proximity pulses since `since`, and the units its current setting makes of them. */
+  calibrationCountSamples: (
+    factoryId: string,
+    params: { machine_id: string; since: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<CountSamplesResponse>(
+      `/v1/factories/${factoryId}/calibration/count-samples?machine_id=${encodeURIComponent(params.machine_id)}&since=${encodeURIComponent(params.since)}`,
+      options,
+    ),
+
+  saveCurrentCalibration: (
+    factoryId: string,
+    bindingId: string,
+    body: SaveCurrentCalibrationBody,
+    options?: ApiRequestOptions,
+  ) =>
+    request<SaveCurrentCalibrationResponse>(
+      `/v1/factories/${factoryId}/calibration/current/${encodeURIComponent(bindingId)}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  saveCountCalibration: (
+    factoryId: string,
+    machineId: string,
+    body: SaveCountCalibrationBody,
+    options?: ApiRequestOptions,
+  ) =>
+    request<SaveCountCalibrationResponse>(
+      `/v1/factories/${factoryId}/calibration/count/${encodeURIComponent(machineId)}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
     ),
 
   /** Change a machine's production unit: proximity pulses per unit and the unit name. */

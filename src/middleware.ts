@@ -152,8 +152,9 @@ export async function middleware(req: NextRequest) {
 
   const identity = await getIdentity(req);
 
-  const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup)\/?$/.test(pathname);
-  const isInternalLogin = pathname === '/internal/login';
+  // Public pages of a factory: sign in, sign up and "forgot password" (a signed-in person is sent home).
+  const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup|forgot-password)\/?$/.test(pathname);
+  const isInternalLogin = pathname === '/internal/login' || pathname === '/internal/forgot-password';
   if (isInternalLogin) {
     if (!internalHostAllowed(req)) {
       return internalHostBlockResponse();

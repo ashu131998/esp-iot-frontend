@@ -2,6 +2,7 @@ import { LinesTable } from '@/components/factory/lines-table';
 import { ListEmpty, ListGroup } from '@/components/ui/simple';
 import { NavDim } from '@/lib/navigation-context';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
+import { getT } from '@/lib/i18n/server';
 import { serverApi } from '@/lib/server-api';
 import { factoryPage } from '@/lib/server/factory-page';
 
@@ -13,6 +14,7 @@ async function LinesPage({
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
+  const { t } = await getT();
   const [{ lines }, { machines }] = await Promise.all([
     serverApi.lines(factoryId),
     serverApi.machines(factoryId),
@@ -26,8 +28,8 @@ async function LinesPage({
   return (
     <NavDim className="space-y-6 p-4 sm:p-6 lg:p-8">
       {lines.length === 0 ? (
-        <ListGroup title="Lines">
-          <ListEmpty>No lines set up yet.</ListEmpty>
+        <ListGroup title={t('Lines')}>
+          <ListEmpty>{t('No lines set up yet.')}</ListEmpty>
         </ListGroup>
       ) : (
         <LinesTable
@@ -37,7 +39,7 @@ async function LinesPage({
           action={
             <ExportCsvButton
               filename="production-lines"
-              headers={['Line ID', 'Name', 'Machines', 'Last Seen', 'Created']}
+              headers={[t('Line ID'), t('Name'), t('Machines'), t('Last Seen'), t('Created')]}
               rows={lines.map((line) => [
                 line.line_id,
                 line.name?.trim() || line.line_id,

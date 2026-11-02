@@ -9,10 +9,12 @@ import { Input, Select } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
 
 export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const queryClient = useQueryClient();
+  const { t } = useT();
   const { data: settings } = useQuery({
     queryKey: ['alert-settings', factoryId],
     queryFn: ({ signal }) => api.alertSettings(factoryId, { signal }),
@@ -57,13 +59,13 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
       setTestResult(
         res.ok
           ? res.channel === 'console' || res.channel === 'console-mode'
-            ? 'Logged to the feed (mobile bridge not live yet).'
-            : 'Sent — check the phone or app.'
-          : `Failed: ${res.error}`,
+            ? t('Logged to the feed (mobile bridge not live yet).')
+            : t('Sent — check the phone or app.')
+          : t('Failed: {error}', { error: res.error }),
       );
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
     },
-    onError: (err) => setTestResult(`Failed: ${err.message}`),
+    onError: (err) => setTestResult(t('Failed: {error}', { error: err.message })),
   });
 
   const testBoardEmail = useMutation({
@@ -71,15 +73,15 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     onSuccess: (res) => {
       if (res.ok) {
         setTestEmailResult(
-          `Sent ${res.sent} test email(s) from ${res.from_email}. Check inbox and spam.`,
+          t('Sent {count} test email(s) from {from}. Check inbox and spam.', { count: res.sent, from: res.from_email }),
         );
       } else {
-        const err = res.results?.find((r) => r.error)?.error ?? 'Send failed';
-        setTestEmailResult(`Failed: ${err}`);
+        const err = res.results?.find((r) => r.error)?.error ?? t('Send failed');
+        setTestEmailResult(t('Failed: {error}', { error: err }));
       }
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
     },
-    onError: (err) => setTestEmailResult(`Failed: ${err.message}`),
+    onError: (err) => setTestEmailResult(t('Failed: {error}', { error: err.message })),
   });
 
   const testPush = useMutation({
@@ -87,16 +89,16 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
     onSuccess: (res) => {
       setTestPushResult(
         res.ok
-          ? `Push sent to ${selectedWorker?.name ?? 'worker'}.`
-          : `Failed: ${res.error ?? 'Unknown error'}`,
+          ? t('Push sent to {name}.', { name: selectedWorker?.name ?? t('worker') })
+          : t('Failed: {error}', { error: res.error ?? t('Unknown error') }),
       );
       queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
     },
-    onError: (err) => setTestPushResult(`Failed: ${err.message}`),
+    onError: (err) => setTestPushResult(t('Failed: {error}', { error: err.message })),
   });
 
   if (!draft) {
-    return <p className="text-sm text-muted">Loading mobile settings…</p>;
+    return <p className="text-sm text-muted">{t('Loading mobile settings…')}</p>;
   }
 
   const update = (patch: Partial<AlertSettings>) => {
@@ -114,26 +116,26 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   if (draft.mobile_enabled && !draft.mobile_configured) tone = 'warn';
 
   const statusTitle = !draft.mobile_enabled
-    ? 'Mobile alerts are off'
+    ? t('Mobile alerts are off')
     : draft.mobile_configured
-      ? 'Mobile alerts are on'
-      : 'Mobile alerts on (simulation)';
+      ? t('Mobile alerts are on')
+      : t('Mobile alerts on (simulation)');
 
   const statusSub = draft.mobile_enabled
-    ? 'Shift reminders and machine stop/start go to workers on the app.'
-    : 'Turn on to send reminders and machine alerts to the mobile app.';
+    ? t('Shift reminders and machine stop/start go to workers on the app.')
+    : t('Turn on to send reminders and machine alerts to the mobile app.');
 
   // Owner phone fields, in the Add phone sheet (Add also closes it).
   const ownerFields = (
     <>
       <Input
-        placeholder="Name"
+        placeholder={t('Name')}
         className="min-w-[100px] flex-1"
         value={newContact.name}
         onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
       />
       <Input
-        placeholder="+91 phone"
+        placeholder={t('+91 phone')}
         className="min-w-[120px] flex-1"
         value={newContact.phone}
         onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
@@ -148,7 +150,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
           setAddingPhone(false);
         }}
       >
-        Add
+        {t('Add')}
       </Button>
     </>
   );
@@ -159,17 +161,15 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
 
       <div className="space-y-2 px-1 text-sm text-muted">
         <p>
-          Board offline emails go to the same list as{' '}
-          <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
-            Shift reports
-          </Link>
-          {settings?.board_email_from ? (
+          {t('Board offline emails go to the same people as the shift reports.')}{' '}
+          {settings?.board_email_from && (
             <>
-              , from <span className="font-mono text-foreground">{settings.board_email_from}</span>.
+              {t('Sender:')} <span className="font-mono text-foreground">{settings.board_email_from}</span>.{' '}
             </>
-          ) : (
-            '.'
           )}
+          <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
+            {t('Shift reports')} →
+          </Link>
         </p>
         {settings?.board_email_configured ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -182,32 +182,32 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                 testBoardEmail.mutate();
               }}
             >
-              {testBoardEmail.isPending ? 'Sending…' : 'Send test board alert email'}
+              {testBoardEmail.isPending ? t('Sending…') : t('Send test board alert email')}
             </Button>
             {testEmailResult && <p className="text-xs">{testEmailResult}</p>}
           </div>
         ) : (
-          <p className="text-xs text-amber-700">Board email is not configured on the server yet.</p>
+          <p className="text-xs text-amber-700">{t('Board email is not configured on the server yet.')}</p>
         )}
       </div>
 
-      <ListGroup title="Settings">
+      <ListGroup title={t('Settings')}>
         <SettingRow
-          label="Mobile alerts"
-          hint="Master switch for this factory"
+          label={t('Mobile alerts')}
+          hint={t('Master switch for this factory')}
           checked={draft.mobile_enabled}
           onChange={(v) => update({ mobile_enabled: v })}
         />
         <SettingRow
-          label="Notify owners when a machine stops or starts"
-          hint="Uses the phone numbers below"
+          label={t('Notify owners when a machine stops or starts')}
+          hint={t('Uses the phone numbers below')}
           checked={draft.notify_owner_on_down}
           onChange={(v) => update({ notify_owner_on_down: v })}
         />
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
           <div>
-            <p className="font-medium text-foreground">Reminder before shift</p>
-            <p className="text-sm text-muted">Minutes before shift start</p>
+            <p className="font-medium text-foreground">{t('Reminder before shift')}</p>
+            <p className="text-sm text-muted">{t('Minutes before shift start')}</p>
           </div>
           <Input
             type="number"
@@ -221,14 +221,14 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         </div>
       </ListGroup>
 
-      <ListGroup title="Owner phones" count={draft.owner_contacts.length}>
+      <ListGroup title={t('Owner phones')} count={draft.owner_contacts.length}>
         {draft.owner_contacts.length === 0 ? (
-          <ListEmpty>Add a number to get owner alerts when machines stop.</ListEmpty>
+          <ListEmpty>{t('Add a number to get owner alerts when machines stop.')}</ListEmpty>
         ) : (
           draft.owner_contacts.map((c, i) => (
             <ListRow
               key={`${c.phone}-${i}`}
-              title={c.name || 'Owner'}
+              title={c.name || t('Owner')}
               detail={
                 <>
                   {c.phone}
@@ -237,7 +237,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                     className="ml-2 text-xs font-medium text-red-600 hover:underline"
                     onClick={() => update({ owner_contacts: draft.owner_contacts.filter((_, j) => j !== i) })}
                   >
-                    Remove
+                    {t('Remove')}
                   </button>
                 </>
               }
@@ -246,26 +246,26 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         )}
         <div className="border-t border-gray-100 px-4 py-3">
           <Button variant="secondary" size="sm" onClick={() => setAddingPhone(true)}>
-            + Add phone
+            + {t('Add phone')}
           </Button>
         </div>
         {addingPhone && (
-          <Sheet title="Add owner phone" onClose={() => setAddingPhone(false)}>
+          <Sheet title={t('Add owner phone')} onClose={() => setAddingPhone(false)}>
             <div className="flex flex-col gap-3">{ownerFields}</div>
           </Sheet>
         )}
       </ListGroup>
 
       <details className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-100">
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">Test alerts</summary>
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">{t('Test alerts')}</summary>
         <div className="mt-3 space-y-4 border-t border-gray-100 pt-3 text-sm">
           {!draft.alertops_configured ? (
-            <p className="text-muted">Test push needs the mobile app bridge on the server.</p>
+            <p className="text-muted">{t('Test push needs the mobile app bridge on the server.')}</p>
           ) : workers.length === 0 ? (
-            <p className="text-muted">Add workers on Team first.</p>
+            <p className="text-muted">{t('Add workers on Team first.')}</p>
           ) : (
             <div className="space-y-2">
-              <p className="text-muted">Send one test push to a worker.</p>
+              <p className="text-muted">{t('Send one test push to a worker.')}</p>
               <div className="flex flex-wrap gap-2">
                 <Select
                   className="min-w-[200px] flex-1"
@@ -275,7 +275,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                     setTestPushResult(null);
                   }}
                 >
-                  <option value="">Choose worker…</option>
+                  <option value="">{t('Choose worker…')}</option>
                   {workers.map((w) => (
                     <option key={w.worker_id} value={w.worker_id}>
                       {w.name}
@@ -290,17 +290,17 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                     testPush.mutate();
                   }}
                 >
-                  {testPush.isPending ? 'Sending…' : 'Send push'}
+                  {testPush.isPending ? t('Sending…') : t('Send push')}
                 </Button>
               </div>
               {testPushResult && <p className="text-xs text-muted">{testPushResult}</p>}
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-muted">Legacy phone test (WhatsApp if configured).</p>
+            <p className="text-muted">{t('Legacy phone test (WhatsApp if configured).')}</p>
             <div className="flex flex-wrap gap-2">
               <Input
-                placeholder="Phone number"
+                placeholder={t('Phone number')}
                 className="min-w-[160px] flex-1"
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
@@ -313,7 +313,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                   test.mutate();
                 }}
               >
-                {test.isPending ? 'Sending…' : 'Send test'}
+                {test.isPending ? t('Sending…') : t('Send test')}
               </Button>
             </div>
             {testResult && <p className="text-xs text-muted">{testResult}</p>}

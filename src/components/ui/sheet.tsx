@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,6 +26,7 @@ export function Sheet({
   size?: 'md' | 'lg';
   children: React.ReactNode;
 }) {
+  const { t } = useT();
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;
@@ -45,7 +47,7 @@ export function Sheet({
       aria-modal="true"
       aria-label={title}
     >
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
+      <button type="button" aria-label={t('Close')} className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
       <div
         className={cn(
           'relative flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl',
@@ -56,7 +58,7 @@ export function Sheet({
           <p className="min-w-0 truncate text-sm font-semibold sm:text-base">{title}</p>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t('Close')}
             onClick={onClose}
             className="-mr-2 rounded-lg p-2 text-muted hover:bg-slate-100 hover:text-foreground"
           >

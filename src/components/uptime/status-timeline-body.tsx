@@ -8,6 +8,10 @@ import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { UPTIME_TIMELINE_HOURS } from '@/lib/date-range';
+import { formatDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import type { Locale } from '@/lib/i18n/locale';
+import type { Translate } from '@/lib/i18n/translate';
 import { filterMachinesByScope, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { runningShare } from '@/lib/plain-words';
@@ -20,19 +24,12 @@ const UPTIME_DETAIL_HOURS = 2;
 /** Same bar height for 24h overview and 2h detail strips. */
 const STATUS_TIMELINE_CHART_HEIGHT = 36;
 
-function shortTime(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 function buildSegmentDetails(
   segment: UptimeSegment,
   reports: DowntimeReport[],
   selection: ConfigSelection | undefined,
+  t: Translate,
+  locale: Locale,
 ): SegmentDetail[] {
   const details: SegmentDetail[] = [];
   const segFrom = new Date(segment.from).getTime();
@@ -45,22 +42,26 @@ function buildSegmentDetails(
       return since < segTo && until > segFrom;
     });
     if (report?.reason_label) {
-      details.push({ label: 'Reason', value: report.reason_label });
+      details.push({ label: t('Reason'), value: report.reason_label });
       if (report.reported_by_name) {
         details.push({
-          label: 'Told by',
-          value: `${report.reported_by_name} via ${formatAlertVia(report.reported_via)}`,
+          label: t('Told by'),
+          value: t('{name} via {via}', { name: report.reported_by_name, via: t(formatAlertVia(report.reported_via)) }),
         });
       }
     } else if (report) {
-      details.push({ label: 'Reason', value: 'Waiting for the worker to give a reason' });
+      details.push({ label: t('Reason'), value: t('Waiting for the worker to give a reason') });
     }
   } else if (selection && new Date(selection.effective_from).getTime() <= segTo) {
-    details.push({ label: 'Setting', value: selection.profile_name ?? selection.profile_id });
+    details.push({ label: t('Setting'), value: selection.profile_name ?? selection.profile_id });
     if (selection.selected_by_name) {
       details.push({
-        label: 'Chosen by',
-        value: `${selection.selected_by_name} via ${formatAlertVia(selection.selected_via)} · ${shortTime(selection.effective_from)}`,
+        label: t('Chosen by'),
+        value: t('{name} via {via} · {time}', {
+          name: selection.selected_by_name,
+          via: t(formatAlertVia(selection.selected_via)),
+          time: formatDateTime(selection.effective_from, locale),
+        }),
       });
     }
   }
@@ -69,9 +70,10 @@ function buildSegmentDetails(
 
 export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
+  const { t, locale } = useT();
   const refetchInterval = useRefetchInterval(STATUS_TIMELINE_REFRESH_MS);
 
-  const timelineWindowLabel = `${UPTIME_TIMELINE_HOURS} hours`;
+  const timelineWindowLabel = t('{n} hours', { n: UPTIME_TIMELINE_HOURS });
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
@@ -117,12 +119,12 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     filterMachinesByScope(data.machines, { machineId, lineId }),
   );
 
-  const detailLabel = `${UPTIME_DETAIL_HOURS} hours`;
+  const detailLabel = t('{n} hours', { n: UPTIME_DETAIL_HOURS });
 
   function machineSubtitle(operatorNames: string, liveSince: string | null | undefined, currentStatus: string) {
     const parts: string[] = [];
-    if (operatorNames) parts.push(`Worker: ${operatorNames}`);
-    if (liveSince) parts.push(`${statusLabel(currentStatus)} since ${shortTime(liveSince)}`);
+    if (operatorNames) parts.push(t('Worker: {names}', { names: operatorNames }));
+    if (liveSince) parts.push(t('{status} since {time}', { status: t(statusLabel(currentStatus)), time: formatDateTime(liveSince, locale) }));
     return parts.length > 0 ? parts.join(' · ') : undefined;
   }
 
@@ -130,44 +132,44 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
     <div className="space-y-6">
       <Card>
         <CardHeader
-          title="What each machine did"
-          description={`Last 24 hours, and the last ${UPTIME_DETAIL_HOURS} hours up close`}
+          title={t('What each machine did')}
+          description={t('Last 24 hours, and the last {n} hours up close', { n: UPTIME_DETAIL_HOURS })}
         />
         {data.meta?.requires_filter && (
           <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            {data.meta.message ?? 'Too many machines to show at once. Pick a line or a machine above.'}
+            {data.meta.message ?? t('Too many machines to show at once. Pick a line or a machine above.')}
           </p>
         )}
         <div className="flex flex-wrap items-center gap-6 text-xs text-muted">
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded-sm bg-emerald-400" />
-            Running
+            {t('Running')}
           </span>
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded-sm bg-red-400" />
-            Stopped
+            {t('Stopped')}
           </span>
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded-sm bg-gray-300" />
-            No signal
+            {t('No signal')}
           </span>
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded-sm border border-slate-300 bg-white" />
-            No data
+            {t('No data')}
           </span>
           <span className="flex items-center gap-2">
             <span className="relative inline-block h-3 w-3">
               <span className="absolute left-1/2 top-0 h-3 w-0.5 -translate-x-1/2 bg-slate-900" />
               <span className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full border border-white bg-red-600" />
             </span>
-            Power cut
+            {t('Power cut')}
           </span>
         </div>
       </Card>
 
       {displayRows.length === 0 && (
         <Card>
-          <p className="py-8 text-center text-sm text-muted">Nothing to show yet</p>
+          <p className="py-8 text-center text-sm text-muted">{t('Nothing to show yet')}</p>
         </Card>
       )}
 
@@ -198,14 +200,14 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               action={
                 <div className="flex flex-wrap items-center gap-3">
                   <MachineStatusBadge status={currentStatus} />
-                  {runningShare(m.availability_percent) && (
-                    <span className="text-sm font-medium tabular-nums">{runningShare(m.availability_percent)}</span>
+                  {runningShare(m.availability_percent, t) && (
+                    <span className="text-sm font-medium tabular-nums">{runningShare(m.availability_percent, t)}</span>
                   )}
                 </div>
               }
             />
             <p className="mb-1 text-xs font-medium text-muted">
-              Last 24 hours
+              {t('Last 24 hours')}
             </p>
             <UptimeTimeSeriesChart
               segments={m.timeline}
@@ -213,11 +215,11 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowTo={overviewTo}
               windowLabel={timelineWindowLabel}
               height={STATUS_TIMELINE_CHART_HEIGHT}
-              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection, t, locale)}
               powerCuts={m.power_cuts}
             />
             <p className="mb-1 mt-4 text-xs font-medium text-muted">
-              Last {UPTIME_DETAIL_HOURS} hours
+              {t('Last {n} hours', { n: UPTIME_DETAIL_HOURS })}
             </p>
             <UptimeTimeSeriesChart
               segments={detailTimeline}
@@ -225,7 +227,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
               windowTo={detailTo}
               windowLabel={detailLabel}
               height={STATUS_TIMELINE_CHART_HEIGHT}
-              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection)}
+              segmentDetails={(segment) => buildSegmentDetails(segment, machineReports, selection, t, locale)}
               powerCuts={m.power_cuts}
             />
           </Card>

@@ -8,8 +8,10 @@ import { SignOutButton } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { tabIcon } from '@/components/layout/factory-sidebar';
+import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
+import { useT } from '@/lib/i18n/context';
 import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -39,6 +41,7 @@ export function FactoryMobileNav({
   const pathname = usePathname();
   const navigate = useNavigate();
   const { canWriteFactory } = useAuth();
+  const { t } = useT();
   const tabs = tabsFor(allTabs, canWriteFactory);
   // Both belong to the page they were set on, so arriving on another page clears them.
   const [pending, setPending] = useState<{ href: string; on: string } | null>(null);
@@ -81,7 +84,7 @@ export function FactoryMobileNav({
         </div>
         <button
           type="button"
-          aria-label="Menu"
+          aria-label={t('Menu')}
           aria-haspopup="dialog"
           onClick={() => setMenuOpen(true)}
           className="-mr-2 rounded-lg p-2 text-muted hover:bg-slate-100 hover:text-foreground"
@@ -91,7 +94,7 @@ export function FactoryMobileNav({
       </header>
 
       <nav
-        aria-label="Main pages"
+        aria-label={t('Main pages')}
         className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         <ul className="flex">
@@ -100,14 +103,14 @@ export function FactoryMobileNav({
             const active = current === tab.href;
             return (
               <li key={tab.href} className="min-w-0 flex-1">
-                <BarButton active={active} onClick={() => go(tab.href)} label={shortLabel(tab)}>
+                <BarButton active={active} onClick={() => go(tab.href)} label={t(shortLabel(tab))}>
                   <Icon className="h-5 w-5" />
                 </BarButton>
               </li>
             );
           })}
           <li className="min-w-0 flex-1">
-            <BarButton active={!onBar} onClick={() => setMenuOpen(true)} label="More" popup>
+            <BarButton active={!onBar} onClick={() => setMenuOpen(true)} label={t('More')} popup>
               <MoreHorizontal className="h-5 w-5" />
             </BarButton>
           </li>
@@ -115,10 +118,10 @@ export function FactoryMobileNav({
       </nav>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t('Menu')}>
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={t('Close menu')}
             className="absolute inset-0 bg-slate-900/40"
             onClick={() => setMenuOpen(false)}
           />
@@ -127,7 +130,7 @@ export function FactoryMobileNav({
               <p className="truncate text-sm font-semibold">{factoryName}</p>
               <button
                 type="button"
-                aria-label="Close"
+                aria-label={t('Close')}
                 onClick={() => setMenuOpen(false)}
                 className="-mr-2 rounded-lg p-2 text-muted hover:bg-slate-100 hover:text-foreground"
               >
@@ -151,7 +154,7 @@ export function FactoryMobileNav({
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="leading-tight">{tab.label}</span>
+                      <span className="leading-tight">{t(tab.label)}</span>
                     </button>
                   </li>
                 );
@@ -160,11 +163,11 @@ export function FactoryMobileNav({
 
             {shifts.length > 0 && (
               <div className="border-t px-4 py-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Shifts</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{t('Shifts')}</p>
                 <ul className="space-y-1 text-sm">
                   {shifts.map((s) => (
                     <li key={s.shift_id} className="flex justify-between gap-2">
-                      <span>{s.name}</span>
+                      <span>{t(s.name)}</span>
                       <span className="text-muted">{s.label}</span>
                     </li>
                   ))}
@@ -172,6 +175,10 @@ export function FactoryMobileNav({
               </div>
             )}
 
+            <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
+              <span className="text-xs text-muted">{t('Language')}</span>
+              <LanguageToggle />
+            </div>
             <div className="flex items-center justify-between border-t px-4 py-4">
               <FactoryPlatformBack factoryId={factoryId} />
               <SignOutButton factoryId={factoryId} />

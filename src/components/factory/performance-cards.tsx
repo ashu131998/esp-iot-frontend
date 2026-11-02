@@ -4,6 +4,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -17,6 +18,7 @@ const PERFORMANCE_REFRESH_MS = 60_000;
 const PERFORMANCE_REFRESH_SEC = 60;
 
 export function PerformanceCards({ factoryId }: { factoryId: string }) {
+  const { t, locale } = useT();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
@@ -40,9 +42,9 @@ export function PerformanceCards({ factoryId }: { factoryId: string }) {
 
   return (
     <StatCard
-      label="Avg Performance (OEE-like)"
-      value={formatPercent(avgPerformance)}
-      sub="Availability × throughput vs target"
+      label={t('Avg Performance (OEE-like)')}
+      value={formatPercent(avgPerformance, locale)}
+      sub={t('Availability × throughput vs target')}
     />
   );
 }

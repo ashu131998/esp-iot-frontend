@@ -12,6 +12,7 @@ import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -33,6 +34,7 @@ export function AvailabilityMachineTable({
   to?: string;
 }) {
   const { minDate, shifts } = useFactoryRefs();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -87,18 +89,18 @@ export function AvailabilityMachineTable({
   return (
     <Card>
       <CardHeader
-        title="Machine Availability"
+        title={t('Machine Availability')}
         action={
           <ExportCsvButton
             filename="machine-availability"
-            headers={['Machine', 'Line', 'Uptime (min)', 'Downtime (min)', 'Availability', 'Current Status']}
+            headers={[t('Machine'), t('Line'), t('Uptime (min)'), t('Downtime (min)'), t('Availability'), t('Current Status')]}
             rows={displayMachines.map((m) => [
               m.machine_name,
               m.line_id,
               m.uptime_minutes,
               m.downtime_minutes,
               m.availability_percent,
-              statusLabel(uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data'),
+              t(statusLabel(uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data')),
             ])}
           />
         }
@@ -106,13 +108,13 @@ export function AvailabilityMachineTable({
       <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Uptime</TH>
-            <TH>Downtime</TH>
-            <TH>Availability</TH>
-            <TH className={PHONE_HIDDEN}>Last 24h</TH>
-            <TH>Current Status</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Uptime')}</TH>
+            <TH>{t('Downtime')}</TH>
+            <TH>{t('Availability')}</TH>
+            <TH className={PHONE_HIDDEN}>{t('Last 24h')}</TH>
+            <TH>{t('Current Status')}</TH>
           </TR>
         </THead>
         <TBody>
@@ -120,9 +122,9 @@ export function AvailabilityMachineTable({
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
               <TD>{m.line_id}</TD>
-              <TD>{humanMinutes(m.uptime_minutes)}</TD>
-              <TD>{humanMinutes(m.downtime_minutes)}</TD>
-              <TD>{formatPercent(m.availability_percent)}</TD>
+              <TD>{humanMinutes(m.uptime_minutes, t)}</TD>
+              <TD>{humanMinutes(m.downtime_minutes, t)}</TD>
+              <TD>{formatPercent(m.availability_percent, locale)}</TD>
               <TD className={PHONE_HIDDEN}>
                 {(uptimeRowsByMachine[m.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">

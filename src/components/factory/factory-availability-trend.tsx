@@ -2,11 +2,13 @@
 
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { endOfDay, format, isToday, parseISO, startOfDay } from 'date-fns';
+import { endOfDay, isToday, parseISO, startOfDay } from 'date-fns';
 
 import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/charts/apex';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { dayKeyToDate, formatDayMonth, formatTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { formatNumber } from '@/lib/utils';
 
@@ -19,6 +21,7 @@ export function FactoryAvailabilityTrend({
   from?: string;
   to?: string;
 }) {
+  const { t, locale } = useT();
   // Truncate to the current minute so the query key (and toIso) stays stable
   // across Suspense remounts — millisecond differences would otherwise bust the
   // cache and fire a new request on every render cycle.
@@ -53,11 +56,11 @@ export function FactoryAvailabilityTrend({
       data.days.map((d) => ({
         // d.date is an IST-day ISO (…+05:30); format from the day key so the
         // label is the IST calendar day regardless of the viewer's timezone.
-        date:         new Date(`${d.date.slice(0, 10)}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date:         formatDayMonth(dayKeyToDate(d.date.slice(0, 10)), locale),
         availability: d.availability_percent,
         is_live:      d.is_live ?? false,
       })),
-    [data],
+    [data, locale],
   );
 
   const options = useMemo<ApexOptions>(() => ({
@@ -85,39 +88,46 @@ export function FactoryAvailabilityTrend({
     yaxis: {
       min: 0,
       max: 100,
-      title: { text: 'Availability %', style: { fontWeight: 500 } },
+      title: { text: t('Availability %'), style: { fontWeight: 500 } },
     },
     tooltip: {
       ...baseChartOptions.tooltip,
       custom: ({ dataPointIndex }) => {
         const d = chartData[dataPointIndex];
+        const dateLine = d.is_live
+          ? t('Date: {date} (live)', { date: d.date })
+          : t('Date: {date}', { date: d.date });
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
-          <p class="font-medium">Date: ${d.date}${d.is_live ? ' (live)' : ''}</p>
-          <p style="color:#10b981">Availability: ${formatNumber(d.availability, 1)}%</p>
+          <p class="font-medium">${dateLine}</p>
+          <p style="color:#10b981">${t('Availability: {pct}%', { pct: formatNumber(d.availability, 1, locale) })}</p>
         </div>`;
       },
     },
-  }), [chartData]);
+  }), [chartData, t, locale]);
 
   const hasLive = chartData.some((d) => d.is_live);
 
   const timeRangeDescription = hasLive
-    ? `Average machine availability per day · through ${format(now, 'h:mm a')} today`
-    : 'Average machine availability per day';
+    ? t('Average machine availability per day · through {time} today.', { time: formatTime(now, locale) })
+    : t('Average machine availability per day.');
 
   return (
     <Card>
       <CardHeader
-        title="Factory Availability Trend"
-        description={`${timeRangeDescription}.${hasLive ? " Orange dots = today's shift (still in progress)." : ''}`}
+        title={t('Factory Availability Trend')}
+        description={
+          hasLive
+            ? `${timeRangeDescription} ${t("Orange dots = today's shift (still in progress).")}`
+            : timeRangeDescription
+        }
       />
       {chartData.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-muted">
-          No data available for the selected period.
+          {t('No data available for the selected period.')}
         </p>
       ) : (
         <div className="px-6 pb-6">
-          <ApexChart type="line" series={[{ name: 'Availability %', data: chartData.map((d) => d.availability) }]} options={options} height={300} />
+          <ApexChart type="line" series={[{ name: t('Availability %'), data: chartData.map((d) => d.availability) }]} options={options} height={300} />
         </div>
       )}
     </Card>

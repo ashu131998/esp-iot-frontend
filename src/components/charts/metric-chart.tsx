@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { formatDateTime, formatFullDateTimeSeconds, formatTimeWithSeconds, formatUpTo } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import type { Locale } from '@/lib/i18n/locale';
+import { englishTranslator, type Translate } from '@/lib/i18n/translate';
 import { knownNumber, normalizeMachineStatus, statusLabel } from '@/lib/utils';
 import { ApexChart, baseChartOptions, formatAxisTick, type ApexOptions } from './apex';
 import { placeMarks, placeSegments } from '@/lib/timeline-layout';
@@ -26,6 +30,7 @@ function barOptions(
   stacked: boolean,
   xLabelRotate = 0,
   showAllXLabels = false,
+  locale: Locale = 'en',
 ): ApexOptions {
   const manyCategories = data.length > 8;
   const rotate = xLabelRotate || (manyCategories ? -45 : 0);
@@ -55,11 +60,11 @@ function barOptions(
       axisTicks: { show: false },
     },
     yaxis: {
-      labels: { style: { fontSize: '11px' }, formatter: (v) => formatAxisTick(v) },
+      labels: { style: { fontSize: '11px' }, formatter: (v) => formatAxisTick(v, locale) },
     },
     tooltip: {
       ...baseChartOptions.tooltip,
-      y: { formatter: (v) => (knownNumber(v) === null ? '—' : Number(v).toLocaleString()) },
+      y: { formatter: (v) => (knownNumber(v) === null ? '—' : formatUpTo(Number(v), 2, locale)) },
     },
   };
 }
@@ -71,8 +76,9 @@ export function MetricBarChart({
   xLabelRotate,
   showAllXLabels,
 }: MetricBarChartProps) {
+  const { t, locale } = useT();
   if (data.length === 0) {
-    return <p className="py-12 text-center text-sm text-muted">No chart data available</p>;
+    return <p className="py-12 text-center text-sm text-muted">{t('No chart data available')}</p>;
   }
 
   const series = bars.map((bar) => ({
@@ -86,7 +92,7 @@ export function MetricBarChart({
     <ApexChart
       type="bar"
       series={series}
-      options={barOptions(data, bars, false, xLabelRotate, showAllXLabels)}
+      options={barOptions(data, bars, false, xLabelRotate, showAllXLabels, locale)}
       height={chartHeight}
     />
   );
@@ -99,8 +105,9 @@ interface StackedBarChartProps {
 }
 
 export function StackedBarChart({ data, keys, height = 320 }: StackedBarChartProps) {
+  const { t, locale } = useT();
   if (data.length === 0) {
-    return <p className="py-12 text-center text-sm text-muted">No chart data available</p>;
+    return <p className="py-12 text-center text-sm text-muted">{t('No chart data available')}</p>;
   }
 
   const series = keys.map((k) => ({
@@ -108,7 +115,7 @@ export function StackedBarChart({ data, keys, height = 320 }: StackedBarChartPro
     data: data.map((row) => Number(row[k.key]) || 0),
   }));
 
-  return <ApexChart type="bar" series={series} options={barOptions(data, keys, true)} height={height} />;
+  return <ApexChart type="bar" series={series} options={barOptions(data, keys, true, 0, false, locale)} height={height} />;
 }
 
 const UPTIME_UP_COLOR = '#10b981';
@@ -128,8 +135,8 @@ function uptimeColor(status: UptimeStatus): string {
   }
 }
 
-function uptimeChartLabel(status: UptimeStatus): string {
-  return statusLabel(status);
+function uptimeChartLabel(status: UptimeStatus, t: Translate = englishTranslator.t): string {
+  return t(statusLabel(status));
 }
 
 export interface UptimeSegmentPoint {
@@ -139,35 +146,14 @@ export interface UptimeSegmentPoint {
   status: UptimeStatus;
 }
 
-function formatDuration(seconds: number): string {
+function formatDuration(seconds: number, t: Translate): string {
   const total = Math.round(seconds);
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
-function formatAxisStart(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (h > 0) return t('{h}h {m}m', { h, m });
+  if (m > 0) return t('{m}m {s}s', { m, s });
+  return t('{s}s', { s });
 }
 
 function isLiveWindowEnd(iso: string): boolean {
@@ -207,24 +193,25 @@ function UptimeSegmentTooltip({
   details?: SegmentDetail[];
   ongoing?: boolean;
 }) {
+  const { t, locale } = useT();
   return (
     <div className="pointer-events-none z-20 min-w-[240px] rounded-md border bg-white px-3 py-2.5 text-xs shadow-md">
       <p
         className="mb-2 font-semibold"
         style={{ color: uptimeColor(segment.status) }}
       >
-        {uptimeChartLabel(segment.status)} · {formatDuration(segment.duration_seconds)}
-        {ongoing ? ' · ongoing' : ''}
+        {uptimeChartLabel(segment.status, t)} · {formatDuration(segment.duration_seconds, t)}
+        {ongoing ? ` · ${t('ongoing')}` : ''}
       </p>
       <dl className="space-y-1.5 text-muted">
         <div>
-          <dt className="text-[10px] font-medium uppercase tracking-wide">From</dt>
-          <dd className="font-mono text-[11px] text-foreground">{formatTimestamp(segment.from)}</dd>
+          <dt className="text-[10px] font-medium uppercase tracking-wide">{t('From')}</dt>
+          <dd className="font-mono text-[11px] text-foreground">{formatFullDateTimeSeconds(segment.from, locale)}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-medium uppercase tracking-wide">To</dt>
+          <dt className="text-[10px] font-medium uppercase tracking-wide">{t('To')}</dt>
           <dd className="font-mono text-[11px] text-foreground">
-            {ongoing ? 'Now (updates each refresh)' : formatTimestamp(segment.to)}
+            {ongoing ? t('Now (updates each refresh)') : formatFullDateTimeSeconds(segment.to, locale)}
           </dd>
         </div>
         {(details ?? []).map((d) => (
@@ -264,25 +251,25 @@ export function UptimeTimeSeriesChart({
 }) {
   // index: position among the drawn segments; last: the newest segment of the data.
   const [hover, setHover] = useState<{ segment: UptimeSegmentPoint; index: number; last: boolean } | null>(null);
+  const { t, locale } = useT();
 
   if (segments.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
+    return <p className="py-8 text-center text-sm text-muted">{t('No uptime data available')}</p>;
   }
 
   const filled = normalizeTimelineSegments(segments, windowTo);
   const liveEnd = isLiveWindowEnd(windowTo);
-  const axisStart = formatAxisStart(windowFrom);
-  const axisEnd = liveEnd ? 'Now' : formatAxisStart(windowTo);
+  const axisStart = formatDateTime(windowFrom, locale);
+  const axisEnd = liveEnd ? t('Now') : formatDateTime(windowTo, locale);
+  const periodLabel = windowLabel ?? t('selected period');
 
   // Each segment at its real time in the window (lib/timeline-layout.ts); time
   // without data stays empty. Absolute layout (left/width in %) avoids the
   // sub-pixel white seams a flex row of many thin segments produces.
   const placed = placeSegments(filled, windowFrom, windowTo);
   const cuts = placeMarks(powerCuts, windowFrom, windowTo);
-  const cutTitle = (from: string, to: string) => {
-    const t = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-    return `Power cut: ${t(from)} – ${t(to)}`;
-  };
+  const cutTitle = (from: string, to: string) =>
+    t('Power cut: {from} – {to}', { from: formatTimeWithSeconds(from, locale), to: formatTimeWithSeconds(to, locale) });
 
   const hoverCenterPct = hover
     ? (placed[hover.index]?.leftPct ?? 0) + (placed[hover.index]?.widthPct ?? 0) / 2
@@ -317,7 +304,7 @@ export function UptimeTimeSeriesChart({
           className="relative w-full overflow-hidden rounded-md border border-slate-200"
           style={{ height, minHeight: height }}
           role="img"
-          aria-label={`Machine status timeline for ${windowLabel ?? 'selected period'}`}
+          aria-label={t('Machine status timeline for {period}', { period: periodLabel })}
         >
           {placed.map(({ segment, index, leftPct, widthPct }, i) => {
             // Every segment overlaps its neighbors by ~1px on both sides so
@@ -355,7 +342,7 @@ export function UptimeTimeSeriesChart({
       </div>
       <div className="grid grid-cols-3 items-center text-[10px] text-muted tabular-nums">
         <span className="truncate pr-2">{axisStart}</span>
-        <span className="truncate text-center">{windowLabel ?? 'selected period'}</span>
+        <span className="truncate text-center">{periodLabel}</span>
         <span className="truncate pl-2 text-right">{axisEnd}</span>
       </div>
     </div>
@@ -378,11 +365,12 @@ export function UptimeTimelineChart({
   data: UptimePoint[];
   height?: number;
 }) {
+  const { t } = useT();
   if (data.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted">No uptime data available</p>;
+    return <p className="py-8 text-center text-sm text-muted">{t('No uptime data available')}</p>;
   }
 
-  const series = [{ name: 'Status', data: data.map(() => 1) }];
+  const series = [{ name: t('Status'), data: data.map(() => 1) }];
   const colors = data.map((d) => uptimeColor(d.status));
 
   const options: ApexOptions = {
@@ -409,7 +397,7 @@ export function UptimeTimelineChart({
         const color = uptimeColor(point.status);
         return `<div class="rounded-md border bg-white px-3 py-2 text-xs shadow-sm">
           <p class="font-medium">${point.label}</p>
-          <p style="color:${color}">${uptimeChartLabel(point.status)}</p>
+          <p style="color:${color}">${uptimeChartLabel(point.status, t)}</p>
         </div>`;
       },
     },

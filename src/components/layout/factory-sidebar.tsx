@@ -27,6 +27,7 @@ import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
+import { useT } from '@/lib/i18n/context';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -75,6 +76,7 @@ export function FactorySidebar({
   const pathname = usePathname();
   const navigate = useNavigate();
   const { canWriteFactory } = useAuth();
+  const { t } = useT();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,11 +101,11 @@ export function FactorySidebar({
       </div>
 
       <div className="border-b border-white/10 px-5 py-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Shifts</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{t('Shifts')}</p>
         <ul className="space-y-1.5 text-xs text-slate-300">
           {shifts.map((s) => (
             <li key={s.shift_id} className="flex justify-between gap-2">
-              <span>{s.name}</span>
+              <span>{t(s.name)}</span>
               <span className="text-slate-500">{s.label}</span>
             </li>
           ))}
@@ -130,7 +132,7 @@ export function FactorySidebar({
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  {tab.label}
+                  {t(tab.label)}
                 </button>
               </li>
             );

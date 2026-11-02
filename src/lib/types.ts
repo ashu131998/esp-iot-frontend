@@ -268,6 +268,8 @@ export interface SensorBinding {
   machine_id: string;
   line_id?: string | null;
   on_threshold_a?: number | null;
+  /** Below this many amps the machine is switched off; between it and on_threshold_a it idles (calibration). */
+  off_below_a?: number | null;
   enabled: boolean;
   sort_order?: number;
 }
@@ -614,4 +616,119 @@ export interface CreateConfigurationInput {
   value: string | number;
   unit?: string;
   description?: string;
+}
+
+// ── Calibration from the dashboard (lib/calibration.ts, components/factory/calibration-wizard.tsx) ──
+
+export interface CalibrationBoard {
+  board_id: string;
+  fw: string | null;
+  /** Firmware 2.6+ takes a threshold per channel; before that one threshold serves the whole board. */
+  per_channel_thresholds: boolean;
+  online: boolean | null;
+  /** Set up from the dashboard's Boards page (its settings are known), so a threshold can be sent to it. */
+  managed: boolean;
+}
+
+export interface CalibrationCurrentBinding {
+  binding_id: string;
+  device_id: string;
+  channel_slot: string;
+  label: string;
+  on_threshold_a: number | null;
+  off_below_a: number | null;
+  board: CalibrationBoard | null;
+}
+
+export interface CalibrationCycleBinding {
+  binding_id: string;
+  device_id: string;
+  channel_slot: string;
+  label: string;
+  field: 'count' | 'rotations';
+}
+
+export interface MachineTypeDefaults {
+  type: string;
+  on_threshold_a: number | null;
+  off_below_a: number | null;
+  rotations_per_unit: number | null;
+  unit_label: string | null;
+  updated_at: string;
+}
+
+export interface CalibrationRecord {
+  calibration_id: string;
+  kind: 'current' | 'count';
+  created_at: string;
+  created_by: string | null;
+  measured: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
+export interface CalibrationContext {
+  machine: { machine_id: string; name: string; type: string | null; rotations_per_unit: number; unit_label: string | null };
+  current_bindings: CalibrationCurrentBinding[];
+  cycle_bindings: CalibrationCycleBinding[];
+  type_defaults: MachineTypeDefaults | null;
+  machines_of_type: number;
+  recent: CalibrationRecord[];
+}
+
+export interface CalibrationWindow {
+  occurred_at: string;
+  amps: number | null;
+  amps_min: number | null;
+  amps_max: number | null;
+  samples: number | null;
+  window_s: number | null;
+}
+
+export interface CurrentSamplesResponse {
+  binding_id: string;
+  since: string;
+  windows: CalibrationWindow[];
+  summary: { windows: number; mean_a: number; min_a: number; max_a: number } | null;
+}
+
+export interface CountSamplesResponse {
+  machine_id: string;
+  since: string;
+  pulses: number;
+  windows: number;
+  first_window_at: string | null;
+  last_window_at: string | null;
+  rotations_per_unit: number;
+  units: number;
+}
+
+export interface SaveCurrentCalibrationBody {
+  on_threshold_a: number;
+  off_below_a: number | null;
+  levels: { off_a: number | null; idle_a: number | null; running_a: number | null };
+  machine_type?: string | null;
+  apply_to_type?: boolean;
+}
+
+export type BoardPushStatus = 'sent' | 'firmware-too-old' | 'not-a-managed-board' | 'broker-unavailable' | 'failed';
+
+export interface SaveCurrentCalibrationResponse {
+  binding: SensorBinding;
+  machine: { machine_id: string; type: string | null };
+  applied_to: number;
+  board_push: { board_id: string; status: BoardPushStatus; cfg_version?: number; error?: string } | null;
+  type_defaults: MachineTypeDefaults | null;
+}
+
+export interface SaveCountCalibrationBody {
+  pulses: number;
+  units: number;
+  unit_label?: string | null;
+  apply_to_type?: boolean;
+}
+
+export interface SaveCountCalibrationResponse {
+  machine: Machine;
+  rotations_per_unit: number;
+  applied_to: number;
 }

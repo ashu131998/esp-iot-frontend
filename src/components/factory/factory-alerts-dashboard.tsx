@@ -11,6 +11,9 @@ import { api } from '@/lib/api';
 import { StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { machineInAlertScope } from '@/lib/alert-machine-scope';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
+import type { Translate } from '@/lib/i18n/translate';
+import { humanMinutes } from '@/lib/plain-words';
 import { cn } from '@/lib/utils';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 
@@ -35,20 +38,12 @@ interface AlertItem {
   downtimeMinutes: number;
 }
 
-/** 289 → "4 h 49 m", 45 → "45 m". */
-function humanMinutes(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  if (h === 0) return `${m} m`;
-  return m === 0 ? `${h} h` : `${h} h ${m} m`;
-}
-
 /** One plain sentence an operator can read at a glance. */
-function describe(alert: AlertItem): string {
-  if (alert.noSensor) return 'No sensor fitted — it cannot be watched';
-  if (alert.noSignal) return 'No signal from the sensor';
-  if (alert.uptimeMinutes === 0) return `Not running · stopped ${humanMinutes(alert.downtimeMinutes)}`;
-  return `Stopped ${humanMinutes(alert.downtimeMinutes)} · ran ${humanMinutes(alert.uptimeMinutes)}`;
+function describe(alert: AlertItem, t: Translate): string {
+  if (alert.noSensor) return t('No sensor fitted — it cannot be watched');
+  if (alert.noSignal) return t('No signal from the sensor');
+  if (alert.uptimeMinutes === 0) return t('Not running · stopped {duration}', { duration: humanMinutes(alert.downtimeMinutes, t) });
+  return t('Stopped {down} · ran {up}', { down: humanMinutes(alert.downtimeMinutes, t), up: humanMinutes(alert.uptimeMinutes, t) });
 }
 
 function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
@@ -57,6 +52,7 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
   const lineFilter = searchParams.get('line_id') ?? '';
   const machineFilter = searchParams.get('machine_id') ?? '';
   const refetchInterval = useRefetchInterval(REFRESH_MS);
+  const { t, tn } = useT();
   const lines = useFactoryRefsOptional()?.lines;
   const lineName = useMemo(
     () => new Map((lines ?? []).map((l) => [l.line_id, l.name])),
@@ -148,19 +144,19 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
         <div className="min-w-0">
           <p className="text-lg font-semibold text-foreground">
             {alerts.length === 0
-              ? 'All machines are running well'
-              : `${alerts.length} machine${alerts.length === 1 ? '' : 's'} need${alerts.length === 1 ? 's' : ''} attention`}
+              ? t('All machines are running well')
+              : tn(alerts.length, '{count} machine needs attention', '{count} machines need attention')}
           </p>
           <p className="text-sm text-muted">
-            {totalMachines} machine{totalMachines === 1 ? '' : 's'} checked · last 24 hours
+            {tn(totalMachines, '{count} machine checked · last 24 hours', '{count} machines checked · last 24 hours')}
           </p>
         </div>
       </div>
 
       {critical.length > 0 && (
         <AlertGroup
-          title="Needs attention"
-          hint={`Running less than ${CRIT_THRESHOLD}% of the time`}
+          title={t('Needs attention')}
+          hint={t('Running less than {pct}% of the time', { pct: String(CRIT_THRESHOLD) })}
           dot="bg-red-500"
           alerts={critical}
           factoryId={factoryId}
@@ -169,8 +165,8 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
       )}
       {warning.length > 0 && (
         <AlertGroup
-          title="Keep an eye on"
-          hint={`Running less than ${WARN_THRESHOLD}% of the time`}
+          title={t('Keep an eye on')}
+          hint={t('Running less than {pct}% of the time', { pct: String(WARN_THRESHOLD) })}
           dot="bg-amber-400"
           alerts={warning}
           factoryId={factoryId}
@@ -196,6 +192,7 @@ function AlertGroup({
   factoryId: string;
   lineName: Map<string, string>;
 }) {
+  const { t } = useT();
   return (
     <section>
       <div className="mb-2 flex items-baseline justify-between px-1">
@@ -219,14 +216,14 @@ function AlertGroup({
                   {lineName.get(alert.lineId) ?? alert.lineId}
                 </span>
               </p>
-              <p className="truncate text-sm text-muted">{describe(alert)}</p>
+              <p className="truncate text-sm text-muted">{describe(alert, t)}</p>
             </div>
             {alert.availability !== null && (
               <span className="shrink-0 text-right">
                 <span className="block text-base font-semibold tabular-nums text-foreground">
                   {Math.round(alert.availability)}%
                 </span>
-                <span className="block text-[11px] text-muted">running</span>
+                <span className="block text-[11px] text-muted">{t('running')}</span>
               </span>
             )}
             <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />

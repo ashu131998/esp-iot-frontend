@@ -12,6 +12,10 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction } from '@/lib/display';
 import { useFactoryRefsOptional, useShown } from '@/lib/factory-refs-context';
+import { formatTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import type { Locale } from '@/lib/i18n/locale';
+import type { Translate, TranslatePlural } from '@/lib/i18n/translate';
 import { unitsMade } from '@/lib/overview-figures';
 import { humanMinutes } from '@/lib/plain-words';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
@@ -23,14 +27,10 @@ const REFRESH_INTERVAL_MS = 60_000;
 // Summary cards per row, by how many are shown (literal class names for Tailwind).
 const GRID_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
 
-function humanDuration(ms: number): string {
+function humanDuration(ms: number, t: Translate): string {
   const min = Math.max(1, Math.round(ms / 60000));
   const h = Math.floor(min / 60);
-  return h > 0 ? `${h}h ${min % 60}m` : `${min}m`;
-}
-
-function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return h > 0 ? t('{h}h {m}m', { h, m: min % 60 }) : t('{m}m', { m: min });
 }
 
 /**
@@ -38,7 +38,13 @@ function timeLabel(iso: string): string {
  * stoppage count and total downtime, so the status is readable at a glance
  * without decoding the timeline strip.
  */
-function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
+function statusNarrative(
+  machineName: string,
+  timeline: UptimeSegment[],
+  t: Translate,
+  tn: TranslatePlural,
+  locale: Locale,
+) {
   const last = timeline.at(-1);
   if (!last) return null;
 
@@ -49,17 +55,22 @@ function statusNarrative(machineName: string, timeline: UptimeSegment[]) {
   const downSegments = timeline.filter((s) => s.status === 'down');
   const totalDownSec = downSegments.reduce((acc, s) => acc + s.duration_seconds, 0);
 
+  const vars = { machine: machineName, duration: humanDuration(sinceMs, t), time: formatTime(last.from, locale) };
   const headline = isRunning
-    ? `${machineName} is running — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
+    ? t('{machine} is running — for {duration} (since {time}).', vars)
     : isNoSignal
-      ? `${machineName} — no signal for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`
-      : `${machineName} is stopped — for ${humanDuration(sinceMs)} (since ${timeLabel(last.from)}).`;
+      ? t('{machine} — no signal for {duration} (since {time}).', vars)
+      : t('{machine} is stopped — for {duration} (since {time}).', vars);
 
   const history =
     downSegments.length === 0
-      ? 'No stoppages in the last 24 hours.'
-      : `${downSegments.length} stoppage${downSegments.length === 1 ? '' : 's'} in the last 24 hours, ` +
-        `totalling ${humanDuration(totalDownSec * 1000)} of downtime.`;
+      ? t('No stoppages in the last 24 hours.')
+      : tn(
+        downSegments.length,
+        '{count} stoppage in the last 24 hours, totalling {duration} of downtime.',
+        '{count} stoppages in the last 24 hours, totalling {duration} of downtime.',
+        { duration: humanDuration(totalDownSec * 1000, t) },
+      );
 
   return { state, isRunning, headline, history };
 }
@@ -78,6 +89,7 @@ export function MachineStatusClient({
   minDate?: string | null;
 }) {
   const shifts = useFactoryRefsOptional()?.shifts;
+  const { t, tn, locale } = useT();
   const range = useMemo(
     () => resolveDateRange({ from, to }, minDate, shifts),
     [from, to, minDate, shifts],
@@ -142,39 +154,42 @@ export function MachineStatusClient({
       <div className={`grid gap-4 ${GRID_COLS[1 + Number(energyOn) + Number(productionOn)]}`}>
         {energyOn && (
           <StatCard
-            label="Total Energy"
-            value={machineEnergy?.energy_kwh != null ? `${formatNumber(machineEnergy.energy_kwh)} kWh` : '—'}
-            sub={machineEnergy?.avg_amps != null ? `Avg: ${formatNumber(machineEnergy.avg_amps)}A` : 'No data'}
+            label={t('Total Energy')}
+            value={machineEnergy?.energy_kwh != null ? `${formatNumber(machineEnergy.energy_kwh, 1, locale)} kWh` : '—'}
+            sub={machineEnergy?.avg_amps != null ? t('Avg: {amps}A', { amps: formatNumber(machineEnergy.avg_amps, 1, locale) }) : t('No data')}
           />
         )}
         <StatCard
-          label="Availability"
-          value={formatPercent(machineAvail?.availability_percent ?? null)}
-          sub={`${humanMinutes(machineAvail?.uptime_minutes ?? 0)} up · ${humanMinutes(machineAvail?.downtime_minutes ?? 0)} down`}
+          label={t('Availability')}
+          value={formatPercent(machineAvail?.availability_percent ?? null, locale)}
+          sub={t('{up} up · {down} down', {
+            up: humanMinutes(machineAvail?.uptime_minutes ?? 0, t),
+            down: humanMinutes(machineAvail?.downtime_minutes ?? 0, t),
+          })}
         />
         {productionOn && (
           <StatCard
-            label="Units Produced"
-            value={formatUnits(unitsMade(machineProduction), machineProduction?.unit_label)}
-            sub="From proximity sensor detections"
+            label={t('Units Produced')}
+            value={formatUnits(unitsMade(machineProduction), machineProduction?.unit_label, locale, t('(mixed units)'))}
+            sub={t('From proximity sensor detections')}
           />
         )}
       </div>
 
       {uptimeRows.length > 1 && (
         <p className="text-sm text-muted">
-          This machine has {uptimeRows.length} sensor streams — each timeline is shown below.
+          {t('This machine has {count} sensor streams — each timeline is shown below.', { count: uptimeRows.length })}
         </p>
       )}
 
       {uptimeRows.map((stream) => {
-        const streamNarrative = statusNarrative(stream.display_name, stream.timeline ?? []);
+        const streamNarrative = statusNarrative(stream.display_name, stream.timeline ?? [], t, tn, locale);
         const streamStatus = stream.timeline.at(-1)?.status ?? 'no_data';
         return (
           <Card key={stream.stream_key}>
             <CardHeader
               title={stream.display_name}
-              description={`Current status · last 24h${isFetching ? ' · updating…' : ''}`}
+              description={`${t('Current status · last 24h')}${isFetching ? ` · ${t('updating…')}` : ''}`}
             />
             <div className="px-6 py-4">
               {streamNarrative && (
@@ -199,30 +214,32 @@ export function MachineStatusClient({
                     {streamNarrative.state === 'down' && openReport && (
                       <p className="mt-1 text-muted">
                         {openReport.reason_label
-                          ? `Reported reason: ${openReport.reason_label}` +
+                          ? t('Reported reason: {reason}', { reason: openReport.reason_label }) +
                             (openReport.reported_by_name
-                              ? ` (${openReport.reported_by_name} via ${formatAlertVia(openReport.reported_via)})`
+                              ? ` (${t('{name} via {via}', { name: openReport.reported_by_name, via: t(formatAlertVia(openReport.reported_via)) })})`
                               : '')
-                          : 'The assigned worker has been asked for the reason on the mobile app — no reply yet.'}
+                          : t('The assigned worker has been asked for the reason on the mobile app — no reply yet.')}
                       </p>
                     )}
                     {streamNarrative.isRunning && latestReport?.resolved_at && latestReport.reason_label && (
                       <p className="mt-1 text-muted">
-                        Last stoppage: {latestReport.reason_label}
-                        {latestReport.reported_by_name ? ` (reported by ${latestReport.reported_by_name})` : ''}
-                        , resolved at {timeLabel(latestReport.resolved_at)}.
+                        {t('Last stoppage: {reason}{by}, resolved at {time}.', {
+                          reason: latestReport.reason_label,
+                          by: latestReport.reported_by_name ? ` (${t('reported by {name}', { name: latestReport.reported_by_name })})` : '',
+                          time: formatTime(latestReport.resolved_at, locale),
+                        })}
                       </p>
                     )}
                     <p className="mt-1 text-muted">{streamNarrative.history}</p>
                     {currentConfig && (
                       <p className="mt-1 flex items-center gap-1.5 text-muted">
                         <Settings2 className="h-3.5 w-3.5" />
-                        Running configuration:{' '}
+                        {t('Running configuration:')}{' '}
                         <span className="font-medium text-foreground">
                           {currentConfig.profile_name ?? currentConfig.profile_id}
                         </span>
                         {currentConfig.selected_by_name
-                          ? ` — selected by ${currentConfig.selected_by_name} via ${currentConfig.selected_via}`
+                          ? ` ${t('— selected by {name} via {via}', { name: currentConfig.selected_by_name, via: t(formatAlertVia(currentConfig.selected_via)) })}`
                           : ''}
                       </p>
                     )}
@@ -230,11 +247,11 @@ export function MachineStatusClient({
                 </div>
               )}
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3">
-                <span className="text-sm font-medium">Status</span>
+                <span className="text-sm font-medium">{t('Status')}</span>
                 <div className="flex justify-end">
                   <MachineStatusBadge status={streamStatus} />
                 </div>
-                <span className="text-sm font-medium">Timeline (Last 24h)</span>
+                <span className="text-sm font-medium">{t('Timeline (Last 24h)')}</span>
                 <MiniTimeline segments={stream.timeline ?? []} />
               </div>
             </div>

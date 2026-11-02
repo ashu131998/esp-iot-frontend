@@ -9,10 +9,12 @@ import { Sheet } from '@/components/ui/sheet';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useT } from '@/lib/i18n/context';
 import { formatDate } from '@/lib/utils';
 
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
+  const { t, locale } = useT();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   function configure(deviceId: string) {
@@ -37,21 +39,21 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
     <div className="space-y-6">
       <Card className="p-6">
         <CardHeader
-          title="Nodes in this factory"
-          description="Pick a node (ESP) to map each sensor channel to a machine and label. Status timelines and uptime use these names (e.g. Machine 1: Main motor)."
+          title={t('Nodes in this factory')}
+          description={t('Pick a node (ESP) to map each sensor channel to a machine and label. Status timelines and uptime use these names (e.g. Machine 1: Main motor).')}
         />
         {nodesQuery.isLoading ? (
-          <p className="mt-4 text-sm text-muted">Loading nodes…</p>
+          <p className="mt-4 text-sm text-muted">{t('Loading nodes…')}</p>
         ) : nodes.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No devices registered yet — telemetry will create nodes automatically.</p>
+          <p className="mt-4 text-sm text-muted">{t('No devices registered yet — telemetry will create nodes automatically.')}</p>
         ) : (
           <Table className="mt-4 border-0">
             <THead>
               <TR>
-                <TH>Node</TH>
-                <TH>Line</TH>
-                <TH>Bindings</TH>
-                <TH>Last seen</TH>
+                <TH>{t('Node')}</TH>
+                <TH>{t('Line')}</TH>
+                <TH>{t('Bindings')}</TH>
+                <TH>{t('Last seen')}</TH>
                 <TH />
               </TR>
             </THead>
@@ -62,7 +64,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
                   <TD>{n.line_id}</TD>
                   <TD>{n.binding_count}</TD>
                   <TD className="text-xs text-muted">
-                    {n.last_seen_at ? formatDate(n.last_seen_at) : '—'}
+                    {n.last_seen_at ? formatDate(n.last_seen_at, locale) : '—'}
                   </TD>
                   <TD>
                     <button
@@ -70,7 +72,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
                       className={`text-sm ${activeDeviceId === n.device_id ? 'font-semibold text-primary' : 'text-primary hover:underline'}`}
                       onClick={() => configure(n.device_id)}
                     >
-                      {activeDeviceId === n.device_id ? 'Editing' : 'Configure'}
+                      {activeDeviceId === n.device_id ? t('Editing') : t('Configure')}
                     </button>
                   </TD>
                 </TR>
@@ -81,7 +83,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
       </Card>
 
       {activeDeviceId && selected && (
-        <Sheet title={`Configure ${activeDeviceId}`} onClose={() => setSelectedDeviceId(null)} size="lg">
+        <Sheet title={t('Configure {node}', { node: activeDeviceId })} onClose={() => setSelectedDeviceId(null)} size="lg">
           <NodeSensorBindingsEditor
             factoryId={factoryId}
             deviceId={activeDeviceId}

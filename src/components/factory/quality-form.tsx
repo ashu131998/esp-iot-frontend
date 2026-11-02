@@ -8,6 +8,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import type { CreateQualityInput, Machine } from '@/lib/types';
 
 export function QualityForm({
@@ -20,6 +21,7 @@ export function QualityForm({
   onSuccess?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateQualityInput>({
     machine_id: machines[0]?.machine_id ?? '',
@@ -48,12 +50,12 @@ export function QualityForm({
   return (
     <>
       <Button onClick={() => setOpen(true)} size="sm">
-        + Add Quality Record
+        + {t('Add Quality Record')}
       </Button>
       {open && (
-        <Sheet title="Add Quality Record" onClose={() => setOpen(false)}>
+        <Sheet title={t('Add Quality Record')} onClose={() => setOpen(false)}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Machine">
+            <Field label={t('Machine')}>
               <Select
                 value={form.machine_id}
                 onChange={(e) => setForm({ ...form, machine_id: e.target.value })}
@@ -65,18 +67,18 @@ export function QualityForm({
                 ))}
               </Select>
             </Field>
-            <Field label="Metric">
+            <Field label={t('Metric')}>
               <Select
                 value={form.metric}
                 onChange={(e) => setForm({ ...form, metric: e.target.value })}
               >
-                <option value="defect_rate">Defect Rate</option>
-                <option value="first_pass_yield">First Pass Yield</option>
-                <option value="scrap_rate">Scrap Rate</option>
-                <option value="rework_rate">Rework Rate</option>
+                <option value="defect_rate">{t('Defect Rate')}</option>
+                <option value="first_pass_yield">{t('First Pass Yield')}</option>
+                <option value="scrap_rate">{t('Scrap Rate')}</option>
+                <option value="rework_rate">{t('Rework Rate')}</option>
               </Select>
             </Field>
-            <Field label="Value">
+            <Field label={t('Value')}>
               <Input
                 type="number"
                 step="0.1"
@@ -84,24 +86,24 @@ export function QualityForm({
                 onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
               />
             </Field>
-            <Field label="Unit">
+            <Field label={t('Unit')}>
               <Select
                 value={form.unit}
                 onChange={(e) => setForm({ ...form, unit: e.target.value })}
               >
-                <option value="percent">Percent</option>
+                <option value="percent">{t('Percent')}</option>
                 <option value="ppm">PPM</option>
-                <option value="count">Count</option>
+                <option value="count">{t('Count')}</option>
               </Select>
             </Field>
-            <Field label="Sample Size">
+            <Field label={t('Sample Size')}>
               <Input
                 type="number"
                 value={form.sample_size ?? ''}
                 onChange={(e) => setForm({ ...form, sample_size: Number(e.target.value) })}
               />
             </Field>
-            <Field label="Notes">
+            <Field label={t('Notes')}>
               <Textarea
                 rows={2}
                 value={form.notes}
@@ -111,10 +113,10 @@ export function QualityForm({
           </div>
           <div className="mt-4 flex gap-2">
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving…' : 'Save Record'}
+              {mutation.isPending ? t('Saving…') : t('Save Record')}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             {mutation.isError && (
               <p className="self-center text-sm text-red-600">{mutation.error.message}</p>

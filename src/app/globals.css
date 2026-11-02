@@ -29,8 +29,19 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  /* Geist has no Devanagari or Gujarati: Hindi and Gujarati text fall through to the phone's or PC's own faces. */
+  font-family: var(--font-sans), system-ui, 'Noto Sans Devanagari', 'Noto Sans Gujarati', 'Nirmala UI', 'Kohinoor Devanagari', 'Kohinoor Gujarati', 'Mangal', 'Shruti', sans-serif;
   overflow-x: hidden;
+}
+
+/* Devanagari and Gujarati have taller letters than Latin: a little more line height keeps vowel marks from clipping. */
+html:lang(hi) body,
+html:lang(gu) body {
+  line-height: 1.6;
+}
+html:lang(hi) .uppercase,
+html:lang(gu) .uppercase {
+  letter-spacing: normal;
 }
 
 * {

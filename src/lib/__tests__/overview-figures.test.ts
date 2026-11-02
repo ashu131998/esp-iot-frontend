@@ -49,3 +49,15 @@ describe('overviewFigures (each tile by its own page\'s rule)', () => {
     expect(overviewFigures({ ...none, energy: [{ energy_kwh: null }] }).kwh).toBeNull();
   });
 });
+
+// ── overviewQueryKey (lib/overview-queries.ts) ─────────────────────────────────
+
+import { overviewQueryKey } from '@/lib/overview-queries';
+
+describe('overviewQueryKey', () => {
+  it('matches the literal keys the dashboard components use', () => {
+    expect(overviewQueryKey('availability', 'mill-01', {})).toEqual(['availability', 'mill-01', 'live', 'live', '', '']);
+    expect(overviewQueryKey('energy', 'mill-01', { from: '2026-11-01', to: '2026-11-02', lineId: 'line-1', machineId: 'loom-02' }))
+      .toEqual(['energy', 'mill-01', '2026-11-01', '2026-11-02', 'line-1', 'loom-02']);
+  });
+});

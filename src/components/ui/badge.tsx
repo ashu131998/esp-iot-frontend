@@ -1,3 +1,6 @@
+'use client';
+
+import { useT } from '@/lib/i18n/context';
 import { cn, normalizeMachineStatus, statusColor, statusLabel } from '@/lib/utils';
 
 import { Card } from './card';
@@ -34,10 +37,11 @@ function statusDotClass(status: string): string {
 
 /** Running | Stopped | No signal — the only three statuses shown to factory owners. */
 export function MachineStatusBadge({ status }: { status: string }) {
+  const { t } = useT();
   return (
     <Badge className={statusColor(status)}>
       <span className={`mr-1.5 inline-flex h-2 w-2 shrink-0 rounded-full ${statusDotClass(status)}`} />
-      {statusLabel(status)}
+      {t(statusLabel(status))}
     </Badge>
   );
 }

@@ -4,6 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ListEmpty, ListGroup, ListRow, SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
+import { formatDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import type { Locale } from '@/lib/i18n/locale';
+import type { Translate } from '@/lib/i18n/translate';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { NotificationItem } from '@/lib/types';
 
@@ -24,35 +28,32 @@ const TYPE_LABEL: Record<string, string> = {
   board_power_cut: 'Board powered off (email)',
 };
 
-function rowTitle(n: NotificationItem) {
-  return TYPE_LABEL[n.type] ?? n.type.replace(/_/g, ' ');
+function rowTitle(n: NotificationItem, t: Translate) {
+  const label = TYPE_LABEL[n.type];
+  return label ? t(label) : n.type.replace(/_/g, ' ');
 }
 
-function rowDetail(n: NotificationItem) {
+function rowDetail(n: NotificationItem, t: Translate, locale: Locale) {
   const who = [n.recipient_name, n.phone].filter(Boolean).join(' · ');
-  const when = new Date(n.created_at).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const when = formatDateTime(n.created_at, locale);
   const from = typeof n.payload?.from_email === 'string' ? n.payload.from_email : null;
   const resendId = typeof n.payload?.email_id === 'string' ? n.payload.email_id : null;
   const bits = [
     who,
-    from ? `from ${from}` : null,
+    from ? t('from {email}', { email: from }) : null,
     n.machine_id,
     when,
-    n.status === 'sent' && n.channel === 'email' ? 'accepted by Resend (check spam if missing)' : null,
+    n.status === 'sent' && n.channel === 'email' ? t('accepted by Resend (check spam if missing)') : null,
     resendId ? `id ${resendId.slice(0, 8)}…` : null,
-    n.status === 'simulated' ? 'simulated' : null,
-    n.status === 'failed' && n.error ? `Error: ${n.error}` : null,
+    n.status === 'simulated' ? t('simulated') : null,
+    n.status === 'failed' && n.error ? t('Error: {error}', { error: n.error }) : null,
   ].filter(Boolean);
   const msg = n.message?.trim();
   return msg ? `${msg.slice(0, 120)}${msg.length > 120 ? '…' : ''} · ${bits.join(' · ')}` : bits.join(' · ');
 }
 
 export function NotificationFeed({ factoryId }: { factoryId: string }) {
+  const { t, locale } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
   const { data, isLoading } = useQuery({
     queryKey: ['notifications', factoryId],
@@ -64,31 +65,31 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
   const notifications = data?.notifications ?? [];
 
   if (isLoading) {
-    return <p className="text-sm text-muted">Loading notification history…</p>;
+    return <p className="text-sm text-muted">{t('Loading notification history…')}</p>;
   }
 
   return (
     <div className="space-y-6">
       <SummaryCard
         tone={notifications.length === 0 ? 'idle' : 'good'}
-        title={notifications.length === 0 ? 'No notifications yet' : 'Notification history'}
+        title={notifications.length === 0 ? t('No notifications yet') : t('Notification history')}
         subtitle={
           data
-            ? `${notifications.length} recent · ${data.total} total`
-            : 'Reminders, mobile alerts, and board emails'
+            ? t('{recent} recent · {total} total', { recent: notifications.length, total: data.total })
+            : t('Reminders, mobile alerts, and board emails')
         }
       />
 
-      <ListGroup title="Latest" count={notifications.length}>
+      <ListGroup title={t('Latest')} count={notifications.length}>
         {notifications.length === 0 ? (
-          <ListEmpty>Shift reminders and alerts will appear here as they are sent.</ListEmpty>
+          <ListEmpty>{t('Shift reminders and alerts will appear here as they are sent.')}</ListEmpty>
         ) : (
           notifications.map((n) => (
             <ListRow
               key={n.notification_id}
               tone={n.status === 'failed' ? 'bad' : n.status === 'simulated' ? 'idle' : 'good'}
-              title={rowTitle(n)}
-              detail={rowDetail(n)}
+              title={rowTitle(n, t)}
+              detail={rowDetail(n, t, locale)}
             />
           ))
         )}

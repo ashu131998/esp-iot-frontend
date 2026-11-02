@@ -14,6 +14,7 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 
 import { LoadMore, ScrollTable, useShowMore } from './load-more';
 import { PHONE_HIDDEN, Table, THead, TBody, TR, TH, TD } from './table';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 declare module '@tanstack/react-table' {
@@ -34,6 +35,7 @@ interface DataTableProps<T> {
   scrollStep?: number;
   /** What the rows are of (dates, filters): when it changes the table starts again from its first rows. */
   resetKey?: string;
+  /** Shown instead of the table when there are no rows; already translated. Default: "No data available". */
   emptyMessage?: string;
   initialSorting?: SortingState;
   className?: string;
@@ -46,11 +48,12 @@ export function DataTable<T>({
   data,
   scrollStep,
   resetKey,
-  emptyMessage = 'No data available',
+  emptyMessage,
   initialSorting = [],
   className,
   rowClassName,
 }: DataTableProps<T>) {
+  const { t } = useT();
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
   const table = useReactTable({
@@ -65,7 +68,7 @@ export function DataTable<T>({
   const { shown, more, hasMore } = useShowMore(rows.length, resetKey ?? String(data.length), scrollStep ?? Math.max(rows.length, 1));
 
   if (data.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted">{emptyMessage}</p>;
+    return <p className="py-8 text-center text-sm text-muted">{emptyMessage ?? t('No data available')}</p>;
   }
 
   return (

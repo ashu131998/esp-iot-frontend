@@ -1,0 +1,33 @@
+import type { Messages } from '../../translate';
+
+/** Gujarati for the menu: page names (lib/display.ts FACTORY_PAGES), phone bar short names, the shell. */
+export const nav: Messages = {
+  'Overview': 'સારાંશ',
+  'Status Timeline': 'સ્થિતિ સમયરેખા',
+  'Timeline': 'સમયરેખા',
+  'Availability': 'ઉપલબ્ધતા',
+  'Alerts': 'એલર્ટ',
+  'Energy': 'વીજળી',
+  'Vibration': 'કંપન',
+  'Temperature': 'તાપમાન',
+  'Performance': 'કામગીરી',
+  'Production': 'ઉત્પાદન',
+  'Quality': 'ગુણવત્તા',
+  'Configuration': 'કૉન્ફિગરેશન',
+  'Config': 'કૉન્ફિગ',
+  'Scheduling': 'શેડ્યૂલ',
+  'Shift reports': 'શિફ્ટ રિપોર્ટ',
+  'Reports': 'રિપોર્ટ',
+  'Sensor mapping': 'સેન્સર મેપિંગ',
+  'Sensors': 'સેન્સર',
+  'WiFi': 'WiFi',
+  'Team': 'ટીમ',
+  'Compliance': 'અનુપાલન',
+  'More': 'વધુ',
+  'Menu': 'મેનૂ',
+  'Main pages': 'મુખ્ય પેજ',
+  'Close menu': 'મેનૂ બંધ કરો',
+  'Back to Internal': 'ઇન્ટરનલ પર પાછા',
+  'Factory home': 'ફેક્ટરી હોમ',
+  'Production Lines': 'પ્રોડક્શન લાઇનો',
+};

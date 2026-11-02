@@ -9,11 +9,12 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noPerformance, noProduction, offQuery } from '@/lib/display';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { overviewFigures } from '@/lib/overview-figures';
+import { overviewQueryKey } from '@/lib/overview-queries';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
-  factoryScopeQueryKey,
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
@@ -34,9 +35,10 @@ export function FactoryOverviewStatCards({
   to?: string;
 }) {
   const { minDate, shifts } = useFactoryRefs();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
-  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const queryScope = { from, to, lineId, machineId };
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const refetchInterval = useRefetchInterval(REFRESH_MS);
   // Modules switched off for the factory: their data is not requested, their cards not shown.
@@ -53,7 +55,7 @@ export function FactoryOverviewStatCards({
   ] = useSuspenseQueries({
     queries: [
       {
-        queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+        queryKey: overviewQueryKey('availability', factoryId, queryScope),
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           api.availability(factoryId, apiRange, { signal }),
         refetchInterval,
@@ -61,7 +63,7 @@ export function FactoryOverviewStatCards({
       },
       energyOn
         ? {
-          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('energy', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.energy(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -70,7 +72,7 @@ export function FactoryOverviewStatCards({
         : offQuery('energy', noEnergy(factoryId)),
       productionOn
         ? {
-          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('production', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.production(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -79,7 +81,7 @@ export function FactoryOverviewStatCards({
         : offQuery('production', noProduction(factoryId)),
       performanceOn
         ? {
-          queryKey: ['performance', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('performance', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.performance(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -106,26 +108,26 @@ export function FactoryOverviewStatCards({
   return (
     <div className={`grid gap-3 sm:gap-4 ${cards > 1 ? 'grid-cols-2' : ''} ${LG_COLS[cards]}`}>
       <StatCard
-        label="Availability"
-        value={formatPercent(figures.runningPercent)}
+        label={t('Availability')}
+        value={formatPercent(figures.runningPercent, locale)}
         icon={<Activity className="h-4 w-4 text-muted" />}
         className={firstWide ? 'col-span-2 lg:col-span-1' : undefined}
       />
       {energyOn && (
         <StatCard
-          label="Energy"
-          value={figures.kwh != null ? `${formatNumber(figures.kwh)} kWh` : '—'}
+          label={t('Energy')}
+          value={figures.kwh != null ? `${formatNumber(figures.kwh, 1, locale)} kWh` : '—'}
           icon={<Zap className="h-4 w-4 text-muted" />}
         />
       )}
       {productionOn && (
         <StatCard
-          label="Units Produced"
-          value={formatUnits(figures.units, figures.unitLabel)}
+          label={t('Units Produced')}
+          value={formatUnits(figures.units, figures.unitLabel, locale, t('(mixed units)'))}
           icon={<Package className="h-4 w-4 text-muted" />}
         />
       )}
-      {performanceOn && <StatCard label="Performance" value={formatPercent(figures.onTargetPercent)} />}
+      {performanceOn && <StatCard label={t('Performance')} value={formatPercent(figures.onTargetPercent, locale)} />}
     </div>
   );
 }

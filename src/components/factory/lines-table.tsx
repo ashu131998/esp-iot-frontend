@@ -1,7 +1,7 @@
 'use client';
 
 import { ListGroup, ListRow } from '@/components/ui/simple';
-import { plural } from '@/lib/plain-words';
+import { useT } from '@/lib/i18n/context';
 import type { ProductionLine } from '@/lib/types';
 
 function lineLabel(line: ProductionLine) {
@@ -19,14 +19,15 @@ export function LinesTable({
   machineCountByLine: Record<string, number>;
   action?: React.ReactNode;
 }) {
+  const { t, tn } = useT();
   return (
-    <ListGroup title="Lines" count={lines.length} action={action}>
+    <ListGroup title={t('Lines')} count={lines.length} action={action}>
       {lines.map((line) => (
         <ListRow
           key={line.line_id}
           href={`/factories/${factoryId}/lines/${line.line_id}`}
           title={lineLabel(line)}
-          detail={plural(machineCountByLine[line.line_id] ?? 0, 'machine')}
+          detail={tn(machineCountByLine[line.line_id] ?? 0, '{count} machine', '{count} machines')}
         />
       ))}
     </ListGroup>

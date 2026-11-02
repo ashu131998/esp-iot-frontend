@@ -15,6 +15,7 @@ import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
 import { inBatches } from '@/lib/infinite';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { unitsMade } from '@/lib/overview-figures';
 import {
   factoryMetricsApiRange,
@@ -46,6 +47,7 @@ export function FactoryOverviewMachinesTable({
   to?: string;
 }) {
   const { minDate, machines, shifts } = useFactoryRefs();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -159,20 +161,20 @@ export function FactoryOverviewMachinesTable({
   return (
     <Card>
       <CardHeader
-        title="Machines"
-        description="All machines registered for this factory"
+        title={t('Machines')}
+        description={t('All machines registered for this factory')}
         action={
           <div className="hidden flex-wrap items-center gap-2 sm:flex">
             <ExportCsvButton
               filename="factory-machines"
               headers={[
-                'Machine',
-                'Line',
-                'Type',
-                'Availability',
-                ...(energyOn ? ['Energy (kWh)'] : []),
-                ...(productionOn ? ['Units'] : []),
-                'Current Status',
+                t('Machine'),
+                t('Line'),
+                t('Type'),
+                t('Availability'),
+                ...(energyOn ? [t('Energy (kWh)')] : []),
+                ...(productionOn ? [t('Units')] : []),
+                t('Current Status'),
               ]}
               rows={machineRows.map(({ machine, avail, eng, prod, uptime }) => [
                 machine.name,
@@ -181,14 +183,14 @@ export function FactoryOverviewMachinesTable({
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
                 ...(productionOn ? [unitsMade(prod)] : []),
-                statusLabel(machineStatus(uptime, avail)),
+                t(statusLabel(machineStatus(uptime, avail))),
               ])}
             />
             <Link
               href={`/factories/${factoryId}/configuration`}
               className="text-sm text-primary hover:underline"
             >
-              Manage config →
+              {t('Manage config')} →
             </Link>
           </div>
         }
@@ -212,14 +214,14 @@ export function FactoryOverviewMachinesTable({
                   <MachineStatusBadge status={machineStatus(uptime, avail)} />
                 </div>
                 <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  <Figure label="Availability" value={formatPercent(avail?.availability_percent)} />
+                  <Figure label={t('Availability')} value={formatPercent(avail?.availability_percent, locale)} />
                   {energyOn && (
                     <Figure
-                      label="Energy"
-                      value={eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}
+                      label={t('Energy')}
+                      value={eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : '—'}
                     />
                   )}
-                  {productionOn && <Figure label="Units" value={formatUnits(unitsMade(prod), prod?.unit_label)} />}
+                  {productionOn && <Figure label={t('Units')} value={formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)'))} />}
                 </dl>
               </Link>
             </li>
@@ -228,14 +230,14 @@ export function FactoryOverviewMachinesTable({
       <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Type</TH>
-            <TH>Availability</TH>
-            {energyOn && <TH>Energy</TH>}
-            {productionOn && <TH>Units</TH>}
-            <TH>Last 24h</TH>
-            <TH>Current Status</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Type')}</TH>
+            <TH>{t('Availability')}</TH>
+            {energyOn && <TH>{t('Energy')}</TH>}
+            {productionOn && <TH>{t('Units')}</TH>}
+            <TH>{t('Last 24h')}</TH>
+            <TH>{t('Current Status')}</TH>
           </TR>
         </THead>
         <TBody>
@@ -244,12 +246,12 @@ export function FactoryOverviewMachinesTable({
               <TD className="font-medium">{machine.name}</TD>
               <TD>{machine.line_id}</TD>
               <TD className="capitalize">{machine.type}</TD>
-              <TD>{formatPercent(avail?.availability_percent)}</TD>
+              <TD>{formatPercent(avail?.availability_percent, locale)}</TD>
               {energyOn && (
-                <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
+                <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : '—'}</TD>
               )}
               {/* No production sensor, or no count received: "—", not "made 0". */}
-              {productionOn && <TD>{formatUnits(unitsMade(prod), prod?.unit_label)}</TD>}
+              {productionOn && <TD>{formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)'))}</TD>}
               <TD>
                 {(uptimeRowsByMachine[machine.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">

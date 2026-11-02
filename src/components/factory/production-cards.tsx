@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -29,6 +30,7 @@ export function ProductionCards({
   to?: string;
 }) {
   const { minDate, shifts } = useFactoryRefs();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
@@ -51,9 +53,9 @@ export function ProductionCards({
 
   return (
     <StatCard
-      label="Total Units Produced"
-      value={formatUnits(totalUnits, sharedUnitLabel(displayMachines))}
-      sub={`From proximity sensor detections${isFetching ? ' · updating…' : ''}`}
+      label={t('Total Units Produced')}
+      value={formatUnits(totalUnits, sharedUnitLabel(displayMachines), locale, t('(mixed units)'))}
+      sub={`${t('From proximity sensor detections')}${isFetching ? ` · ${t('updating…')}` : ''}`}
     />
   );
 }

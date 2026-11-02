@@ -35,6 +35,8 @@ import {
   type Preset,
   type Selection,
 } from '@/lib/date-presets';
+import { formatFullDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { useRefreshInfo } from '@/lib/refresh-context';
 import { useWideScreen } from '@/lib/use-wide-screen';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
@@ -88,6 +90,7 @@ export function DateRangePicker({
   const isNavigating = useIsNavigating();
   const refreshInfo = useRefreshInfo();
   const wide = useWideScreen();
+  const { t, locale } = useT();
 
   // Line / machine selector state
   const [lineOpen,      setLineOpen]      = useState(false);
@@ -126,10 +129,10 @@ export function DateRangePicker({
   );
 
   const presets = useMemo(
-    () => buildPresets(shifts),
+    () => buildPresets(shifts, undefined, t),
     // Rebuilt on open so shift labels reflect the time the panel was opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shifts, open],
+    [shifts, open, t],
   );
 
   const lineMap = useMemo(
@@ -328,7 +331,7 @@ export function DateRangePicker({
     ? hoverDate : draftFrom;
   const rangeEnd   = draftTo ?? (draftFrom && hoverDate && !isBefore(hoverDate, draftFrom) ? hoverDate : null);
 
-  const triggerLabel = `${format(parseISO(current.from), 'd MMM yyyy, HH:mm')} → ${format(parseISO(current.to), 'd MMM yyyy, HH:mm')}`;
+  const triggerLabel = `${formatFullDateTime(current.from, locale)} → ${formatFullDateTime(current.to, locale)}`;
   const showMachines = machines && machines.length > 0;
   const showLines = showMachines && lines && lines.length > 0;
 
@@ -364,14 +367,14 @@ export function DateRangePicker({
                 lineId && 'border-primary/50 bg-primary/5',
               )}
             >
-              <span className="font-medium text-muted">Line</span>
+              <span className="font-medium text-muted">{t('Line')}</span>
               <span className={cn('max-w-[120px] truncate font-medium', lineId ? 'text-primary' : 'text-foreground')}>
-                {selectedLine ? selectedLine.name : 'All'}
+                {selectedLine ? selectedLine.name : t('All')}
               </span>
               {lineId ? (
                 <span
                   role="button"
-                  aria-label="Clear line filter"
+                  aria-label={t('Clear line filter')}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
                   onClick={(e) => { e.stopPropagation(); applyLine(undefined); }}
                 >
@@ -390,7 +393,7 @@ export function DateRangePicker({
                     onClick={() => applyLine(undefined)}
                     className={cn('w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent', !lineId && 'bg-accent font-medium')}
                   >
-                    All lines
+                    {t('All lines')}
                   </button>
                   {(lines ?? []).map((line) => (
                     <button
@@ -426,14 +429,14 @@ export function DateRangePicker({
                 machineId && 'border-primary/50 bg-primary/5',
               )}
             >
-              <span className="font-medium text-muted">Machine</span>
+              <span className="font-medium text-muted">{t('Machine')}</span>
               <span className={cn('max-w-[120px] truncate font-medium', machineId ? 'text-primary' : 'text-foreground')}>
-                {selectedMachine ? selectedMachine.name : 'All'}
+                {selectedMachine ? selectedMachine.name : t('All')}
               </span>
               {machineId ? (
                 <span
                   role="button"
-                  aria-label="Clear machine filter"
+                  aria-label={t('Clear machine filter')}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
                   onClick={e => { e.stopPropagation(); applyMachine(undefined); }}
                 >
@@ -454,7 +457,7 @@ export function DateRangePicker({
                       <input
                         autoFocus
                         type="text"
-                        placeholder="Search machines…"
+                        placeholder={t('Search machines…')}
                         className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
                         value={machineSearch}
                         onChange={e => setMachineSearch(e.target.value)}
@@ -467,7 +470,7 @@ export function DateRangePicker({
                       onClick={() => applyMachine(undefined)}
                       className={cn('w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent', !machineId && 'bg-accent font-medium')}
                     >
-                      All Machines
+                      {t('All Machines')}
                     </button>
                     {Object.entries(groupedMachines).map(([lineId, lineMs]) => (
                       <div key={lineId}>
@@ -487,7 +490,7 @@ export function DateRangePicker({
                       </div>
                     ))}
                     {filteredMachines.length === 0 && (
-                      <p className="px-3 py-4 text-center text-xs text-muted">No machines found</p>
+                      <p className="px-3 py-4 text-center text-xs text-muted">{t('No machines found')}</p>
                     )}
                   </div>
                 </div>
@@ -501,7 +504,7 @@ export function DateRangePicker({
       {isNavigating && (
         <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-primary">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Updating…
+          {t('Updating…')}
         </span>
       )}
 
@@ -529,7 +532,7 @@ export function DateRangePicker({
                     : 'text-gray-700 active:bg-gray-50',
                 )}
               >
-                {preset.label}
+                {t(preset.label)}
                 {preset.hint && <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>}
               </button>
             ))}
@@ -550,14 +553,14 @@ export function DateRangePicker({
               onClick={handleClear}
               className="ml-auto text-xs text-blue-500 underline-offset-2 hover:underline"
             >
-              Clear filters
+              {t('Clear filters')}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
@@ -565,7 +568,7 @@ export function DateRangePicker({
               disabled={!draftFrom || !draftTo}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
-              Apply
+              {t('Apply')}
             </button>
           </div>
 
@@ -584,7 +587,7 @@ export function DateRangePicker({
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                   )}
                 >
-                  {preset.label}
+                  {t(preset.label)}
                   {preset.hint && (
                     <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>
                   )}
@@ -595,7 +598,7 @@ export function DateRangePicker({
             <div className="flex flex-col px-6">
               <div className="flex gap-6 py-4">
                 <MonthCalendar
-                  label="From"
+                  label={t('From')}
                   month={fromMonth}
                   onMonthChange={setFromMonth}
                   rangeStart={rangeStart}
@@ -607,7 +610,7 @@ export function DateRangePicker({
                 />
                 <div className="w-px bg-gray-100" />
                 <MonthCalendar
-                  label="To"
+                  label={t('To')}
                   month={toMonth}
                   onMonthChange={setToMonth}
                   rangeStart={rangeStart}
@@ -622,7 +625,7 @@ export function DateRangePicker({
               <div className="flex gap-6 border-t py-3">
                 <div className="flex w-[260px] items-center gap-2 text-xs text-gray-600">
                   <Clock className={cn('h-3.5 w-3.5 shrink-0', timeDisabled ? 'text-gray-300' : 'text-gray-400')} />
-                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>From time</span>
+                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>{t('From time')}</span>
                   <input
                     type="time"
                     value={draftFromTime}
@@ -637,7 +640,7 @@ export function DateRangePicker({
                 <div className="w-px bg-gray-100" />
                 <div className="flex w-[260px] items-center gap-2 text-xs text-gray-600">
                   <Clock className={cn('h-3.5 w-3.5 shrink-0', timeDisabled ? 'text-gray-300' : 'text-gray-400')} />
-                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>To time</span>
+                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>{t('To time')}</span>
                   <input
                     type="time"
                     value={draftToTime}
@@ -653,7 +656,7 @@ export function DateRangePicker({
 
               {timeDisabled && (
                 <p className="border-t py-2 text-[11px] text-amber-600">
-                  Time-of-day filtering is unavailable for dates older than 3 days — only daily aggregates are stored for that period.
+                  {t('Time-of-day filtering is unavailable for dates older than 3 days — only daily aggregates are stored for that period.')}
                 </p>
               )}
             </div>

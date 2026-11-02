@@ -5,29 +5,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/input';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { api } from '@/lib/api';
+import { formatDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import { humanMinutes } from '@/lib/plain-words';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { DowntimeReport } from '@/lib/types';
 
 const REFRESH_MS = 30_000;
 
-function durationLabel(report: DowntimeReport) {
+/** How long a stop lasted (or has lasted so far), in whole minutes. */
+function downMinutes(report: DowntimeReport) {
   const end = report.resolved_at ? new Date(report.resolved_at).getTime() : Date.now();
-  const min = Math.max(1, Math.round((end - new Date(report.down_since).getTime()) / 60000));
-  const h = Math.floor(min / 60);
-  return h > 0 ? `${h} h ${min % 60} m` : `${min} m`;
-}
-
-function whenLabel(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return Math.max(1, Math.round((end - new Date(report.down_since).getTime()) / 60000));
 }
 
 export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
   const queryClient = useQueryClient();
+  const { t, tn, locale } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
 
   const { data } = useQuery({
@@ -59,30 +53,30 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
 
   const summaryTitle =
     reports.length === 0
-      ? 'No downtime reports yet'
+      ? t('No downtime reports yet')
       : waitingReason.length > 0
-        ? `${waitingReason.length} waiting for a reason`
+        ? t('{count} waiting for a reason', { count: waitingReason.length })
         : open.length > 0
-          ? `${open.length} machine${open.length === 1 ? '' : 's'} still down`
-          : 'Recent downtime is logged';
+          ? tn(open.length, '{count} machine still down', '{count} machines still down')
+          : t('Recent downtime is logged');
 
   const summarySub =
     reports.length === 0
-      ? 'When a machine stops, workers can say why on the mobile app.'
-      : 'Workers reply on the app — or pick a reason here.';
+      ? t('When a machine stops, workers can say why on the mobile app.')
+      : t('Workers reply on the app — or pick a reason here.');
 
   return (
     <div className="space-y-6">
       <SummaryCard tone={tone} badge={waitingReason.length || undefined} title={summaryTitle} subtitle={summarySub} />
 
-      <ListGroup title="Recent stops" count={reports.length}>
+      <ListGroup title={t('Recent stops')} count={reports.length}>
         {reports.length === 0 ? (
-          <ListEmpty>Stops will show up here with time and duration.</ListEmpty>
+          <ListEmpty>{t('Stops will show up here with time and duration.')}</ListEmpty>
         ) : (
           reports.map((r) => {
             const openRow = !r.resolved_at;
             const rowTone: Tone | undefined = openRow ? 'bad' : 'good';
-            const timeLine = `${whenLabel(r.down_since)} · ${durationLabel(r)}`;
+            const timeLine = `${formatDateTime(r.down_since, locale)} · ${humanMinutes(downMinutes(r), t)}`;
             const reasonLine = r.reason_label
               ? `${r.reason_label}${r.reported_by_name ? ` · ${r.reported_by_name}` : ''}`
               : null;
@@ -94,7 +88,7 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
                 href={needsReason ? undefined : `/factories/${factoryId}/machines/${r.machine_id}`}
                 tone={rowTone}
                 title={r.machine_name ?? r.machine_id}
-                tag={openRow ? 'Still down' : 'Back up'}
+                tag={openRow ? t('Still down') : t('Back up')}
                 detail={
                   needsReason ? (
                     <span className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -110,7 +104,7 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
                         }}
                       >
                         <option value="" disabled>
-                          Set reason…
+                          {t('Set reason…')}
                         </option>
                         {reasons.map((reason) => (
                           <option key={reason.code} value={reason.code}>

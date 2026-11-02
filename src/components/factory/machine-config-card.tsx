@@ -11,6 +11,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import type {
   CreateConfigurationInput,
   Machine,
@@ -29,6 +30,7 @@ function ApplyProfileSection({
   profiles: MachineConfigProfile[];
 }) {
   const router = useRouter();
+  const { t, tn } = useT();
   const [selectedProfileId, setSelectedProfileId] = useState(profiles[0]?.profile_id ?? '');
 
   const applyMutation = useMutation({
@@ -42,7 +44,7 @@ function ApplyProfileSection({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-blue-50 px-4 py-3">
-      <Field label="Saved setting">
+      <Field label={t('Saved setting')}>
         <Select
           value={selectedProfileId}
           onChange={(e) => setSelectedProfileId(e.target.value)}
@@ -58,7 +60,7 @@ function ApplyProfileSection({
 
       {selected && (
         <p className="pb-1 text-xs text-muted">
-          {selected.parameters.length} setting{selected.parameters.length !== 1 ? 's' : ''}
+          {tn(selected.parameters.length, '{count} setting', '{count} settings')}
         </p>
       )}
 
@@ -68,12 +70,12 @@ function ApplyProfileSection({
           onClick={() => applyMutation.mutate()}
           disabled={applyMutation.isPending || !selectedProfileId}
         >
-          {applyMutation.isPending ? 'Saving…' : 'Use this'}
+          {applyMutation.isPending ? t('Saving…') : t('Use this')}
         </Button>
       </div>
 
       {applyMutation.isSuccess && (
-        <p className="pb-1 text-xs text-green-700">Setting in use.</p>
+        <p className="pb-1 text-xs text-green-700">{t('Setting in use.')}</p>
       )}
       {applyMutation.isError && (
         <p className="pb-1 text-xs text-red-600">{applyMutation.error?.message}</p>
@@ -94,6 +96,7 @@ export function MachineConfigCard({
   profiles?: MachineConfigProfile[];
 }) {
   const router = useRouter();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateConfigurationInput>({
     machine_id: machine.machine_id,
@@ -125,29 +128,29 @@ export function MachineConfigCard({
   return (
     <Card>
       <CardHeader
-        title="Machine settings"
-        description="Settings now and before"
+        title={t('Machine settings')}
+        description={t('Settings now and before')}
         action={
           !open ? (
             <Button size="sm" onClick={() => setOpen(true)}>
-              + Add a setting
+              + {t('Add a setting')}
             </Button>
           ) : undefined
         }
       />
 
       {open && (
-        <Sheet title="Add a setting" onClose={() => setOpen(false)}>
+        <Sheet title={t('Add a setting')} onClose={() => setOpen(false)}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Setting name">
+            <Field label={t('Setting name')}>
               <Input
-                placeholder="e.g. speed_rpm, feed_rate"
+                placeholder={t('e.g. speed_rpm, feed_rate')}
                 value={form.key}
                 onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))}
               />
             </Field>
 
-            <Field label="Value">
+            <Field label={t('Value')}>
               <Input
                 value={String(form.value)}
                 onChange={(e) => {
@@ -161,9 +164,9 @@ export function MachineConfigCard({
               />
             </Field>
 
-            <Field label="Unit">
+            <Field label={t('Unit')}>
               <Input
-                placeholder="e.g. rpm, mm/s, bar"
+                placeholder={t('e.g. rpm, mm/s, bar')}
                 value={form.unit}
                 onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
               />
@@ -172,10 +175,10 @@ export function MachineConfigCard({
             <div></div>
 
             <div className="sm:col-span-2">
-              <Field label="Note">
+              <Field label={t('Note')}>
                 <Textarea
                   rows={2}
-                  placeholder="Optional notes for this setting"
+                  placeholder={t('Optional notes for this setting')}
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 />
@@ -188,10 +191,10 @@ export function MachineConfigCard({
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || !canSave}
             >
-              {mutation.isPending ? 'Saving…' : 'Save'}
+              {mutation.isPending ? t('Saving…') : t('Save')}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             {mutation.isError && (
               <p className="text-sm text-red-600">{mutation.error.message}</p>
@@ -202,25 +205,25 @@ export function MachineConfigCard({
 
       {lastConfig && (
         <div className="mb-6 rounded-lg border bg-green-50 px-4 py-3">
-          <p className="mb-1 text-xs font-semibold text-green-800">Newest setting</p>
+          <p className="mb-1 text-xs font-semibold text-green-800">{t('Newest setting')}</p>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-green-700">Setting</p>
+              <p className="text-xs text-green-700">{t('Setting')}</p>
               <p className="font-mono font-semibold">{lastConfig.key}</p>
             </div>
             <div>
-              <p className="text-xs text-green-700">Value</p>
+              <p className="text-xs text-green-700">{t('Value')}</p>
               <p className="font-semibold">
                 {String(lastConfig.value)} {lastConfig.unit && `${lastConfig.unit}`}
               </p>
             </div>
             <div className="col-span-2">
-              <p className="text-xs text-green-700">Changed</p>
-              <p className="text-xs">{formatDate(lastConfig.updated_at)}</p>
+              <p className="text-xs text-green-700">{t('Changed')}</p>
+              <p className="text-xs">{formatDate(lastConfig.updated_at, locale)}</p>
             </div>
             {lastConfig.description && (
               <div className="col-span-2">
-                <p className="text-xs text-green-700">Note</p>
+                <p className="text-xs text-green-700">{t('Note')}</p>
                 <p className="text-xs">{lastConfig.description}</p>
               </div>
             )}
@@ -231,19 +234,19 @@ export function MachineConfigCard({
       <ApplyProfileSection factoryId={factoryId} machine={machine} profiles={profiles} />
 
       {configurations.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted">No settings saved for this machine yet.</p>
+        <p className="py-4 text-center text-sm text-muted">{t('No settings saved for this machine yet.')}</p>
       ) : (
         <div>
-          <h4 className="mb-3 text-sm font-semibold">Configuration History</h4>
+          <h4 className="mb-3 text-sm font-semibold">{t('Configuration History')}</h4>
           <Table className="border-0">
             <THead>
               <TR>
-                <TH>Setting</TH>
-                <TH>Value</TH>
-                <TH>Unit</TH>
-                <TH>From</TH>
-                <TH>Note</TH>
-                <TH>Changed</TH>
+                <TH>{t('Setting')}</TH>
+                <TH>{t('Value')}</TH>
+                <TH>{t('Unit')}</TH>
+                <TH>{t('From')}</TH>
+                <TH>{t('Note')}</TH>
+                <TH>{t('Changed')}</TH>
               </TR>
             </THead>
             <TBody>
@@ -264,7 +267,7 @@ export function MachineConfigCard({
                     )}
                   </TD>
                   <TD className="text-muted">{c.description || '—'}</TD>
-                  <TD>{formatDate(c.updated_at)}</TD>
+                  <TD>{formatDate(c.updated_at, locale)}</TD>
                 </TR>
               ))}
             </TBody>

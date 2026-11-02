@@ -1,5 +1,6 @@
 import { TeamPanel } from '@/components/factory/team-panel';
 import { PageHeader } from '@/components/layout/app-shell';
+import { getT } from '@/lib/i18n/server';
 import { SCROLL_STEP } from '@/lib/infinite';
 import { resolveListTotal } from '@/lib/pagination';
 import { NavDim } from '@/lib/navigation-context';
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic';
 
 async function FactoryTeamPage({ params }: { params: Promise<{ factoryId: string }> }) {
   const { factoryId } = await params;
+  const { t } = await getT();
 
   const [pendingData, usersData, workersData] = await Promise.all([
     serverApi.factoryUsers(factoryId, 100, 0, 'pending'),
@@ -21,8 +23,8 @@ async function FactoryTeamPage({ params }: { params: Promise<{ factoryId: string
   return (
     <NavDim>
       <PageHeader
-        title="Team"
-        description="Floor workers (scheduling and mobile alerts) and dashboard user access"
+        title={t('Team')}
+        description={t('Floor workers (scheduling and mobile alerts) and dashboard user access')}
       />
       <TeamPanel
         factoryId={factoryId}

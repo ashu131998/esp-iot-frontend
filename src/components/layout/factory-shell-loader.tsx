@@ -4,6 +4,7 @@ import { FactoryShell } from '@/components/layout/factory-shell';
 import { serverApi } from '@/lib/server-api';
 import { getFactoryConfig } from '@/lib/factory-config';
 import { displayOf, factoryTabs } from '@/lib/display';
+import { getT } from '@/lib/i18n/server';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 
@@ -29,8 +30,10 @@ export async function FactoryShellLoader({
     notFound();
   }
 
+  const { tn } = await getT();
   const shifts = factory.shifts?.length ? factory.shifts : DEFAULT_SHIFTS;
   const shiftLabel = shifts.map((s) => s.label).join(' · ');
+  const machineCount = factory.machines?.length ?? 0;
 
   // Pages and sections our staff switched for this factory (lib/display.ts).
   const display = displayOf(factory);
@@ -43,7 +46,7 @@ export async function FactoryShellLoader({
       shifts={shifts}
       tabs={factoryTabs(factoryId, display)}
       branding={factory.branding}
-      description={`${factory.location ?? ''} · ${factory.machines?.length ?? 0} machines · ${shiftLabel}`}
+      description={`${factory.location ?? ''} · ${tn(machineCount, '{count} machine', '{count} machines')} · ${shiftLabel}`}
       refs={{
         machines: sortByMachineName(factory.machines ?? []),
         lines: lines ?? [],

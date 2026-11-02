@@ -65,16 +65,18 @@
 
   <main>
     <section class="page-head">
-      <div class="wrap narrow center">
+      <span class="blob blob-1" aria-hidden="true"></span>
+      <span class="blob blob-2" aria-hidden="true"></span>
+      <div class="wrap narrow center" data-reveal="stagger">
         <p class="eyebrow">ROI calculator</p>
-        <h1 class="page-title">What do stopped machines cost you?</h1>
+        <h1 class="page-title">What do <span class="grad">stopped machines</span> cost you?</h1>
         <p class="lead">Put in your own numbers. The figures change as you type; nothing you enter leaves this page.</p>
       </div>
     </section>
 
     <section class="section soft calc-section">
       <div class="wrap calc">
-        <form id="roi-form" class="calc-form" autocomplete="off">
+        <form id="roi-form" class="calc-form" autocomplete="off" data-reveal>
           <h2 class="calc-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20V8l5 4V8l5 4V4h3l1 16"/><path d="M2 20h20"/><path d="M17 20V12l5-3v11"/></svg>Your floor</h2>
           <label class="field">
             <span>Machines</span>
@@ -124,7 +126,7 @@
           <p class="muted">The numbers already filled in are an example, not a promise. Change every one to your own.</p>
         </form>
 
-        <aside id="roi-out" class="calc-out" aria-live="polite">
+        <aside id="roi-out" class="calc-out" aria-live="polite" data-reveal>
           <p id="out-hint" class="calc-hint"></p>
           <dl class="calc-figures">
             <div><dt>Stop time a month</dt><dd id="out-stop-hours">—</dd></div>
@@ -149,7 +151,7 @@
     </section>
 
     <section class="section">
-      <div class="wrap narrow">
+      <div class="wrap narrow" data-reveal>
         <p class="eyebrow">The real figure</p>
         <h2>How FloorBeat measures it</h2>
         <ul class="ticks">

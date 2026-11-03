@@ -156,7 +156,7 @@ export function FactoryMobileNav({
                       aria-current={active ? 'page' : undefined}
                       className={cn(
                         'flex h-20 w-full flex-col items-center justify-center gap-1.5 rounded-xl border px-1 text-center text-xs font-medium',
-                        active ? 'border-primary bg-blue-50 text-primary' : 'text-foreground active:bg-slate-50',
+                        active ? 'border-primary bg-primary/5 text-primary' : 'text-foreground active:bg-slate-50',
                       )}
                     >
                       <Icon className="h-5 w-5" />

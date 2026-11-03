@@ -41,11 +41,6 @@
   color-scheme: dark;
 }
 
-/* Hairlines on the sidebar: the grey `* { border-color }` below is unlayered, so it would beat any border colour class. */
-.sidebar-surface,
-.sidebar-surface * {
-  border-color: rgb(255 255 255 / 0.06);
-}
 
 body {
   background: var(--background);
@@ -65,6 +60,17 @@ html:lang(gu) .uppercase {
   letter-spacing: normal;
 }
 
-* {
-  border-color: var(--border);
+/*
+ * The default border colour, in the base layer so every border colour class (status stripes,
+ * warning boxes, selected states, the spinner's gap) wins over it; unlayered, it beat them all
+ * and every border showed grey. Hairlines on the dark sidebar by default.
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  .sidebar-surface,
+  .sidebar-surface * {
+    border-color: rgb(255 255 255 / 0.06);
+  }
 }

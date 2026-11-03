@@ -533,7 +533,7 @@ export function DateRangePicker({
                 className={cn(
                   'rounded-lg border px-3 py-2.5 text-left text-sm',
                   activePreset === preset.id
-                    ? 'border-blue-500 bg-blue-50 font-semibold text-blue-600'
+                    ? 'border-primary bg-primary/5 font-semibold text-primary'
                     : 'text-gray-700 active:bg-gray-50',
                 )}
               >

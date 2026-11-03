@@ -208,10 +208,10 @@ function ChoiceCard({
       onClick={onClick}
       className={cn(
         'flex h-full flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors',
-        disabled ? 'cursor-not-allowed opacity-60' : 'hover:border-primary hover:bg-blue-50/40 active:bg-blue-50',
+        disabled ? 'cursor-not-allowed opacity-60' : 'hover:border-primary hover:bg-primary/5 active:bg-primary/10',
       )}
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-primary">{icon}</span>
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">{icon}</span>
       <span className="text-base font-semibold text-foreground">{title}</span>
       <span className="text-sm text-muted">{body}</span>
       {disabledReason && <span className="text-xs text-amber-700">{disabledReason}</span>}

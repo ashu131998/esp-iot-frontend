@@ -22,6 +22,7 @@ import { useNavigate, useIsNavigating } from '@/lib/navigation-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 import type {
   Machine,
   MachineConfigProfile,
@@ -88,7 +89,7 @@ function SchedulingFilterBar({
   const [machineSearch, setMachineSearch] = useState('');
 
   const lineMap = useMemo(
-    () => Object.fromEntries((lines ?? []).map((l) => [l.line_id, l.name])),
+    () => Object.fromEntries((lines ?? []).map((l) => [l.line_id, lineLabel(l)])),
     [lines],
   );
 

@@ -801,3 +801,48 @@ export interface SensorFiguresResponse {
     zones?: Record<string, number>;
   };
 }
+
+// ── Predictive maintenance (GET /v1/factories/:id/maintenance, .../maintenance/log) ──
+
+export interface MaintenanceSign {
+  kind: 'vibration' | 'temperature' | 'load' | 'stops' | 'service';
+  /** 0 fine, 1 watch, 2 service soon, 3 service now. */
+  severity: 0 | 1 | 2 | 3;
+  codes: string[];
+  value: number | null;
+  baseline: number | null;
+  change_pct: number | null;
+}
+
+export interface MaintenanceMachine {
+  machine_id: string;
+  machine_name: string;
+  line_id: string;
+  condition: 'now' | 'soon' | 'watch' | 'healthy' | 'no_data';
+  /** 100 = nothing wrong; null without signs. */
+  score: number | null;
+  signs: MaintenanceSign[];
+  last_service: { done_at: string; kind: string; note: string | null } | null;
+  service_interval_hours: number | null;
+  running_hours_since_service: number | null;
+  next_service: { hours_left: number; days_left: number | null; hours_per_day: number | null } | null;
+}
+
+export interface MaintenanceOverview {
+  factory_id: string;
+  at: string;
+  machines: MaintenanceMachine[];
+  summary: { machines: number; conditions: Record<string, number> };
+}
+
+export interface MaintenanceEntry {
+  id: number;
+  machine_id: string;
+  machine_name: string | null;
+  line_id: string | null;
+  done_at: string;
+  kind: string;
+  note: string | null;
+  created_by: string | null;
+  created_at: string | null;
+}

@@ -8,6 +8,7 @@ import { useT } from '@/lib/i18n/context';
 import type { Machine, ProductionLine } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 
 export const MACHINE_PARAM = 'machine_id';
 
@@ -32,7 +33,7 @@ export function MachineSelector({
   const [open, setOpen] = useState(false);
 
   const lineMap = useMemo(
-    () => Object.fromEntries(lines.map((l) => [l.line_id, l.name])),
+    () => Object.fromEntries(lines.map((l) => [l.line_id, lineLabel(l)])),
     [lines],
   );
 

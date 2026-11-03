@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { Field, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
+import { lineLabel } from '@/lib/lines';
 
 function useLineMachineOptions(factoryId: string, lineFilter: string) {
   const linesQuery = useQuery({
@@ -55,7 +56,7 @@ export function LineMachineAlertFilters({
           <option value="">{t('All lines')}</option>
           {(linesQuery.data?.lines ?? []).map((l) => (
             <option key={l.line_id} value={l.line_id}>
-              {l.name ?? l.line_id}
+              {lineLabel(l)}
             </option>
           ))}
         </Select>
@@ -119,7 +120,7 @@ export function FactoryLineMachineAlertFilters({
           <option value="">{factoryFilter ? t('All lines') : t('Select factory first')}</option>
           {(linesQuery.data?.lines ?? []).map((l) => (
             <option key={l.line_id} value={l.line_id}>
-              {l.name ?? l.line_id}
+              {lineLabel(l)}
             </option>
           ))}
         </Select>

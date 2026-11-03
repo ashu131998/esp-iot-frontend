@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, type ReactNode } from 'react';
 
 import { isShown, type Display } from '@/lib/display';
+import { lineLabel } from '@/lib/lines';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 
 export interface FactoryRefs {
@@ -54,14 +55,14 @@ export function useFactoryRefsOptional(): FactoryRefs | null {
 }
 
 /**
- * A line's name for its ID ("Weaving A" for "line-1"), what every table shows; the ID itself
- * when the line is unknown or outside a factory. Nothing for no line.
+ * A line's name for its ID ("Weaving A" for "line-1"; "Line 1" when it has no name of its own,
+ * lib/lines.ts), what every table shows. Nothing for no line.
  */
 export function useLineName(): (lineId: string | null | undefined) => string {
   const lines = useContext(FactoryRefsContext)?.lines;
   return useCallback((lineId: string | null | undefined) => {
     if (!lineId) return '—';
-    return lines?.find((l) => l.line_id === lineId)?.name?.trim() || lineId;
+    return lineLabel(lines?.find((l) => l.line_id === lineId) ?? { line_id: lineId });
   }, [lines]);
 }
 

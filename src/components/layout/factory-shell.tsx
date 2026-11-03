@@ -35,7 +35,7 @@ export function FactoryShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible" style={brandStyle(branding)} data-sheet-root>
+    <div className="min-h-screen lg:flex lg:h-screen lg:overflow-hidden print:block print:h-auto print:overflow-visible" style={brandStyle(branding)} data-sheet-root>
       <aside className="hidden h-screen w-64 shrink-0 lg:block print:hidden">
         <FactorySidebar
           factoryId={factoryId}
@@ -46,7 +46,7 @@ export function FactoryShell({
           tabs={tabs}
         />
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable] print:block print:overflow-visible">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-none lg:[scrollbar-gutter:stable] print:block print:overflow-visible">
         <FactoryMobileNav
           factoryId={factoryId}
           factoryName={factoryName}

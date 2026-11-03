@@ -17,6 +17,7 @@ import type { Translate } from '@/lib/i18n/translate';
 import { humanMinutes } from '@/lib/plain-words';
 import { cn } from '@/lib/utils';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
+import { lineLabel } from '@/lib/lines';
 
 const WARN_THRESHOLD = 85;
 const CRIT_THRESHOLD = 70;
@@ -58,7 +59,7 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
   const lines = refs?.lines;
   const maxDate = refs?.maxDate ?? null;
   const lineName = useMemo(
-    () => new Map((lines ?? []).map((l) => [l.line_id, l.name])),
+    () => new Map((lines ?? []).map((l) => [l.line_id, lineLabel(l)])),
     [lines],
   );
 

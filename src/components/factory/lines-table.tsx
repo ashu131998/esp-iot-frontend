@@ -3,10 +3,7 @@
 import { ListGroup, ListRow } from '@/components/ui/simple';
 import { useT } from '@/lib/i18n/context';
 import type { ProductionLine } from '@/lib/types';
-
-function lineLabel(line: ProductionLine) {
-  return line.name?.trim() || line.line_id;
-}
+import { lineLabel } from '@/lib/lines';
 
 export function LinesTable({
   factoryId,

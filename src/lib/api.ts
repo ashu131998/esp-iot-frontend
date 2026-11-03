@@ -27,6 +27,8 @@ import type {
   MachineConfiguration,
   MachineDailyTrendResponse,
   MachineLiveDaysResponse,
+  MaintenanceEntry,
+  MaintenanceOverview,
   NodeDetailResponse,
   NotificationItem,
   PaginatedMeta,
@@ -183,6 +185,20 @@ export const api = {
       `/v1/factories/${factoryId}/lines${qs(params)}`,
       options,
     ),
+
+  /** Predictive maintenance: every machine's condition from its signs (the page must be switched on for the factory). */
+  maintenance: (factoryId: string, params?: { line_id?: string; machine_id?: string }, options?: ApiRequestOptions) =>
+    request<MaintenanceOverview>(`/v1/factories/${factoryId}/maintenance${qs(params)}`, options),
+  maintenanceLog: (factoryId: string, params?: { machine_id?: string; limit?: number }, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; entries: MaintenanceEntry[] }>(`/v1/factories/${factoryId}/maintenance/log${qs(params)}`, options),
+  addMaintenanceLog: (factoryId: string, body: { machine_id: string; done_at: string; kind: string; note?: string }) =>
+    request<MaintenanceEntry>(`/v1/factories/${factoryId}/maintenance/log`, { method: 'POST', body: JSON.stringify(body) }),
+  deleteMaintenanceLog: (factoryId: string, id: number) =>
+    request<{ ok: true }>(`/v1/factories/${factoryId}/maintenance/log/${id}`, { method: 'DELETE' }),
+  setServiceInterval: (factoryId: string, machineId: string, hours: number | null) =>
+    request<{ machine_id: string; service_interval_hours: number | null }>(`/v1/factories/${factoryId}/machines/${machineId}/service-interval`, {
+      method: 'PUT', body: JSON.stringify({ service_interval_hours: hours }),
+    }),
 
   /** Temperature or vibration figures per machine for a window (the page must be switched on for the factory). */
   sensorFigures: (factoryId: string, kind: SensorKind, params?: DateRangeParams, options?: ApiRequestOptions) =>

@@ -37,6 +37,7 @@ import { useWideScreen } from '@/lib/use-wide-screen';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 
 // ── Presets ──────────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ export function DateRangePicker({
   );
 
   const lineMap = useMemo(
-    () => Object.fromEntries((lines ?? []).map(l => [l.line_id, l.name])),
+    () => Object.fromEntries((lines ?? []).map(l => [l.line_id, lineLabel(l)])),
     [lines],
   );
 

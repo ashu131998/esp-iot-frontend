@@ -43,14 +43,14 @@ describe('displayOf', () => {
     expect(displayOf({ display: { energy: false }, features: { energy: true } })).toEqual({ energy: false });
   });
 
-  it('falls back to the older feature flags, sensor pages off unless set', () => {
-    const d = displayOf({ features: { vibration: true, energy: false } });
-    expect(isShown(d, 'vibration')).toBe(true);
-    expect(isShown(d, 'temperature')).toBe(false);
+  it('falls back to the older feature flags, the compliance page off unless set', () => {
+    const d = displayOf({ features: { maintenance: false, energy: false } });
+    expect(isShown(d, 'maintenance')).toBe(false);
     expect(isShown(d, 'compliance')).toBe(false);
     expect(isShown(d, 'energy')).toBe(false);
     expect(isShown(d, 'production')).toBe(true);
-    expect(isShown(displayOf(undefined), 'temperature')).toBe(false);
+    expect(isShown(displayOf(undefined), 'maintenance')).toBe(true);
+    expect(isShown(displayOf(undefined), 'compliance')).toBe(false);
     expect(isShown(displayOf(null), 'overview')).toBe(true);
   });
 });

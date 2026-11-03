@@ -10,6 +10,7 @@ import { factory_metrics } from './factory-metrics';
 import { nav } from './nav';
 import { pages } from './pages';
 import { results } from './results';
+import { maintenance } from './maintenance';
 import { sensors } from './sensors';
 
 /** Every Hindi message, by its English text. Loaded on the server only (lib/i18n/server.ts). */
@@ -21,6 +22,7 @@ export const HI_NAMESPACES: Record<string, Messages> = {
   factory_admin,
   alerts,
   sensors,
+  maintenance,
   auth,
   calibration,
   pages,

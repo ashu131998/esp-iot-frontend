@@ -5,6 +5,7 @@ import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { getT } from '@/lib/i18n/server';
 import { serverApi } from '@/lib/server-api';
 import { factoryPage } from '@/lib/server/factory-page';
+import { lineLabel } from '@/lib/lines';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ async function LinesPage({
               headers={[t('Line ID'), t('Name'), t('Machines'), t('Last Seen'), t('Created')]}
               rows={lines.map((line) => [
                 line.line_id,
-                line.name?.trim() || line.line_id,
+                lineLabel(line),
                 machineCountByLine[line.line_id] ?? 0,
                 line.last_seen_at,
                 line.created_at,

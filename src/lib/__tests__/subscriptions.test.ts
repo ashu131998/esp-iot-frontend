@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  addDays, addMonths, currentPeriod, draftBody, draftOf, draftProblems, formatDay, formatPeriod, isDayKey,
-  nextPeriodDraft, periodEnd, subscriptionBadge, todayKey, type SubscriptionPeriod,
+  addDays, addMonths, currentPeriod, dayAsInstant, draftBody, draftOf, draftProblems, formatDay, formatPeriod, isDayKey,
+  nextPeriodDraft, periodEnd, subscriptionBadge, subscriptionBar, todayKey, type SubscriptionPeriod,
 } from '@/lib/subscriptions';
 
 const period = (id: number, starts_on: string, ends_on: string, extra: Partial<SubscriptionPeriod> = {}): SubscriptionPeriod => ({
@@ -86,5 +86,35 @@ describe('the form', () => {
     expect(draftBody({ ...draft, plan: '  Standard   40 ', monthly_amount: '24000.5', notes: ' ' })).toEqual({
       starts_on: '2026-11-01', ends_on: '2026-12-01', plan: 'Standard 40', machines: 40, monthly_amount: 24000.5, notes: null,
     });
+  });
+});
+
+describe('subscriptionBar: who sees what on the factory dashboard', () => {
+  const ending = { state: 'ending' as const, ends_on: '2026-12-01', days_left: 5 };
+  const ended = { state: 'ended' as const, ends_on: '2026-12-01', days_left: -2 };
+  const owner = { staff: false, canRenew: true };
+  const worker = { staff: false, canRenew: false };
+  const staff = { staff: true, canRenew: false };
+
+  it('ended: everyone sees it; staff see that they are not limited', () => {
+    expect(subscriptionBar(ended, worker)).toEqual({ kind: 'ended', ends_on: '2026-12-01' });
+    expect(subscriptionBar(ended, owner)).toEqual({ kind: 'ended', ends_on: '2026-12-01' });
+    expect(subscriptionBar(ended, staff)).toEqual({ kind: 'ended-staff', ends_on: '2026-12-01' });
+  });
+
+  it('its last 30 days: only those who can renew', () => {
+    expect(subscriptionBar(ending, owner)).toEqual({ kind: 'ending', ends_on: '2026-12-01', days_left: 5 });
+    expect(subscriptionBar(ending, staff)?.kind).toBe('ending');
+    expect(subscriptionBar(ending, worker)).toBeNull();
+  });
+
+  it('running, none, or not known: nothing', () => {
+    expect(subscriptionBar({ state: 'active', ends_on: '2027-10-31', days_left: 360 }, owner)).toBeNull();
+    expect(subscriptionBar({ state: 'none' }, owner)).toBeNull();
+    expect(subscriptionBar(undefined, owner)).toBeNull();
+  });
+
+  it('a calendar day as an instant at noon in India', () => {
+    expect(dayAsInstant('2026-12-01').toISOString()).toBe('2026-12-01T06:30:00.000Z');
   });
 });

@@ -15,7 +15,7 @@ import { useFactoryRefs } from '@/lib/factory-refs-context';
  */
 export function useFactoryDateRange() {
   const sp = useSearchParams();
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
 
   const from = sp.get('from') ?? undefined;
   const to = sp.get('to') ?? undefined;
@@ -24,8 +24,8 @@ export function useFactoryDateRange() {
   const live = isLiveDateParams({ from, to });
 
   const range = useMemo(
-    () => resolveDateRange({ from, to }, minDate, shifts),
-    [from, to, minDate, shifts],
+    () => resolveDateRange({ from, to }, minDate, shifts, maxDate),
+    [from, to, minDate, shifts, maxDate],
   );
 
   /** Stable query-key fragment: 'live' while tracking now, else the fixed bounds. */

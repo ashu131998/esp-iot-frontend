@@ -18,12 +18,7 @@ import { Calendar, ChevronDown, Clock, Loader2, Search, X } from 'lucide-react';
 import { MonthCalendar } from '@/components/ui/date-range-calendar';
 import { RefreshCountdown } from '@/components/uptime/refresh-countdown';
 import { useIsNavigating, useNavigate } from '@/lib/navigation-context';
-import {
-  DATE_PARAM_FROM,
-  DATE_PARAM_TO,
-  isLiveRange,
-  resolveDateRange,
-} from '@/lib/date-range';
+import { dashboardNow, DATE_PARAM_FROM, DATE_PARAM_TO, isLiveRange, resolveDateRange } from '@/lib/date-range';
 import {
   CURRENT_SHIFT,
   LAST_SHIFT,
@@ -72,6 +67,7 @@ export function DateRangePicker({
   machines,
   lines,
   shifts,
+  maxDate = null,
   hideDateRange = false,
 }: {
   minDate?: string | null;
@@ -83,6 +79,8 @@ export function DateRangePicker({
   machines?: Machine[];
   lines?: ProductionLine[];
   shifts?: Shift[];
+  /** The end of what this viewer may see (an ended subscription): nothing later is offered. */
+  maxDate?: string | null;
   hideDateRange?: boolean;
 }) {
   const pathname   = usePathname();
@@ -104,8 +102,8 @@ export function DateRangePicker({
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [selecting,    setSelecting]    = useState<'start' | 'end'>('start');
   const [hoverDate,    setHoverDate]    = useState<Date | null>(null);
-  const [fromMonth,    setFromMonth]    = useState<Date>(startOfMonth(new Date()));
-  const [toMonth,      setToMonth]      = useState<Date>(startOfMonth(addMonths(new Date(), 1)));
+  const [fromMonth,    setFromMonth]    = useState<Date>(() => startOfMonth(dashboardNow(maxDate)));
+  const [toMonth,      setToMonth]      = useState<Date>(() => startOfMonth(addMonths(dashboardNow(maxDate), 1)));
 
   // Time-of-day state
   const [draftFromTime, setDraftFromTime] = useState('00:00');
@@ -113,6 +111,12 @@ export function DateRangePicker({
 
   const panelRef   = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const maxDateObj = useMemo(() => {
+    if (!maxDate) return null;
+    const d = parseISO(maxDate);
+    return isNaN(d.getTime()) ? null : d;
+  }, [maxDate]);
 
   const minDateObj = useMemo(() => {
     if (!minDate) return null;
@@ -123,16 +127,16 @@ export function DateRangePicker({
   const liveNow = !to ? (refreshInfo?.lastUpdatedAt ?? 0) : 0;
 
   const current = useMemo(
-    () => resolveDateRange({ from, to }, minDate, shifts),
+    () => resolveDateRange({ from, to }, minDate, shifts, maxDate),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [from, to, minDate, shifts, liveNow],
+    [from, to, minDate, shifts, maxDate, liveNow],
   );
 
   const presets = useMemo(
-    () => buildPresets(shifts, undefined, t),
+    () => buildPresets(shifts, maxDate ? () => dashboardNow(maxDate) : undefined, t),
     // Rebuilt on open so shift labels reflect the time the panel was opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shifts, open, t],
+    [shifts, open, t, maxDate],
   );
 
   const lineMap = useMemo(
@@ -325,7 +329,7 @@ export function DateRangePicker({
   const handleApply = () =>
     applySelection(selectionRange(activePreset, draftFrom, draftTo, draftFromTime, draftToTime));
 
-  const applyPresetNow = (preset: Preset) => applySelection(presetSelection(preset));
+  const applyPresetNow = (preset: Preset) => applySelection(presetSelection(preset, dashboardNow(maxDate)));
 
   const rangeStart = draftFrom && !draftTo && hoverDate && isBefore(hoverDate, draftFrom)
     ? hoverDate : draftFrom;
@@ -607,6 +611,7 @@ export function DateRangePicker({
                   onDayClick={handleDayClick}
                   onDayHover={setHoverDate}
                   minDate={minDateObj}
+                  maxDate={maxDateObj}
                 />
                 <div className="w-px bg-gray-100" />
                 <MonthCalendar
@@ -619,6 +624,7 @@ export function DateRangePicker({
                   onDayClick={handleDayClick}
                   onDayHover={setHoverDate}
                   minDate={minDateObj}
+                  maxDate={maxDateObj}
                 />
               </div>
 

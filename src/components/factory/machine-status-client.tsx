@@ -88,11 +88,13 @@ export function MachineStatusClient({
   to?: string;
   minDate?: string | null;
 }) {
-  const shifts = useFactoryRefsOptional()?.shifts;
+  const refs = useFactoryRefsOptional();
+  const shifts = refs?.shifts;
+  const maxDate = refs?.maxDate ?? null;
   const { t, tn, locale } = useT();
   const range = useMemo(
-    () => resolveDateRange({ from, to }, minDate, shifts),
-    [from, to, minDate, shifts],
+    () => resolveDateRange({ from, to }, minDate, shifts, maxDate),
+    [from, to, minDate, shifts, maxDate],
   );
 
   const refetchInterval = useRefetchInterval(REFRESH_INTERVAL_MS);

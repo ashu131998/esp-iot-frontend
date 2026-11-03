@@ -51,9 +51,12 @@ export async function FactoryShellLoader({
         machines: sortByMachineName(factory.machines ?? []),
         lines: lines ?? [],
         minDate: factory.created_at,
+        // Set when this viewer sees data only up to the end of an ended subscription.
+        maxDate: factory.data_limit?.until ?? null,
         shifts,
         display,
       }}
+      subscription={factory.subscription ?? null}
     >
       {children}
     </FactoryShell>

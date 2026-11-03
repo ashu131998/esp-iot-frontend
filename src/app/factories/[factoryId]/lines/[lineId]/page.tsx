@@ -31,7 +31,7 @@ export default async function LineDetailPage({
   const { t, tn, locale } = await getT();
 
   const factory = await serverApi.factory(factoryId);
-  const range = resolveDateRange(sp, factory.created_at, factory.shifts);
+  const range = resolveDateRange(sp, factory.created_at, factory.shifts, factory.data_limit?.until);
 
   const activeLineId = sp.line_id ?? lineId;
 

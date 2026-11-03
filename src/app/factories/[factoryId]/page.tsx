@@ -35,7 +35,7 @@ async function FactoryOverviewPage({
   const shifts = factory.shifts?.length ? factory.shifts : DEFAULT_SHIFTS;
 
   const scope = { from: sp.from, to: sp.to, lineId: sp.line_id, machineId: sp.machine_id };
-  const range = resolveDateRange({ from: sp.from, to: sp.to }, factory.created_at, shifts);
+  const range = resolveDateRange({ from: sp.from, to: sp.to }, factory.created_at, shifts, factory.data_limit?.until);
   // The same request the cards make: the line narrows the server's answer, the machine is a client-side filter.
   const apiRange = { ...range, ...(sp.line_id ? { line_id: sp.line_id } : {}) };
   const show = (key: string) => isShown(display, key);

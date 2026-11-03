@@ -46,9 +46,10 @@ export function AvailabilityTrendTable({
   from?: string;
   to?: string;
 }) {
-  const shifts = useFactoryRefsOptional()?.shifts;
+  const refs = useFactoryRefsOptional();
+  const shifts = refs?.shifts;
   const { t, locale } = useT();
-  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
+  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts, refs?.maxDate));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   // The same days and figures as the chart above it (trend-days.ts): within the

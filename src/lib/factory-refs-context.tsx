@@ -12,6 +12,11 @@ export interface FactoryRefs {
   lines: ProductionLine[];
   /** Factory `created_at`, used as the date-picker minimum. */
   minDate: string | null;
+  /**
+   * The end of the data this viewer may see (a factory whose subscription ended: its users see
+   * data up to the end, factory.data_limit); null when not limited. Dates stop there.
+   */
+  maxDate: string | null;
   /** Shift schedule; the default date range is the current shift. */
   shifts: Shift[];
   /** Pages and page sections switched on for this factory (lib/display.ts). */

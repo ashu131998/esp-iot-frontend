@@ -194,3 +194,33 @@ export function draftBody(d: PeriodDraft): PeriodBody {
 export function todayKey(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
+
+/** Where customers go to renew. */
+export const SALES_EMAIL = 'sales@floorbeat.in';
+
+export type SubscriptionBar =
+  | { kind: 'ended'; ends_on: string }
+  | { kind: 'ended-staff'; ends_on: string }
+  | { kind: 'ending'; ends_on: string; days_left: number };
+
+/**
+ * The bar a factory's dashboard shows about its subscription, or null. Once it has ended,
+ * everyone sees why the data stops (our staff see that they are not limited). In its last 30
+ * days only those who can renew see it coming: the factory's admins and our staff.
+ */
+export function subscriptionBar(
+  status: SubscriptionStatus | null | undefined,
+  viewer: { staff: boolean; canRenew: boolean },
+): SubscriptionBar | null {
+  if (!status?.ends_on) return null;
+  if (status.state === 'ended') return { kind: viewer.staff ? 'ended-staff' : 'ended', ends_on: status.ends_on };
+  if (status.state === 'ending' && (viewer.staff || viewer.canRenew)) {
+    return { kind: 'ending', ends_on: status.ends_on, days_left: status.days_left ?? 0 };
+  }
+  return null;
+}
+
+/** A calendar day as an instant at noon in India, for the locale date formatters (no day shift). */
+export function dayAsInstant(key: string): Date {
+  return new Date(`${key}T12:00:00+05:30`);
+}

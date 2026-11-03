@@ -10,6 +10,7 @@ import { LineMachineAlertFilters } from '@/components/alerts/alert-scope-filters
 import { api } from '@/lib/api';
 import { StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { machineInAlertScope } from '@/lib/alert-machine-scope';
+import { dashboardNow } from '@/lib/date-range';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import type { Translate } from '@/lib/i18n/translate';
@@ -53,7 +54,9 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
   const machineFilter = searchParams.get('machine_id') ?? '';
   const refetchInterval = useRefetchInterval(REFRESH_MS);
   const { t, tn } = useT();
-  const lines = useFactoryRefsOptional()?.lines;
+  const refs = useFactoryRefsOptional();
+  const lines = refs?.lines;
+  const maxDate = refs?.maxDate ?? null;
   const lineName = useMemo(
     () => new Map((lines ?? []).map((l) => [l.line_id, l.name])),
     [lines],
@@ -70,11 +73,12 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
   }
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['availability-factory-alerts', factoryId],
+    queryKey: ['availability-factory-alerts', factoryId, maxDate],
     queryFn: ({ signal }) => {
-      const to = new Date().toISOString();
-      const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      return api.availability(factoryId, { from, to }, { signal });
+      // The last 24 hours, ending at the end of what this viewer may see (an ended subscription).
+      const end = dashboardNow(maxDate);
+      const from = new Date(end.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      return api.availability(factoryId, { from, to: end.toISOString() }, { signal });
     },
     refetchInterval,
     staleTime: 0,

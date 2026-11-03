@@ -33,10 +33,10 @@ export function AvailabilityMachineTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
   const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 

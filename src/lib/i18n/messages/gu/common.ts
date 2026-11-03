@@ -98,4 +98,10 @@ export const common: Messages = {
   '{m} m': '{m} મિ',
   'this shift': 'આ શિફ્ટમાં',
   'selected time': 'પસંદ કરેલા સમયમાં',
+  'Your FloorBeat subscription ended on {date}. You can see your data up to that day; everything recorded since is kept and appears again once you renew.': 'તમારું FloorBeat સબ્સ્ક્રિપ્શન {date} ના રોજ પૂરું થયું. તમે એ દિવસ સુધીનો ડેટા જોઈ શકો છો; ત્યાર પછીનો બધો ડેટા સચવાયેલો છે અને રિન્યૂ કરતાં જ ફરી દેખાશે.',
+  "This factory's subscription ended on {date}. Its users see data up to that day; you see everything.": 'આ ફેક્ટરીનું સબ્સ્ક્રિપ્શન {date} ના રોજ પૂરું થયું. તેના વપરાશકર્તાઓ એ દિવસ સુધીનો ડેટા જુએ છે; તમે બધું જુઓ છો.',
+  'Your FloorBeat subscription ends today.': 'તમારું FloorBeat સબ્સ્ક્રિપ્શન આજે પૂરું થાય છે.',
+  'Your FloorBeat subscription ends tomorrow, {date}.': 'તમારું FloorBeat સબ્સ્ક્રિપ્શન કાલે, {date} ના રોજ પૂરું થાય છે.',
+  'Your FloorBeat subscription ends on {date}, in {n} days.': 'તમારું FloorBeat સબ્સ્ક્રિપ્શન {date} ના રોજ, {n} દિવસમાં પૂરું થાય છે.',
+  'To renew, write to': 'રિન્યૂ કરવા લખો:',
 };

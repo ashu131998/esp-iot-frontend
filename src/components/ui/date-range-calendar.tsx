@@ -54,6 +54,7 @@ export function MonthCalendar({
   onDayClick,
   onDayHover,
   minDate,
+  maxDate,
 }: {
   label: string;
   month: Date;
@@ -64,9 +65,11 @@ export function MonthCalendar({
   onDayClick: (d: Date) => void;
   onDayHover: (d: Date | null) => void;
   minDate?: Date | null;
+  /** The last day that may be picked (an ended subscription), when before today. */
+  maxDate?: Date | null;
 }) {
   const { locale } = useT();
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => (maxDate && maxDate < new Date() ? maxDate : new Date()), [maxDate]);
   const cells = useMemo(() => buildGrid(month), [month]);
   const months = useMemo(() => monthNames(locale), [locale]);
   const dow = useMemo(() => weekdayLetters(locale), [locale]);

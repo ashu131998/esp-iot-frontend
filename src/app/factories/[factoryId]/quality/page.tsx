@@ -31,7 +31,7 @@ async function QualityContent({
     : machineId
       ? allMachines.filter((m) => m.machine_id === machineId)
       : allMachines;
-  const range = resolveDateRange({ from, to }, factory.created_at, factory.shifts);
+  const range = resolveDateRange({ from, to }, factory.created_at, factory.shifts, factory.data_limit?.until);
   // The first records; the panel loads more as the list scrolls (infinite scroll).
   const data = await serverApi.quality(factoryId, range.from, range.to, SCROLL_STEP, 0, machineId, lineId);
   const records = data.records ?? [];

@@ -3,8 +3,9 @@
 import dynamic from 'next/dynamic';
 
 import { FactoryOverviewStatCards } from '@/components/factory/factory-overview-stat-cards';
+import { OverviewRunSplit } from '@/components/factory/period-splits';
 import { SetupChecklistCard } from '@/components/results/setup-checklist-card';
-import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
+import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
 
@@ -36,6 +37,12 @@ export function FactoryOverviewDashboard({
       {shown('overview.cards') && (
         <QuerySuspense ssr={ssrCards} fallback={<StatGridSkeleton count={4} />}>
           <FactoryOverviewStatCards factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
+
+      {shown('overview.split') && (
+        <QuerySuspense fallback={<ChartSkeleton />}>
+          <OverviewRunSplit factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
 

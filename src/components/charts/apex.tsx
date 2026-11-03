@@ -21,7 +21,7 @@ export function ApexChart({
   height = 320,
   width = '100%',
 }: {
-  type: 'bar' | 'line' | 'area';
+  type: 'bar' | 'line' | 'area' | 'donut';
   series: ApexOptions['series'];
   options: ApexOptions;
   height?: number;

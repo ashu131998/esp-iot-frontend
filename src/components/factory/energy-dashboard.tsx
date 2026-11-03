@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 
 import { EnergyCards } from '@/components/factory/energy-cards';
+import { EnergySplit } from '@/components/factory/period-splits';
 import {
   ChartSkeleton,
   SingleStatChartTableSkeleton,
@@ -37,6 +38,7 @@ export function EnergyDashboard({
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={6} />}>
       {shown('energy.cards') && <EnergyCards factoryId={factoryId} from={from} to={to} />}
+      {shown('energy.split') && <EnergySplit factoryId={factoryId} from={from} to={to} />}
       {wide && shown('energy.chart') && <EnergyChartSection factoryId={factoryId} from={from} to={to} />}
       {shown('energy.table') && <EnergyTable factoryId={factoryId} from={from} to={to} />}
     </QuerySuspense>

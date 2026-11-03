@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { api } from '@/lib/api';
 import type { SensorBinding } from '@/lib/types';
 
-const SENSOR_TYPES = ['current', 'proximity', 'cycle', 'time'] as const;
+const SENSOR_TYPES = ['current', 'cycle', 'proximity', 'temperature', 'vibration', 'time'] as const;
 
 type BindingDraft = {
   _key: string;

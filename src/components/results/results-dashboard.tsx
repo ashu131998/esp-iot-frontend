@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Copy, Printer, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { DonutChart } from '@/components/charts/donut-chart';
 import { ResultsSettingsForm } from '@/components/results/results-settings-form';
 import { StopFollowUpTiles } from '@/components/results/stop-follow-up-tiles';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useShown } from '@/lib/factory-refs-context';
 import { formatDateTime, formatFullDate, formatUpTo } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
+import { reasonSlices } from '@/lib/pie-slices';
 import { humanMinutes } from '@/lib/plain-words';
 import {
   caseStudyText, formatPct, formatRupees, formatSignedHours, monthLabel, recoveredTone, resultsQueryKey,
@@ -148,6 +150,15 @@ export function ResultsDashboard({
           <div className="p-4">
             <StopFollowUpTiles data={data.stops} />
           </div>
+          {data.stops.reasons.filter((r) => r.stops > 0).length > 1 && (
+            <div className="p-4">
+              <DonutChart
+                slices={reasonSlices(data.stops.reasons, t)}
+                format={(n) => t('{count} stops', { count: n })}
+                locale={locale}
+              />
+            </div>
+          )}
           {data.stops.reasons.slice(0, 5).map((r) => (
             <ListRow
               key={r.code ?? 'none'}

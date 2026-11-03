@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 
 import { AvailabilityCards } from '@/components/factory/availability-cards';
 import { FactoryAvailabilityTrend } from '@/components/factory/factory-availability-trend';
+import { AvailabilitySplit } from '@/components/factory/period-splits';
 import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
@@ -40,6 +41,13 @@ export function AvailabilityDashboard({
       {shown('availability.cards') && (
         <QuerySuspense fallback={<StatGridSkeleton count={3} />}>
           <AvailabilityCards factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
+
+      {/* Pie: running against stopped time, from the same availability query */}
+      {shown('availability.split') && (
+        <QuerySuspense fallback={<ChartSkeleton />}>
+          <AvailabilitySplit factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
 

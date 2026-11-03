@@ -1,14 +1,22 @@
 import { TemperatureDashboard } from '@/components/factory/temperature-dashboard';
+import { ChartSkeleton, StatGridSkeleton } from '@/components/ui/page-skeletons';
+import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
+import { QuerySuspense } from '@/components/ui/query-suspense';
+import { NavDim } from '@/lib/navigation-context';
 import { factoryPage } from '@/lib/server/factory-page';
 
 export const dynamic = 'force-dynamic';
 
-// The switch check runs in factoryPage, which is all this page needs the factory for.
-async function TemperaturePage() {
-
+async function TemperaturePage({ params }: { params: Promise<{ factoryId: string }> }) {
+  const { factoryId } = await params;
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <TemperatureDashboard />
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <DateRangeToolbar />
+      <NavDim className="space-y-6">
+        <QuerySuspense fallback={<><StatGridSkeleton count={2} /><ChartSkeleton /></>}>
+          <TemperatureDashboard factoryId={factoryId} />
+        </QuerySuspense>
+      </NavDim>
     </div>
   );
 }

@@ -742,3 +742,62 @@ export interface SaveCountCalibrationResponse {
   rotations_per_unit: number;
   applied_to: number;
 }
+
+// ── Temperature and vibration (GET /v1/factories/:id/metrics/{temperature,vibration}) ──
+
+export type SensorKind = 'temperature' | 'vibration';
+
+/** One reading key of a sensor channel over the window: its newest value, the window's figures and series [[iso, value]]. */
+export interface SensorFigure {
+  key: string;
+  latest: number | null;
+  latest_at: string | null;
+  avg: number | null;
+  min: number | null;
+  max: number | null;
+  samples: number;
+  series: [string, number][];
+}
+
+/** A board's channel (T1 / T2, or an RS485 channel M1-M8) with its figures. */
+export interface SensorChannel {
+  binding_id?: string;
+  device_id: string;
+  slot: string;
+  /** The binding's label when bound to a machine; the board's own name for it otherwise. */
+  label?: string;
+  name?: string | null;
+  figures: SensorFigure[];
+}
+
+export interface SensorMachine {
+  machine_id: string;
+  machine_name: string;
+  line_id: string;
+  status: 'ok' | 'no_data' | 'no_sensor';
+  /** Temperature: the highest latest °C over its sensors; vibration: the highest latest velocity (mm/s) over the axes. */
+  value: number | null;
+  band?: 'normal' | 'warm' | 'hot' | 'unknown' | null;
+  zone?: 'good' | 'warning' | 'alarm' | 'unknown' | null;
+  sensors: SensorChannel[];
+}
+
+export interface SensorFiguresResponse {
+  factory_id: string;
+  kind: SensorKind;
+  from: string;
+  to: string;
+  /** Minute rows (bucketed) or each hour's saved figures. */
+  source: 'minute' | 'hourly';
+  bucket_s: number;
+  machines: SensorMachine[];
+  /** Channels that reported but are bound to no machine (whole factory only). */
+  unbound: SensorChannel[];
+  summary: {
+    machines: number;
+    with_sensor: number;
+    reporting: number;
+    bands?: Record<string, number>;
+    zones?: Record<string, number>;
+  };
+}

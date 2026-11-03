@@ -41,20 +41,24 @@ export function signedInHome(cookieHeader: string | null, origins: Origins): str
 const NOT_FOUND_ERROR = 'Factory not found';
 
 /**
- * Whether the factory exists, from the API's public lookup: false only for a
- * definite "not found", null when the API can't answer, so an API outage still
- * lets visitors through to the sign-in page.
+ * The factory's real ID, from the API's public lookup, which also finds an ID typed in other
+ * letters ("Factory-01" for "factory-01"). False only for a definite "not found"; null when the API
+ * can't answer, so an API outage still lets visitors through to the sign-in page.
  */
-export async function factoryExists(
+export async function lookupFactoryId(
   factoryId: string,
   apiOrigin: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<boolean | null> {
+): Promise<string | false | null> {
   try {
     const res = await fetchImpl(`${apiOrigin}/v1/public/factories/${encodeURIComponent(factoryId)}`, {
       signal: AbortSignal.timeout(3000),
     });
-    if (res.ok) return true;
+    if (res.ok) {
+      const found = (await res.json().catch(() => null)) as { factory_id?: unknown } | null;
+      const id = typeof found?.factory_id === 'string' ? found.factory_id : '';
+      return FACTORY_ID_RE.test(id) ? id : factoryId;
+    }
     const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
     // An older API answers 404 for the unknown route itself, with a different body.
     if (res.status === 404 && body?.error === NOT_FOUND_ERROR) return false;
@@ -80,4 +84,20 @@ const ALWAYS_SHOWN = new Set(['/roi', '/partners']);
 export function alwaysShown(pathname: string): boolean {
   const path = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
   return ALWAYS_SHOWN.has(path);
+}
+
+/**
+ * Dashboard and staff addresses that reach the website because they lost their subdomain, as
+ * happens when a link is copied out of a phone's mail app ("floorbeat.in/f/factory-01/login"): the
+ * same address on the right host, so they never end on "page not found". Only plain path segments
+ * pass ([A-Za-z0-9_-], no "//", no dots), and the host is ours, so this cannot redirect elsewhere.
+ */
+const APP_PATH_RE = /^\/(?:f|factories)\/[A-Za-z0-9_-]{1,64}(?:\/[A-Za-z0-9_-]+)*\/?$/;
+const APP_EXACT = new Set(['/reset-password', '/reset-password/']);
+const STAFF_PATH_RE = /^\/internal(?:\/[A-Za-z0-9_-]+)*\/?$/;
+
+export function forwardTarget(pathname: string, search: string, origins: Origins): string | null {
+  if (APP_PATH_RE.test(pathname) || APP_EXACT.has(pathname)) return `${origins.APP_ORIGIN}${pathname}${search}`;
+  if (STAFF_PATH_RE.test(pathname)) return `${origins.STAFF_ORIGIN}${pathname}${search}`;
+  return null;
 }

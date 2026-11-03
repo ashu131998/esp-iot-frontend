@@ -322,6 +322,7 @@ img { max-width: 100%; }
 .page-head .blob { opacity: 0.4; }
 .page-head .wrap { position: relative; }
 .page-title { font-size: clamp(2.2rem, 4.8vw, 3.4rem); }
+.notfound { padding: 112px 0 132px; }
 
 /* ROI calculator */
 .calc-section { padding-top: 48px; }

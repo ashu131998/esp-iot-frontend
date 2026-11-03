@@ -1,4 +1,4 @@
-import { alwaysShown, factoryExists, factoryLoginUrl, signedInHome, type Origins } from './redirect';
+import { alwaysShown, factoryLoginUrl, forwardTarget, lookupFactoryId, signedInHome, type Origins } from './redirect';
 
 interface Env extends Origins {
   ASSETS: Fetcher;
@@ -43,6 +43,13 @@ export default {
   async fetch(req, env): Promise<Response> {
     const url = new URL(req.url);
 
+    // A dashboard or staff address without its subdomain (copied badly out of a mail app):
+    // straight to the right host, in one hop from www too.
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const forward = forwardTarget(url.pathname, url.search, env);
+      if (forward) return redirect(forward);
+    }
+
     if (url.hostname.startsWith('www.')) {
       url.hostname = url.hostname.slice(4);
       return Response.redirect(url.toString(), 301);
@@ -58,11 +65,12 @@ export default {
     if (home) return redirect(home);
 
     if (url.pathname === '/login' && url.searchParams.has('factory')) {
-      const factoryId = url.searchParams.get('factory')?.trim() ?? '';
-      const target = factoryLoginUrl(factoryId, env);
-      if (!target) return redirect('/login#invalid');
-      if ((await factoryExists(factoryId, env.API_ORIGIN)) === false) return redirect('/login#not-found');
-      return redirect(target);
+      const typed = url.searchParams.get('factory')?.trim() ?? '';
+      if (!factoryLoginUrl(typed, env)) return redirect('/login#invalid');
+      // Any letter case finds the factory; the sign-in page gets its real ID.
+      const found = await lookupFactoryId(typed, env.API_ORIGIN);
+      if (found === false) return redirect('/login#not-found');
+      return redirect(factoryLoginUrl(found ?? typed, env) ?? factoryLoginUrl(typed, env)!);
     }
 
     if (url.pathname === '/login/staff') return redirect(`${env.STAFF_ORIGIN}/internal/login`);

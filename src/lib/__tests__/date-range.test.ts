@@ -153,8 +153,9 @@ describe('resolveDateRange / presetRange with an end (factory.data_limit)', () =
   it('an end asked for after it is cut; a window starting after it falls back to its last production day', () => later(() => {
     expect(resolveDateRange({ from: '2026-11-30T00:00:00.000Z', to: '2026-12-04T00:00:00.000Z' }, null, null, END))
       .toEqual({ from: '2026-11-30T00:00:00.000Z', to: END });
+    // The production day that holds the end (local clock, like every fallback here).
     expect(resolveDateRange({ from: '2026-12-03T00:00:00.000Z', to: '2026-12-04T00:00:00.000Z' }, null, null, END))
-      .toEqual({ from: '2026-12-01T00:30:00.000Z', to: END });
+      .toEqual({ from: productionDayStart(new Date(END)).toISOString(), to: END });
     expect(resolveDateRange({ from: '2026-11-01T00:00:00.000Z', to: '2026-11-02T00:00:00.000Z' }, null, null, END))
       .toEqual({ from: '2026-11-01T00:00:00.000Z', to: '2026-11-02T00:00:00.000Z' });
   }));

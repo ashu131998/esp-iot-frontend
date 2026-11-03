@@ -5,6 +5,8 @@
  * instead of as an error after "Create". The server checks again.
  */
 
+import type { PeriodDraft } from './subscriptions';
+
 export const MAX_ONBOARD_ADMINS = 10;
 export const MIN_PASSWORD_LENGTH = 8;
 export const MIN_USERNAME_LENGTH = 3;
@@ -257,4 +259,370 @@ export function signInDetailsText(
     ...(admin.username.toLowerCase() !== admin.email.toLowerCase() ? [`Username: ${admin.username}`] : []),
     `Password: ${admin.password}`,
   ].join('\n');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// The whole factory in one go (POST /v1/admin/factories/setup). Only the factory and one admin
+// are required; every other step is optional and sent only when something was filled in. The
+// rules mirror query-api's factory-setup.js, so problems show on their own step.
+// ════════════════════════════════════════════════════════════════════════════
+
+
+export const SETUP_STEPS = [
+  { key: 'factory', label: 'Factory' },
+  { key: 'look', label: 'Look' },
+  { key: 'subscription', label: 'Subscription' },
+  { key: 'shifts', label: 'Shifts' },
+  { key: 'lines', label: 'Lines & machines' },
+  { key: 'wifi', label: 'WiFi' },
+  { key: 'people', label: 'People' },
+  { key: 'reports', label: 'Reports & alerts' },
+  { key: 'review', label: 'Review' },
+] as const;
+export type SetupStepKey = (typeof SETUP_STEPS)[number]['key'];
+
+/** The step a server problem belongs to (its `section`). */
+export function stepOfSection(section: string): number {
+  const i = SETUP_STEPS.findIndex((s) => s.key === section);
+  return i < 0 ? 0 : i;
+}
+
+export const MAX_WIFI = 8;
+export const LOGO_MAX_BYTES = 200 * 1024;
+export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+export const WORKER_ROLES = [
+  'Machine Operator', 'Weaver', 'Maintenance Technician', 'Quality Inspector', 'Shift Supervisor', 'Material Handler', 'Electrician',
+];
+
+const PHONE_RE = /^\+?[0-9 ()-]{6,20}$/;
+const COLOUR_RE = /^#[0-9a-fA-F]{6}$/;
+const RESCUE_LINE = 'rescue';
+
+export interface LookDraft {
+  accent_color: string;
+  logo: { type: string; data: string; name: string; size: number } | null;
+  /** Page and section switches changed from their defaults. */
+  features: Record<string, boolean>;
+}
+
+export interface SubscriptionDraft extends PeriodDraft {
+  /** Set one now (else the factory starts without one: not limited). */
+  enabled: boolean;
+}
+
+export interface LineDraft { key: string; line_id: string; name: string; idEdited: boolean }
+
+export interface MachineDraft {
+  key: string;
+  line_key: string;
+  name: string;
+  machine_id: string;
+  type: string;
+  target_units_per_hour: string;
+  target_cycle_time_sec: string;
+  voltage_v: string;
+  unit_label: string;
+}
+
+export interface WifiDraft { key: string; ssid: string; pass: string }
+
+export interface WorkerDraft {
+  key: string;
+  name: string;
+  role: string;
+  employee_code: string;
+  phone: string;
+  email: string;
+  password: string;
+}
+
+export interface ContactDraft { key: string; name: string; phone: string }
+
+export interface ReportsDraft {
+  /** Shift-report (and monitoring alert) emails, one per line or comma-separated. */
+  emails: string;
+  mobile_enabled: boolean;
+  notify_owner_on_down: boolean;
+  owner_contacts: ContactDraft[];
+  value_per_loom_hour: string;
+  fee_per_machine_month: string;
+  setup_fee: string;
+  monthly_email: boolean;
+}
+
+export interface SetupDraft {
+  step: number;
+  factory: FactoryDraft;
+  idEdited: boolean;
+  look: LookDraft;
+  subscription: SubscriptionDraft;
+  shifts: ShiftDraft[];
+  lines: LineDraft[];
+  machines: MachineDraft[];
+  wifi: WifiDraft[];
+  admins: AdminDraft[];
+  workers: WorkerDraft[];
+  reports: ReportsDraft;
+}
+
+const key = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
+export function emptySetupDraft(today: string): SetupDraft {
+  return {
+    step: 0,
+    factory: { factory_id: '', name: '', location: '', referred_by: '' },
+    idEdited: false,
+    look: { accent_color: '', logo: null, features: {} },
+    subscription: {
+      enabled: false, starts_on: today, ends_on: '', plan: '', machines: '', monthly_amount: '', notes: '',
+    },
+    shifts: SHIFT_PRESETS[0].shifts,
+    lines: [],
+    machines: [],
+    wifi: [],
+    admins: [emptyAdmin(key())],
+    workers: [],
+    reports: {
+      emails: '', mobile_enabled: true, notify_owner_on_down: true, owner_contacts: [],
+      value_per_loom_hour: '', fee_per_machine_month: '', setup_fee: '', monthly_email: true,
+    },
+  };
+}
+
+export const newLine = (line_id = '', name = ''): LineDraft => ({ key: key(), line_id, name, idEdited: Boolean(line_id) });
+export const newMachine = (line_key: string, name = ''): MachineDraft => ({
+  key: key(), line_key, name, machine_id: '', type: '', target_units_per_hour: '', target_cycle_time_sec: '', voltage_v: '', unit_label: '',
+});
+export const newWifi = (): WifiDraft => ({ key: key(), ssid: '', pass: '' });
+export const newWorker = (): WorkerDraft => ({ key: key(), name: '', role: WORKER_ROLES[0], employee_code: '', phone: '', email: '', password: '' });
+export const newContact = (): ContactDraft => ({ key: key(), name: '', phone: '' });
+
+/**
+ * Machines named in a run: "Loom #" from 1 to 12 gives Loom #1 … Loom #12, on one line, with the
+ * same type and targets. Names already in the list are skipped.
+ */
+export function bulkMachines(
+  { prefix, from, to, line_key, type = '', target_units_per_hour = '' }:
+  { prefix: string; from: number; to: number; line_key: string; type?: string; target_units_per_hour?: string },
+  existing: ReadonlyArray<MachineDraft> = [],
+): MachineDraft[] {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < from || to - from >= 500) return [];
+  const taken = new Set(existing.map((m) => m.name.trim().toLowerCase()));
+  const out: MachineDraft[] = [];
+  for (let n = from; n <= to; n += 1) {
+    const name = `${prefix}${n}`.trim();
+    if (!name || taken.has(name.toLowerCase())) continue;
+    taken.add(name.toLowerCase());
+    out.push({ ...newMachine(line_key, name), type, target_units_per_hour });
+  }
+  return out;
+}
+
+/** Emails typed one per line or comma-separated: trimmed, lower-cased, each once. */
+export function emailList(text: string): string[] {
+  return [...new Set(text.split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+}
+
+const asNumber = (v: string): number | null => (v.trim() === '' ? null : Number(v));
+const badNumber = (v: string, { positive = false } = {}) => {
+  const n = asNumber(v);
+  return n !== null && (!Number.isFinite(n) || n < 0 || (positive && n === 0));
+};
+
+export function lookProblems(l: LookDraft): Partial<Record<'accent_color' | 'logo', string>> {
+  const out: Partial<Record<'accent_color' | 'logo', string>> = {};
+  if (l.accent_color && !COLOUR_RE.test(l.accent_color)) out.accent_color = 'A colour like #2563eb';
+  if (l.logo && !LOGO_TYPES.includes(l.logo.type)) out.logo = 'A PNG, JPEG or WebP image';
+  else if (l.logo && l.logo.size > LOGO_MAX_BYTES) out.logo = `At most ${LOGO_MAX_BYTES / 1024} KB`;
+  return out;
+}
+
+export function lineProblems(lines: LineDraft[]): Partial<Record<'line_id', string>>[] {
+  const seen = new Set<string>();
+  return lines.map((l) => {
+    const id = l.line_id.trim();
+    let problem: string | undefined;
+    if (!ID_RE.test(id)) problem = 'Letters, digits, - and _ only';
+    else if (id === RESCUE_LINE) problem = '"rescue" is kept for the rescue box';
+    else if (seen.has(id.toLowerCase())) problem = 'Same ID as another line';
+    seen.add(id.toLowerCase());
+    return problem ? { line_id: problem } : {};
+  });
+}
+
+export type MachineProblems = Partial<Record<'name' | 'line_key' | 'machine_id' | 'numbers', string>>;
+
+export function machineProblems(machines: MachineDraft[], lines: LineDraft[]): MachineProblems[] {
+  const lineKeys = new Set(lines.map((l) => l.key));
+  const names = new Set<string>();
+  const ids = new Set<string>();
+  return machines.map((m) => {
+    const out: MachineProblems = {};
+    const name = m.name.trim();
+    if (!name) out.name = 'Enter a name';
+    else if (names.has(name.toLowerCase())) out.name = 'Same name as another machine';
+    names.add(name.toLowerCase());
+    if (!lineKeys.has(m.line_key)) out.line_key = 'Pick a line';
+    const id = m.machine_id.trim();
+    if (id && !ID_RE.test(id)) out.machine_id = 'Letters, digits, - and _ only';
+    else if (id && ids.has(id.toLowerCase())) out.machine_id = 'Same ID as another machine';
+    if (id) ids.add(id.toLowerCase());
+    if ([m.target_units_per_hour, m.target_cycle_time_sec, m.voltage_v].some((v) => badNumber(v, { positive: true }))) {
+      out.numbers = 'Targets and voltage must be numbers above 0';
+    }
+    if (m.unit_label.trim().length > 16) out.numbers = 'The unit is at most 16 characters';
+    return out;
+  });
+}
+
+const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
+
+export function wifiProblems(list: WifiDraft[]): Partial<Record<'ssid' | 'pass', string>>[] {
+  const seen = new Set<string>();
+  return list.map((n) => {
+    const out: Partial<Record<'ssid' | 'pass', string>> = {};
+    const ssid = n.ssid.trim();
+    const bytes = utf8Bytes(ssid);
+    if (bytes < 1 || bytes > 32) out.ssid = 'The network name, 1–32 characters';
+    else if (seen.has(ssid)) out.ssid = 'Listed twice';
+    seen.add(ssid);
+    if (n.pass !== '' && (n.pass.length < 8 || n.pass.length > 63 || !/^[\x20-\x7e]+$/.test(n.pass))) {
+      out.pass = '8–63 plain characters, or empty for an open network';
+    }
+    return out;
+  });
+}
+
+export type WorkerProblems = Partial<Record<'name' | 'email' | 'password' | 'phone', string>>;
+
+export function workerProblems(workers: WorkerDraft[]): WorkerProblems[] {
+  const emails = new Set<string>();
+  return workers.map((w) => {
+    const out: WorkerProblems = {};
+    if (!w.name.trim()) out.name = 'Enter a name';
+    const email = w.email.trim().toLowerCase();
+    if (email && !isValidEmail(email)) out.email = 'Not a valid email';
+    else if (email && emails.has(email)) out.email = 'Same email as another worker';
+    if (email) emails.add(email);
+    if (w.password && !email) out.password = 'An app login needs an email too';
+    else if (w.password && w.password.length < MIN_PASSWORD_LENGTH) out.password = `At least ${MIN_PASSWORD_LENGTH} characters`;
+    if (w.phone.trim() && !PHONE_RE.test(w.phone.trim())) out.phone = 'Not a phone number';
+    return out;
+  });
+}
+
+export type ReportsProblems = Partial<Record<'emails' | 'contacts' | 'money', string>>;
+
+export function reportsProblems(r: ReportsDraft): ReportsProblems {
+  const out: ReportsProblems = {};
+  const bad = emailList(r.emails).filter((e) => !isValidEmail(e));
+  if (bad.length > 0) out.emails = `Not an email: ${bad.join(', ')}`;
+  const badContact = r.owner_contacts.find((c) => !PHONE_RE.test(c.phone.trim()));
+  if (badContact) out.contacts = `Not a phone number: ${badContact.phone || '(empty)'}`;
+  if ([r.value_per_loom_hour, r.fee_per_machine_month, r.setup_fee].some((v) => badNumber(v))) out.money = 'Amounts must be numbers';
+  return out;
+}
+
+/** Whether each step is fine to leave (Review is always fine). */
+export function setupStepsOk(d: SetupDraft, takenIds: string[] = [], periodProblems: (p: PeriodDraft) => object = () => ({})): boolean[] {
+  return SETUP_STEPS.map(({ key: step }) => {
+    switch (step) {
+      case 'factory': return !hasProblems(factoryProblems(d.factory, takenIds));
+      case 'look': return !hasProblems(lookProblems(d.look));
+      case 'subscription': return !d.subscription.enabled || !hasProblems(periodProblems(d.subscription));
+      case 'shifts': return shiftProblem(d.shifts) === null;
+      case 'lines': return !hasProblems(lineProblems(d.lines)) && !hasProblems(machineProblems(d.machines, d.lines));
+      case 'wifi': return !hasProblems(wifiProblems(d.wifi));
+      case 'people': return !hasProblems(adminProblems(d.admins)) && !hasProblems(workerProblems(d.workers));
+      case 'reports': return !hasProblems(reportsProblems(d.reports));
+      default: return true;
+    }
+  });
+}
+
+export interface SetupRequest {
+  factory: { factory_id: string; name: string; location: string; referred_by?: string };
+  shifts: ShiftDraft[];
+  admins: { email: string; username: string; password: string }[];
+  look?: { accent_color?: string; logo?: { type: string; data: string }; features?: Record<string, boolean> };
+  subscription?: { starts_on: string; ends_on: string; plan: string | null; machines: number | null; monthly_amount: number | null; notes: string | null };
+  lines?: { line_id: string; name: string }[];
+  machines?: Record<string, string | number>[];
+  wifi?: { ssid: string; pass: string }[];
+  workers?: { name: string; role: string; employee_code?: string; phone?: string; email?: string; password?: string }[];
+  reports?: { enabled: boolean; recipient_emails: string[] };
+  alerts?: { mobile_enabled: boolean; notify_owner_on_down: boolean; owner_contacts: { name: string; phone: string }[] };
+  results?: { value_per_loom_hour?: number; fee_per_machine_month?: number; setup_fee?: number; monthly_email: boolean };
+}
+
+export interface SetupResponse {
+  factory: import('./types').Factory;
+  admins: import('./auth-types').AuthUser[];
+  emails: { username: string; email: string; sent: boolean; error?: string }[];
+  lines: number;
+  machines: number;
+  wifi: number;
+  workers: { worker_id: string; name: string; app_login: string }[];
+  dashboard_url: string;
+}
+
+const clean = (v: string) => v.replace(/\s+/g, ' ').trim();
+
+/** The form as the API takes it: required parts always, the rest only when filled in. */
+export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => SetupRequest['subscription']): SetupRequest {
+  const base = buildOnboardRequest(d.factory, d.shifts, d.admins);
+  const req: SetupRequest = {
+    factory: {
+      factory_id: base.factory_id, name: base.name, location: base.location,
+      ...(base.referred_by ? { referred_by: base.referred_by } : {}),
+    },
+    shifts: base.shifts,
+    admins: base.admins,
+  };
+  const look: NonNullable<SetupRequest['look']> = {};
+  if (d.look.accent_color) look.accent_color = d.look.accent_color.toLowerCase();
+  if (d.look.logo) look.logo = { type: d.look.logo.type, data: d.look.logo.data };
+  if (Object.keys(d.look.features).length > 0) look.features = d.look.features;
+  if (Object.keys(look).length > 0) req.look = look;
+  if (d.subscription.enabled) req.subscription = body(d.subscription);
+  const lineIdOf = new Map(d.lines.map((l) => [l.key, l.line_id.trim()]));
+  if (d.lines.length > 0) req.lines = d.lines.map((l) => ({ line_id: l.line_id.trim(), name: clean(l.name) || l.line_id.trim() }));
+  if (d.machines.length > 0) {
+    req.machines = d.machines.map((m) => {
+      const out: Record<string, string | number> = { line_id: lineIdOf.get(m.line_key) ?? '', name: clean(m.name) };
+      if (m.machine_id.trim()) out.machine_id = m.machine_id.trim();
+      if (clean(m.type)) out.type = clean(m.type);
+      if (clean(m.unit_label)) out.unit_label = clean(m.unit_label);
+      for (const k of ['target_units_per_hour', 'target_cycle_time_sec', 'voltage_v'] as const) {
+        const n = asNumber(m[k]);
+        if (n !== null) out[k] = n;
+      }
+      return out;
+    });
+  }
+  if (d.wifi.length > 0) req.wifi = d.wifi.map((n) => ({ ssid: n.ssid.trim(), pass: n.pass }));
+  if (d.workers.length > 0) {
+    req.workers = d.workers.map((w) => ({
+      name: clean(w.name),
+      role: clean(w.role) || WORKER_ROLES[0],
+      ...(clean(w.employee_code) ? { employee_code: clean(w.employee_code) } : {}),
+      ...(w.phone.trim() ? { phone: w.phone.trim() } : {}),
+      ...(w.email.trim() ? { email: w.email.trim().toLowerCase() } : {}),
+      ...(w.password ? { password: w.password } : {}),
+    }));
+  }
+  const emails = emailList(d.reports.emails);
+  if (emails.length > 0) req.reports = { enabled: true, recipient_emails: emails };
+  req.alerts = {
+    mobile_enabled: d.reports.mobile_enabled,
+    notify_owner_on_down: d.reports.notify_owner_on_down,
+    owner_contacts: d.reports.owner_contacts.map((c) => ({ name: clean(c.name), phone: c.phone.trim() })),
+  };
+  const money: NonNullable<SetupRequest['results']> = { monthly_email: d.reports.monthly_email };
+  for (const k of ['value_per_loom_hour', 'fee_per_machine_month', 'setup_fee'] as const) {
+    const n = asNumber(d.reports[k]);
+    if (n !== null) money[k] = n;
+  }
+  if (Object.keys(money).length > 1 || !d.reports.monthly_email) req.results = money;
+  return req;
 }

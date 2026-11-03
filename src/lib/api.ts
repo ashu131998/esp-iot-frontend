@@ -66,6 +66,8 @@ class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    /** The error response's JSON, for routes that say more than a message (e.g. problems by step). */
+    public body: unknown = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -100,13 +102,14 @@ async function request<T>(path: string, init?: RequestInit & ApiRequestOptions):
 
     if (!res.ok) {
       let message = res.statusText;
+      let body: unknown = null;
       try {
-        const body = await res.json();
-        message = body.error ?? message;
+        body = await res.json();
+        message = (body as { error?: string } | null)?.error ?? message;
       } catch {
         /* ignore */
       }
-      throw new ApiError(message, res.status);
+      throw new ApiError(message, res.status, body);
     }
 
     if (res.status === 204) return undefined as T;
@@ -801,16 +804,10 @@ export const api = {
     ),
 
   /** A factory with its first admins; each admin is emailed their sign-in details. */
-  onboardFactory: (body: import('./onboarding').OnboardRequest, options?: ApiRequestOptions) =>
-    request<{
-      factory: Factory;
-      admins: import('./auth-types').AuthUser[];
-      emails: { username: string; email: string; sent: boolean; error?: string }[];
-      dashboard_url: string;
-    }>('/v1/admin/factories', {
-      method: 'POST',
-      body: JSON.stringify(body),
-      ...options,
+  /** A whole factory in one go (/internal/onboard): created all or nothing. Staff only. */
+  adminSetupFactory: (body: import('./onboarding').SetupRequest, options?: ApiRequestOptions) =>
+    request<import('./onboarding').SetupResponse>('/v1/admin/factories/setup', {
+      method: 'POST', body: JSON.stringify(body), ...options,
     }),
 
   /** Switch factory pages / page sections (keys from adminDisplayCatalog). Staff only. */

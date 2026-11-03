@@ -62,23 +62,23 @@ export function SidebarUserFooter({ factoryId, children }: { factoryId?: string;
   const initial = (user.username || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="space-y-3 border-t border-gray-100 p-3">
+    <div className="space-y-3 border-t border-white/[0.06] p-3">
       {children}
-      <LanguageToggle fill className="border-gray-200" />
-      <div className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+      <LanguageToggle tone="dark" fill />
+      <div className="flex items-center gap-3 rounded-xl px-1 py-1">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground ring-2 ring-white/10">
           {initial}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">{user.username}</p>
-          <p className="truncate text-xs text-muted">{t('Signed in')}</p>
+          <p className="truncate text-sm font-medium text-slate-100">{user.username}</p>
+          <p className="truncate text-xs text-slate-500">{t('Signed in')}</p>
         </div>
         <button
           type="button"
           onClick={signOut}
           aria-label={t('Sign out')}
           title={t('Sign out')}
-          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-gray-50 hover:text-foreground"
+          className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-white"
         >
           <LogOut className="h-4 w-4" />
         </button>

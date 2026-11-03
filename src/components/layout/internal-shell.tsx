@@ -54,8 +54,8 @@ function InternalSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex items-center gap-3 px-5 pb-3 pt-5">
         <BrandMark className="h-10 w-10" />
         <div>
-          <p className="text-sm font-semibold text-foreground">FloorBeat</p>
-          <p className="text-xs font-medium text-amber-600">Staff · Internal</p>
+          <p className="text-sm font-semibold text-white">FloorBeat</p>
+          <p className="text-xs font-medium text-amber-400">Staff · Internal</p>
         </div>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
@@ -101,7 +101,7 @@ export function InternalShell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close menu" onClick={() => setOpen(false)} />
           <aside className={cn('relative flex h-full w-64 flex-col shadow-xl', SIDEBAR_PANEL)}>
-            <button type="button" aria-label="Close menu" className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-gray-50 hover:text-foreground" onClick={() => setOpen(false)}>
+            <button type="button" aria-label="Close menu" className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-white/[0.06] hover:text-white" onClick={() => setOpen(false)}>
               <X className="h-5 w-5" />
             </button>
             <InternalSidebar onNavigate={() => setOpen(false)} />

@@ -44,8 +44,8 @@ function SidebarContent({
       <div className="flex items-center gap-3 px-5 pb-3 pt-5">
         <BrandMark className="h-10 w-10" />
         <div>
-          <p className="text-sm font-semibold text-foreground">FloorBeat</p>
-          <p className="text-xs text-muted">Operations Platform</p>
+          <p className="text-sm font-semibold text-white">FloorBeat</p>
+          <p className="text-xs text-slate-400">Operations Platform</p>
         </div>
       </div>
 
@@ -141,7 +141,7 @@ export function Sidebar({ factories }: { factories: Array<{ factory_id: string; 
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-gray-50 hover:text-foreground"
+              className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
               aria-label="Close navigation menu"
             >
               <X className="h-5 w-5" />

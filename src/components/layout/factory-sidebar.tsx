@@ -28,7 +28,7 @@ import {
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
-import { SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
+import { SIDEBAR_CARD, SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
 import { currentShiftWindow } from '@/lib/shifts';
@@ -112,30 +112,39 @@ export function FactorySidebar({
       <div className="flex items-center gap-3 px-5 pb-3 pt-5">
         {logoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
-          <img src={logoSrc} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-0.5 ring-1 ring-gray-100" />
+          <img src={logoSrc} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-0.5 ring-1 ring-white/10" />
         ) : (
           <BrandMark className="h-10 w-10" />
         )}
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{factoryName}</p>
-          <p className="truncate text-xs text-muted">{location ?? factoryId}</p>
+          <p className="truncate text-sm font-semibold text-white">{factoryName}</p>
+          <p className="truncate text-xs text-slate-400">{location ?? factoryId}</p>
         </div>
       </div>
 
       {shifts.length > 0 && (
-        <div className="mx-3 rounded-xl bg-slate-50 px-3 py-2.5">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{t('Shifts')}</p>
+        <div className={cn('mx-3 px-3 py-2.5', SIDEBAR_CARD)}>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{t('Shifts')}</p>
           <ul className="space-y-1 text-xs">
             {shifts.map((s) => {
               const now = currentShiftId === s.shift_id;
               return (
                 <li key={s.shift_id} className="flex items-center justify-between gap-2">
-                  <span className={cn('flex min-w-0 items-center gap-1.5', now ? 'font-medium text-foreground' : 'text-slate-500')}>
-                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', now ? 'bg-emerald-500' : 'bg-gray-300')} />
+                  <span className={cn('flex min-w-0 items-center gap-1.5', now ? 'font-medium text-slate-100' : 'text-slate-400')}>
+                    <span
+                      className={cn(
+                        'h-1.5 w-1.5 shrink-0 rounded-full',
+                        now ? 'bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.18)]' : 'bg-slate-600',
+                      )}
+                    />
                     <span className="truncate">{t(s.name)}</span>
-                    {now && <span className="rounded-full bg-emerald-50 px-1.5 text-[10px] font-semibold text-emerald-700">{t('Now')}</span>}
+                    {now && (
+                      <span className="rounded-full bg-emerald-400/10 px-1.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+                        {t('Now')}
+                      </span>
+                    )}
                   </span>
-                  <span className="shrink-0 tabular-nums text-slate-400">{s.label}</span>
+                  <span className="shrink-0 tabular-nums text-slate-500">{s.label}</span>
                 </li>
               );
             })}
@@ -176,7 +185,7 @@ export function FactorySidebar({
       </nav>
 
       <SidebarUserFooter factoryId={factoryId}>
-        {isInternalStaff && <FactoryPlatformBack factoryId={factoryId} />}
+        {isInternalStaff && <FactoryPlatformBack factoryId={factoryId} className="px-1 text-slate-400 hover:text-white" />}
       </SidebarUserFooter>
     </aside>
   );

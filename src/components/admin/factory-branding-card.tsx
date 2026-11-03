@@ -135,7 +135,7 @@ export function FactoryBrandingCard({ factory }: { factory: Factory }) {
         {/* Preview: the sidebar header and a button, as the factory will see them. */}
         <div style={brandStyle(shownColor ? { accent_color: shownColor, logo_version: null } : null)}>
           <p className="mb-1.5 text-sm font-medium">Preview</p>
-          <div className="flex items-center gap-2 rounded-lg bg-sidebar px-4 py-3 text-sidebar-foreground">
+          <div className="sidebar-surface flex items-center gap-2 rounded-lg px-4 py-3">
             {shownLogo ? (
               // eslint-disable-next-line @next/next/no-img-element -- local preview / same-origin logo
               <img src={shownLogo} alt="" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5" />

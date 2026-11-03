@@ -43,7 +43,7 @@ export function LanguageToggle({
       className={cn(
         fill ? 'flex w-full' : 'inline-flex',
         'rounded-lg p-0.5 text-xs font-medium',
-        tone === 'dark' ? 'bg-white/10' : 'bg-slate-100',
+        tone === 'dark' ? 'bg-white/[0.04] ring-1 ring-inset ring-white/[0.06]' : 'bg-slate-100',
         pending && 'opacity-60',
         className,
       )}
@@ -61,7 +61,7 @@ export function LanguageToggle({
               'rounded-md py-1 transition-colors',
               fill ? 'flex-1 px-1' : 'px-2.5',
               tone === 'dark'
-                ? active ? 'bg-white/20 text-white' : 'text-slate-300 hover:text-white'
+                ? active ? 'bg-white/[0.12] text-white shadow-sm' : 'text-slate-400 hover:text-slate-100'
                 : active ? 'bg-white text-foreground shadow-sm ring-1 ring-gray-200' : 'text-muted hover:text-foreground',
             )}
           >

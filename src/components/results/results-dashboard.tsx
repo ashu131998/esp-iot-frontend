@@ -155,6 +155,7 @@ export function ResultsDashboard({
               <DonutChart
                 slices={reasonSlices(data.stops.reasons, t)}
                 format={(n) => t('{count} stops', { count: n })}
+                centerLabel={t('Stops')}
                 locale={locale}
               />
             </div>

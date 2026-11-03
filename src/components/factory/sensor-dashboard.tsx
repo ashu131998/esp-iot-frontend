@@ -78,6 +78,7 @@ export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: 
                 : t('Now, ISO 10816: good up to {warn} mm/s, warning up to {bad} mm/s, alarm above', CLASS_LIMITS.vibration)}
               slices={classSlices(data, t)}
               format={(n) => tn(n, '{count} machine', '{count} machines', { count: n })}
+              centerLabel={t('Machines')}
               locale={locale}
             />
           )}

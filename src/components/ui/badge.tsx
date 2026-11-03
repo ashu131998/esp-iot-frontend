@@ -3,8 +3,6 @@
 import { useT } from '@/lib/i18n/context';
 import { cn, normalizeMachineStatus, statusColor, statusLabel } from '@/lib/utils';
 
-import { Card } from './card';
-
 export function Badge({
   children,
   className,
@@ -63,13 +61,13 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <Card className={cn('flex h-full flex-col gap-2', className)}>
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted">{label}</span>
-        {icon}
+    <div className={cn('flex h-full flex-col rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-gray-100', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-medium text-muted">{label}</span>
+        {icon && <span className="shrink-0 text-gray-300">{icon}</span>}
       </div>
-      <div className="text-xl font-bold tracking-tight sm:text-2xl">{value}</div>
-      {sub && <p className="text-xs text-muted">{sub}</p>}
-    </Card>
+      <div className="mt-1 text-2xl font-bold tracking-tight text-foreground tabular-nums sm:text-3xl">{value}</div>
+      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+    </div>
   );
 }

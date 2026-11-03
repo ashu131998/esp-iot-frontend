@@ -5,6 +5,8 @@ import type { Messages } from '../../translate';
  * Temperature and vibration pages, and the pies on the overview, availability, energy and results pages.
  */
 export const sensors: Messages = {
+  'Measured': 'मापा गया',
+  'Stops': 'रुकावटें',
   'Alarm': 'अलार्म',
   'All machines together, {period}': 'सभी मशीनें मिलाकर, {period}',
   'Energy by line': 'लाइन के हिसाब से ऊर्जा',

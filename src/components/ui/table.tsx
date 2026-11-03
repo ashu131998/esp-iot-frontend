@@ -2,23 +2,23 @@ import { cn } from '@/lib/utils';
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('overflow-x-auto rounded-lg border', className)}>
+    <div className={cn('overflow-x-auto', className)}>
       <table className="w-full text-sm">{children}</table>
     </div>
   );
 }
 
 export function THead({ children }: { children: React.ReactNode }) {
-  return <thead className="border-b bg-slate-50 text-left text-xs uppercase text-muted">{children}</thead>;
+  return <thead className="border-b border-gray-100 text-left text-xs font-medium text-muted">{children}</thead>;
 }
 
 export function TBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y">{children}</tbody>;
+  return <tbody className="divide-y divide-gray-100">{children}</tbody>;
 }
 
 export function TR({ children, className, ...props }: React.ComponentPropsWithoutRef<'tr'>) {
   return (
-    <tr className={cn('hover:bg-slate-50/80', className)} {...props}>
+    <tr className={cn('transition-colors hover:bg-gray-50/80', className)} {...props}>
       {children}
     </tr>
   );
@@ -28,11 +28,11 @@ export function TR({ children, className, ...props }: React.ComponentPropsWithou
 export const PHONE_HIDDEN = 'hidden sm:table-cell';
 
 export function TH({ children, className }: { children?: React.ReactNode; className?: string }) {
-  return <th className={cn('px-2 py-2 font-medium sm:px-4 sm:py-3', className)}>{children}</th>;
+  return <th className={cn('px-2 py-2.5 font-medium sm:px-3', className)}>{children}</th>;
 }
 
 export function TD({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={cn('px-2 py-2 sm:px-4 sm:py-3', className)}>{children}</td>;
+  return <td className={cn('px-2 py-3 sm:px-3', className)}>{children}</td>;
 }
 
 export function EmptyState({ message }: { message: string }) {
@@ -53,7 +53,7 @@ export function LoadingState() {
 
 export function ErrorState({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-100">
       {message}
     </div>
   );

@@ -19,6 +19,8 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
+import { SummaryCard } from '@/components/ui/simple';
+import { RUN_BAD_PCT, periodPhrase, runTone, wholePercent } from '@/lib/plain-words';
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
@@ -35,7 +37,7 @@ export function FactoryOverviewStatCards({
   to?: string;
 }) {
   const { minDate, shifts, maxDate } = useFactoryRefs();
-  const { t, locale } = useT();
+  const { t, tn, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const queryScope = { from, to, lineId, machineId };
@@ -105,7 +107,24 @@ export function FactoryOverviewStatCards({
   // Two per row up to lg (phones too); with an odd count, availability takes a whole row.
   const firstWide = cards > 1 && cards % 2 === 1;
 
+  const ran = filterMachinesByScope(availability.machines, scope).map((m) => m.availability_percent).filter((v): v is number => v !== null);
+  const below = ran.filter((v) => v < RUN_BAD_PCT).length;
+  const period = t(periodPhrase(from, to));
+
   return (
+    <div className="space-y-4">
+    <SummaryCard
+      tone={runTone(figures.runningPercent)}
+      badge={figures.runningPercent == null ? undefined : wholePercent(figures.runningPercent)}
+      title={figures.runningPercent == null
+        ? t('No running data yet')
+        : ran.length > 1
+          ? t('On average, machines ran {pct} of {period}', { pct: wholePercent(figures.runningPercent), period })
+          : t('Machine ran {pct} of {period}', { pct: wholePercent(figures.runningPercent), period })}
+      subtitle={ran.length === 0 ? undefined : below > 0
+        ? tn(below, '{count} machine ran under {pct}%', '{count} machines ran under {pct}%', { count: below, pct: RUN_BAD_PCT })
+        : t('Every machine ran {pct}% or more', { pct: RUN_BAD_PCT })}
+    />
     <div className={`grid gap-3 sm:gap-4 ${cards > 1 ? 'grid-cols-2' : ''} ${LG_COLS[cards]}`}>
       <StatCard
         label={t('Availability')}
@@ -128,6 +147,7 @@ export function FactoryOverviewStatCards({
         />
       )}
       {performanceOn && <StatCard label={t('Performance')} value={formatPercent(figures.onTargetPercent, locale)} />}
+    </div>
     </div>
   );
 }

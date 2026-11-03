@@ -62,6 +62,7 @@ export function MachineHealth({ factoryId }: { factoryId: string }) {
           description={t("From each machine's signs: vibration, temperature, motor load, stops and hours since its last service")}
           slices={conditionSlices(data, t)}
           format={(n) => tn(n, '{count} machine', '{count} machines', { count: n })}
+          centerLabel={t('Machines')}
           locale={locale}
         />
       )}

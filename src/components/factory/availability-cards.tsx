@@ -3,9 +3,8 @@
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { Badge, StatCard } from '@/components/ui/badge';
-import { Card, CardHeader } from '@/components/ui/card';
-import { SummaryCard } from '@/components/ui/simple';
+import { StatCard } from '@/components/ui/badge';
+import { NumberTile, NumberTiles, SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
@@ -98,20 +97,23 @@ export function AvailabilityCards({
       </div>
 
       {data.by_shift && data.by_shift.length > 0 && !machineId && (
-        <Card>
-          <CardHeader title={t('Availability by Shift')} description={t('Last completed 12-hour shift per schedule')} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {data.by_shift.map((s) => (
-              <div key={s.shift_id} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold">{t(s.name)}</h4>
-                  <Badge className="bg-blue-50 text-blue-700">{s.label}</Badge>
-                </div>
-                <p className="mt-2 text-2xl font-bold">{formatPercent(s.avg_availability_percent, locale)}</p>
-              </div>
-            ))}
+        <section>
+          <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+            <h3 className="text-sm font-semibold text-foreground">{t('Availability by Shift')}</h3>
+            <span className="text-xs text-muted">{t('Last completed 12-hour shift per schedule')}</span>
           </div>
-        </Card>
+          <NumberTiles>
+            {data.by_shift.map((s) => (
+              <NumberTile
+                key={s.shift_id}
+                label={t(s.name)}
+                value={formatPercent(s.avg_availability_percent, locale)}
+                hint={s.label}
+                tone={runTone(s.avg_availability_percent)}
+              />
+            ))}
+          </NumberTiles>
+        </section>
       )}
     </>
   );

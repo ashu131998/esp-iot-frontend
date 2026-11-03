@@ -19,6 +19,7 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatNumber, formatVolts } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
 
 export function EnergyTable({
   factoryId,
@@ -75,7 +76,22 @@ export function EnergyTable({
           </div>
         }
       />
-      <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={t('Avg {avg} A · peak {peak} A', {
+              avg: m.avg_amps != null ? formatNumber(m.avg_amps, 2, locale) : '—',
+              peak: m.peak_amps != null ? formatNumber(m.peak_amps, 2, locale) : '—',
+            })}
+            value={m.energy_kwh != null ? `${formatNumber(m.energy_kwh, 1, locale)} kWh` : '—'}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>{t('Machine')}</TH>

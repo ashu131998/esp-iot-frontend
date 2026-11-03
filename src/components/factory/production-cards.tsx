@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { StatCard } from '@/components/ui/badge';
+import { Package } from 'lucide-react';
+
+import { SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
@@ -16,6 +18,7 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatUnits, sharedUnitLabel, sumUnits } from '@/lib/utils';
+import { periodPhrase } from '@/lib/plain-words';
 
 const PRODUCTION_REFRESH_MS = 60_000;
 const PRODUCTION_REFRESH_SEC = 60;
@@ -51,11 +54,20 @@ export function ProductionCards({
 
   const totalUnits = sumUnits(displayMachines);
 
+  const unitLabel = sharedUnitLabel(displayMachines);
+  const counted = displayMachines.filter((m) => m.status !== 'no_sensor');
+  const top = [...counted].sort((a, b) => (b.units_produced ?? 0) - (a.units_produced ?? 0))[0];
+
   return (
-    <StatCard
-      label={t('Total Units Produced')}
-      value={formatUnits(totalUnits, sharedUnitLabel(displayMachines), locale, t('(mixed units)'))}
-      sub={`${t('From proximity sensor detections')}${isFetching ? ` · ${t('updating…')}` : ''}`}
+    <SummaryCard
+      tone="good"
+      icon={<Package className="h-5 w-5" />}
+      title={counted.length === 0
+        ? t('No proximity sensor counts yet')
+        : t('Made {units} in {period}', { units: formatUnits(totalUnits, unitLabel, locale, t('(mixed units)')), period: t(periodPhrase(from, to)) })}
+      subtitle={top && (top.units_produced ?? 0) > 0
+        ? `${t('Made the most: {machine} · {units}', { machine: top.machine_name, units: formatUnits(top.units_produced, top.unit_label, locale, t('(mixed units)')) })}${isFetching ? ` · ${t('updating…')}` : ''}`
+        : t('From proximity sensor detections')}
     />
   );
 }

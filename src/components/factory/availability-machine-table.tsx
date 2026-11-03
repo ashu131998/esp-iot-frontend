@@ -21,8 +21,9 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
-import { humanMinutes } from '@/lib/plain-words';
+import { STATE_TONE, humanMinutes, machineState } from '@/lib/plain-words';
 import { formatPercent, statusLabel } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
 
 export function AvailabilityMachineTable({
   factoryId,
@@ -106,7 +107,21 @@ export function AvailabilityMachineTable({
           />
         }
       />
-      <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            tone={STATE_TONE[machineState(uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data')]}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={t('Ran {up} · stopped {down}', { up: humanMinutes(m.uptime_minutes, t), down: humanMinutes(m.downtime_minutes, t) })}
+            value={formatPercent(m.availability_percent, locale)}
+            valueHint={m.availability_percent != null ? t('running') : undefined}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>{t('Machine')}</TH>

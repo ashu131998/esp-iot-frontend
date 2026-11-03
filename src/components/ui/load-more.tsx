@@ -134,7 +134,7 @@ export function ScrollTable({
   }, [hasRows, resetKey]);
 
   return (
-    <div className={cn('overflow-x-auto rounded-lg border', className)}>
+    <div className={cn('overflow-x-auto', className)}>
       <table ref={tableRef} className="w-full text-sm">{children}</table>
     </div>
   );

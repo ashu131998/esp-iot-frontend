@@ -18,6 +18,8 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatPercent, formatUnits } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { runTone } from '@/lib/plain-words';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
   const { t, locale } = useT();
@@ -73,7 +75,26 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
           />
         }
       />
-      <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            tone={runTone(m.performance_percent)}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={m.availability_percent == null && m.throughput_percent == null
+              ? t('No data')
+              : t('Running {availability} · pace {throughput}', {
+                availability: formatPercent(m.availability_percent, locale),
+                throughput: formatPercent(m.throughput_percent, locale),
+              })}
+            value={formatPercent(m.performance_percent, locale)}
+            valueHint={m.performance_percent != null ? t('of target') : undefined}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>{t('Machine')}</TH>

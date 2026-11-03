@@ -64,12 +64,17 @@ describe('the pies', () => {
 });
 
 describe('the donut chart', () => {
-  it('never lightens a hovered slice to white, and its tooltip is dark text on white', async () => {
+  it('shows the total in the middle and the hovered slice there instead of a tooltip; never lightens a slice', async () => {
     const { donutChartOptions } = await import('@/components/charts/donut-chart');
-    const options = donutChartOptions([{ label: 'No data', value: 8, color: SLICE_COLORS.idle }], (v) => `${v} machines`);
+    const options = donutChartOptions([{ label: 'No data', value: 8, color: SLICE_COLORS.idle }], (v) => `${v}`, 'Machines');
     expect(options.states?.hover?.filter).toEqual({ type: 'darken' });
     expect(options.states?.active?.filter).toEqual({ type: 'darken' });
-    expect(options.tooltip).toMatchObject({ theme: 'light', fillSeriesColor: false });
+    expect(options.tooltip).toEqual({ enabled: false });
+    const labels = options.plotOptions?.pie?.donut?.labels;
+    expect(labels?.show).toBe(true);
+    expect(labels?.total).toMatchObject({ show: true, label: 'Machines' });
+    expect((labels?.total?.formatter as (w: unknown) => string)({ globals: { seriesTotals: [8, 2] } })).toBe('10');
+    expect((labels?.value?.formatter as (v: string) => string)('8')).toBe('8');
     expect(options.labels).toEqual(['No data']);
     expect(options.colors).toEqual([SLICE_COLORS.idle]);
   });

@@ -20,6 +20,7 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { cn, formatUnits } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
 
 export function ProductionTable({
   factoryId,
@@ -77,7 +78,19 @@ export function ProductionTable({
           </div>
         }
       />
-      <ScrollTable rowCount={pageRows.length} resetKey={listKey}>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={m.status === 'no_sensor' ? t('No proximity sensor') : t('{count} readings', { count: m.data_points != null ? formatInt(m.data_points, locale) : '0' })}
+            value={formatUnits(m.units_produced, m.unit_label, locale, mixedWord)}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
             <TH>{t('Machine')}</TH>

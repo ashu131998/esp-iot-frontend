@@ -50,6 +50,7 @@ export function OverviewRunSplit({ factoryId, from, to }: { factoryId: string; f
       description={t('How much of {period} each machine ran', { period: t(periodPhrase(from, to)) })}
       slices={runShareSlices(machines.map((m) => m.availability_percent), t)}
       format={(n) => tn(n, '{count} machine', '{count} machines', { count: n })}
+      centerLabel={t('Machines')}
       locale={locale}
     />
   );
@@ -74,6 +75,8 @@ export function AvailabilitySplit({ factoryId, from, to }: { factoryId: string; 
       description={machines.length > 1 ? t('All machines together, {period}', { period: t(periodPhrase(from, to)) }) : t(periodPhrase(from, to))}
       slices={timeSplitSlices(up, down, t)}
       format={(n) => humanMinutes(n, t)}
+      centerFormat={(n) => humanMinutes(n, t)}
+      centerLabel={t('Measured')}
       locale={locale}
       empty={t('No running data yet')}
     />
@@ -100,6 +103,8 @@ export function EnergySplit({ factoryId, from, to }: { factoryId: string; from?:
       description={t(periodPhrase(from, to))}
       slices={byLine ? lineEnergySlices(machines, lineName) : machineEnergySlices(machines, t)}
       format={(n) => `${formatUpTo(n, 1, locale)} kWh`}
+      centerFormat={(n) => formatUpTo(n, n >= 100 ? 0 : 1, locale)}
+      centerLabel="kWh"
       locale={locale}
       empty={t('No energy measured in this period')}
     />

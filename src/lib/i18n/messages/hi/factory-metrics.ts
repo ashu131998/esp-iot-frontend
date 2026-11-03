@@ -2,6 +2,19 @@ import type { Messages } from '../../translate';
 
 /** Hindi for one area of the dashboard (see lib/i18n/README.md). Key = the exact English text. */
 export const factory_metrics: Messages = {
+  'Avg {avg} A · peak {peak} A': 'औसत {avg} A · अधिकतम {peak} A',
+  'Every machine ran {pct}% or more': 'हर मशीन {pct}% या ज़्यादा चली',
+  'Machines made {pct} of their target': 'मशीनों ने लक्ष्य का {pct} बनाया',
+  'Made the most: {machine} · {units}': 'सबसे ज़्यादा बनाया: {machine} · {units}',
+  'Made {units} in {period}': '{period} में {units} बनाया',
+  'No performance figures yet': 'अभी परफ़ॉर्मेंस के आँकड़े नहीं',
+  'No proximity sensor counts yet': 'अभी प्रॉक्सिमिटी सेंसर की गिनती नहीं',
+  'No proximity sensor': 'प्रॉक्सिमिटी सेंसर नहीं',
+  'Running {availability} · pace {throughput}': 'चली {availability} · रफ़्तार {throughput}',
+  'of target': 'लक्ष्य का',
+  '{count} machine ran under {pct}%': '{count} मशीन {pct}% से कम चली',
+  '{count} machines ran under {pct}%': '{count} मशीनें {pct}% से कम चलीं',
+  '{count} readings': '{count} रीडिंग',
   // production-cards.tsx
   'Total Units Produced': 'कुल उत्पादन',
   'From proximity sensor detections': 'प्रॉक्सिमिटी सेंसर की गिनती से',

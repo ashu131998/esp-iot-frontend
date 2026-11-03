@@ -26,6 +26,8 @@ import {
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { STATE_TONE, STATE_WORD, machineState } from '@/lib/plain-words';
 
 const REFRESH_MS = 60_000;
 
@@ -196,38 +198,25 @@ export function FactoryOverviewMachinesTable({
           </div>
         }
       />
-      {/* Phones: one card per machine, tapping through to it. */}
-      <ul className="-mx-4 divide-y border-t sm:hidden">
+      {/* Phones: one row per machine, tapping through to it. */}
+      <PhoneRows>
         {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
-            <li key={machine.machine_id}>
-              <Link
-                href={`/factories/${factoryId}/machines/${machine.machine_id}`}
-                className="block px-4 py-3 active:bg-slate-50"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{machine.name}</p>
-                    <p className="truncate text-xs text-muted">
-                      {lineName(machine.line_id)}
-                      {machine.type && <span className="capitalize"> · {machine.type}</span>}
-                    </p>
-                  </div>
-                  <MachineStatusBadge status={machineStatus(uptime, avail)} />
-                </div>
-                <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  <Figure label={t('Availability')} value={formatPercent(avail?.availability_percent, locale)} />
-                  {energyOn && (
-                    <Figure
-                      label={t('Energy')}
-                      value={eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : '—'}
-                    />
-                  )}
-                  {productionOn && <Figure label={t('Units')} value={formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)'))} />}
-                </dl>
-              </Link>
-            </li>
+          <ListRow
+            key={machine.machine_id}
+            href={`/factories/${factoryId}/machines/${machine.machine_id}`}
+            tone={STATE_TONE[machineState(machineStatus(uptime, avail))]}
+            title={machine.name}
+            tag={lineName(machine.line_id)}
+            detail={[
+              t(STATE_WORD[machineState(machineStatus(uptime, avail))]),
+              energyOn && eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : null,
+              productionOn && unitsMade(prod) != null ? formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)')) : null,
+            ].filter(Boolean).join(' · ')}
+            value={formatPercent(avail?.availability_percent, locale)}
+            valueHint={avail?.availability_percent != null ? t('running') : undefined}
+          />
         ))}
-      </ul>
+      </PhoneRows>
       <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
@@ -276,14 +265,5 @@ export function FactoryOverviewMachinesTable({
       </ScrollTable>
       <LoadMore shown={rowsShown} total={total} hasMore={rowsShown < total} onMore={more} loading={loadingRows} />
     </Card>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-1">
-      <dt className="text-muted">{label}</dt>
-      <dd className="font-medium">{value}</dd>
-    </div>
   );
 }

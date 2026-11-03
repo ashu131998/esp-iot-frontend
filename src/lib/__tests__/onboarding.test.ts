@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_USERNAME_LENGTH, SHIFT_PRESETS, addShift, adminProblems, buildOnboardRequest, emptyAdmin, factoryProblems,
   generatePassword, hasProblems, isValidEmail, setAdminEmail, setAdminUsername, shiftLabel, shiftProblem,
-  signInDetailsText, suggestFactoryId, type AdminDraft, type ShiftDraft,
+  signInDetailsText, siteFromAppUrl, suggestFactoryId, type AdminDraft, type ShiftDraft,
 } from '../onboarding';
 
 const admin = (email: string, password = 'password1', key = email): AdminDraft => setAdminEmail({ ...emptyAdmin(key), password }, email);
@@ -154,8 +154,18 @@ describe('signInDetailsText', () => {
   it('username only when it is not the email', () => {
     const app = 'https://app.floorbeat.in';
     expect(signInDetailsText('mill-01', { email: 'a@b.in', username: 'a@b.in', password: 'pw' }, app)).toBe(
-      'FloorBeat sign-in for mill-01\nDashboard: https://app.floorbeat.in/f/mill-01/login\nEmail: a@b.in\nPassword: pw',
+      'FloorBeat sign-in for mill-01\nSign in: https://app.floorbeat.in/f/mill-01/login\n'
+      + 'Link not working? Go to floorbeat.in/login and enter factory ID: mill-01\nEmail: a@b.in\nPassword: pw',
     );
     expect(signInDetailsText('mill-01', { email: 'a@b.in', username: 'ravi', password: 'pw' }, app)).toContain('Username: ravi');
+  });
+});
+
+describe('siteFromAppUrl', () => {
+  it('names the website that goes with each dashboard', () => {
+    expect(siteFromAppUrl('https://app.floorbeat.in')).toBe('floorbeat.in');
+    expect(siteFromAppUrl('https://stage-app.floorbeat.in')).toBe('stage-www.floorbeat.in');
+    expect(siteFromAppUrl('https://dev-app.floorbeat.in/')).toBe('dev-www.floorbeat.in');
+    expect(siteFromAppUrl('http://localhost:3000')).toBe('localhost:3000');
   });
 });

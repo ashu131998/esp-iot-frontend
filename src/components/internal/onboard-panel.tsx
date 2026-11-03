@@ -173,7 +173,7 @@ export function OnboardPanel() {
                       className="font-mono"
                       onChange={(e) => {
                         setIdEdited(true);
-                        setFactory((f) => ({ ...f, factory_id: e.target.value }));
+                        setFactory((f) => ({ ...f, factory_id: e.target.value.toLowerCase() }));
                       }}
                     />
                     {(tried || (factory.factory_id && fProblems.factory_id)) && <FieldError>{fProblems.factory_id}</FieldError>}

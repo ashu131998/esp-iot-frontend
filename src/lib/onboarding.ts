@@ -230,6 +230,19 @@ export function buildOnboardRequest(f: FactoryDraft, shifts: ShiftDraft[], admin
   };
 }
 
+/**
+ * The website that goes with a dashboard address, without https:// ("https://app.floorbeat.in" gives
+ * "floorbeat.in", "https://stage-app.floorbeat.in" gives "stage-www.floorbeat.in"): its /login takes a
+ * factory ID, the way in that survives a badly copied link.
+ */
+export function siteFromAppUrl(appUrl: string): string {
+  const host = appUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (host.startsWith('app.')) return host.slice(4);
+  const env = /^([a-z0-9]+)-app\.(.+)$/.exec(host);
+  if (env) return `${env[1]}-www.${env[2]}`;
+  return host;
+}
+
 /** Sign-in details to paste into a message, for an admin whose email did not go. */
 export function signInDetailsText(
   factoryId: string,
@@ -238,7 +251,8 @@ export function signInDetailsText(
 ): string {
   return [
     `FloorBeat sign-in for ${factoryId}`,
-    `Dashboard: ${appUrl}/f/${factoryId}/login`,
+    `Sign in: ${appUrl}/f/${factoryId}/login`,
+    `Link not working? Go to ${siteFromAppUrl(appUrl)}/login and enter factory ID: ${factoryId}`,
     `Email: ${admin.email}`,
     ...(admin.username.toLowerCase() !== admin.email.toLowerCase() ? [`Username: ${admin.username}`] : []),
     `Password: ${admin.password}`,

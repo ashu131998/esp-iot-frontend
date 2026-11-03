@@ -9,18 +9,25 @@ function respond(status: number, body: unknown): typeof fetch {
 describe('lookupFactory', () => {
   it('returns the factory name when it exists (no branding from an older API)', async () => {
     const res = await lookupFactory('factory-01', respond(200, { factory_id: 'factory-01', name: 'Demo Textile Mill' }));
-    expect(res).toEqual({ status: 'found', name: 'Demo Textile Mill', branding: null });
+    expect(res).toEqual({ status: 'found', factoryId: 'factory-01', name: 'Demo Textile Mill', branding: null });
   });
 
   it('returns the branding for the sign-in page, ignoring malformed fields', async () => {
     const branded = await lookupFactory('factory-01', respond(200, {
       factory_id: 'factory-01', name: 'Demo', branding: { accent_color: '#1a73e8', logo_version: 42 },
     }));
-    expect(branded).toEqual({ status: 'found', name: 'Demo', branding: { accent_color: '#1a73e8', logo_version: 42 } });
+    expect(branded).toEqual({ status: 'found', factoryId: 'factory-01', name: 'Demo', branding: { accent_color: '#1a73e8', logo_version: 42 } });
     const odd = await lookupFactory('factory-01', respond(200, {
       name: 'Demo', branding: { accent_color: 7, logo_version: 'x' },
     }));
-    expect(odd).toEqual({ status: 'found', name: 'Demo', branding: { accent_color: null, logo_version: null } });
+    expect(odd).toEqual({ status: 'found', factoryId: 'factory-01', name: 'Demo', branding: { accent_color: null, logo_version: null } });
+  });
+
+  it('gives the real ID of a factory opened with its ID in other letters', async () => {
+    const res = await lookupFactory('Factory-01', respond(200, { factory_id: 'factory-01', name: 'Demo' }));
+    expect(res).toMatchObject({ status: 'found', factoryId: 'factory-01' });
+    const odd = await lookupFactory('factory-01', respond(200, { factory_id: '../evil', name: 'Demo' }));
+    expect(odd).toMatchObject({ status: 'found', factoryId: 'factory-01' });
   });
 
   it('reports missing only for the API\'s factory-not-found answer', async () => {

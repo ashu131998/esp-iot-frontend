@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RESTORE_RETRY_MS, loginRedirectPath, noteRestore, safeNextPath, shouldTryRestore } from '@/lib/auth-redirect';
+import { RESTORE_RETRY_MS, loginRedirectPath, noteRestore, realFactoryPagePath, safeNextPath, shouldTryRestore } from '@/lib/auth-redirect';
 
 describe('safeNextPath: only a page inside this app', () => {
   it('keeps app paths, with their query', () => {
@@ -51,5 +51,25 @@ describe('silent sign-in loop guard', () => {
     const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
     expect(shouldTryRestore(broken)).toBe(true);
     expect(() => noteRestore(broken)).not.toThrow();
+  });
+});
+
+describe('realFactoryPagePath: a factory page opened with the ID in other letters', () => {
+  it('moves to the real ID and keeps the page', () => {
+    expect(realFactoryPagePath('login', 'factory-01', 'Factory-01')).toBe('/f/factory-01/login');
+    expect(realFactoryPagePath('forgot-password', 'factory-01', 'FACTORY-01')).toBe('/f/factory-01/forgot-password');
+  });
+
+  it('moves a next inside that factory with it, so the person lands where they were going', () => {
+    expect(realFactoryPagePath('login', 'factory-01', 'Factory-01', { next: '/factories/Factory-01/results?month=2026-10' }))
+      .toBe('/f/factory-01/login?next=%2Ffactories%2Ffactory-01%2Fresults%3Fmonth%3D2026-10');
+    expect(realFactoryPagePath('login', 'factory-01', 'Factory-01', { next: '/f/Factory-01' }))
+      .toBe('/f/factory-01/login?next=%2Ff%2Ffactory-01');
+  });
+
+  it('leaves a next for somewhere else, and other parameters, as they are', () => {
+    expect(realFactoryPagePath('login', 'factory-01', 'Factory-01', { next: '/factories/other-mill', lang: ['hi', 'gu'] }))
+      .toBe('/f/factory-01/login?next=%2Ffactories%2Fother-mill&lang=hi&lang=gu');
+    expect(realFactoryPagePath('login', 'factory-01', 'Factory-01', { next: undefined })).toBe('/f/factory-01/login');
   });
 });

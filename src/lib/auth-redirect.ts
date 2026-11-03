@@ -19,6 +19,35 @@ export function safeNextPath(next: string | null | undefined): string | null {
   return path;
 }
 
+/**
+ * The same factory page under the factory's real ID, for one opened with the ID in other letters
+ * ("/f/Factory-01/login" becomes "/f/factory-01/login"). A `next` inside that factory moves with it,
+ * so the person lands where they were going once signed in. Other query parameters are kept.
+ */
+export function realFactoryPagePath(
+  page: 'login' | 'forgot-password',
+  realId: string,
+  typedId: string,
+  params: Record<string, string | string[] | undefined> = {},
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    for (const one of Array.isArray(value) ? value : [value]) search.append(key, one);
+  }
+  const next = search.get('next');
+  if (next) {
+    const m = /^\/(f|factories)\/([^/?#]+)(.*)$/.exec(next);
+    let segment = '';
+    try { segment = m ? decodeURIComponent(m[2]) : ''; } catch { segment = ''; }
+    if (m && segment.toLowerCase() === typedId.toLowerCase()) {
+      search.set('next', `/${m[1]}/${encodeURIComponent(realId)}${m[3]}`);
+    }
+  }
+  const qs = search.toString();
+  return `/f/${encodeURIComponent(realId)}/${page}${qs ? `?${qs}` : ''}`;
+}
+
 /** The factory login page that sends the person back to `pathname` + `search` once signed in. */
 export function loginRedirectPath(factoryId: string, pathname: string, search = ''): string {
   const next = safeNextPath(`${pathname}${search}`);

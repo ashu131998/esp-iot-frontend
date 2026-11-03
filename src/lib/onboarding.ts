@@ -458,16 +458,21 @@ export function lookProblems(l: LookDraft): Partial<Record<'accent_color' | 'log
   return out;
 }
 
-export function lineProblems(lines: LineDraft[]): Partial<Record<'line_id', string>>[] {
+export type LineProblems = Partial<Record<'line_id' | 'name', string>>;
+
+/** Each line needs a label (what the factory's people read) and a valid, distinct ID. */
+export function lineProblems(lines: LineDraft[]): LineProblems[] {
   const seen = new Set<string>();
   return lines.map((l) => {
+    const out: LineProblems = {};
+    if (!l.name.trim()) out.name = 'Enter its label';
+    else if (l.name.trim().length > 80) out.name = 'At most 80 characters';
     const id = l.line_id.trim();
-    let problem: string | undefined;
-    if (!ID_RE.test(id)) problem = 'Letters, digits, - and _ only';
-    else if (id === RESCUE_LINE) problem = '"rescue" is kept for the rescue box';
-    else if (seen.has(id.toLowerCase())) problem = 'Same ID as another line';
+    if (!ID_RE.test(id)) out.line_id = 'Letters, digits, - and _ only';
+    else if (id === RESCUE_LINE) out.line_id = '"rescue" is kept for the rescue box';
+    else if (seen.has(id.toLowerCase())) out.line_id = 'Same ID as another line';
     seen.add(id.toLowerCase());
-    return problem ? { line_id: problem } : {};
+    return out;
   });
 }
 
@@ -634,7 +639,7 @@ export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => Setup
   if (Object.keys(look).length > 0) req.look = look;
   if (d.subscription.enabled) req.subscription = body(d.subscription);
   const lineIdOf = new Map(d.lines.map((l) => [l.key, l.line_id.trim()]));
-  if (d.lines.length > 0) req.lines = d.lines.map((l) => ({ line_id: l.line_id.trim(), name: clean(l.name) || l.line_id.trim() }));
+  if (d.lines.length > 0) req.lines = d.lines.map((l) => ({ line_id: l.line_id.trim(), name: clean(l.name) }));
   if (d.machines.length > 0) {
     req.machines = d.machines.map((m) => {
       const out: Record<string, string | number> = { line_id: lineIdOf.get(m.line_key) ?? '', name: clean(m.name) };

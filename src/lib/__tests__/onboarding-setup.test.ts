@@ -42,10 +42,11 @@ describe('lines and machines', () => {
     expect(bulkMachines({ prefix: 'L', from: 5, to: 1, line_key: line.key })).toEqual([]);
   });
 
-  it('line IDs valid and distinct; never "rescue"', () => {
-    expect(lineProblems([newLine('line-1'), newLine('Line-1'), newLine('rescue'), newLine('a b')])).toEqual([
+  it('a label each; line IDs valid and distinct; never "rescue"', () => {
+    expect(lineProblems([newLine('line-1', 'Weaving A'), newLine('Line-1', 'Weaving B'), newLine('rescue', 'Rescue'), newLine('a b', 'Odd')])).toEqual([
       {}, { line_id: 'Same ID as another line' }, { line_id: '"rescue" is kept for the rescue box' }, { line_id: 'Letters, digits, - and _ only' },
     ]);
+    expect(lineProblems([newLine('line-1'), newLine('line-2', 'x'.repeat(81))])).toEqual([{ name: 'Enter its label' }, { name: 'At most 80 characters' }]);
   });
 
   it('machines: a name, a line, sensible numbers', () => {

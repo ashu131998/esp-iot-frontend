@@ -49,12 +49,15 @@ export function LinesStep({
       <div className="mt-2 space-y-2">
         {lines.map((l, i) => (
           <div key={l.key} className="grid grid-cols-[1fr_auto] gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_12rem_auto] sm:items-start sm:border-0 sm:p-0">
-            <Input
-              aria-label="Line name"
-              value={l.name}
-              placeholder={`Line ${i + 1}, e.g. Weaving A`}
-              onChange={(e) => setLine(l.key, { name: e.target.value, ...(l.idEdited ? {} : { line_id: suggestFactoryId(e.target.value) }) })}
-            />
+            <div>
+              <Input
+                aria-label="Line name"
+                value={l.name}
+                placeholder={`Line ${i + 1}, e.g. Weaving A`}
+                onChange={(e) => setLine(l.key, { name: e.target.value, ...(l.idEdited ? {} : { line_id: suggestFactoryId(e.target.value) }) })}
+              />
+              {tried && lp[i].name && <p className="text-xs text-red-600">{lp[i].name}</p>}
+            </div>
             <div className="order-3 col-span-2 sm:order-none sm:col-span-1">
               <Input
                 aria-label="Line ID"

@@ -62,3 +62,15 @@ describe('the pies', () => {
     expect(sliceShares([{ label: 'a', value: 0, color: '' }])).toEqual([0]);
   });
 });
+
+describe('the donut chart', () => {
+  it('never lightens a hovered slice to white, and its tooltip is dark text on white', async () => {
+    const { donutChartOptions } = await import('@/components/charts/donut-chart');
+    const options = donutChartOptions([{ label: 'No data', value: 8, color: SLICE_COLORS.idle }], (v) => `${v} machines`);
+    expect(options.states?.hover?.filter).toEqual({ type: 'darken' });
+    expect(options.states?.active?.filter).toEqual({ type: 'darken' });
+    expect(options.tooltip).toMatchObject({ theme: 'light', fillSeriesColor: false });
+    expect(options.labels).toEqual(['No data']);
+    expect(options.colors).toEqual([SLICE_COLORS.idle]);
+  });
+});

@@ -34,6 +34,35 @@ export function sliceShares(slices: Slice[]): number[] {
 }
 
 /**
+ * The chart's options for the slices drawn. A hovered slice darkens a little (ApexCharts would
+ * lighten it, which turns the grey "no data" slice white against the white card), and the
+ * tooltip is always a white box with dark text (never the slice's own colour with white text:
+ * unreadable on grey or amber).
+ */
+export function donutChartOptions(drawn: Slice[], format: (value: number) => string): ApexOptions {
+  return {
+    ...baseChartOptions,
+    chart: { ...baseChartOptions.chart, type: 'donut' },
+    labels: drawn.map((s) => s.label),
+    colors: drawn.map((s) => s.color),
+    legend: { show: false },
+    stroke: { width: 2, colors: ['#fff'] },
+    plotOptions: { pie: { donut: { size: '68%' }, expandOnClick: false } },
+    dataLabels: { enabled: false },
+    states: {
+      hover: { filter: { type: 'darken' } },
+      active: { filter: { type: 'darken' } },
+    },
+    tooltip: {
+      ...baseChartOptions.tooltip,
+      theme: 'light',
+      fillSeriesColor: false,
+      y: { formatter: format },
+    },
+  };
+}
+
+/**
  * A donut with its legend: the chart on wide screens, the legend (label, figure, share) always,
  * so a phone gets the figures without the chart. Slices of 0 are kept in the legend, left out of
  * the chart. `format` writes a slice's figure ("3 machines", "12.4 kWh").
@@ -48,17 +77,7 @@ export function DonutChart({ slices, format, height = 220, locale, className }: 
   const wide = useWideScreen();
   const shares = sliceShares(slices);
   const drawn = slices.filter((s) => s.value > 0);
-  const options = useMemo<ApexOptions>(() => ({
-    ...baseChartOptions,
-    chart: { ...baseChartOptions.chart, type: 'donut' },
-    labels: drawn.map((s) => s.label),
-    colors: drawn.map((s) => s.color),
-    legend: { show: false },
-    stroke: { width: 2, colors: ['#fff'] },
-    plotOptions: { pie: { donut: { size: '68%' } } },
-    dataLabels: { enabled: false },
-    tooltip: { ...baseChartOptions.tooltip, y: { formatter: (v: number) => (format ? format(v) : formatNumber(v, 1, locale)) } },
-  }), [drawn, format, locale]);
+  const options = useMemo<ApexOptions>(() => donutChartOptions(drawn, (v) => (format ? format(v) : formatNumber(v, 1, locale))), [drawn, format, locale]);
   const total = slices.reduce((s, x) => s + Math.max(0, x.value), 0);
 
   return (

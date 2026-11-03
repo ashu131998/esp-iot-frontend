@@ -34,22 +34,22 @@ type Level = 'off' | 'idle' | 'running';
 const LEVELS: Level[] = ['off', 'idle', 'running'];
 
 const LEVEL_TITLE: Record<Level, string> = {
-  off: 'Step {n} of 3: loom off',
+  off: 'Step {n} of 3: machine off',
   idle: 'Step {n} of 3: motor idling',
-  running: 'Step {n} of 3: loom running',
+  running: 'Step {n} of 3: machine running',
 };
 const LEVEL_INSTRUCTION: Record<Level, string> = {
-  off: 'Switch the loom completely off. Then press Start and leave it off for about 3 minutes.',
+  off: 'Switch the machine completely off. Then press Start and leave it off for about 3 minutes.',
   idle: 'Start the motor but do not weave: let it idle. Press Start, then leave it like that for about 3 minutes.',
-  running: 'Run the loom normally. Press Start and keep it running for about 3 minutes.',
+  running: 'Run the machine normally. Press Start and keep it running for about 3 minutes.',
 };
 const LEVEL_WORD: Record<Level, string> = { off: 'Off', idle: 'Idle', running: 'Running' };
 
 /**
- * Calibrate a loom from the dashboard, step by step: either its running / stopped detection
+ * Calibrate a machine from the dashboard, step by step: either its running / stopped detection
  * (measure it off, idling and running, then save the two current thresholds — the running one
  * also goes to the board, per channel) or its production count (one timed run against the
- * loom's own counter gives pulses per unit). Opens in a Sheet from the machine page.
+ * machine's own counter gives pulses per unit). Opens in a Sheet from the machine page.
  */
 export function CalibrationWizard({
   factoryId,
@@ -147,14 +147,14 @@ function Choose({
         <ChoiceCard
           icon={<Activity className="h-5 w-5" />}
           title={t('Running / stopped detection')}
-          body={t('Measure the loom off, idling and running; the dashboard learns where "running" begins.')}
+          body={t('Measure the machine off, idling and running; the dashboard learns where "running" begins.')}
           disabledReason={hasCurrent ? null : t('No current sensor is mapped to this machine yet.')}
           onClick={() => onPick('current')}
         />
         <ChoiceCard
           icon={<Gauge className="h-5 w-5" />}
           title={t('Production count')}
-          body={t("Compare the sensor's pulses with the loom's own counter over one run.")}
+          body={t("Compare the sensor's pulses with the machine's own counter over one run.")}
           disabledReason={hasCycle ? null : t('No proximity sensor is mapped to this machine yet.')}
           onClick={() => onPick('count')}
         />
@@ -176,7 +176,7 @@ function Choose({
       )}
       {defaults?.on_threshold_a != null && (
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-muted">
-          {t('Looms of type {type} use {on} A running / {off} A off.', {
+          {t('Machines of type {type} use {on} A running / {off} A off.', {
             type: defaults.type,
             on: formatDecimal(defaults.on_threshold_a, 2, locale),
             off: defaults.off_below_a != null ? formatDecimal(defaults.off_below_a, 2, locale) : '—',
@@ -288,7 +288,7 @@ function MeasureLevel({
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" onClick={onBack}>{t('Back')}</Button>
-        {onSkip && <Button variant="secondary" onClick={onSkip}>{t('This loom has no idle state')}</Button>}
+        {onSkip && <Button variant="secondary" onClick={onSkip}>{t('This machine has no idle state')}</Button>}
         {since && !status.ready && summary && (
           <Button variant="secondary" onClick={() => onDone(summary)}>{t('Use what we have')}</Button>
         )}
@@ -373,7 +373,7 @@ function CurrentFlow({
           {saved.binding.off_below_a != null && ` · ${t('off threshold {off} A', { off: formatDecimal(saved.binding.off_below_a, 2, locale) })}`}
         </p>
         {pushText && <p className="text-sm text-muted">{pushText}</p>}
-        {saved.applied_to > 1 && <p className="text-sm text-muted">{tn(saved.applied_to, 'Applied to {count} loom.', 'Applied to {count} looms.')}</p>}
+        {saved.applied_to > 1 && <p className="text-sm text-muted">{tn(saved.applied_to, 'Applied to {count} machine.', 'Applied to {count} machines.')}</p>}
         <Button onClick={onClose}>{t('Done')}</Button>
       </div>
     );
@@ -422,11 +422,11 @@ function CurrentFlow({
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t('Running threshold (A)')}>
           <Input type="number" step="0.01" min="0.01" value={on} onChange={(e) => setOn(e.target.value)} />
-          <p className="mt-1 text-xs text-muted">{t('Above this the loom counts as running.')}</p>
+          <p className="mt-1 text-xs text-muted">{t('Above this the machine counts as running.')}</p>
         </Field>
         <Field label={t('Off threshold (A)')}>
           <Input type="number" step="0.01" min="0" value={offBelow} onChange={(e) => setOffBelow(e.target.value)} placeholder="—" />
-          <p className="mt-1 text-xs text-muted">{t('Below this the loom counts as switched off; between the two it idles. Leave empty for no distinction.')}</p>
+          <p className="mt-1 text-xs text-muted">{t('Below this the machine counts as switched off; between the two it idles. Leave empty for no distinction.')}</p>
         </Field>
       </div>
       {board && (
@@ -443,10 +443,10 @@ function CurrentFlow({
       <div className="space-y-2 rounded-2xl border p-3">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="h-4 w-4" checked={applyToType} onChange={(e) => setApplyToType(e.target.checked)} />
-          {tn(ctx.machines_of_type || 1, 'Apply to all {count} loom of this type', 'Apply to all {count} looms of this type')}
+          {tn(ctx.machines_of_type || 1, 'Apply to all {count} machine of this type', 'Apply to all {count} machines of this type')}
         </label>
-        <Field label={t('Loom type')}>
-          <Input value={machineType} onChange={(e) => setMachineType(e.target.value)} placeholder={t('e.g. Rapier loom')} />
+        <Field label={t('Machine type')}>
+          <Input value={machineType} onChange={(e) => setMachineType(e.target.value)} placeholder={t('e.g. Rapier loom, CNC lathe')} />
         </Field>
       </div>
       {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
@@ -516,7 +516,7 @@ function CountFlow({
         <p className="text-base font-semibold text-emerald-700">
           {t('Saved. 1 {unit} = {per_unit} pulses.', { unit: unitWord, per_unit: formatUpTo(saved.per_unit, 4, locale) })}
         </p>
-        {saved.applied_to > 1 && <p className="text-sm text-muted">{tn(saved.applied_to, 'Applied to {count} loom.', 'Applied to {count} looms.')}</p>}
+        {saved.applied_to > 1 && <p className="text-sm text-muted">{tn(saved.applied_to, 'Applied to {count} machine.', 'Applied to {count} machines.')}</p>}
         <Button onClick={onClose}>{t('Done')}</Button>
       </div>
     );
@@ -527,7 +527,7 @@ function CountFlow({
       <div>
         <h3 className="text-base font-semibold">{t('Production count')}</h3>
         <p className="mt-1 text-sm text-muted">
-          {t("Note the loom's own counter (picks or metres) now, then press Start. Run the loom normally for at least 10 minutes: the longer, the more exact.")}
+          {t("Note the machine's own counter (pieces or metres) now, then press Start. Run the machine normally for at least 10 minutes: the longer, the more exact.")}
         </p>
       </div>
 
@@ -553,7 +553,7 @@ function CountFlow({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t('Units produced since Start')}>
               <Input type="number" step="any" min="0" value={units} onChange={(e) => setUnits(e.target.value)} autoFocus />
-              <p className="mt-1 text-xs text-muted">{t("Enter what the loom's counter advanced by since Start.")}</p>
+              <p className="mt-1 text-xs text-muted">{t("Enter what the machine's counter advanced by since Start.")}</p>
             </Field>
             <Field label={t('Unit')}>
               <Input value={unitLabel} onChange={(e) => setUnitLabel(e.target.value)} placeholder="m" maxLength={16} />
@@ -581,8 +581,8 @@ function CountFlow({
           )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-4 w-4" checked={applyToType} onChange={(e) => setApplyToType(e.target.checked)} disabled={!ctx.machine.type} />
-            {tn(ctx.machines_of_type || 1, 'Apply to all {count} loom of this type', 'Apply to all {count} looms of this type')}
-            {!ctx.machine.type && <span className="text-xs text-muted">({t('this loom has no type yet')})</span>}
+            {tn(ctx.machines_of_type || 1, 'Apply to all {count} machine of this type', 'Apply to all {count} machines of this type')}
+            {!ctx.machine.type && <span className="text-xs text-muted">({t('this machine has no type yet')})</span>}
           </label>
           {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
         </div>

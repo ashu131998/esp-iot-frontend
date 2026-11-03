@@ -40,7 +40,7 @@ describe('proposeThresholds', () => {
     expect(proposeThresholds({ off: null, idle: null, running })).toMatchObject({ on_threshold_a: 1.8, off_below_a: null, warnings: [] });
   });
   it('needs the running level', () => {
-    expect(proposeThresholds({ off, idle, running: null })).toEqual({ on_threshold_a: null, off_below_a: null, warnings: ['Measure the loom running first.'], gap_a: null });
+    expect(proposeThresholds({ off, idle, running: null })).toEqual({ on_threshold_a: null, off_below_a: null, warnings: ['Measure the machine running first.'], gap_a: null });
   });
   it('falls back to the means and warns when running and stopped overlap', () => {
     const overlapping = { windows: 2, mean_a: 1.4, min_a: 0.8, max_a: 2.0 };   // low dips below idle's high
@@ -59,7 +59,7 @@ describe('proposeThresholds', () => {
     const noisyOff = { windows: 2, mean_a: 0.5, min_a: 0.1, max_a: 0.8 };
     const out = proposeThresholds({ off: noisyOff, idle, running });
     expect(out.off_below_a).toBe(null);
-    expect(out.warnings).toEqual(['Off and idle currents overlap: the loom will show as stopped either way.']);
+    expect(out.warnings).toEqual(['Off and idle currents overlap: the machine will show as stopped either way.']);
   });
   it('never goes below the minimum on threshold', () => {
     const tiny = { windows: 1, mean_a: 0.03, min_a: 0.02, max_a: 0.04 };

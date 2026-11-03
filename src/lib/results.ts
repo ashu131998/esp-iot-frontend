@@ -2,8 +2,8 @@
  * Results: what Machine Monitoring as a Service gave a factory back (query-api src/results.js
  * works the figures out; this file only shapes them for the dashboard). Pure, so tested.
  *
- * - Recovered loom-hours: each loom's running share against its first month, times the hours it
- *   was watched. Negative when looms ran less than in the first month: shown as it is.
+ * - Recovered machine-hours: each machine's running share against its first month, times the hours it
+ *   was watched. Negative when machines ran less than in the first month: shown as it is.
  * - Rupees and the service fee are for the factory's admins and our staff; the API leaves them
  *   out for everyone else.
  */
@@ -172,7 +172,7 @@ export function monthLabel(monthKey: string, locale: Locale = 'en'): string {
   return new Intl.DateTimeFormat(localeTag(locale), { month: 'long', year: 'numeric', timeZone: APP_TZ }).format(mid);
 }
 
-/** Green when looms ran more than in the first month, red when less, grey when unknown or even. */
+/** Green when machines ran more than in the first month, red when less, grey when unknown or even. */
 export function recoveredTone(hours: number | null | undefined): Tone {
   if (hours == null || !Number.isFinite(hours) || Math.abs(hours) < 0.05) return 'idle';
   return hours > 0 ? 'good' : 'bad';
@@ -247,14 +247,14 @@ export function caseStudyText({
   lines.push(`• Machines monitored: ${formatInt(results.machines_monitored)}`);
   if (t && t.recovered_hours != null) {
     lines.push(
-      `• Loom-hours recovered in ${month}: ${formatSignedHours(t.recovered_hours)} against the first month `
+      `• Machine-hours recovered in ${month}: ${formatSignedHours(t.recovered_hours)} against the first month `
       + `(running ${formatPct(t.baseline_running_pct)} → ${formatPct(t.running_pct)})`,
     );
   } else {
-    lines.push('• Loom-hours recovered: still measuring the first month');
+    lines.push('• Machine-hours recovered: still measuring the first month');
   }
   if (money?.recovered_rupees != null && results.settings?.value_per_loom_hour != null) {
-    lines.push(`• Worth: ${formatRupees(money.recovered_rupees)} at ${formatRupees(results.settings.value_per_loom_hour)} a loom-hour`);
+    lines.push(`• Worth: ${formatRupees(money.recovered_rupees)} at ${formatRupees(results.settings.value_per_loom_hour)} a machine-hour`);
   }
   if (money?.service_fee_rupees != null) {
     const multiple = money.return_multiple != null ? ` — returned ${formatDecimal(money.return_multiple, 1)}×` : '';

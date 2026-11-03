@@ -9,12 +9,14 @@ import { Sheet } from '@/components/ui/sheet';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useLineName } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import { formatDate } from '@/lib/utils';
 
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
   const { t, locale } = useT();
+  const lineName = useLineName();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   function configure(deviceId: string) {
@@ -61,7 +63,7 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
               {nodes.map((n) => (
                 <TR key={n.device_id}>
                   <TD className="font-mono text-sm">{n.device_id}</TD>
-                  <TD>{n.line_id}</TD>
+                  <TD>{lineName(n.line_id)}</TD>
                   <TD>{n.binding_count}</TD>
                   <TD className="text-xs text-muted">
                     {n.last_seen_at ? formatDate(n.last_seen_at, locale) : '—'}

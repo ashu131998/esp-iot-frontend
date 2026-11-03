@@ -247,7 +247,7 @@ export function OnboardPanel() {
                     <Input
                       value={d.factory.referred_by ?? ''}
                       maxLength={120}
-                      placeholder="Patel Loom Services, Surat"
+                      placeholder="Patel Engineering Works, Surat"
                       onChange={(e) => patch({ factory: { ...d.factory, referred_by: e.target.value } })}
                     />
                   </Field>

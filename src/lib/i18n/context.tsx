@@ -34,7 +34,7 @@ export function useLocale(): Locale {
 }
 
 /**
- * `t('Running')`, `t('{count} machines', { count })`, `tn(n, '{count} loom', '{count} looms')`.
+ * `t('Running')`, `t('{count} machines', { count })`, `tn(n, '{count} machine', '{count} machines')`.
  * The English text in the code is the key; see lib/i18n/README.md.
  */
 export function useT(): Translator {

@@ -30,7 +30,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   const emptyMachineForm = {
     line_id: '',
     name: '',
-    type: 'loom',
+    type: '',
     rotations_per_unit: '1',
     unit_label: '',
   };
@@ -209,7 +209,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
               {machines.map((m) => (
                 <TR key={m.machine_id}>
                   <TD className="font-medium">{m.name}</TD>
-                  <TD className="font-mono text-xs">{m.line_id}</TD>
+                  <TD>{lines.find((l) => l.line_id === m.line_id)?.name || m.line_id}</TD>
                   <TD className="capitalize">{m.type}</TD>
                   <TD className="text-xs">{unitSummary(m)}</TD>
                   <TD>

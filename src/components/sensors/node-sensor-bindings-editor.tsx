@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { useLineName } from '@/lib/factory-refs-context';
 import type { NodeDetailResponse, SensorBinding } from '@/lib/types';
 
 const SENSOR_TYPES = ['current', 'proximity', 'cycle', 'time'] as const;
@@ -64,6 +65,7 @@ export function NodeSensorBindingsEditor(props: EditorProps) {
 
 function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorProps) {
   const qc = useQueryClient();
+  const lineName = useLineName();   // the staff console has no factory context: the ID then
   const queryKey = ['node-detail', apiMode, factoryId, deviceId];
 
   const detailQuery = useQuery({
@@ -262,7 +264,7 @@ function NodeBindingsDraft({ factoryId, deviceId, apiMode, canWrite }: EditorPro
                   <option value="">— select —</option>
                   {machines.map((m) => (
                     <option key={m.machine_id} value={m.machine_id}>
-                      {m.name} ({m.line_id})
+                      {m.name} ({lineName(m.line_id)})
                     </option>
                   ))}
                 </select>

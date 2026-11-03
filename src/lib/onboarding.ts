@@ -292,7 +292,7 @@ export const MAX_WIFI = 8;
 export const LOGO_MAX_BYTES = 200 * 1024;
 export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const WORKER_ROLES = [
-  'Machine Operator', 'Weaver', 'Maintenance Technician', 'Quality Inspector', 'Shift Supervisor', 'Material Handler', 'Electrician',
+  'Machine Operator', 'Helper', 'Maintenance Technician', 'Quality Inspector', 'Shift Supervisor', 'Material Handler', 'Electrician',
 ];
 
 const PHONE_RE = /^\+?[0-9 ()-]{6,20}$/;
@@ -419,7 +419,7 @@ export const newWorker = (): WorkerDraft => ({ key: key(), name: '', role: WORKE
 export const newContact = (): ContactDraft => ({ key: key(), name: '', phone: '' });
 
 /**
- * Machines named in a run: "Loom #" from 1 to 12 gives Loom #1 … Loom #12, on one line, with the
+ * Machines named in a run: "Machine #" from 1 to 12 gives Machine #1 … Machine #12, on one line, with the
  * same type and targets. Names already in the list are skipped.
  */
 export function bulkMachines(
@@ -518,13 +518,12 @@ export type BoardProblems = Partial<Record<'line_key' | 'channels', string>>;
 
 /**
  * Each board on one of the form's lines (a rescue box needs none), its channels on machines that
- * are still in the form, and a machine with at most one current and one proximity channel, so its
- * running time and its count each come from one sensor.
+ * are still in the form. A machine may have several sensors of a kind: the first current sensor
+ * listed decides whether it runs, and every proximity sensor's pulses count towards it.
  */
 export function boardProblems(boards: BoardDraft[], lines: LineDraft[], machines: MachineDraft[]): BoardProblems[] {
   const lineKeys = new Set(lines.map((l) => l.key));
   const machineName = new Map(machines.map((m) => [m.key, m.name.trim()]));
-  const takenBy = new Map<string, string>();
   return boards.map((b) => {
     const out: BoardProblems = {};
     if (b.rescue) return out;
@@ -532,15 +531,7 @@ export function boardProblems(boards: BoardDraft[], lines: LineDraft[], machines
     for (const slot of SETUP_BOARD_SLOTS) {
       const machineKey = b.channels[slot];
       if (!machineKey) continue;
-      const name = machineName.get(machineKey);
-      if (!name) {
-        out.channels ??= `${slot}: its machine was removed; pick another`;
-        continue;
-      }
-      const sensor = slotSensor(slot);
-      const taken = takenBy.get(`${sensor}:${machineKey}`);
-      if (taken) out.channels ??= `${name} has two ${sensor} channels: ${taken} and ${b.board_id} ${slot}`;
-      else takenBy.set(`${sensor}:${machineKey}`, `${b.board_id} ${slot}`);
+      if (!machineName.get(machineKey)) out.channels ??= `${slot}: its machine was removed; pick another`;
     }
     return out;
   });

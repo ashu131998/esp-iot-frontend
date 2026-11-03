@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
- * Results: what Machine Monitoring as a Service gave the factory back in a month (loom-hours won
+ * Results: what Machine Monitoring as a Service gave the factory back in a month (machine-hours won
  * back against the first month, their worth against the fee, stop follow-up). Printable as the
  * monthly report. `?month=YYYY-MM` opens a month (the monthly email links here), `?settings=1` the
  * settings (from the rollout checklist).

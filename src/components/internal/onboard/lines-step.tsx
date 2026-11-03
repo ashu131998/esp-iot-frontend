@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The factory's production lines and its machines. Optional: both can be added later on the
- * factory's Setup page. Machines can be added in a run ("Loom #1" to "Loom #40") and then
+ * factory's Setup page. Machines can be added in a run ("Machine #1" to "Machine #40") and then
  * edited one by one.
  */
 export function LinesStep({
@@ -24,7 +24,7 @@ export function LinesStep({
   onChange: (next: { lines: LineDraft[]; machines: MachineDraft[] }) => void;
   tried: boolean;
 }) {
-  const [run, setRun] = useState({ prefix: 'Loom #', from: '1', to: '12', line_key: '', type: '', target_units_per_hour: '' });
+  const [run, setRun] = useState({ prefix: 'Machine #', from: '1', to: '12', line_key: '', type: '', target_units_per_hour: '' });
   const lp = lineProblems(lines);
   const mp = machineProblems(machines, lines);
   const runLine = lines.some((l) => l.key === run.line_key) ? run.line_key : (lines[0]?.key ?? '');

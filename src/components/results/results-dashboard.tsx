@@ -23,7 +23,7 @@ import {
 } from '@/lib/results';
 
 /**
- * Results: what the service gave the factory back in a month — loom-hours won back against its
+ * Results: what the service gave the factory back in a month — machine-hours won back against its
  * first month, what they are worth against the service fee, and how stop alerts were followed up.
  * Printable as the monthly report; admins and our staff can copy it as a case study.
  */
@@ -111,7 +111,7 @@ export function ResultsDashboard({
       {data.totals && data.totals.recovered_hours != null && (
         <NumberTiles>
           <NumberTile
-            label={t('Loom-hours recovered')}
+            label={t('Machine-hours recovered')}
             value={formatSignedHours(data.totals.recovered_hours, locale)}
             hint={t('against your first month')}
             tone={recoveredTone(data.totals.recovered_hours)}
@@ -161,7 +161,7 @@ export function ResultsDashboard({
       )}
 
       {shown('results.machines') && data.machines.length > 0 && (
-        <ListGroup title={t('Each loom against its first month')} count={data.machines.length}>
+        <ListGroup title={t('Each machine against its first month')} count={data.machines.length}>
           {[...data.machines]
             .sort((a, b) => (b.recovered_hours ?? -Infinity) - (a.recovered_hours ?? -Infinity))
             .map((m) => (
@@ -213,7 +213,7 @@ function Headline({ data, label }: { data: ResultsResponse; label: string }) {
         tone="idle"
         badge={data.baseline.days_done}
         title={t('Measuring your first month: day {done} of {total}', { done: data.baseline.days_done, total: data.baseline.days_total })}
-        subtitle={t('From then on, each month shows the loom-hours won back against it.')}
+        subtitle={t('From then on, each month shows the machine-hours won back against it.')}
       />
     );
   }
@@ -244,9 +244,9 @@ function Headline({ data, label }: { data: ResultsResponse; label: string }) {
       tone={tone === 'idle' ? 'good' : tone}
       badge={hours >= 0 ? '+' : '−'}
       title={hours >= 0
-        ? t('{hours} loom-hours won back in {month}', { hours: formatUpTo(Math.abs(hours), 1, locale), month: label })
-        : t('{hours} loom-hours below your first month in {month}', { hours: formatUpTo(Math.abs(hours), 1, locale), month: label })}
-      subtitle={t('{count} looms compared, each against its own first month', { count: data.totals.compared_machines })}
+        ? t('{hours} machine-hours won back in {month}', { hours: formatUpTo(Math.abs(hours), 1, locale), month: label })
+        : t('{hours} machine-hours below your first month in {month}', { hours: formatUpTo(Math.abs(hours), 1, locale), month: label })}
+      subtitle={t('{count} machines compared, each against its own first month', { count: data.totals.compared_machines })}
     />
   );
 }
@@ -262,8 +262,8 @@ function MoneyTiles({ data }: { data: ResultsResponse }) {
         label={t('Worth')}
         value={formatRupees(money.recovered_rupees, locale)}
         hint={value != null
-          ? t('at {rupees} a loom-hour', { rupees: formatRupees(value, locale) })
-          : t('Set what a loom-hour earns in Settings')}
+          ? t('at {rupees} a machine-hour', { rupees: formatRupees(value, locale) })
+          : t('Set what a machine-hour earns in Settings')}
         tone={money.recovered_rupees != null ? recoveredTone(money.recovered_rupees) : undefined}
       />
       <NumberTile

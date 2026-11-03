@@ -761,7 +761,7 @@ export const api = {
       ...options,
     }),
 
-  /** The first-week rollout checklist (shown to admins and staff until every loom is live). */
+  /** The first-week rollout checklist (shown to admins and staff until every machine is live). */
   setupProgress: (factoryId: string, options?: ApiRequestOptions) =>
     request<SetupProgress>(`/v1/factories/${factoryId}/setup-progress`, options),
 
@@ -835,7 +835,7 @@ export const api = {
       { method: 'PUT', body: JSON.stringify(body), ...options },
     ),
 
-  /** Set or clear the partner (loom dealer, electrician) who referred a factory. Staff only. */
+  /** Set or clear the partner (machine dealer, electrician) who referred a factory. Staff only. */
   adminSetFactoryReferral: (factoryId: string, referredBy: string | null, options?: ApiRequestOptions) =>
     request<{ factory_id: string; referred_by: string | null }>(
       `/v1/admin/factories/${factoryId}/referral`,

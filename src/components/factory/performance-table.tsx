@@ -7,6 +7,7 @@ import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
+import { useLineName } from '@/lib/factory-refs-context';
 import { formatUpTo } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
@@ -20,6 +21,7 @@ import { formatPercent, formatUnits } from '@/lib/utils';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
   const { t, locale } = useT();
+  const lineName = useLineName();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
@@ -60,7 +62,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
             ]}
             rows={allMachines.map((m) => [
               m.machine_name,
-              m.line_id,
+              lineName(m.line_id),
               m.performance_percent,
               m.availability_percent,
               m.throughput_percent,
@@ -87,7 +89,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
           {pageRows.map((m) => (
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
+              <TD>{lineName(m.line_id)}</TD>
               <TD>{formatPercent(m.performance_percent, locale)}</TD>
               <TD>{formatPercent(m.availability_percent, locale)}</TD>
               <TD>{formatPercent(m.throughput_percent, locale)}</TD>

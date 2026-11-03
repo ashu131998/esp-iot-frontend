@@ -9,7 +9,7 @@ import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useFactoryRefs, useLineName } from '@/lib/factory-refs-context';
 import { formatInt } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
@@ -31,6 +31,7 @@ export function ProductionTable({
   to?: string;
 }) {
   const { minDate, shifts, maxDate } = useFactoryRefs();
+  const lineName = useLineName();
   const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
@@ -66,7 +67,7 @@ export function ProductionTable({
               headers={[t('Machine'), t('Line'), t('Units Produced'), t('Unit'), t('Sensor'), t('Data Points')]}
               rows={displayMachines.map((m) => [
                 m.machine_name,
-                m.line_id,
+                lineName(m.line_id),
                 m.units_produced,
                 m.unit_label ?? t('units'),
                 m.device_id,
@@ -90,7 +91,7 @@ export function ProductionTable({
           {pageRows.map((m) => (
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
+              <TD>{lineName(m.line_id)}</TD>
               <TD className="font-semibold">{formatUnits(m.units_produced, m.unit_label, locale, mixedWord)}</TD>
               <TD className={cn('font-mono text-xs', PHONE_HIDDEN)}>{m.device_id ?? '—'}</TD>
               <TD>{m.data_points != null ? formatInt(m.data_points, locale) : '—'}</TD>

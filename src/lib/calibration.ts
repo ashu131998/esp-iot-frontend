@@ -1,6 +1,6 @@
 /**
  * The rules behind the Calibrate wizard (components/factory/calibration-wizard.tsx): what the
- * measured current levels of a loom (off, idle, running) turn into, and what one measured run says
+ * measured current levels of a machine (off, idle, running) turn into, and what one measured run says
  * about pulses per unit. Pure functions, so every rule is tested.
  */
 
@@ -64,7 +64,7 @@ export const SMALL_GAP_A = 0.1;
 export function proposeThresholds({ off, idle, running }: Levels): Proposal {
   const warnings: string[] = [];
   if (!running) {
-    return { on_threshold_a: null, off_below_a: null, warnings: ['Measure the loom running first.'], gap_a: null };
+    return { on_threshold_a: null, off_below_a: null, warnings: ['Measure the machine running first.'], gap_a: null };
   }
   const stopped = idle ?? off;
   const stoppedMax = stopped?.max_a ?? 0;
@@ -87,7 +87,7 @@ export function proposeThresholds({ off, idle, running }: Levels): Proposal {
       offBelow = round((off.max_a + idle.min_a) / 2, 2);
       if (offBelow >= on) offBelow = null;
     } else {
-      warnings.push('Off and idle currents overlap: the loom will show as stopped either way.');
+      warnings.push('Off and idle currents overlap: the machine will show as stopped either way.');
     }
   }
   return { on_threshold_a: on, off_below_a: offBelow, warnings, gap_a: gap };

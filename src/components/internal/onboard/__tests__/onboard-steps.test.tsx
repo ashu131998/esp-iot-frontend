@@ -43,7 +43,7 @@ function filled(): SetupDraft {
   d.admins = [{ ...setAdminEmail(d.admins[0], 'owner@shree.in'), password: 'AdminPass123' }];
   const line = newLine('line-1', 'Weaving A');
   d.lines = [line];
-  d.machines = [newMachine(line.key, 'Loom #1'), newMachine(line.key, 'Loom #2')];
+  d.machines = [newMachine(line.key, 'Machine #1'), newMachine(line.key, 'Machine #2')];
   d.wifi = [{ ...newWifi(), ssid: 'Shree-Office', pass: 'WifiSecret99' }, { ...newWifi(), ssid: 'Shree-Floor', pass: '' }];
   d.boards = [{ ...newBoard('revb-311d80'), line_key: line.key, channels: { I1: d.machines[0].key, P1: d.machines[0].key } }, newBoard('rescue-a1b2c3', true)];
   d.workers = [{ ...newWorker(), name: 'Ravi', email: 'ravi@shree.in', password: 'WorkerPass1' }, { ...newWorker(), name: 'Sita' }];
@@ -81,8 +81,8 @@ describe('wizard steps', () => {
     expect(html).toContain('Weaving A');
     expect(html).toContain('Add machines in one go');
     expect(html).toContain('Machines (2)');
-    expect(html).toContain('Loom #1');
-    expect(html).toMatch(/Add 10 machines/);   // Loom #3 … #12: #1 and #2 are there already
+    expect(html).toContain('Machine #1');
+    expect(html).toMatch(/Add 10 machines/);   // Machine #3 … #12: #1 and #2 are there already
   });
 
   it('WiFi: names shown, passwords hidden', () => {
@@ -102,7 +102,7 @@ describe('wizard steps', () => {
     ];
     const html = render(<BoardsStep value={d.boards} lines={d.lines} machines={d.machines} onChange={noop} tried={false} canClaim />, undefined, waiting);
     expect(html).toContain('Waiting to be claimed');
-    for (const text of ['revb-9f0e1d', 'Online', 'Not connected', 'fw 2.7.0', 'Pass', 'Rescue box', 'Weaving A', 'I1 · current (CT)', 'P2 · proximity', 'Not used', 'Loom #2']) {
+    for (const text of ['revb-9f0e1d', 'Online', 'Not connected', 'fw 2.7.0', 'Pass', 'Rescue box', 'Weaving A', 'I1 · current (CT)', 'P2 · proximity', 'Not used', 'Machine #2']) {
       expect(html).toContain(text);
     }
     expect(html).not.toContain('revb-304ad0');   // in a factory already
@@ -131,7 +131,7 @@ describe('wizard steps', () => {
 
   it('Review: every step summed up, no password anywhere', () => {
     const html = render(<ReviewStep d={filled()} onEdit={noop} />);
-    for (const text of ['Shree Mills', 'shree-mills', 'Patel Looms', '3 Nov 2026 – 2 Nov 2027', 'Weaving A', '2 machines', 'Shree-Office', '(open)', 'revb-311d80', 'I1 Loom #1, P1 Loom #1', 'owner@shree.in', '2 workers, 1 with the alert app', 'Mobile alerts on']) {
+    for (const text of ['Shree Mills', 'shree-mills', 'Patel Looms', '3 Nov 2026 – 2 Nov 2027', 'Weaving A', '2 machines', 'Shree-Office', '(open)', 'revb-311d80', 'I1 Machine #1, P1 Machine #1', 'owner@shree.in', '2 workers, 1 with the alert app', 'Mobile alerts on']) {
       expect(html).toContain(text);
     }
     expect(html).toMatch(/rescue-a1b2c3<\/span><span[^>]*> · rescue box/);

@@ -14,7 +14,7 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
 import { inBatches } from '@/lib/infinite';
-import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { useFactoryRefs, useLineName, useShown } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import { unitsMade } from '@/lib/overview-figures';
 import {
@@ -47,6 +47,7 @@ export function FactoryOverviewMachinesTable({
   to?: string;
 }) {
   const { minDate, machines, shifts, maxDate } = useFactoryRefs();
+  const lineName = useLineName();
   const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
@@ -178,7 +179,7 @@ export function FactoryOverviewMachinesTable({
               ]}
               rows={machineRows.map(({ machine, avail, eng, prod, uptime }) => [
                 machine.name,
-                machine.line_id,
+                lineName(machine.line_id),
                 machine.type,
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
@@ -207,7 +208,7 @@ export function FactoryOverviewMachinesTable({
                   <div className="min-w-0">
                     <p className="truncate font-medium">{machine.name}</p>
                     <p className="truncate text-xs text-muted">
-                      {machine.line_id}
+                      {lineName(machine.line_id)}
                       {machine.type && <span className="capitalize"> · {machine.type}</span>}
                     </p>
                   </div>
@@ -244,7 +245,7 @@ export function FactoryOverviewMachinesTable({
           {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
             <TR key={machine.machine_id}>
               <TD className="font-medium">{machine.name}</TD>
-              <TD>{machine.line_id}</TD>
+              <TD>{lineName(machine.line_id)}</TD>
               <TD className="capitalize">{machine.type}</TD>
               <TD>{formatPercent(avail?.availability_percent, locale)}</TD>
               {energyOn && (

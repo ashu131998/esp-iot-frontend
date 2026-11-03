@@ -9,7 +9,7 @@ import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useFactoryRefs, useLineName } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
@@ -30,6 +30,7 @@ export function EnergyTable({
   to?: string;
 }) {
   const { minDate, shifts, maxDate } = useFactoryRefs();
+  const lineName = useLineName();
   const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
   const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
@@ -64,7 +65,7 @@ export function EnergyTable({
               headers={[t('Machine'), t('Line'), t('Energy (kWh)'), t('Avg Amps'), t('Peak Amps'), t('Voltage (V)')]}
               rows={displayMachines.map((m) => [
                 m.machine_name,
-                m.line_id,
+                lineName(m.line_id),
                 m.energy_kwh,
                 m.avg_amps,
                 m.peak_amps,
@@ -89,7 +90,7 @@ export function EnergyTable({
           {pageRows.map((m) => (
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
+              <TD>{lineName(m.line_id)}</TD>
               <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh, 1, locale) : '—'}</TD>
               <TD className={PHONE_HIDDEN}>{m.avg_amps != null ? formatNumber(m.avg_amps, 2, locale) : '—'}</TD>
               <TD className={PHONE_HIDDEN}>{m.peak_amps != null ? formatNumber(m.peak_amps, 2, locale) : '—'}</TD>

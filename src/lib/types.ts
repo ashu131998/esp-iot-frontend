@@ -27,7 +27,7 @@ export interface Factory {
   line_count: number;
   last_seen_at: string | null;
   created_at: string | null;
-  /** The partner (loom dealer, electrician) who brought the factory in; staff lists only. */
+  /** The partner (machine dealer, electrician) who brought the factory in; staff lists only. */
   referred_by?: string | null;
   /** Where its subscription stands (staff lists, and the factory itself for its bar). */
   subscription?: import('./subscriptions').SubscriptionStatus;
@@ -252,7 +252,7 @@ export interface UptimeMachine {
   offline_hours: number;
   idle_hours?: number;
   availability_percent: number | null;
-  /** Current loom state from the latest machine_status_event (extends to now). */
+  /** Current machine state from the latest machine_status_event (extends to now). */
   live_status?: UptimeStatus;
   live_since?: string | null;
   timeline: UptimeSegment[];

@@ -54,6 +54,18 @@ export function useFactoryRefsOptional(): FactoryRefs | null {
 }
 
 /**
+ * A line's name for its ID ("Weaving A" for "line-1"), what every table shows; the ID itself
+ * when the line is unknown or outside a factory. Nothing for no line.
+ */
+export function useLineName(): (lineId: string | null | undefined) => string {
+  const lines = useContext(FactoryRefsContext)?.lines;
+  return useCallback((lineId: string | null | undefined) => {
+    if (!lineId) return '—';
+    return lines?.find((l) => l.line_id === lineId)?.name?.trim() || lineId;
+  }, [lines]);
+}
+
+/**
  * `shown(key)`: whether this factory shows a page or page section, e.g.
  * `shown('production.chart')` or `shown('energy')`. Everything is shown outside
  * a factory (shared components on the platform pages).

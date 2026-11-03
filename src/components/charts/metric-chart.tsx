@@ -19,7 +19,7 @@ interface MetricBarChartProps {
   data: ChartData[];
   bars: Array<{ key: string; color: string; label: string }>;
   height?: number;
-  /** When many categories (e.g. 20 looms), rotate and show every label. */
+  /** When many categories (e.g. 20 machines), rotate and show every label. */
   xLabelRotate?: number;
   showAllXLabels?: boolean;
 }
@@ -279,7 +279,7 @@ export function UptimeTimeSeriesChart({
     <div className="space-y-1">
       <div className="relative" style={{ contain: 'layout' }}>
         {cuts.map((c) => (
-          // A red dot above the bar where the power went: visible on every colour, even on a stopped (red) loom.
+          // A red dot above the bar where the power went: visible on every colour, even on a stopped (red) machine.
           <span
             key={`dot-${c.from}`}
             className="absolute -top-1.5 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-white bg-red-600"

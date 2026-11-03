@@ -17,9 +17,9 @@ function stepLabel(step: SetupStep, t: Translate): string {
     case 'boards':
       return t('Boards fitted and online');
     case 'mapped':
-      return t('Every loom has a sensor');
+      return t('Every machine has a sensor');
     case 'live':
-      return t('Every loom live');
+      return t('Every machine live');
     case 'first_shift':
       return t('First full shift recorded');
     case 'alerts':
@@ -27,7 +27,7 @@ function stepLabel(step: SetupStep, t: Translate): string {
     case 'reports':
       return t('Shift report emails on');
     case 'value':
-      return t('Rupee value of a loom-hour set (for the monthly results)');
+      return t('Rupee value of a machine-hour set (for the monthly results)');
     default:
       return step.key;
   }
@@ -35,7 +35,7 @@ function stepLabel(step: SetupStep, t: Translate): string {
 
 /**
  * The first-week rollout, for the factory's admins and our staff (the API decides who sees it):
- * day N of 7 and the steps to "every loom live". Gone once every step is done.
+ * day N of 7 and the steps to "every machine live". Gone once every step is done.
  */
 export function SetupChecklistCard({ factoryId }: { factoryId: string }) {
   const { t } = useT();
@@ -97,7 +97,7 @@ export function SetupChecklistCard({ factoryId }: { factoryId: string }) {
         })}
       </ul>
       <p className="px-5 pb-4 pt-1 text-xs text-muted">
-        {t('FloorBeat promises every loom live within the first week. This list goes away once it is done.')}
+        {t('FloorBeat promises every machine live within the first week. This list goes away once it is done.')}
       </p>
     </section>
   );

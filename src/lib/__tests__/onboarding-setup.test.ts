@@ -96,17 +96,16 @@ describe('boards', () => {
     return { d, line, loom1: d.machines[0].key, loom2: d.machines[1].key };
   }
 
-  it('a board needs its line (a rescue box none); a machine gets one current and one proximity channel', () => {
+  it('a board needs its line (a rescue box none); a machine may have several sensors of a kind', () => {
     const { d, line, loom1, loom2 } = withMachines();
     const ok = { ...newBoard('revb-311d80'), line_key: line.key, channels: { I1: loom1, P1: loom1, I2: loom2 } };
     expect(boardProblems([ok, newBoard('rescue-a1b2c3', true)], d.lines, d.machines)).toEqual([{}, {}]);
     expect(boardProblems([{ ...ok, line_key: '' }], d.lines, d.machines)[0].line_key).toBe('Pick its line');
     expect(boardProblems([{ ...ok, line_key: '' }], [], d.machines)[0].line_key).toBe('Add its line first, on Lines & machines');
-    expect(boardProblems([{ ...ok, channels: { I1: loom1, I3: loom1 } }], d.lines, d.machines)[0].channels)
-      .toBe('Loom #1 has two current channels: revb-311d80 I1 and revb-311d80 I3');
-    // Across boards too.
+    // Two motors on one machine, or two counting points: fine, on one board or across boards.
+    expect(boardProblems([{ ...ok, channels: { I1: loom1, I3: loom1 } }], d.lines, d.machines)).toEqual([{}]);
     const other = { ...newBoard('revb-304ad0'), line_key: line.key, channels: { P2: loom1 } };
-    expect(boardProblems([ok, other], d.lines, d.machines)[1].channels).toBe('Loom #1 has two proximity channels: revb-311d80 P1 and revb-304ad0 P2');
+    expect(boardProblems([ok, other], d.lines, d.machines)).toEqual([{}, {}]);
     expect(boardProblems([{ ...ok, channels: { I4: 'removed-machine' } }], d.lines, d.machines)[0].channels).toBe('I4: its machine was removed; pick another');
     const steps = setupStepsOk({ ...d, boards: [{ ...ok, line_key: '' }] }, [], draftProblems);
     expect(steps[stepOfSection('boards')]).toBe(false);

@@ -130,6 +130,9 @@ export function BoardsStep({ value, lines, machines, onChange, tried, canClaim }
                       ))}
                     </div>
                     {p.channels && <p className="mt-2 text-xs text-red-600">{p.channels}</p>}
+                    <p className="mt-2 text-xs text-muted">
+                      A machine may have several sensors: the first current sensor listed decides running or stopped, and proximity counts add up.
+                    </p>
                     {named.length === 0 && <p className="mt-2 text-xs text-muted">Add machines on Lines &amp; machines to pick them here.</p>}
                   </>
                 )}

@@ -15,7 +15,7 @@ const DAY_MS = 86_400_000;
 const amountText = (v: number | null) => (v == null ? '' : String(v));
 
 /**
- * What turns hours into rupees, and the monthly email: the value of a running loom-hour, the
+ * What turns hours into rupees, and the monthly email: the value of a running machine-hour, the
  * service fee per machine, an optional one-time setup fee, the first month to compare with (set by
  * hand only when the automatic one is wrong) and who gets the email. Factory admins.
  */
@@ -88,9 +88,9 @@ export function ResultsSettingsForm({
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('What a running loom-hour earns (₹)')}>
+        <Field label={t('What a running machine-hour earns (₹)')}>
           <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} placeholder="350" />
-          <p className="text-xs text-muted">{t('Your margin on the cloth one loom weaves in an hour. Turns recovered hours into rupees.')}</p>
+          <p className="text-xs text-muted">{t('Your margin on what one machine makes in an hour. Turns recovered hours into rupees.')}</p>
         </Field>
         <Field label={t('Service fee per machine per month (₹)')}>
           <Input inputMode="decimal" value={fee} onChange={(e) => setFee(e.target.value)} />

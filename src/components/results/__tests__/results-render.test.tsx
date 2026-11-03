@@ -42,8 +42,8 @@ const ready: ResultsResponse = {
   data_to: '2026-10-31T12:30:00.000Z', closed_shifts: 2,
   totals: { compared_machines: 2, watched_hours: 1400, recovered_hours: 412.4, baseline_running_pct: 68.2, running_pct: 70.6, stopped_hours: 410, stopped_hours_at_baseline: 445.2 },
   machines: [
-    { machine_id: 'loom-1', machine_name: 'Loom 1', line_id: 'A', baseline_hours: 700, baseline_running_pct: 60, hours: 700, running_pct: 70, recovered_hours: 70 },
-    { machine_id: 'loom-2', machine_name: 'Loom 2', line_id: 'A', baseline_hours: 10, baseline_running_pct: 80, hours: 700, running_pct: 75, recovered_hours: null, status: 'no_baseline' as const },
+    { machine_id: 'machine-1', machine_name: 'Machine 1', line_id: 'A', baseline_hours: 700, baseline_running_pct: 60, hours: 700, running_pct: 70, recovered_hours: 70 },
+    { machine_id: 'machine-2', machine_name: 'Machine 2', line_id: 'A', baseline_hours: 10, baseline_running_pct: 80, hours: 700, running_pct: 75, recovered_hours: null, status: 'no_baseline' as const },
   ].map((m) => ({ status: 'compared' as const, ...m })),
   money: { recovered_rupees: 144340, service_fee_rupees: 3000, net_rupees: 141340, return_multiple: 48.1, setup_fee_rupees: null, payback_months: null, no_upfront_cost: true },
   since_baseline: null,
@@ -70,10 +70,10 @@ beforeEach(() => {
 });
 
 describe('ResultsDashboard', () => {
-  it('a month after the baseline: hours, rupees, follow-up and each loom', () => {
+  it('a month after the baseline: hours, rupees, follow-up and each machine', () => {
     auth.canWriteFactory = true;
     const html = dashboard(ready);
-    expect(html).toContain('412.4 loom-hours won back in October 2026');
+    expect(html).toContain('412.4 machine-hours won back in October 2026');
     expect(html).toContain('+412.4 h');
     expect(html).toContain('₹1,44,340');
     expect(html).toContain('48.1×');
@@ -81,7 +81,7 @@ describe('ResultsDashboard', () => {
     expect(html).toContain('198 of 212');
     expect(html).toContain('Yarn breakage');
     expect(html).toContain('No reason given');
-    expect(html).toContain('Loom 1');
+    expect(html).toContain('Machine 1');
     expect(html).toContain('Not enough first-month data to compare yet');
     expect(html).toContain('3 shifts were left out because the floor was closed');
     expect(html).toContain('Copy as case study');
@@ -98,7 +98,7 @@ describe('ResultsDashboard', () => {
 
   it('a loss reads as a loss', () => {
     const html = dashboard({ ...ready, totals: { ...ready.totals!, recovered_hours: -12.25 } });
-    expect(html).toContain('12.3 loom-hours below your first month in October 2026');
+    expect(html).toContain('12.3 machine-hours below your first month in October 2026');
   });
 
   it('says where it stands before there is anything to compare', () => {
@@ -113,8 +113,8 @@ describe('ResultsDashboard', () => {
 
   it('in Hindi', () => {
     const html = dashboard(ready, 'hi');
-    expect(html).toContain('वापस मिले लूम-घंटे');
-    expect(html).not.toContain('Loom-hours recovered');
+    expect(html).toContain('वापस मिले मशीन-घंटे');
+    expect(html).not.toContain('Machine-hours recovered');
   });
 });
 
@@ -160,10 +160,10 @@ describe('DowntimeReportsCard', () => {
   const now = Date.now();
   const iso = (minAgo: number) => new Date(now - minAgo * 60_000).toISOString();
   const reports = [
-    { report_id: 'd1', factory_id: F, machine_id: 'loom-1', machine_name: 'Loom 1', device_id: null, down_since: iso(30), resolved_at: iso(20),
+    { report_id: 'd1', factory_id: F, machine_id: 'machine-1', machine_name: 'Machine 1', device_id: null, down_since: iso(30), resolved_at: iso(20),
       reason_code: 'yarn_breakage', reason_label: 'Yarn breakage', reported_by_worker_id: null, reported_by_name: 'Ravi', reported_via: 'app',
       reason_reported_at: iso(28), fixed_at: iso(21), fixed_by_name: 'Ravi', created_at: iso(30) },
-    { report_id: 'd2', factory_id: F, machine_id: 'loom-2', machine_name: 'Loom 2', device_id: null, down_since: iso(15), resolved_at: iso(5),
+    { report_id: 'd2', factory_id: F, machine_id: 'machine-2', machine_name: 'Machine 2', device_id: null, down_since: iso(15), resolved_at: iso(5),
       reason_code: 'other', reason_label: 'Other', reported_by_worker_id: null, reported_by_name: null, reported_via: 'dashboard',
       reason_reported_at: iso(14), created_at: iso(15) },
   ];

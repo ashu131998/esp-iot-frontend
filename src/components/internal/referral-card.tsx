@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 
 /**
- * The partner (loom dealer, electrician) who brought this factory in: they keep a share of its
+ * The partner (machine dealer, electrician) who brought this factory in: they keep a share of its
  * subscription and get first call on its repair work. Staff only (English).
  */
 export function ReferralCard({ factoryId, initial }: { factoryId: string; initial: string | null }) {
@@ -40,7 +40,7 @@ export function ReferralCard({ factoryId, initial }: { factoryId: string; initia
         <Input
           value={value}
           maxLength={120}
-          placeholder="Patel Loom Services, Surat"
+          placeholder="Patel Engineering Works, Surat"
           onChange={(e) => setValue(e.target.value)}
         />
         <Button type="submit" disabled={!dirty || save.isPending}>

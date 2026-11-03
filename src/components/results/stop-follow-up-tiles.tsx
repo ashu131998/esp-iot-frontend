@@ -15,7 +15,7 @@ function actedTone(pct: number | null): Tone | undefined {
 
 /**
  * How stop alerts were followed up: how many someone acted on (gave the reason or confirmed the
- * fix), how fast a reason came, and how fast looms ran again (the sensor's word).
+ * fix), how fast a reason came, and how fast machines ran again (the sensor's word).
  */
 export function StopFollowUpTiles({ data }: { data: StopFollowUp }) {
   const { t, tn, locale } = useT();

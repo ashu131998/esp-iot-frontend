@@ -23,9 +23,9 @@ const TYPE_LABEL: Record<string, string> = {
   config_selection_reply: 'Config from worker',
   test: 'Test message',
   test_push: 'Test push',
-  board_offline: 'Board offline (email)',
-  board_online: 'Board back (email)',
-  board_power_cut: 'Board powered off (email)',
+  board_offline: 'Machines stopped reporting (email)',
+  board_online: 'Machines reporting again (email)',
+  board_power_cut: 'Machines lost power (email)',
 };
 
 function rowTitle(n: NotificationItem, t: Translate) {
@@ -76,7 +76,7 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
         subtitle={
           data
             ? t('{recent} recent · {total} total', { recent: notifications.length, total: data.total })
-            : t('Reminders, mobile alerts, and board emails')
+            : t('Reminders, mobile alerts, and alert emails')
         }
       />
 

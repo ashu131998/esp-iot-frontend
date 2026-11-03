@@ -161,7 +161,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
 
       <div className="space-y-2 px-1 text-sm text-muted">
         <p>
-          {t('Board offline emails go to the same people as the shift reports.')}{' '}
+          {t('Emails when machines stop reporting, come back or lose power go to the same people as the shift reports.')}{' '}
           {settings?.board_email_from && (
             <>
               {t('Sender:')} <span className="font-mono text-foreground">{settings.board_email_from}</span>.{' '}
@@ -182,12 +182,12 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
                 testBoardEmail.mutate();
               }}
             >
-              {testBoardEmail.isPending ? t('Sending…') : t('Send test board alert email')}
+              {testBoardEmail.isPending ? t('Sending…') : t('Send a test alert email')}
             </Button>
             {testEmailResult && <p className="text-xs">{testEmailResult}</p>}
           </div>
         ) : (
-          <p className="text-xs text-amber-700">{t('Board email is not configured on the server yet.')}</p>
+          <p className="text-xs text-amber-700">{t('Alert email is not configured on the server yet.')}</p>
         )}
       </div>
 

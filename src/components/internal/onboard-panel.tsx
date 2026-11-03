@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { BoardsStep } from '@/components/internal/onboard/boards-step';
 import { LinesStep } from '@/components/internal/onboard/lines-step';
 import { LookStep } from '@/components/internal/onboard/look-step';
 import { OnboardDone, type OnboardResult } from '@/components/internal/onboard/onboard-done';
@@ -15,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
 import { ApiError, api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import { isSuperAdmin } from '@/lib/auth-types';
 import {
   MAX_ONBOARD_ADMINS,
   SETUP_STEPS,
@@ -67,6 +70,7 @@ function reviveDraft(stored: unknown, fresh: SetupDraft): SetupDraft {
     lines: list(s.lines, fresh.lines),
     machines: list(s.machines, fresh.machines),
     wifi: list(s.wifi, fresh.wifi),
+    boards: list(s.boards, fresh.boards),
     admins: list(s.admins, fresh.admins),
     workers: list(s.workers, fresh.workers),
   };
@@ -107,6 +111,7 @@ function Stepper({ step, bad, onJump }: { step: number; bad: boolean[]; onJump: 
  */
 export function OnboardPanel() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const stored = useStoredState<SetupDraft>(DRAFT_KEY, () => emptySetupDraft(todayKey()), reviveDraft);
   const d = stored.value;
   const set = stored.set;
@@ -299,6 +304,17 @@ export function OnboardPanel() {
           )}
 
           {current === 'wifi' && <WifiStep value={d.wifi} onChange={(wifi) => patch({ wifi })} tried={tried} />}
+
+          {current === 'boards' && (
+            <BoardsStep
+              value={d.boards}
+              lines={d.lines}
+              machines={d.machines}
+              onChange={(boards) => patch({ boards })}
+              tried={tried}
+              canClaim={isSuperAdmin(user)}
+            />
+          )}
 
           {current === 'people' && (
             <>

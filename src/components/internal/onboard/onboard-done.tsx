@@ -13,9 +13,11 @@ export type OnboardResult = SetupResponse & { request: SetupRequest };
 export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAnother: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const { factory, emails, dashboard_url: dashboardUrl, request, workers } = result;
+  const boards = result.boards ?? [];
   const appUrl = dashboardUrl.replace(/\/f\/[^/]+$/, '');
   const failed = emails.filter((e) => !e.sent);
   const loginTrouble = workers.filter((w) => w.app_login.startsWith('failed') || w.app_login === 'not available on this server');
+  const claimed = boards.filter((b) => b.claim === 'claimed').length;
 
   const copy = async (email: string) => {
     const a = request.admins.find((x) => x.email === email);
@@ -33,6 +35,7 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
     result.machines > 0 && `${result.machines} machine${result.machines === 1 ? '' : 's'}`,
     result.wifi > 0 && `${result.wifi} WiFi network${result.wifi === 1 ? '' : 's'}`,
     workers.length > 0 && `${workers.length} worker${workers.length === 1 ? '' : 's'}`,
+    claimed > 0 && `${claimed} board${claimed === 1 ? '' : 's'} claimed`,
   ].filter(Boolean);
 
   return (
@@ -72,13 +75,39 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
             <div className="mt-1 text-xs">The workers themselves were added; their app logins can be made later on the Scheduling page.</div>
           </div>
         )}
+        {boards.length > 0 && (
+          <>
+            <h4 className="mt-6 text-sm font-semibold">Boards</h4>
+            <ul className="mt-2 divide-y rounded-lg border text-sm">
+              {boards.map((b) => (
+                <li key={b.board_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+                  <div className="min-w-0">
+                    <span className="font-mono">{b.board_id}</span>
+                    <span className="text-xs text-muted">
+                      {b.rescue ? ' · rescue box' : ` · ${b.line_id} · ${b.channels} sensor${b.channels === 1 ? '' : 's'} matched`}
+                    </span>
+                    {b.claim !== 'claimed' && <div className="text-xs text-red-600">Not claimed: {b.claim.replace(/^failed: /, '')}</div>}
+                  </div>
+                  {b.claim === 'claimed'
+                    ? <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Claimed</span>
+                    : <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">Claim it again</span>}
+                </li>
+              ))}
+            </ul>
+            {claimed < boards.length && (
+              <p className="mt-1 text-xs text-muted">
+                Claim those on the Boards page, to this factory and the same line: their sensors are already matched to machines.
+              </p>
+            )}
+          </>
+        )}
         <p className="mt-2 text-xs text-muted">The form and its passwords are cleared from this device.</p>
 
         <h4 className="mt-6 text-sm font-semibold">Next steps</h4>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
           <Link href="/internal/boards" className="rounded-lg border p-3 text-sm hover:bg-slate-50">
-            <div className="font-medium">Claim its boards</div>
-            <div className="text-xs text-muted">Then map their channels to machines</div>
+            <div className="font-medium">{claimed > 0 ? 'Its boards' : 'Claim its boards'}</div>
+            <div className="text-xs text-muted">{claimed > 0 ? 'See them report in, or claim more' : 'Then match their sensors to machines'}</div>
           </Link>
           <Link href={`/internal/factories/${encodeURIComponent(factory.factory_id)}`} className="rounded-lg border p-3 text-sm hover:bg-slate-50">
             <div className="font-medium">Factory setup</div>

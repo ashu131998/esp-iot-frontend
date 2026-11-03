@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { CardHeader } from '@/components/ui/card';
-import { SETUP_STEPS, emailList, shiftLabel, type SetupDraft, type SetupStepKey } from '@/lib/onboarding';
+import { SETUP_BOARD_SLOTS, SETUP_STEPS, emailList, shiftLabel, type SetupDraft, type SetupStepKey } from '@/lib/onboarding';
 import { formatPeriod, isDayKey } from '@/lib/subscriptions';
 
 function Row({ label, step, onEdit, children }: { label: string; step: SetupStepKey; onEdit: (i: number) => void; children: ReactNode }) {
@@ -29,6 +29,11 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
   const appLogins = d.workers.filter((w) => w.email.trim() && w.password).length;
   const reportEmails = emailList(d.reports.emails);
   const machinesOn = (key: string) => d.machines.filter((m) => m.line_key === key).length;
+  const lineName = (key: string) => {
+    const l = d.lines.find((x) => x.key === key);
+    return l ? l.name.trim() || l.line_id.trim() : '—';
+  };
+  const machineName = new Map(d.machines.map((m) => [m.key, m.name.trim()]));
 
   return (
     <>
@@ -74,6 +79,21 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
           {d.wifi.length === 0 ? <None>None (boards use 4G or their own networks)</None> : d.wifi.map((n, i) => (
             <div key={n.key}>{i + 1}. {n.ssid.trim()} {n.pass === '' && <span className="text-muted">(open)</span>}</div>
           ))}
+        </Row>
+        <Row label="Boards" step="boards" onEdit={onEdit}>
+          {d.boards.length === 0 ? <None>None now (claimed later on the Boards page)</None> : d.boards.map((b) => {
+            const mapped = SETUP_BOARD_SLOTS.filter((slot) => machineName.get(b.channels[slot] ?? ''));
+            return (
+              <div key={b.key}>
+                <span className="font-mono">{b.board_id}</span>
+                <span className="text-muted">
+                  {b.rescue
+                    ? ' · rescue box'
+                    : ` · ${lineName(b.line_key)} · ${mapped.length === 0 ? 'no sensors matched yet' : mapped.map((slot) => `${slot} ${machineName.get(b.channels[slot])}`).join(', ')}`}
+                </span>
+              </div>
+            );
+          })}
         </Row>
         <Row label="People" step="people" onEdit={onEdit}>
           {d.admins.map((a) => <div key={a.key}>Admin: {a.email.trim().toLowerCase()}</div>)}

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  SETUP_STEPS, buildSetupRequest, bulkMachines, emailList, emptySetupDraft, lineProblems, lookProblems,
-  machineProblems, newContact, newLine, newMachine, newWifi, newWorker, reportsProblems, setAdminEmail,
+  SETUP_STEPS, boardProblems, buildSetupRequest, bulkMachines, emailList, emptySetupDraft, lineProblems, lookProblems,
+  machineProblems, newBoard, newContact, newLine, newMachine, newWifi, newWorker, reportsProblems, setAdminEmail,
   setupStepsOk, stepOfSection, wifiProblems, workerProblems, type SetupDraft,
 } from '@/lib/onboarding';
 import { draftBody, draftProblems } from '@/lib/subscriptions';
@@ -17,9 +17,10 @@ function minimal(): SetupDraft {
 
 describe('the steps', () => {
   it('in order, and server problems map to their step', () => {
-    expect(SETUP_STEPS.map((s) => s.key)).toEqual(['factory', 'look', 'subscription', 'shifts', 'lines', 'wifi', 'people', 'reports', 'review']);
+    expect(SETUP_STEPS.map((s) => s.key)).toEqual(['factory', 'look', 'subscription', 'shifts', 'lines', 'wifi', 'boards', 'people', 'reports', 'review']);
     expect(stepOfSection('lines')).toBe(4);
-    expect(stepOfSection('people')).toBe(6);
+    expect(stepOfSection('boards')).toBe(6);
+    expect(stepOfSection('people')).toBe(7);
     expect(stepOfSection('unknown')).toBe(0);
   });
 
@@ -28,7 +29,7 @@ describe('the steps', () => {
     expect(ok.every(Boolean)).toBe(true);
     const empty = emptySetupDraft('2026-11-03');
     expect(setupStepsOk(empty, [], draftProblems)[0]).toBe(false);   // factory
-    expect(setupStepsOk(empty, [], draftProblems)[6]).toBe(false);   // people: one admin needed
+    expect(setupStepsOk(empty, [], draftProblems)[7]).toBe(false);   // people: one admin needed
   });
 });
 
@@ -83,6 +84,51 @@ describe('look, WiFi, workers, reports', () => {
       emails: 'Not an email: nope', contacts: 'Not a phone number: 12', money: 'Amounts must be numbers',
     });
     expect(emailList(' A@b.in, a@b.in\nc@d.in ;')).toEqual(['a@b.in', 'c@d.in']);
+  });
+});
+
+describe('boards', () => {
+  function withMachines() {
+    const d = minimal();
+    const line = newLine('line-1', 'Weaving A');
+    d.lines = [line];
+    d.machines = [newMachine(line.key, 'Loom #1'), newMachine(line.key, 'Loom #2')];
+    return { d, line, loom1: d.machines[0].key, loom2: d.machines[1].key };
+  }
+
+  it('a board needs its line (a rescue box none); a machine gets one current and one proximity channel', () => {
+    const { d, line, loom1, loom2 } = withMachines();
+    const ok = { ...newBoard('revb-311d80'), line_key: line.key, channels: { I1: loom1, P1: loom1, I2: loom2 } };
+    expect(boardProblems([ok, newBoard('rescue-a1b2c3', true)], d.lines, d.machines)).toEqual([{}, {}]);
+    expect(boardProblems([{ ...ok, line_key: '' }], d.lines, d.machines)[0].line_key).toBe('Pick its line');
+    expect(boardProblems([{ ...ok, line_key: '' }], [], d.machines)[0].line_key).toBe('Add its line first, on Lines & machines');
+    expect(boardProblems([{ ...ok, channels: { I1: loom1, I3: loom1 } }], d.lines, d.machines)[0].channels)
+      .toBe('Loom #1 has two current channels: revb-311d80 I1 and revb-311d80 I3');
+    // Across boards too.
+    const other = { ...newBoard('revb-304ad0'), line_key: line.key, channels: { P2: loom1 } };
+    expect(boardProblems([ok, other], d.lines, d.machines)[1].channels).toBe('Loom #1 has two proximity channels: revb-311d80 P1 and revb-304ad0 P2');
+    expect(boardProblems([{ ...ok, channels: { I4: 'removed-machine' } }], d.lines, d.machines)[0].channels).toBe('I4: its machine was removed; pick another');
+    const steps = setupStepsOk({ ...d, boards: [{ ...ok, line_key: '' }] }, [], draftProblems);
+    expect(steps[stepOfSection('boards')]).toBe(false);
+  });
+
+  it('to the API: machines by name, the line\'s ID, slots in order; a rescue box alone', () => {
+    const { d, line, loom1, loom2 } = withMachines();
+    d.boards = [
+      { ...newBoard('revb-311d80'), line_key: line.key, channels: { I2: loom2, I1: loom1, P1: loom1 } },
+      { ...newBoard('revb-304ad0'), line_key: line.key },
+      { ...newBoard('rescue-a1b2c3', true), line_key: line.key },
+    ];
+    expect(buildSetupRequest(d, draftBody).boards).toEqual([
+      {
+        board_id: 'revb-311d80',
+        line_id: 'line-1',
+        channels: [{ slot: 'I1', machine: 'Loom #1' }, { slot: 'I2', machine: 'Loom #2' }, { slot: 'P1', machine: 'Loom #1' }],
+      },
+      { board_id: 'revb-304ad0', line_id: 'line-1' },
+      { board_id: 'rescue-a1b2c3' },
+    ]);
+    expect(buildSetupRequest(minimal(), draftBody).boards).toBeUndefined();
   });
 });
 

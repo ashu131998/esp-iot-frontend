@@ -275,6 +275,7 @@ export const SETUP_STEPS = [
   { key: 'shifts', label: 'Shifts' },
   { key: 'lines', label: 'Lines & machines' },
   { key: 'wifi', label: 'WiFi' },
+  { key: 'boards', label: 'Boards' },
   { key: 'people', label: 'People' },
   { key: 'reports', label: 'Reports & alerts' },
   { key: 'review', label: 'Review' },
@@ -326,6 +327,23 @@ export interface MachineDraft {
 
 export interface WifiDraft { key: string; ssid: string; pass: string }
 
+/** The channels a board gets machines for here (REV B's own): CTs on I1–I4, proximity on P1–P2. */
+export const SETUP_BOARD_SLOTS = ['I1', 'I2', 'I3', 'I4', 'P1', 'P2'] as const;
+
+/** What a channel measures: a proximity sensor on P slots, a current transformer on the rest. */
+export const slotSensor = (slot: string): 'current' | 'proximity' => (slot.startsWith('P') ? 'proximity' : 'current');
+
+/** A board waiting to be claimed, for this factory. */
+export interface BoardDraft {
+  key: string;
+  board_id: string;
+  /** A rescue box: claimed into the factory alone (no line, no sensors). */
+  rescue: boolean;
+  line_key: string;
+  /** Channel slot → the machine it measures (the machine's key); not there: not used. */
+  channels: Record<string, string>;
+}
+
 export interface WorkerDraft {
   key: string;
   name: string;
@@ -360,6 +378,7 @@ export interface SetupDraft {
   lines: LineDraft[];
   machines: MachineDraft[];
   wifi: WifiDraft[];
+  boards: BoardDraft[];
   admins: AdminDraft[];
   workers: WorkerDraft[];
   reports: ReportsDraft;
@@ -380,6 +399,7 @@ export function emptySetupDraft(today: string): SetupDraft {
     lines: [],
     machines: [],
     wifi: [],
+    boards: [],
     admins: [emptyAdmin(key())],
     workers: [],
     reports: {
@@ -394,6 +414,7 @@ export const newMachine = (line_key: string, name = ''): MachineDraft => ({
   key: key(), line_key, name, machine_id: '', type: '', target_units_per_hour: '', target_cycle_time_sec: '', voltage_v: '', unit_label: '',
 });
 export const newWifi = (): WifiDraft => ({ key: key(), ssid: '', pass: '' });
+export const newBoard = (board_id: string, rescue = false): BoardDraft => ({ key: key(), board_id, rescue, line_key: '', channels: {} });
 export const newWorker = (): WorkerDraft => ({ key: key(), name: '', role: WORKER_ROLES[0], employee_code: '', phone: '', email: '', password: '' });
 export const newContact = (): ContactDraft => ({ key: key(), name: '', phone: '' });
 
@@ -493,6 +514,38 @@ export function wifiProblems(list: WifiDraft[]): Partial<Record<'ssid' | 'pass',
   });
 }
 
+export type BoardProblems = Partial<Record<'line_key' | 'channels', string>>;
+
+/**
+ * Each board on one of the form's lines (a rescue box needs none), its channels on machines that
+ * are still in the form, and a machine with at most one current and one proximity channel, so its
+ * running time and its count each come from one sensor.
+ */
+export function boardProblems(boards: BoardDraft[], lines: LineDraft[], machines: MachineDraft[]): BoardProblems[] {
+  const lineKeys = new Set(lines.map((l) => l.key));
+  const machineName = new Map(machines.map((m) => [m.key, m.name.trim()]));
+  const takenBy = new Map<string, string>();
+  return boards.map((b) => {
+    const out: BoardProblems = {};
+    if (b.rescue) return out;
+    if (!lineKeys.has(b.line_key)) out.line_key = lines.length === 0 ? 'Add its line first, on Lines & machines' : 'Pick its line';
+    for (const slot of SETUP_BOARD_SLOTS) {
+      const machineKey = b.channels[slot];
+      if (!machineKey) continue;
+      const name = machineName.get(machineKey);
+      if (!name) {
+        out.channels ??= `${slot}: its machine was removed; pick another`;
+        continue;
+      }
+      const sensor = slotSensor(slot);
+      const taken = takenBy.get(`${sensor}:${machineKey}`);
+      if (taken) out.channels ??= `${name} has two ${sensor} channels: ${taken} and ${b.board_id} ${slot}`;
+      else takenBy.set(`${sensor}:${machineKey}`, `${b.board_id} ${slot}`);
+    }
+    return out;
+  });
+}
+
 export type WorkerProblems = Partial<Record<'name' | 'email' | 'password' | 'phone', string>>;
 
 export function workerProblems(workers: WorkerDraft[]): WorkerProblems[] {
@@ -533,6 +586,7 @@ export function setupStepsOk(d: SetupDraft, takenIds: string[] = [], periodProbl
       case 'shifts': return shiftProblem(d.shifts) === null;
       case 'lines': return !hasProblems(lineProblems(d.lines)) && !hasProblems(machineProblems(d.machines, d.lines));
       case 'wifi': return !hasProblems(wifiProblems(d.wifi));
+      case 'boards': return !hasProblems(boardProblems(d.boards, d.lines, d.machines));
       case 'people': return !hasProblems(adminProblems(d.admins)) && !hasProblems(workerProblems(d.workers));
       case 'reports': return !hasProblems(reportsProblems(d.reports));
       default: return true;
@@ -549,6 +603,7 @@ export interface SetupRequest {
   lines?: { line_id: string; name: string }[];
   machines?: Record<string, string | number>[];
   wifi?: { ssid: string; pass: string }[];
+  boards?: { board_id: string; line_id?: string; channels?: { slot: string; machine: string }[] }[];
   workers?: { name: string; role: string; employee_code?: string; phone?: string; email?: string; password?: string }[];
   reports?: { enabled: boolean; recipient_emails: string[] };
   alerts?: { mobile_enabled: boolean; notify_owner_on_down: boolean; owner_contacts: { name: string; phone: string }[] };
@@ -563,6 +618,8 @@ export interface SetupResponse {
   machines: number;
   wifi: number;
   workers: { worker_id: string; name: string; app_login: string }[];
+  /** Each board's claim: "claimed", or "failed: …" (claim it again on the Boards page). */
+  boards?: { board_id: string; rescue: boolean; line_id: string | null; channels: number; claim: string }[];
   dashboard_url: string;
 }
 
@@ -601,6 +658,17 @@ export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => Setup
     });
   }
   if (d.wifi.length > 0) req.wifi = d.wifi.map((n) => ({ ssid: n.ssid.trim(), pass: n.pass }));
+  if (d.boards.length > 0) {
+    // Machines by name: the server makes their IDs.
+    const machineName = new Map(d.machines.map((m) => [m.key, clean(m.name)]));
+    req.boards = d.boards.map((b) => {
+      const channels = SETUP_BOARD_SLOTS
+        .filter((slot) => machineName.has(b.channels[slot] ?? ''))
+        .map((slot) => ({ slot, machine: machineName.get(b.channels[slot]) ?? '' }));
+      const lineId = b.rescue ? '' : (lineIdOf.get(b.line_key) ?? '');
+      return { board_id: b.board_id, ...(lineId ? { line_id: lineId } : {}), ...(channels.length > 0 ? { channels } : {}) };
+    });
+  }
   if (d.workers.length > 0) {
     req.workers = d.workers.map((w) => ({
       name: clean(w.name),

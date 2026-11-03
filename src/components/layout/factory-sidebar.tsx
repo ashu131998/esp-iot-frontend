@@ -30,7 +30,7 @@ import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { SIDEBAR_CARD, SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
 import { useAuth } from '@/lib/auth-context';
-import { tabsFor } from '@/lib/display';
+import { sidebarGroups, tabsFor } from '@/lib/display';
 import { currentShiftWindow } from '@/lib/shifts';
 import { useT } from '@/lib/i18n/context';
 import { useNavigate } from '@/lib/navigation-context';
@@ -59,9 +59,6 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   compliance: ShieldCheck,
   team: Users,
 };
-
-/** Pages for running the factory rather than watching it: the sidebar's second group. */
-const MANAGE_PAGES = new Set(['lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance']);
 
 export function tabIcon(slug: string): React.ComponentType<{ className?: string }> {
   return tabIcons[slug] ?? Activity;
@@ -102,10 +99,7 @@ export function FactorySidebar({
   }, [pathname]);
 
   const visible = tabsFor(tabs, canWriteFactory);
-  const groups = [
-    { key: 'monitor', title: t('Monitor'), tabs: visible.filter((tab) => !MANAGE_PAGES.has(tab.slug)) },
-    { key: 'manage', title: t('Manage'), tabs: visible.filter((tab) => MANAGE_PAGES.has(tab.slug)) },
-  ].filter((g) => g.tabs.length > 0);
+  const groups = sidebarGroups(visible).map((g) => ({ ...g, title: g.key === 'monitor' ? t('Monitor') : t('Manage') }));
 
   return (
     <aside className={cn('sticky top-0 flex h-screen w-64 shrink-0 flex-col', SIDEBAR_PANEL)}>

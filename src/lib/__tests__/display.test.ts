@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FACTORY_PAGES,
+  MANAGE_PAGES,
   displayOf,
   factoryTabs,
   isShown,
@@ -9,6 +10,7 @@ import {
   noProduction,
   offQuery,
   resolveDisplay,
+  sidebarGroups,
   tabsFor,
   type DisplayPage,
 } from '@/lib/display';
@@ -125,5 +127,30 @@ describe('switched-off module stand-ins', () => {
 
   it('empty production keeps the response shape', () => {
     expect(noProduction('f1')).toEqual({ factory_id: 'f1', from: '', to: '', total_units: 0, machines: [] });
+  });
+});
+
+describe('sidebarGroups: what people read (Monitor), then what they set up (Manage)', () => {
+  it('every factory page lands in exactly one group, in menu order', () => {
+    const groups = sidebarGroups(FACTORY_PAGES);
+    expect(groups.map((g) => g.key)).toEqual(['monitor', 'manage']);
+    expect(groups[0].tabs.map((p) => p.slug)).toEqual([
+      'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'performance', 'production', 'quality',
+    ]);
+    expect(groups[1].tabs.map((p) => p.slug)).toEqual([
+      'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
+    ]);
+    expect(groups.flatMap((g) => g.tabs)).toHaveLength(FACTORY_PAGES.length);
+  });
+
+  it('names only pages that exist', () => {
+    const slugs = FACTORY_PAGES.map((p) => p.slug);
+    for (const slug of MANAGE_PAGES) expect(slugs).toContain(slug);
+  });
+
+  it('a group with nothing in it is left out', () => {
+    expect(sidebarGroups([{ slug: 'overview' }, { slug: 'energy' }]).map((g) => g.key)).toEqual(['monitor']);
+    expect(sidebarGroups([{ slug: 'team' }]).map((g) => g.key)).toEqual(['manage']);
+    expect(sidebarGroups([])).toEqual([]);
   });
 });

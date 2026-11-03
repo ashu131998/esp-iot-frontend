@@ -90,6 +90,20 @@ export function tabsFor<T extends { slug: string }>(tabs: readonly T[], canWrite
   return tabs.filter((t) => canWrite || !ADMIN_PAGES.includes(t.slug));
 }
 
+/** The pages people set the factory up with: the sidebar lists them under Manage, the rest under Monitor. */
+export const MANAGE_PAGES: ReadonlySet<string> = new Set([
+  'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
+]);
+
+/** The sidebar's groups in menu order: what people read (Monitor), then what they set up (Manage); an empty one left out. */
+export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): Array<{ key: 'monitor' | 'manage'; tabs: T[] }> {
+  const groups: Array<{ key: 'monitor' | 'manage'; tabs: T[] }> = [
+    { key: 'monitor', tabs: tabs.filter((tab) => !MANAGE_PAGES.has(tab.slug)) },
+    { key: 'manage', tabs: tabs.filter((tab) => MANAGE_PAGES.has(tab.slug)) },
+  ];
+  return groups.filter((g) => g.tabs.length > 0);
+}
+
 /** The factory's menu: its pages that are switched on. */
 export function factoryTabs(
   factoryId: string,

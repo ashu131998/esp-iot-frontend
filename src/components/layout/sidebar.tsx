@@ -20,6 +20,7 @@ import {
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
+import { SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
 import { cn } from '@/lib/utils';
 
 const platformNav = [
@@ -40,21 +41,17 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="border-b border-white/10 px-5 py-5">
-        <div className="flex items-center gap-2">
-          <BrandMark className="h-9 w-9" />
-          <div>
-            <p className="text-sm font-semibold">FloorBeat</p>
-            <p className="text-xs text-slate-400">Operations Platform</p>
-          </div>
+      <div className="flex items-center gap-3 px-5 pb-3 pt-5">
+        <BrandMark className="h-10 w-10" />
+        <div>
+          <p className="text-sm font-semibold text-foreground">FloorBeat</p>
+          <p className="text-xs text-muted">Operations Platform</p>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Platform
-        </p>
-        <ul className="space-y-1">
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        <p className={SIDEBAR_HEADING}>Platform</p>
+        <ul className="space-y-0.5">
           {platformNav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -62,12 +59,9 @@ function SidebarContent({
                 <Link
                   href={href}
                   onClick={onNavigate}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                    active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
-                  )}
+                  className={sidebarItemClass(active)}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={sidebarIconClass(active)} />
                   {label}
                 </Link>
               </li>
@@ -75,10 +69,8 @@ function SidebarContent({
           })}
         </ul>
 
-        <p className="mb-2 mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Factories
-        </p>
-        <ul className="space-y-1">
+        <p className={SIDEBAR_HEADING}>Factories</p>
+        <ul className="space-y-0.5">
           {factories.map((f) => {
             const href = `/factories/${f.factory_id}`;
             const active = pathname.startsWith(href);
@@ -87,12 +79,9 @@ function SidebarContent({
                 <Link
                   href={href}
                   onClick={onNavigate}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                    active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
-                  )}
+                  className={sidebarItemClass(active)}
                 >
-                  <Gauge className="h-4 w-4" />
+                  <Gauge className={sidebarIconClass(active)} />
                   <span className="truncate">{f.name}</span>
                 </Link>
               </li>
@@ -124,11 +113,11 @@ export function Sidebar({ factories }: { factories: Array<{ factory_id: string; 
   return (
     <>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 text-foreground lg:hidden">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/10"
+          className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-50"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />
@@ -148,11 +137,11 @@ export function Sidebar({ factories }: { factories: Array<{ factory_id: string; 
             onClick={() => setOpen(false)}
             aria-label="Close navigation menu"
           />
-          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground shadow-xl">
+          <aside className={cn('relative flex h-full w-72 max-w-[85vw] flex-col shadow-xl', SIDEBAR_PANEL)}>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+              className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-gray-50 hover:text-foreground"
               aria-label="Close navigation menu"
             >
               <X className="h-5 w-5" />
@@ -167,7 +156,7 @@ export function Sidebar({ factories }: { factories: Array<{ factory_id: string; 
       )}
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex">
+      <aside className={cn('sticky top-0 hidden h-screen w-64 shrink-0 flex-col lg:flex', SIDEBAR_PANEL)}>
         <SidebarContent factories={factories} pathname={pathname} />
       </aside>
     </>

@@ -27,8 +27,11 @@ import {
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
+import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
+import { SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
+import { currentShiftWindow } from '@/lib/shifts';
 import { useT } from '@/lib/i18n/context';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -57,6 +60,9 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   team: Users,
 };
 
+/** Pages for running the factory rather than watching it: the sidebar's second group. */
+const MANAGE_PAGES = new Set(['lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance']);
+
 export function tabIcon(slug: string): React.ComponentType<{ className?: string }> {
   return tabIcons[slug] ?? Activity;
 }
@@ -79,72 +85,99 @@ export function FactorySidebar({
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
-  const { canWriteFactory } = useAuth();
+  const { canWriteFactory, isInternalStaff } = useAuth();
   const { t } = useT();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  // Which shift is on now: worked out after the page is up (the server's clock may sit on the other side of a change).
+  const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
+  useEffect(() => {
+    const tick = () => setCurrentShiftId(shifts.length ? currentShiftWindow(shifts).shift.shift_id : null);
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [shifts]);
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
 
+  const visible = tabsFor(tabs, canWriteFactory);
+  const groups = [
+    { key: 'monitor', title: t('Monitor'), tabs: visible.filter((tab) => !MANAGE_PAGES.has(tab.slug)) },
+    { key: 'manage', title: t('Manage'), tabs: visible.filter((tab) => MANAGE_PAGES.has(tab.slug)) },
+  ].filter((g) => g.tabs.length > 0);
+
   return (
-    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="border-b border-white/10 px-5 py-5">
-        <div className="flex items-center gap-2">
-          {logoSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
-            <img src={logoSrc} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain p-0.5" />
-          ) : (
-            <BrandMark className="h-9 w-9" />
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{factoryName}</p>
-            <p className="truncate text-xs text-slate-400">{location ?? factoryId}</p>
-          </div>
+    <aside className={cn('sticky top-0 flex h-screen w-64 shrink-0 flex-col', SIDEBAR_PANEL)}>
+      <div className="flex items-center gap-3 px-5 pb-3 pt-5">
+        {logoSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
+          <img src={logoSrc} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-0.5 ring-1 ring-gray-100" />
+        ) : (
+          <BrandMark className="h-10 w-10" />
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{factoryName}</p>
+          <p className="truncate text-xs text-muted">{location ?? factoryId}</p>
         </div>
       </div>
 
-      <div className="border-b border-white/10 px-5 py-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{t('Shifts')}</p>
-        <ul className="space-y-1.5 text-xs text-slate-300">
-          {shifts.map((s) => (
-            <li key={s.shift_id} className="flex justify-between gap-2">
-              <span>{t(s.name)}</span>
-              <span className="text-slate-500">{s.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {shifts.length > 0 && (
+        <div className="mx-3 rounded-xl bg-slate-50 px-3 py-2.5">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{t('Shifts')}</p>
+          <ul className="space-y-1 text-xs">
+            {shifts.map((s) => {
+              const now = currentShiftId === s.shift_id;
+              return (
+                <li key={s.shift_id} className="flex items-center justify-between gap-2">
+                  <span className={cn('flex min-w-0 items-center gap-1.5', now ? 'font-medium text-foreground' : 'text-slate-500')}>
+                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', now ? 'bg-emerald-500' : 'bg-gray-300')} />
+                    <span className="truncate">{t(s.name)}</span>
+                    {now && <span className="rounded-full bg-emerald-50 px-1.5 text-[10px] font-semibold text-emerald-700">{t('Now')}</span>}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-slate-400">{s.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {tabsFor(tabs, canWriteFactory).map((tab) => {
-            const Icon = tabIcon(tab.slug);
-            const active = pendingHref ? pendingHref === tab.href : pathname === tab.href;
-            return (
-              <li key={tab.href}>
-                <button
-                  onClick={() => {
-                    if (pathname !== tab.href) {
-                      setPendingHref(tab.href);
-                      navigate(tab.href);
-                    }
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                    active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {t(tab.label)}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        {groups.map((group) => (
+          <div key={group.key}>
+            <p className={SIDEBAR_HEADING}>{group.title}</p>
+            <ul className="space-y-0.5">
+              {group.tabs.map((tab) => {
+                const Icon = tabIcon(tab.slug);
+                const active = pendingHref ? pendingHref === tab.href : pathname === tab.href;
+                return (
+                  <li key={tab.href}>
+                    <button
+                      type="button"
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => {
+                        if (pathname !== tab.href) {
+                          setPendingHref(tab.href);
+                          navigate(tab.href);
+                        }
+                      }}
+                      className={sidebarItemClass(active)}
+                    >
+                      <Icon className={sidebarIconClass(active)} />
+                      {t(tab.label)}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
-      <SidebarUserFooter factoryId={factoryId} />
+      <SidebarUserFooter factoryId={factoryId}>
+        {isInternalStaff && <FactoryPlatformBack factoryId={factoryId} />}
+      </SidebarUserFooter>
     </aside>
   );
 }

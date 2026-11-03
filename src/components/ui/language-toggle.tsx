@@ -43,7 +43,7 @@ export function LanguageToggle({
       className={cn(
         fill ? 'flex w-full' : 'inline-flex',
         'rounded-lg p-0.5 text-xs font-medium',
-        tone === 'dark' ? 'bg-white/10' : 'border bg-white',
+        tone === 'dark' ? 'bg-white/10' : 'bg-slate-100',
         pending && 'opacity-60',
         className,
       )}
@@ -62,7 +62,7 @@ export function LanguageToggle({
               fill ? 'flex-1 px-1' : 'px-2.5',
               tone === 'dark'
                 ? active ? 'bg-white/20 text-white' : 'text-slate-300 hover:text-white'
-                : active ? 'bg-slate-900 text-white' : 'text-muted hover:text-foreground',
+                : active ? 'bg-white text-foreground shadow-sm ring-1 ring-gray-200' : 'text-muted hover:text-foreground',
             )}
           >
             {compact ? LOCALE_SHORT[l] : LOCALE_NAMES[l]}

@@ -53,28 +53,36 @@ export function SignOutButton({
   );
 }
 
-export function SidebarUserFooter({ factoryId }: { factoryId?: string }) {
+export function SidebarUserFooter({ factoryId, children }: { factoryId?: string; children?: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { t } = useT();
   const signOut = useSignOut(factoryId);
 
   if (loading || !user) return null;
+  const initial = (user.username || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="border-t border-white/10 px-5 py-4">
-      <p className="mb-2 truncate text-xs text-slate-400">{t('Signed in as {name}', { name: user.username })}</p>
-      <div className="mb-2 px-3">
-        <p className="mb-1 text-xs text-slate-400">{t('Language')}</p>
-        <LanguageToggle tone="dark" fill />
+    <div className="space-y-3 border-t border-gray-100 p-3">
+      {children}
+      <LanguageToggle fill className="border-gray-200" />
+      <div className="flex items-center gap-3 rounded-xl px-2 py-1.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+          {initial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">{user.username}</p>
+          <p className="truncate text-xs text-muted">{t('Signed in')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={signOut}
+          aria-label={t('Sign out')}
+          title={t('Sign out')}
+          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-gray-50 hover:text-foreground"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={signOut}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
-      >
-        <LogOut className="h-4 w-4" />
-        {t('Sign out')}
-      </button>
     </div>
   );
 }

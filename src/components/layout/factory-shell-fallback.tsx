@@ -15,25 +15,23 @@ export function FactoryShellFallback({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="hidden h-screen w-64 shrink-0 bg-sidebar lg:block">
-        <div className="border-b border-white/10 px-5 py-5">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-lg bg-white/10" />
-            <div className="min-w-0 space-y-1.5">
-              <Skeleton className="h-3.5 w-32 bg-white/10" />
-              <Skeleton className="h-3 w-20 bg-white/10" />
-            </div>
+      <aside className="hidden h-screen w-64 shrink-0 border-r border-gray-100 bg-white lg:block">
+        <div className="flex items-center gap-3 px-5 pb-3 pt-5">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="min-w-0 space-y-1.5">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-20" />
           </div>
         </div>
-        <div className="border-b border-white/10 px-5 py-3">
-          <Skeleton className="mb-2 h-3 w-12 bg-white/10" />
+        <div className="mx-3 space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+          <Skeleton className="h-3 w-12" />
           {DEFAULT_SHIFTS.map((s) => (
-            <Skeleton key={s.shift_id} className="mb-1.5 h-3 w-full bg-white/10" />
+            <Skeleton key={s.shift_id} className="h-3 w-full" />
           ))}
         </div>
         <div className="space-y-1 px-3 py-4">
           {tabs.map((tab) => (
-            <Skeleton key={tab.href} className="h-9 w-full rounded-lg bg-white/10" />
+            <Skeleton key={tab.href} className="h-9 w-full rounded-xl" />
           ))}
         </div>
       </aside>

@@ -19,9 +19,12 @@ import type { Shift } from '@/lib/types';
 
 type Tab = { slug: string; label: string; href: string };
 
+type Sheet = 'pages' | 'account';
+
 /**
- * Phones (below lg), in place of the sidebar: a slim top bar, a bottom bar with the main
- * pages (lib/mobile-nav.ts) and a menu with every page, the shifts and sign-out.
+ * Phones (below lg), in place of the sidebar: a slim top bar whose menu holds the shifts, the
+ * language, the way back and sign-out; a bottom bar with the main pages (lib/mobile-nav.ts) whose
+ * "More" holds only the other pages.
  */
 export function FactoryMobileNav({
   factoryId,
@@ -45,14 +48,16 @@ export function FactoryMobileNav({
   const tabs = tabsFor(allTabs, canWriteFactory);
   // Both belong to the page they were set on, so arriving on another page clears them.
   const [pending, setPending] = useState<{ href: string; on: string } | null>(null);
-  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null);
-  const menuOpen = menuOpenOn === pathname;
-  const setMenuOpen = (open: boolean) => setMenuOpenOn(open ? pathname : null);
+  const [sheetOn, setSheetOn] = useState<{ on: string; sheet: Sheet } | null>(null);
+  const sheet: Sheet | null = sheetOn?.on === pathname ? sheetOn.sheet : null;
+  const menuOpen = sheet !== null;
+  const openSheet = (which: Sheet) => setSheetOn({ on: pathname, sheet: which });
+  const setMenuOpen = (open: boolean) => { if (!open) setSheetOn(null); };
 
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpenOn(null);
+      if (e.key === 'Escape') setSheetOn(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -86,7 +91,7 @@ export function FactoryMobileNav({
           type="button"
           aria-label={t('Menu')}
           aria-haspopup="dialog"
-          onClick={() => setMenuOpen(true)}
+          onClick={() => openSheet('account')}
           className="-mr-2 rounded-lg p-2 text-muted hover:bg-slate-100 hover:text-foreground"
         >
           <Menu className="h-5 w-5" />
@@ -110,7 +115,7 @@ export function FactoryMobileNav({
             );
           })}
           <li className="min-w-0 flex-1">
-            <BarButton active={!onBar} onClick={() => setMenuOpen(true)} label={t('More')} popup>
+            <BarButton active={!onBar} onClick={() => openSheet('pages')} label={t('More')} popup>
               <MoreHorizontal className="h-5 w-5" />
             </BarButton>
           </li>
@@ -118,7 +123,7 @@ export function FactoryMobileNav({
       </nav>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t('Menu')}>
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={sheet === 'pages' ? t('More pages') : t('Menu')}>
           <button
             type="button"
             aria-label={t('Close menu')}
@@ -127,7 +132,7 @@ export function FactoryMobileNav({
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-xl">
             <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3">
-              <p className="truncate text-sm font-semibold">{factoryName}</p>
+              <p className="truncate text-sm font-semibold">{sheet === 'pages' ? t('More pages') : factoryName}</p>
               <button
                 type="button"
                 aria-label={t('Close')}
@@ -138,6 +143,7 @@ export function FactoryMobileNav({
               </button>
             </div>
 
+            {sheet === 'pages' && (
             <ul className="grid grid-cols-3 gap-2 p-3">
               {moreTabs(tabs).map((tab) => {
                 const Icon = tabIcon(tab.slug);
@@ -160,8 +166,9 @@ export function FactoryMobileNav({
                 );
               })}
             </ul>
+            )}
 
-            {shifts.length > 0 && (
+            {sheet === 'account' && shifts.length > 0 && (
               <div className="border-t px-4 py-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{t('Shifts')}</p>
                 <ul className="space-y-1 text-sm">
@@ -175,14 +182,18 @@ export function FactoryMobileNav({
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
-              <span className="text-xs text-muted">{t('Language')}</span>
-              <LanguageToggle />
-            </div>
-            <div className="flex items-center justify-between border-t px-4 py-4">
-              <FactoryPlatformBack factoryId={factoryId} />
-              <SignOutButton factoryId={factoryId} />
-            </div>
+            {sheet === 'account' && (
+              <>
+                <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
+                  <span className="text-xs text-muted">{t('Language')}</span>
+                  <LanguageToggle />
+                </div>
+                <div className="flex items-center justify-between border-t px-4 py-4">
+                  <FactoryPlatformBack factoryId={factoryId} />
+                  <SignOutButton factoryId={factoryId} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

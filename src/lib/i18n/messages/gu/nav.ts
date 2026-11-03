@@ -24,6 +24,7 @@ export const nav: Messages = {
   'WiFi': 'WiFi',
   'Team': 'ટીમ',
   'Compliance': 'અનુપાલન',
+  'More pages': 'વધુ પેજ',
   'More': 'વધુ',
   'Menu': 'મેનૂ',
   'Main pages': 'મુખ્ય પેજ',

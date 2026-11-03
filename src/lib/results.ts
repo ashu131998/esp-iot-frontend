@@ -285,5 +285,3 @@ export function caseStudyText({
 export const resultsQueryKey = (factoryId: string, month: string | null = null) =>
   ['results', factoryId, month ?? 'current'] as const;
 export const setupProgressQueryKey = (factoryId: string) => ['setup-progress', factoryId] as const;
-/** This month's results without the stops and the totals since the first month (the overview card). */
-export const resultsSummaryQueryKey = (factoryId: string) => ['results', factoryId, 'current', 'summary'] as const;

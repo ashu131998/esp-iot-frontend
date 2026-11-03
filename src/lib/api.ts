@@ -750,10 +750,6 @@ export const api = {
       options,
     ),
 
-  /** This month's results without stops and the totals since the first month (the overview card). */
-  resultsSummary: (factoryId: string, options?: ApiRequestOptions) =>
-    request<ResultsResponse>(`/v1/factories/${factoryId}/results?summary=1`, options),
-
   saveResultsSettings: (factoryId: string, body: Partial<ResultsSettings>, options?: ApiRequestOptions) =>
     request<{ settings: ResultsSettings }>(`/v1/factories/${factoryId}/results/settings`, {
       method: 'PUT',

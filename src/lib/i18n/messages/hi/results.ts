@@ -13,10 +13,7 @@ export const results: Messages = {
 
   // components/results/recovered-card.tsx, results-dashboard.tsx
   'Measuring your first month: day {done} of {total}': 'आपका पहला महीना मापा जा रहा है: दिन {done}/{total}',
-  'Later months are compared with it to show the loom-hours won back.': 'आगे के महीनों की तुलना इसी से होती है, ताकि वापस मिले लूम-घंटे दिखें।',
-  '{hours} loom-hours this month against your first month': 'इस महीने पहले महीने की तुलना में {hours} लूम-घंटे',
   'Running {now} · first month {base}': 'चलना {now} · पहला महीना {base}',
-  'worth {rupees}': 'कीमत {rupees}',
   'Results could not be loaded': 'नतीजे लोड नहीं हो सके',
   'Month': 'महीना',
   'Print': 'प्रिंट करें',

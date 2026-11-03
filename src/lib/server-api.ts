@@ -105,9 +105,6 @@ export const serverApi = {
       `/v1/factories/${factoryId}/results${month ? `?month=${encodeURIComponent(month)}` : ''}`,
     ),
   ),
-  resultsSummary: cache((factoryId: string) =>
-    serverRequest<ResultsResponse>(`/v1/factories/${factoryId}/results?summary=1`),
-  ),
   setupProgress: cache((factoryId: string) =>
     serverRequest<SetupProgress>(`/v1/factories/${factoryId}/setup-progress`),
   ),

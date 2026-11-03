@@ -8,7 +8,7 @@ import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ResultsResponse, SetupProgress, StopFollowUp } from '@/lib/results';
-import { resultsQueryKey, resultsSummaryQueryKey, setupProgressQueryKey } from '@/lib/results';
+import { resultsQueryKey, setupProgressQueryKey } from '@/lib/results';
 import { hi } from '@/lib/i18n/messages/hi';
 import { LocaleProvider } from '@/lib/i18n/context';
 
@@ -21,7 +21,6 @@ vi.mock('next/link', () => ({
 }));
 
 const { ResultsDashboard } = await import('@/components/results/results-dashboard');
-const { RecoveredCard } = await import('@/components/results/recovered-card');
 const { SetupChecklistCard } = await import('@/components/results/setup-checklist-card');
 const { StopFollowUpTiles } = await import('@/components/results/stop-follow-up-tiles');
 const { DowntimeReportsCard } = await import('@/components/alerts/downtime-reports-card');
@@ -116,22 +115,6 @@ describe('ResultsDashboard', () => {
     const html = dashboard(ready, 'hi');
     expect(html).toContain('वापस मिले लूम-घंटे');
     expect(html).not.toContain('Loom-hours recovered');
-  });
-});
-
-describe('RecoveredCard', () => {
-  const card = (data: ResultsResponse | undefined) =>
-    render(<RecoveredCard factoryId={F} />, data ? [[resultsSummaryQueryKey(F), data]] : []);
-  it('links this month\'s hours to Results', () => {
-    const html = card(ready);
-    expect(html).toContain('+412.4 h loom-hours this month against your first month');
-    expect(html).toContain('worth ₹1,44,340');
-    expect(html).toContain(`href="/factories/${F}/results"`);
-  });
-  it('counts the days of the first month, and is empty before any shift', () => {
-    expect(card({ ...ready, baseline: { ...ready.baseline!, ready: false, days_done: 5 } })).toContain('day 5 of 30');
-    expect(card({ ...ready, baseline: null })).toBe('');
-    expect(card(undefined)).toBe('');
   });
 });
 

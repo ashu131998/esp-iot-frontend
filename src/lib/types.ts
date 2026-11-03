@@ -29,6 +29,8 @@ export interface Factory {
   created_at: string | null;
   /** The partner (loom dealer, electrician) who brought the factory in; staff lists only. */
   referred_by?: string | null;
+  /** Where its subscription stands; staff lists only. */
+  subscription?: import('./subscriptions').SubscriptionStatus;
 }
 
 export interface ProductionLine {

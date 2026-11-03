@@ -56,6 +56,7 @@ import {
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
+import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
 
 export type { ApiRequestOptions };
 
@@ -842,6 +843,31 @@ export const api = {
     request<{ factory_id: string; referred_by: string | null }>(
       `/v1/admin/factories/${factoryId}/referral`,
       { method: 'PUT', body: JSON.stringify({ referred_by: referredBy }), ...options },
+    ),
+
+  /** A factory's subscription: its state and every period. Staff only. */
+  adminSubscription: (factoryId: string, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse>(`/v1/admin/factories/${factoryId}/subscription`, options),
+
+  /** Add a subscription period (a renewal is the next one). Staff only. */
+  adminAddSubscriptionPeriod: (factoryId: string, body: PeriodBody, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { period: SubscriptionPeriod }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Change a subscription period. Staff only. */
+  adminUpdateSubscriptionPeriod: (factoryId: string, periodId: number, body: Partial<PeriodBody>, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { period: SubscriptionPeriod }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods/${periodId}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Remove a subscription period. Staff only. */
+  adminDeleteSubscriptionPeriod: (factoryId: string, periodId: number, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { deleted: boolean }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods/${periodId}`,
+      { method: 'DELETE', ...options },
     ),
 
   /** Every page that can be switched per factory, with its sections. Staff only. */

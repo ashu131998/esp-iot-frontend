@@ -1,5 +1,6 @@
 import { FactorySetupPanel } from '@/components/internal/factory-setup-panel';
 import { ReferralCard } from '@/components/internal/referral-card';
+import { SubscriptionCard } from '@/components/internal/subscription-card';
 import { PageHeader } from '@/components/layout/page-header';
 import { WifiManager } from '@/components/wifi/wifi-manager';
 import { serverApi } from '@/lib/server-api';
@@ -25,6 +26,9 @@ export default async function InternalFactorySetupPage({
         description="Lines, machines, node registration and WiFi for this site"
       />
       <FactorySetupPanel factoryId={factoryId} />
+      <section className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+        <SubscriptionCard factoryId={factoryId} />
+      </section>
       {listed && (
         <section className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
           <ReferralCard factoryId={factoryId} initial={listed.referred_by ?? null} />

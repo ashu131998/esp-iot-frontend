@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/app-shell';
+import { SubscriptionBadge } from '@/components/internal/subscription-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/table';
@@ -38,6 +39,9 @@ export default async function FactoriesPage() {
                 </p>
               </div>
               <Badge className="capitalize bg-slate-100 text-slate-700">{f.tier}</Badge>
+            </div>
+            <div className="mt-3">
+              <SubscriptionBadge status={f.subscription} />
             </div>
             {f.referred_by && (
               <p className="mt-2 text-sm text-muted">

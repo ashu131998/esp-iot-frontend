@@ -65,14 +65,20 @@
     },
     "stage-app": {
       "name": "esp-iot-frontend-stage-app",
+      // As production: every factory at its own address, <id>.stage.floorbeat.in ("*.stage" DNS record).
+      // stage.floorbeat.in brings the certificate that covers them; stage-app.floorbeat.in forwards old links.
       "routes": [
         { "pattern": "stage-app.floorbeat.in", "custom_domain": true },
-        { "pattern": "stage-app.floorbeat.in/*", "zone_name": "floorbeat.in" }
+        { "pattern": "stage.floorbeat.in", "custom_domain": true },
+        { "pattern": "stage-app.floorbeat.in/*", "zone_name": "floorbeat.in" },
+        { "pattern": "stage.floorbeat.in/*", "zone_name": "floorbeat.in" },
+        { "pattern": "*.stage.floorbeat.in/*", "zone_name": "floorbeat.in" }
       ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "stage-ops.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
         "API_INTERNAL_URL": "https://api-stage.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".stage.floorbeat.in",
         "MARKETING_URL": "https://stage-www.floorbeat.in",
         "STAFF_URL": "https://stage-ops.floorbeat.in/internal"
       }
@@ -91,14 +97,20 @@
     },
     "dev-app": {
       "name": "esp-iot-frontend-dev-app",
+      // As production: every factory at its own address, <id>.dev.floorbeat.in ("*.dev" DNS record).
+      // dev.floorbeat.in brings the certificate that covers them; dev-app.floorbeat.in forwards old links.
       "routes": [
         { "pattern": "dev-app.floorbeat.in", "custom_domain": true },
-        { "pattern": "dev-app.floorbeat.in/*", "zone_name": "floorbeat.in" }
+        { "pattern": "dev.floorbeat.in", "custom_domain": true },
+        { "pattern": "dev-app.floorbeat.in/*", "zone_name": "floorbeat.in" },
+        { "pattern": "dev.floorbeat.in/*", "zone_name": "floorbeat.in" },
+        { "pattern": "*.dev.floorbeat.in/*", "zone_name": "floorbeat.in" }
       ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
         "API_INTERNAL_URL": "https://api-dev.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".dev.floorbeat.in",
         "MARKETING_URL": "https://dev-www.floorbeat.in",
         "STAFF_URL": "https://dev-ops.floorbeat.in/internal"
       }

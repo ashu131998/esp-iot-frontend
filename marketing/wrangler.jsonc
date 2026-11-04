@@ -40,6 +40,7 @@
         "APP_ORIGIN": "https://stage-app.floorbeat.in",
         "STAFF_ORIGIN": "https://stage-ops.floorbeat.in",
         "API_ORIGIN": "https://api-stage.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".stage.floorbeat.in",
         "NON_PRODUCTION": "true"
       }
     },
@@ -53,6 +54,7 @@
         "APP_ORIGIN": "https://dev-app.floorbeat.in",
         "STAFF_ORIGIN": "https://dev-ops.floorbeat.in",
         "API_ORIGIN": "https://api-dev.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".dev.floorbeat.in",
         "NON_PRODUCTION": "true"
       }
     }

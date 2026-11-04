@@ -130,6 +130,18 @@ describe('app.floorbeat.in is gone: old links go to the factory\'s own address',
   });
 });
 
+describe('stage and dev have factory addresses too', () => {
+  it('<factory>.stage.floorbeat.in on the stage customer Worker: that factory, as in production', async () => {
+    vi.stubEnv('FACTORY_HOST_SUFFIX', '.stage.floorbeat.in');
+    vi.stubEnv('MARKETING_URL', 'https://stage-www.floorbeat.in');
+    expect((await visit('https://factory-01.stage.floorbeat.in/')).to).toBe('/f/factory-01/login');
+    expect((await visit('https://factory-01.stage.floorbeat.in/', { role: 'admin', factoryId: 'factory-01' })).to).toBe('/factories/factory-01');
+    // its old address forwards there; its bare environment address goes to its website
+    expect((await visit('https://stage-app.floorbeat.in/f/factory-01/login')).location).toBe('https://factory-01.stage.floorbeat.in/f/factory-01/login');
+    expect((await visit('https://stage.floorbeat.in/')).location).toBe('https://stage-www.floorbeat.in/');
+  });
+});
+
 describe('the staff addresses', () => {
   it('superadmin.floorbeat.in: the super admin only; staff are sent to admin', async () => {
     expect(await visit('https://superadmin.floorbeat.in/internal/boards', { role: 'super_admin' })).toMatchObject({ status: 200, to: null });

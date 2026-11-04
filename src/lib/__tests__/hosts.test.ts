@@ -20,6 +20,15 @@ describe('factoryFromHost: <factory>.floorbeat.in is that factory', () => {
     expect(factoryFromHost('mill.floorbeat.in', 'floorbeat.in')).toBe('mill');   // suffix without the dot
   });
 
+  it('stage and dev: <factory>.stage.floorbeat.in and <factory>.dev.floorbeat.in, each on its own Worker only', () => {
+    expect(factoryFromHost('factory-01.dev.floorbeat.in', '.dev.floorbeat.in')).toBe('factory-01');
+    expect(factoryFromHost('factory-01.stage.floorbeat.in', '.stage.floorbeat.in')).toBe('factory-01');
+    expect(factoryFromHost('factory-01.dev.floorbeat.in', SUFFIX)).toBeNull();          // production's Worker: not its factory
+    expect(factoryFromHost('dev.floorbeat.in', '.dev.floorbeat.in')).toBeNull();          // the environment's own address
+    expect(factoryFromHost('a.b.dev.floorbeat.in', '.dev.floorbeat.in')).toBeNull();
+    expect(factoryFromHost('factory-01.floorbeat.in', '.dev.floorbeat.in')).toBeNull();
+  });
+
   it('FloorBeat\'s own addresses are never a factory', () => {
     for (const host of ['app', 'ops', 'www', 'api', 'admin', 'superadmin', 'stage-app', 'stage-ops', 'stage-www', 'dev-app', 'dev-ops', 'dev-www', 'api-stage', 'api-dev']) {
       expect(factoryFromHost(`${host}.floorbeat.in`, SUFFIX)).toBeNull();

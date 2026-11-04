@@ -157,3 +157,14 @@ describe('production: each factory has its own address (<id>.floorbeat.in)', () 
     expect(forwardTarget('/reset-password', '?token=t', origins)).toBe('https://app.floorbeat.in/reset-password?token=t');   // stage, dev
   });
 });
+
+describe('stage and dev: their factories have addresses too (<id>.stage.floorbeat.in, <id>.dev.floorbeat.in)', () => {
+  const stage = { APP_ORIGIN: 'https://stage-app.floorbeat.in', STAFF_ORIGIN: 'https://stage-ops.floorbeat.in', FACTORY_HOST_SUFFIX: '.stage.floorbeat.in' };
+
+  it('the login form and lost-subdomain links go to the stage factory; a staff reset to stage-ops', () => {
+    expect(factoryLoginUrl('factory-01', stage)).toBe('https://factory-01.stage.floorbeat.in/f/factory-01/login');
+    expect(forwardTarget('/f/factory-01/login', '', stage)).toBe('https://factory-01.stage.floorbeat.in/f/factory-01/login');
+    expect(forwardTarget('/reset-password', '?token=t', stage)).toBe('https://stage-ops.floorbeat.in/reset-password?token=t');
+  });
+});
+

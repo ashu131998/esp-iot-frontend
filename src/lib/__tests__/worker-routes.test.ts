@@ -37,6 +37,8 @@ function workers() {
 
 const ZONE = 'floorbeat.in';
 const subdomainOf = (host: string) => (host.endsWith(`.${ZONE}`) ? host.slice(0, -ZONE.length - 1) : null);
+/** Each customer Worker and the factories' addresses it answers on (production, stage, dev). */
+const CUSTOMER: Record<string, string> = { app: `.${ZONE}`, 'stage-app': `.stage.${ZONE}`, 'dev-app': `.dev.${ZONE}` };
 
 describe('every address on floorbeat.in is safe from the factories\' *.floorbeat.in route', () => {
   it('reads both configs (the scan sees the addresses)', () => {
@@ -44,6 +46,7 @@ describe('every address on floorbeat.in is safe from the factories\' *.floorbeat
     expect(hosts).toEqual(expect.arrayContaining([
       'ops.floorbeat.in', 'admin.floorbeat.in', 'superadmin.floorbeat.in',
       'stage-ops.floorbeat.in', 'stage-app.floorbeat.in', 'dev-ops.floorbeat.in', 'dev-app.floorbeat.in',
+      'stage.floorbeat.in', 'dev.floorbeat.in',
       'floorbeat.in', 'www.floorbeat.in', 'stage-www.floorbeat.in', 'dev-www.floorbeat.in',
     ]));
   });
@@ -76,10 +79,11 @@ describe('every address on floorbeat.in is safe from the factories\' *.floorbeat
     expect(app.routes).toEqual([{ pattern: `*.${ZONE}/*`, zone_name: ZONE }]);
   });
 
-  it('only the customer Worker may take *.floorbeat.in, and nothing wider', () => {
+  it('only a customer Worker may hold a wildcard, its own factories\' one, and nothing wider', () => {
     for (const w of workers()) {
       for (const r of w.routes.filter((x) => x.pattern.includes('*') && !/^[a-z0-9.-]+\/\*$/.test(x.pattern))) {
-        expect({ file: w.file, env: w.env, pattern: r.pattern }).toEqual({ file: 'app', env: 'app', pattern: `*.${ZONE}/*` });
+        const own = w.file === 'app' ? CUSTOMER[w.env] : undefined;
+        expect({ file: w.file, env: w.env, pattern: r.pattern }).toEqual({ file: 'app', env: w.env, pattern: `*${own ?? '?'}/*` });
       }
     }
   });
@@ -98,10 +102,19 @@ describe('the staff console\'s addresses', () => {
     expect(rules.get('admin.floorbeat.in')).toEqual(['internal_admin', 'internal_viewer']);
   });
 
-  it('factories\' own addresses are switched on in production only: the customer Worker and the website', () => {
-    const on = (w: { file: string; env: string }) => (w.file === 'app' && w.env === 'app') || (w.file === 'site' && w.env === '(default)');
+  it('factories\' own addresses: each customer Worker and website knows its environment\'s; the staff consoles none', () => {
+    const want: Record<string, string> = {
+      'app app': '.floorbeat.in', 'app stage-app': '.stage.floorbeat.in', 'app dev-app': '.dev.floorbeat.in',
+      'site (default)': '.floorbeat.in', 'site stage': '.stage.floorbeat.in', 'site dev': '.dev.floorbeat.in',
+    };
     for (const w of workers()) {
-      expect(w.vars.FACTORY_HOST_SUFFIX ?? null, `${w.file} ${w.env}`).toBe(on(w) ? '.floorbeat.in' : null);
+      expect(w.vars.FACTORY_HOST_SUFFIX ?? null, `${w.file} ${w.env}`).toBe(want[`${w.file} ${w.env}`] ?? null);
+    }
+  });
+
+  it('a customer Worker\'s wildcard is exactly its factories\' addresses', () => {
+    for (const w of workers().filter((x) => x.file === 'app' && CUSTOMER[x.env])) {
+      expect(w.routes).toContainEqual({ pattern: `*${w.vars.FACTORY_HOST_SUFFIX}/*`, zone_name: ZONE });
     }
   });
 });

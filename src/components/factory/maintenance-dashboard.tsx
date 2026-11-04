@@ -11,6 +11,7 @@ import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const TABS = [
   { key: 'health', label: 'Machine health' },
@@ -25,6 +26,7 @@ type Tab = (typeof TABS)[number]['key'];
  * pages behind it, and the service log. The tab is in the address (?tab=), so a link lands on it.
  */
 export function MaintenanceDashboard({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const { t } = useT();
   const shown = useShown();
   const sp = useSearchParams();
@@ -36,7 +38,7 @@ export function MaintenanceDashboard({ factoryId }: { factoryId: string }) {
     if (key === 'health') p.delete('tab');
     else p.set('tab', key);
     const q = p.toString();
-    return `/factories/${factoryId}/maintenance${q ? `?${q}` : ''}`;
+    return link(`/factories/${factoryId}/maintenance${q ? `?${q}` : ''}`);
   };
   const fallback = <><StatGridSkeleton count={2} /><ChartSkeleton /></>;
 

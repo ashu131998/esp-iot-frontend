@@ -20,6 +20,7 @@ import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import type { MaintenanceMachine } from '@/lib/types';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { cn } from '@/lib/utils';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const REFRESH_MS = 60_000;
 const TONE_BADGE = {
@@ -37,6 +38,7 @@ export const maintenanceKey = (factoryId: string, lineId?: string, machineId?: s
  * a service from here.
  */
 export function MachineHealth({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const { t, tn, locale } = useT();
   const { canWriteFactory } = useAuth();
   const lineName = useLineName();
@@ -85,7 +87,7 @@ export function MachineHealth({ factoryId }: { factoryId: string }) {
               return (
                 <li key={m.machine_id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:gap-4">
                   <div className="min-w-0 sm:w-56">
-                    <Link href={`/factories/${factoryId}/machines/${m.machine_id}`} className="font-medium hover:underline">{m.machine_name}</Link>
+                    <Link href={link(`/factories/${factoryId}/machines/${m.machine_id}`)} className="font-medium hover:underline">{m.machine_name}</Link>
                     <div className="text-xs text-muted">{lineName(m.line_id)}</div>
                     <div className="mt-1 flex items-center gap-2">
                       <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', TONE_BADGE[info.tone])}>{t(info.word)}</span>

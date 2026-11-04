@@ -82,8 +82,10 @@ function isInternalWritePath(pathname: string): boolean {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  // The factory whose own address this is (<factory>.floorbeat.in), if any.
+  const hostFactory = factoryFromHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX);
 
-  const legacyTarget = LEGACY_PLATFORM_REDIRECTS[pathname];
+  const legacyTarget = hostFactory ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
     if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
       return internalHostBlockResponse();
@@ -114,8 +116,16 @@ export async function middleware(req: NextRequest) {
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('content-security-policy', csp);
 
-  const secured = () => {
-    const res = NextResponse.next({ request: { headers: requestHeaders } });
+  const secured = () => withSecurity(NextResponse.next({ request: { headers: requestHeaders } }));
+
+  /** Serve another route of the app at this address (the address bar keeps the plain one). */
+  const securedRewrite = (path: string) => {
+    const url = req.nextUrl.clone();
+    url.pathname = path;
+    return withSecurity(NextResponse.rewrite(url, { request: { headers: requestHeaders } }));
+  };
+
+  function withSecurity(res: NextResponse) {
     applySecurityHeaders(res, csp);
     if (!req.cookies.get(CSRF_COOKIE)) {
       res.cookies.set(CSRF_COOKIE, crypto.randomUUID().replace(/-/g, ''), {
@@ -126,7 +136,7 @@ export async function middleware(req: NextRequest) {
       });
     }
     return res;
-  };
+  }
 
   const redirectTo = (path: string) => {
     const url = req.nextUrl.clone();
@@ -170,30 +180,42 @@ export async function middleware(req: NextRequest) {
 
   let identity = await getIdentity(req);
 
-  // A factory's own address (<factory>.floorbeat.in): that factory alone, its sign-in and
-  // everything else. Someone signed in for another factory counts as signed out here.
-  const hostFactory = factoryFromHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX);
+  // A factory's own address (<factory>.floorbeat.in): that factory alone, at plain addresses —
+  // /login to sign in, / its dashboard, /energy, /machines/… its pages (served from the app's
+  // /f/<id>/… and /factories/<id>/… inside). Someone signed in for another factory counts as
+  // signed out here, and is never renewed into a loop.
   if (hostFactory) {
     if (identity && !isStaffRole(identity.role) && identity.factoryId?.toLowerCase() !== hostFactory) {
       identity = null;
       restoreAllowed = false;
     }
-    if (pathname === '/') {
-      if (!identity) {
-        if (restoreAllowed && req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
-        return redirectTo(`/f/${hostFactory}/login`);
-      }
-      return redirectTo(`/factories/${!isStaffRole(identity.role) && identity.factoryId ? identity.factoryId : hostFactory}`);
-    }
-    // Its sign-in at <factory>.floorbeat.in/login (and sign-up, forgot password): the factory's own pages.
-    const auth = pathname.match(/^\/(login|signup|forgot-password)\/?$/);
-    if (auth) {
+    // An address in the app's own form (/f/<id>/login, /factories/<id>/energy): the same page at its
+    // plain address; another factory's: the dashboard.
+    const inner = pathname.match(/^\/(?:f|factories)\/([^/]+)(\/.*)?$/);
+    if (inner) {
+      const same = decodeSegment(inner[1]).toLowerCase() === hostFactory;
       const url = req.nextUrl.clone();
-      url.pathname = `/f/${hostFactory}/${auth[1]}`;
+      url.pathname = same ? (inner[2] ?? '/') : '/';
+      if (!same) url.search = '';
       return NextResponse.redirect(url);
     }
-    const page = pathname.match(/^\/(?:factories|f)\/([^/]+)/);
-    if (page && decodeSegment(page[1]).toLowerCase() !== hostFactory) return redirectTo('/');
+    if (pathname === '/internal' || pathname.startsWith('/internal/')) return internalHostBlockResponse();
+    if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
+    const auth = pathname.match(/^\/(login|signup|forgot-password)\/?$/);
+    if (auth) {
+      if (identity) return redirectTo('/');
+      return securedRewrite(`/f/${hostFactory}/${auth[1]}`);
+    }
+    if (!identity) {
+      if (restoreAllowed && req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+      const next = pathname === '/' ? null : safeNextPath(`${pathname}${req.nextUrl.search}`);
+      const url = req.nextUrl.clone();
+      url.pathname = '/login';
+      url.search = next ? `?next=${encodeURIComponent(next)}` : '';
+      return NextResponse.redirect(url);
+    }
+    if (/^\/team(\/|$)/.test(pathname) && identity.role !== 'super_admin' && identity.role !== 'admin') return redirectTo('/');
+    return securedRewrite(`/factories/${hostFactory}${pathname === '/' ? '' : pathname}`);
   }
 
   // The customer Worker on an address that is not a factory's (app.floorbeat.in, gone; workers.dev):
@@ -203,10 +225,11 @@ export async function middleware(req: NextRequest) {
   if (factorySuffix && !hostFactory && !internalHostAllowed(req)) {
     const scheme = req.nextUrl.protocol;
     const rest = `${pathname}${req.nextUrl.search}`;
-    const page = pathname.match(/^\/(?:factories|f)\/([^/]+)/);
+    const page = pathname.match(/^\/(?:factories|f)\/([^/]+)(\/.*)?$/);
     const linked = page ? decodeSegment(page[1]).toLowerCase() : req.nextUrl.searchParams.get('factory')?.trim().toLowerCase();
     if ((page || pathname === '/reset-password') && linked && isFactorySubdomain(linked)) {
-      return NextResponse.redirect(`${scheme}//${linked}${factorySuffix.startsWith('.') ? '' : '.'}${factorySuffix}${rest}`);
+      const plain = page ? `${page[2] ?? '/'}${req.nextUrl.search}` : rest;
+      return NextResponse.redirect(`${scheme}//${linked}${factorySuffix.startsWith('.') ? '' : '.'}${factorySuffix}${plain}`);
     }
     const staffUrl = process.env.STAFF_URL?.trim();
     if (pathname === '/reset-password' && staffUrl) return NextResponse.redirect(`${new URL(staffUrl).origin}${rest}`);

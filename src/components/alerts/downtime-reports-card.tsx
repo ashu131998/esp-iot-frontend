@@ -12,6 +12,7 @@ import { useT } from '@/lib/i18n/context';
 import { humanMinutes } from '@/lib/plain-words';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { DowntimeReport } from '@/lib/types';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 /** The stop follow-up figures cover this many days back from now. */
 const FOLLOW_UP_DAYS = 7;
@@ -25,6 +26,7 @@ function downMinutes(report: DowntimeReport) {
 }
 
 export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const queryClient = useQueryClient();
   const { t, tn, locale } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
@@ -137,7 +139,7 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
             return (
               <ListRow
                 key={r.report_id}
-                href={needsReason || canMarkFixed ? undefined : `/factories/${factoryId}/machines/${r.machine_id}`}
+                href={needsReason || canMarkFixed ? undefined : link(`/factories/${factoryId}/machines/${r.machine_id}`)}
                 tone={rowTone}
                 title={r.machine_name ?? r.machine_id}
                 tag={openRow ? t('Still down') : t('Back up')}

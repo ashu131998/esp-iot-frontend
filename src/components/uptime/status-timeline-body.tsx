@@ -18,6 +18,7 @@ import { runningShare } from '@/lib/plain-words';
 import { formatAlertVia, statusLabel } from '@/lib/utils';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import type { ActiveAssignment, ConfigSelection, DowntimeReport, UptimeSegment } from '@/lib/types';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const STATUS_TIMELINE_REFRESH_MS = 30_000;
 const UPTIME_DETAIL_HOURS = 2;
@@ -69,6 +70,7 @@ function buildSegmentDetails(
 }
 
 export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const { t, locale } = useT();
   const refetchInterval = useRefetchInterval(STATUS_TIMELINE_REFRESH_MS);
@@ -190,7 +192,7 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
             <CardHeader
               title={
                 <Link
-                  href={`/factories/${factoryId}/machines/${m.machine_id}`}
+                  href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
                   className="hover:text-primary hover:underline"
                 >
                   {m.machine_name}

@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { setupProgressQueryKey, setupStepHref, type SetupStep } from '@/lib/results';
 import { cn } from '@/lib/utils';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 /** Each step in words (literal t() calls, so the translation check sees them). */
 function stepLabel(step: SetupStep, t: Translate): string {
@@ -38,6 +39,7 @@ function stepLabel(step: SetupStep, t: Translate): string {
  * day N of 7 and the steps to "every machine live". Gone once every step is done.
  */
 export function SetupChecklistCard({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const { t } = useT();
   const refetchInterval = useRefetchInterval(60_000);
   const { data } = useQuery({
@@ -66,7 +68,8 @@ export function SetupChecklistCard({ factoryId }: { factoryId: string }) {
       </div>
       <ul className="mt-2 divide-y divide-gray-100">
         {data.steps.map((step) => {
-          const href = step.done ? null : setupStepHref(step.key, factoryId);
+          const stepHref = step.done ? null : setupStepHref(step.key, factoryId);
+          const href = stepHref && link(stepHref);
           const counts = step.of != null && step.of > 0 ? t('{count} of {total}', { count: step.count ?? 0, total: step.of }) : null;
           const body = (
             <>

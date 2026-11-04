@@ -101,7 +101,7 @@ export function LoginForm({
       ) {
         router.push('/internal');
       } else if (user.factory_id) {
-        router.push(`/factories/${user.factory_id}`);
+        router.push('/');
       } else {
         router.push('/internal');
       }

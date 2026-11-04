@@ -11,8 +11,10 @@ import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/compone
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const queryClient = useQueryClient();
   const { t } = useT();
   const { data: settings } = useQuery({
@@ -167,7 +169,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
               {t('Sender:')} <span className="font-mono text-foreground">{settings.board_email_from}</span>.{' '}
             </>
           )}
-          <Link href={`/factories/${factoryId}/shift-reports`} className="font-medium text-primary hover:underline">
+          <Link href={link(`/factories/${factoryId}/shift-reports`)} className="font-medium text-primary hover:underline">
             {t('Shift reports')} →
           </Link>
         </p>

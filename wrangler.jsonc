@@ -15,13 +15,20 @@
   },
   // Every address also has an exact route: a route wins over a custom domain, and the customer
   // Worker's *.floorbeat.in route (factories' own addresses) must never take these.
+  // worker-routes.test.ts holds the rule.
   "routes": [
     { "pattern": "ops.floorbeat.in", "custom_domain": true },
-    { "pattern": "ops.floorbeat.in/*", "zone_name": "floorbeat.in" }
+    { "pattern": "admin.floorbeat.in", "custom_domain": true },
+    { "pattern": "superadmin.floorbeat.in", "custom_domain": true },
+    { "pattern": "ops.floorbeat.in/*", "zone_name": "floorbeat.in" },
+    { "pattern": "admin.floorbeat.in/*", "zone_name": "floorbeat.in" },
+    { "pattern": "superadmin.floorbeat.in/*", "zone_name": "floorbeat.in" }
   ],
   "workers_dev": true,
   "vars": {
-    "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+    "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,admin.floorbeat.in,superadmin.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+    // superadmin.floorbeat.in is the super admin's, admin.floorbeat.in the staff's; ops takes both.
+    "STAFF_HOST_ROLES": "superadmin.floorbeat.in=super_admin;admin.floorbeat.in=internal_admin,internal_viewer",
     "SESSION_HINT_COOKIE_DOMAIN": "floorbeat.in"
   },
   "env": {
@@ -33,7 +40,9 @@
       ],
       "workers_dev": true,
       "vars": {
-        "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+        "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,admin.floorbeat.in,superadmin.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
+        // <factory>.floorbeat.in serves that factory alone (src/lib/hosts.ts); live once *.floorbeat.in reaches this Worker.
+        "FACTORY_HOST_SUFFIX": ".floorbeat.in",
         "SESSION_HINT_COOKIE_DOMAIN": "floorbeat.in",
         "MARKETING_URL": "https://floorbeat.in",
         "STAFF_URL": "https://ops.floorbeat.in/internal"

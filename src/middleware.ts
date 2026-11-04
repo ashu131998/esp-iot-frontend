@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
+import { factoryFromHost, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
 
@@ -25,6 +26,20 @@ const LEGACY_PLATFORM_REDIRECTS: Record<string, string> = {
 };
 
 const FACTORY_HOME_RE = /^\/factories\/[A-Za-z0-9_-]{1,64}$/;
+
+/** The address asked for: the Host header (next dev puts localhost in nextUrl), else nextUrl. */
+function requestHost(req: NextRequest): string {
+  return req.headers.get('host') ?? req.nextUrl.hostname;
+}
+
+/** A path segment as written, also when its %-escapes are broken. */
+function decodeSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
 
 interface Identity {
   role: string;
@@ -130,10 +145,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
+  // Renewing the session silently makes sense only when it is this address's own session.
+  let restoreAllowed = true;
+
   // Not signed in (or the cookies did not come: a click from an email is cross-site and they
   // are SameSite=Strict): the factory login, which renews the session if it can and comes back.
   const redirectToLogin = (factoryId: string) => {
-    if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+    if (restoreAllowed && req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
     const [path, query] = loginRedirectPath(factoryId, pathname, req.nextUrl.search).split('?');
     const url = req.nextUrl.clone();
     url.pathname = path;
@@ -150,7 +168,33 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
-  const identity = await getIdentity(req);
+  let identity = await getIdentity(req);
+
+  // A factory's own address (<factory>.floorbeat.in): that factory alone, its sign-in and
+  // everything else. Someone signed in for another factory counts as signed out here.
+  const hostFactory = factoryFromHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX);
+  if (hostFactory) {
+    if (identity && !isStaffRole(identity.role) && identity.factoryId?.toLowerCase() !== hostFactory) {
+      identity = null;
+      restoreAllowed = false;
+    }
+    if (pathname === '/') {
+      if (!identity) {
+        if (restoreAllowed && req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+        return redirectTo(`/f/${hostFactory}/login`);
+      }
+      return redirectTo(`/factories/${!isStaffRole(identity.role) && identity.factoryId ? identity.factoryId : hostFactory}`);
+    }
+    // Its sign-in at <factory>.floorbeat.in/login (and sign-up, forgot password): the factory's own pages.
+    const auth = pathname.match(/^\/(login|signup|forgot-password)\/?$/);
+    if (auth) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/f/${hostFactory}/${auth[1]}`;
+      return NextResponse.redirect(url);
+    }
+    const page = pathname.match(/^\/(?:factories|f)\/([^/]+)/);
+    if (page && decodeSegment(page[1]).toLowerCase() !== hostFactory) return redirectTo('/');
+  }
 
   // Public pages of a factory: sign in, sign up and "forgot password" (a signed-in person is sent home).
   const isFactoryAuthPage = /^\/f\/[^/]+\/(login|signup|forgot-password)\/?$/.test(pathname);
@@ -205,6 +249,14 @@ export async function middleware(req: NextRequest) {
     }
     if (!identity) return redirectToInternalLogin();
     if (!isStaffRole(identity.role)) return redirectTo(homeFor(identity, req));
+    // superadmin.floorbeat.in is the super admin's, admin.floorbeat.in the staff's (STAFF_HOST_ROLES).
+    const staffHosts = parseStaffHostRoles(process.env.STAFF_HOST_ROLES);
+    if (!staffRoleAllowedOnHost(requestHost(req), identity.role, staffHosts)) {
+      const own = staffHostForRole(identity.role, staffHosts);
+      if (!own) return internalHostBlockResponse();
+      const port = requestHost(req).split(':')[1];   // none in production; kept for a local run
+      return NextResponse.redirect(`${req.nextUrl.protocol}//${own}${port ? `:${port}` : ''}/internal`);
+    }
     if (
       isInternalWritePath(pathname) &&
       identity.role === 'internal_viewer'

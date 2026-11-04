@@ -237,8 +237,9 @@ export function OnboardPanel() {
                     />
                     {(tried || (d.factory.factory_id && fProblems.factory_id)) && <FieldError>{fProblems.factory_id}</FieldError>}
                     <p className="text-xs text-muted">
-                      Part of the factory&apos;s own address: app.floorbeat.in/f/
-                      <span className="font-mono">{d.factory.factory_id.trim() || '…'}</span>. It cannot be changed later.
+                      The factory&apos;s own address, where its people sign in:{' '}
+                      <span className="font-mono">{d.factory.factory_id.trim() || '…'}.floorbeat.in</span>. Lowercase letters, digits
+                      and hyphens. It cannot be changed later.
                     </p>
                   </Field>
                 </div>

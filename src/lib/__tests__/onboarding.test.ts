@@ -18,7 +18,7 @@ describe('suggestFactoryId', () => {
 
   it('never longer than 64 and never ends in -', () => {
     const id = suggestFactoryId(`${'a'.repeat(63)} b`);
-    expect(id.length).toBeLessThanOrEqual(64);
+    expect(id.length).toBeLessThanOrEqual(63);   // one DNS label: it becomes <id>.floorbeat.in
     expect(id.endsWith('-')).toBe(false);
   });
 });
@@ -29,7 +29,10 @@ describe('factoryProblems', () => {
     expect(factoryProblems({ factory_id: '', name: ' ', location: '' })).toEqual({
       name: 'Enter the factory name', factory_id: 'Enter a factory ID',
     });
-    expect(factoryProblems({ factory_id: 'mill 01', name: 'M', location: '' }).factory_id).toMatch(/Only letters/);
+    expect(factoryProblems({ factory_id: 'mill 01', name: 'M', location: '' }).factory_id).toMatch(/Lowercase letters, digits and hyphens/);
+    expect(factoryProblems({ factory_id: 'mill_01', name: 'M', location: '' }).factory_id).toMatch(/Lowercase letters, digits and hyphens/);
+    expect(factoryProblems({ factory_id: 'admin', name: 'M', location: '' }).factory_id).toMatch(/kept for FloorBeat/);
+    expect(factoryProblems({ factory_id: 'stage-mill', name: 'M', location: '' }).factory_id).toMatch(/kept for FloorBeat/);
     expect(factoryProblems({ factory_id: 'Mill-01', name: 'M', location: '' }, ['mill-01']).factory_id).toMatch(/already exists/);
   });
 });

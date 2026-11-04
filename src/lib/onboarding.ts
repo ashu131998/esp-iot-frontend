@@ -6,6 +6,7 @@
  */
 
 import type { PeriodDraft } from './subscriptions';
+import { factorySubdomainProblem } from '@/lib/hosts';
 
 export const MAX_ONBOARD_ADMINS = 10;
 export const MIN_PASSWORD_LENGTH = 8;
@@ -37,7 +38,7 @@ export function suggestFactoryId(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 64)
+    .slice(0, 63)
     .replace(/-+$/, '');
 }
 
@@ -48,7 +49,7 @@ export function factoryProblems(f: FactoryDraft, takenIds: string[] = []): Facto
   const id = f.factory_id.trim();
   if (!f.name.trim()) out.name = 'Enter the factory name';
   if (!id) out.factory_id = 'Enter a factory ID';
-  else if (!ID_RE.test(id)) out.factory_id = 'Only letters, digits, - and _ (up to 64)';
+  else if (factorySubdomainProblem(id)) out.factory_id = factorySubdomainProblem(id) ?? undefined;
   else if (takenIds.some((t) => t.toLowerCase() === id.toLowerCase())) out.factory_id = 'A factory with this ID already exists';
   return out;
 }

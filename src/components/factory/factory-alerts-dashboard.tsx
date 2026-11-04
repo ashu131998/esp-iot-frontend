@@ -18,6 +18,7 @@ import { humanMinutes } from '@/lib/plain-words';
 import { cn } from '@/lib/utils';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { lineLabel } from '@/lib/lines';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const WARN_THRESHOLD = 85;
 const CRIT_THRESHOLD = 70;
@@ -49,6 +50,7 @@ function describe(alert: AlertItem, t: Translate): string {
 }
 
 function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const router = useRouter();
   const searchParams = useSearchParams();
   const lineFilter = searchParams.get('line_id') ?? '';
@@ -70,7 +72,7 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
       else next.set(k, v);
     }
     if (patch.line_id !== undefined) next.delete('machine_id');
-    router.replace(`/factories/${factoryId}/alerts?${next.toString()}`);
+    router.replace(link(`/factories/${factoryId}/alerts?${next.toString()}`));
   }
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
@@ -197,6 +199,7 @@ function AlertGroup({
   factoryId: string;
   lineName: Map<string, string>;
 }) {
+  const link = useFactoryHref();
   const { t } = useT();
   return (
     <section>
@@ -210,7 +213,7 @@ function AlertGroup({
         {alerts.map((alert) => (
           <Link
             key={alert.id}
-            href={`/factories/${factoryId}/machines/${alert.machineId}`}
+            href={link(`/factories/${factoryId}/machines/${alert.machineId}`)}
             className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50 active:bg-gray-100"
           >
             <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', dot)} />

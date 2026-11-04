@@ -53,7 +53,7 @@
       "vars": {
         "APP_ORIGIN": "https://dev-app.floorbeat.in",
         "STAFF_ORIGIN": "https://dev-ops.floorbeat.in",
-        "API_ORIGIN": "https://api-dev.floorbeat.in",
+        "API_ORIGIN": "https://api-stage.floorbeat.in",   // dev shares stage's backend
         "FACTORY_HOST_SUFFIX": ".dev.floorbeat.in",
         "NON_PRODUCTION": "true"
       }

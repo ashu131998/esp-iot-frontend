@@ -20,8 +20,10 @@ import {
 import { formatPercent, formatUnits } from '@/lib/utils';
 import { ListRow, PhoneRows } from '@/components/ui/simple';
 import { runTone } from '@/lib/plain-words';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
+  const link = useFactoryHref();
   const { t, locale } = useT();
   const lineName = useLineName();
   const { range, live, machineId, lineId } = useFactoryDateRange();
@@ -79,7 +81,7 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
         {pageRows.map((m) => (
           <ListRow
             key={m.machine_id}
-            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
             tone={runTone(m.performance_percent)}
             title={m.machine_name}
             tag={lineName(m.line_id)}

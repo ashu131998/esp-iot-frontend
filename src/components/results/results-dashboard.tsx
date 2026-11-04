@@ -23,6 +23,7 @@ import {
   caseStudyText, formatPct, formatRupees, formatSignedHours, monthLabel, recoveredTone, resultsQueryKey,
   type ResultsResponse,
 } from '@/lib/results';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 /**
  * Results: what the service gave the factory back in a month — machine-hours won back against its
@@ -42,6 +43,7 @@ export function ResultsDashboard({
   initialMonth?: string;
   openSettings?: boolean;
 }) {
+  const link = useFactoryHref();
   const { t, locale } = useT();
   const shown = useShown();
   const { canWriteFactory, isInternalStaff } = useAuth();
@@ -179,7 +181,7 @@ export function ResultsDashboard({
             .map((m) => (
               <ListRow
                 key={m.machine_id}
-                href={`/factories/${factoryId}/machines/${m.machine_id}`}
+                href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
                 tone={m.status === 'compared' ? recoveredTone(m.recovered_hours) : 'idle'}
                 title={m.machine_name}
                 detail={m.status === 'no_baseline'

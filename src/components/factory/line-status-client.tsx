@@ -25,6 +25,7 @@ import type {
 import { sortByMachineName } from '@/lib/machine-sort';
 import { humanMinutes } from '@/lib/plain-words';
 import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const REFRESH_INTERVAL_MS = 60_000;
 // Summary cards per row, by how many are shown (literal class names for Tailwind).
@@ -47,6 +48,7 @@ export function LineStatusClient({
   to?: string;
   minDate?: string | null;
 }) {
+  const link = useFactoryHref();
   const refs = useFactoryRefsOptional();
   const shifts = refs?.shifts;
   const maxDate = refs?.maxDate ?? null;
@@ -168,7 +170,7 @@ export function LineStatusClient({
                   <TR key={machine.machine_id}>
                     <TD className="font-medium">
                       <Link
-                        href={`/factories/${machine.factory_id}/machines/${machine.machine_id}`}
+                        href={link(`/factories/${machine.factory_id}/machines/${machine.machine_id}`)}
                         className="hover:underline text-blue-600"
                       >
                         {machine.name}

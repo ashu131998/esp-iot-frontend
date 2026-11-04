@@ -14,6 +14,16 @@ export interface Origins {
 /** One DNS label: a factory ID that can be its own address. */
 const LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+/**
+ * A page of a factory: at its own address the address names the factory, so the page is plain
+ * (https://factory-01.floorbeat.in/login, /, /energy); on the app it keeps /f/<id>… or /factories/<id>….
+ */
+export function factoryPage(factoryId: string, rest: string, origins: Origins, kind: 'f' | 'factories' = 'factories'): string {
+  const origin = factoryOrigin(factoryId, origins);
+  if (origin !== origins.APP_ORIGIN) return `${origin}${rest || '/'}`;
+  return `${origin}/${kind}/${factoryId}${rest}`;
+}
+
 /** Where a factory's pages live: its own address in production (FACTORY_HOST_SUFFIX), else the app. */
 export function factoryOrigin(factoryId: string, origins: Origins): string {
   const suffix = origins.FACTORY_HOST_SUFFIX?.trim();
@@ -47,7 +57,7 @@ export function signedInHome(cookieHeader: string | null, origins: Origins): str
   const home = readCookie(cookieHeader, SESSION_HINT_COOKIE);
   if (!home) return null;
   if (home === STAFF_HOME) return `${origins.STAFF_ORIGIN}${STAFF_HOME}`;
-  if (FACTORY_HOME_RE.test(home)) return `${factoryOrigin(home.split('/')[2], origins)}${home}`;
+  if (FACTORY_HOME_RE.test(home)) return factoryPage(home.split('/')[2], '', origins);
   return null;
 }
 
@@ -85,7 +95,7 @@ export async function lookupFactoryId(
 export function factoryLoginUrl(factory: string | null, origins: Origins): string | null {
   const id = factory?.trim() ?? '';
   if (!FACTORY_ID_RE.test(id)) return null;
-  return `${factoryOrigin(id, origins)}/f/${id}/login`;
+  return factoryPage(id, '/login', origins, 'f');
 }
 
 /**
@@ -110,7 +120,11 @@ const APP_EXACT = new Set(['/reset-password', '/reset-password/']);
 const STAFF_PATH_RE = /^\/internal(?:\/[A-Za-z0-9_-]+)*\/?$/;
 
 export function forwardTarget(pathname: string, search: string, origins: Origins): string | null {
-  if (APP_PATH_RE.test(pathname)) return `${factoryOrigin(pathname.split('/')[2], origins)}${pathname}${search}`;
+  if (APP_PATH_RE.test(pathname)) {
+    const [, kind, id, ...rest] = pathname.split('/');
+    const tail = rest.length ? `/${rest.join('/')}` : '';
+    return `${factoryPage(id, tail, origins, kind as 'f' | 'factories')}${search}`;
+  }
   if (APP_EXACT.has(pathname)) {
     // A factory account's reset link goes to its factory; a staff account's to the staff console
     // (production has no app address any more), or to the app on stage and dev, as before.

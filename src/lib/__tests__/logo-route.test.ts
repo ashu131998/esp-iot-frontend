@@ -15,7 +15,7 @@ describe('GET /api/logo/[factoryId]', () => {
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/v1\/public\/factories\/factory%2001\/logo$/);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
-    expect(res.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(res.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('content-security-policy')).toBe("default-src 'none'");
     expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);

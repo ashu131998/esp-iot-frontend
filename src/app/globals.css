@@ -3,7 +3,7 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
-  --sidebar: #0f172a;
+  --sidebar: #0a0e17;
   --sidebar-foreground: #e2e8f0;
   --card: #ffffff;
   --border: #e2e8f0;
@@ -26,13 +26,51 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * The sidebar of every shell: near-black with a faint glow of the factory's own colour at the top.
+ * --sidebar-accent is that colour lifted towards white, so even a dark brand colour reads on it
+ * (the current page's marker and icon). The plain colour stays if a browser lacks color-mix.
+ */
+.sidebar-surface {
+  --sidebar-accent: color-mix(in srgb, var(--primary) 60%, white);
+  background-color: var(--sidebar);
+  background-image:
+    radial-gradient(130% 38% at 0% 0%, color-mix(in srgb, var(--primary) 20%, transparent) 0%, transparent 72%),
+    linear-gradient(180deg, #0f1522 0%, var(--sidebar) 60%);
+  color: var(--sidebar-foreground);
+  color-scheme: dark;
+}
+
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  /* Geist has no Devanagari or Gujarati: Hindi and Gujarati text fall through to the phone's or PC's own faces. */
+  font-family: var(--font-sans), system-ui, 'Noto Sans Devanagari', 'Noto Sans Gujarati', 'Nirmala UI', 'Kohinoor Devanagari', 'Kohinoor Gujarati', 'Mangal', 'Shruti', sans-serif;
   overflow-x: hidden;
 }
 
-* {
-  border-color: var(--border);
+/* Devanagari and Gujarati have taller letters than Latin: a little more line height keeps vowel marks from clipping. */
+html:lang(hi) body,
+html:lang(gu) body {
+  line-height: 1.6;
+}
+html:lang(hi) .uppercase,
+html:lang(gu) .uppercase {
+  letter-spacing: normal;
+}
+
+/*
+ * The default border colour, in the base layer so every border colour class (status stripes,
+ * warning boxes, selected states, the spinner's gap) wins over it; unlayered, it beat them all
+ * and every border showed grey. Hairlines on the dark sidebar by default.
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  .sidebar-surface,
+  .sidebar-surface * {
+    border-color: rgb(255 255 255 / 0.06);
+  }
 }

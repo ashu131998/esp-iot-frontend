@@ -188,6 +188,14 @@ export function ListRow({
   );
 }
 
+/**
+ * Phones (below sm): a tile's machine table as list rows (ListRow), edge to edge inside its tile;
+ * the table itself shows from sm up (give it `hidden sm:block`).
+ */
+export function PhoneRows({ children }: { children: React.ReactNode }) {
+  return <div className="-mx-4 divide-y divide-gray-100 border-t border-gray-100 sm:hidden">{children}</div>;
+}
+
 /** Shown inside a ListGroup when it has nothing to list. */
 export function ListEmpty({ children }: { children: React.ReactNode }) {
   return <p className="px-4 py-6 text-center text-sm text-muted">{children}</p>;

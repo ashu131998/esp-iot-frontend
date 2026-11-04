@@ -7,6 +7,7 @@ on:
     paths:
       - 'marketing/**'
       - '.github/workflows/deploy-marketing.yml'
+      - 'scripts/smoke-public-links.mjs'
   pull_request:
     branches: [main]
     paths:
@@ -18,7 +19,7 @@ jobs:
   deploy:
     name: Test & Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: marketing
@@ -51,3 +52,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: marketing
           command: deploy${{ github.ref_name == 'staging' && ' --env stage' || github.ref_name == 'develop' && ' --env dev' || '' }}
+
+      # Open the links customers get and the ways they get mangled (www, a lost
+      # "app.", capitals in the factory ID); any dead end fails this run.
+      - name: Check customer links
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: node ../scripts/smoke-public-links.mjs --only site

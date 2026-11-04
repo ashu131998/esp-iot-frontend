@@ -1,17 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { PHONE_HIDDEN, TBody, TD, THead, TH, TR } from '@/components/ui/table';
+import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
-import { useFactoryRefs } from '@/lib/factory-refs-context';
-import { resolvePagination } from '@/lib/pagination';
+import { useFactoryRefs, useLineName } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -19,7 +18,8 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatVolts } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
 
 export function EnergyTable({
   factoryId,
@@ -30,9 +30,11 @@ export function EnergyTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
+  const lineName = useLineName();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
@@ -47,26 +49,24 @@ export function EnergyTable({
 
   const displayMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const total = displayMachines.length;
-  const pageRows = displayMachines.slice((page - 1) * limit, (page - 1) * limit + limit);
+  // Infinite scroll: the first rows, then more as the table's end comes into view (all are loaded).
+  const listKey = [from, to, ...scopeKey].join('|');
+  const { shown, more, hasMore } = useShowMore(total, listKey);
+  const pageRows = displayMachines.slice(0, shown);
 
   return (
     <Card>
       <CardHeader
-        title="Machine Energy Details"
+        title={t('Machine Energy Details')}
         action={
           <div className="flex items-center gap-3">
             <ExportCsvButton
               filename="machine-energy"
-              headers={['Machine', 'Line', 'Energy (kWh)', 'Avg Amps', 'Peak Amps', 'Voltage (V)']}
+              headers={[t('Machine'), t('Line'), t('Energy (kWh)'), t('Avg Amps'), t('Peak Amps'), t('Voltage (V)')]}
               rows={displayMachines.map((m) => [
                 m.machine_name,
-                m.line_id,
+                lineName(m.line_id),
                 m.energy_kwh,
                 m.avg_amps,
                 m.peak_amps,
@@ -76,31 +76,46 @@ export function EnergyTable({
           </div>
         }
       />
-      <Table>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={t('Avg {avg} A · peak {peak} A', {
+              avg: m.avg_amps != null ? formatNumber(m.avg_amps, 2, locale) : '—',
+              peak: m.peak_amps != null ? formatNumber(m.peak_amps, 2, locale) : '—',
+            })}
+            value={m.energy_kwh != null ? `${formatNumber(m.energy_kwh, 1, locale)} kWh` : '—'}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Energy (kWh)</TH>
-            <TH>Avg Amps</TH>
-            <TH>Peak Amps</TH>
-            <TH>Voltage</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Energy (kWh)')}</TH>
+            <TH className={PHONE_HIDDEN}>{t('Avg Amps')}</TH>
+            <TH className={PHONE_HIDDEN}>{t('Peak Amps')}</TH>
+            <TH>{t('Voltage')}</TH>
           </TR>
         </THead>
         <TBody>
           {pageRows.map((m) => (
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
-              <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh) : '—'}</TD>
-              <TD>{m.avg_amps != null ? formatNumber(m.avg_amps, 2) : '—'}</TD>
-              <TD>{m.peak_amps != null ? formatNumber(m.peak_amps, 2) : '—'}</TD>
-              <TD>{m.voltage_v ?? '—'} V</TD>
+              <TD>{lineName(m.line_id)}</TD>
+              <TD>{m.energy_kwh != null ? formatNumber(m.energy_kwh, 1, locale) : '—'}</TD>
+              <TD className={PHONE_HIDDEN}>{m.avg_amps != null ? formatNumber(m.avg_amps, 2, locale) : '—'}</TD>
+              <TD className={PHONE_HIDDEN}>{m.peak_amps != null ? formatNumber(m.peak_amps, 2, locale) : '—'}</TD>
+              <TD>{formatVolts(m.voltage_v)}</TD>
             </TR>
           ))}
         </TBody>
-      </Table>
-      <TablePagination total={total} page={page} limit={limit} />
+      </ScrollTable>
+      <LoadMore shown={shown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );
 }

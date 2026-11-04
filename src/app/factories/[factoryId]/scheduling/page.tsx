@@ -1,5 +1,6 @@
 import { SchedulingPanel } from '@/components/factory/scheduling-panel';
 import { PageHeader } from '@/components/layout/app-shell';
+import { getT } from '@/lib/i18n/server';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
 import type {
@@ -18,6 +19,7 @@ async function SchedulingPage({
   params: Promise<{ factoryId: string }>;
 }) {
   const { factoryId } = await params;
+  const { t } = await getT();
 
   const [{ machines }, linesData, profilesData, workersData, schedulesData] = await Promise.all([
     serverApi.machines(factoryId),
@@ -32,8 +34,8 @@ async function SchedulingPage({
   return (
     <NavDim>
       <PageHeader
-        title="Scheduling"
-        description="Assign workers (added on Team) to shifts, dates, machines and configuration profiles"
+        title={t('Scheduling')}
+        description={t('Assign workers (added on Team) to shifts, dates, machines and configuration profiles')}
       />
       <div className="p-4 sm:p-6 lg:p-8">
         <SchedulingPanel

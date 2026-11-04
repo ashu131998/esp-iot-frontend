@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { useT } from '@/lib/i18n/context';
 import { useRefreshPaused } from '@/lib/refresh-context';
 
 const REFRESH_INTERVAL_SEC = 30;
@@ -18,6 +19,7 @@ export function RefreshCountdown({
 }) {
   const queryClient = useQueryClient();
   const { paused, setPaused } = useRefreshPaused();
+  const { t } = useT();
 
   const [remaining, setRemaining] = useState(() =>
     Math.min(intervalSec, Math.max(0, intervalSec - Math.floor((Date.now() - lastUpdatedAt) / 1000)))
@@ -62,7 +64,7 @@ export function RefreshCountdown({
         className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        Refresh
+        {t('Refresh')}
       </button>
     );
   }
@@ -74,7 +76,7 @@ export function RefreshCountdown({
   const dashOffset   = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted" title="Auto-refresh countdown">
+    <div className="flex items-center gap-2 text-xs text-muted" title={t('Auto-refresh countdown')}>
       <div className="relative flex h-7 w-7 items-center justify-center">
         <svg className="-rotate-90" width="28" height="28" viewBox="0 0 28 28" aria-hidden>
           <circle cx="14" cy="14" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
@@ -96,7 +98,7 @@ export function RefreshCountdown({
         </span>
       </div>
       <span className="hidden tabular-nums sm:inline-block sm:min-w-[6.75rem]">
-        {isRefreshing ? 'Updating…' : `Refreshing in ${remaining}s`}
+        {isRefreshing ? t('Updating…') : t('Refreshing in {s}s', { s: remaining })}
       </span>
     </div>
   );

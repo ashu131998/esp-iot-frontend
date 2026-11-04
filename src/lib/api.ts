@@ -1,25 +1,36 @@
-import type { AdminBoard, BoardBeat } from '@/lib/board-status';
+import type { AdminBoard, BoardBeat, BrokerLogins } from '@/lib/board-status';
+import type { Capacity } from '@/lib/capacity';
+import type { FirmwareRelease, ReleaseSignature } from '@/lib/firmware';
 import type { BoardSettings } from '@/lib/board-settings';
 import type {
   ActiveAssignmentsResponse,
   AlertSettings,
   AvailabilityResponse,
+  CalibrationContext,
   ConfigSelection,
+  CountSamplesResponse,
+  CreateConfigProfileInput,
+  CreateConfigurationInput,
+  CreateQualityInput,
+  CreateScheduleInput,
+  CreateWorkerInput,
+  CurrentSamplesResponse,
+  DateRangeParams,
   DowntimeReason,
   DowntimeReport,
-  NotificationItem,
-  CreateConfigurationInput,
-  CreateConfigProfileInput,
-  CreateQualityInput,
-  DateRangeParams,
   EnergyResponse,
   Factory,
   FactoryDailyAvailabilityResponse,
+  FactoryNodeSummary,
   Machine,
+  MachineConfigProfile,
+  MachineConfiguration,
   MachineDailyTrendResponse,
   MachineLiveDaysResponse,
-  MachineConfiguration,
-  MachineConfigProfile,
+  MaintenanceEntry,
+  MaintenanceOverview,
+  NodeDetailResponse,
+  NotificationItem,
   PaginatedMeta,
   PaginationParams,
   PerformanceResponse,
@@ -27,16 +38,18 @@ import type {
   ProductionLine,
   ProductionResponse,
   QualityRecord,
-  UptimeResponse,
-  ShiftReportScheduleResponse,
-  ShiftReportAdminOverview,
-  NodeDetailResponse,
-  FactoryNodeSummary,
+  SaveCountCalibrationBody,
+  SaveCountCalibrationResponse,
+  SaveCurrentCalibrationBody,
+  SaveCurrentCalibrationResponse,
   SensorBinding,
+  SensorFiguresResponse,
+  SensorKind,
+  ShiftReportAdminOverview,
+  ShiftReportScheduleResponse,
+  UptimeResponse,
   Worker,
   WorkerSchedule,
-  CreateWorkerInput,
-  CreateScheduleInput,
 } from './types';
 import { getClientCsrf } from './auth-context';
 import { sortByMachineName } from './machine-sort';
@@ -45,6 +58,9 @@ import {
   fetchWithSignal,
   isAbortError,
 } from './request-signal';
+import type { WifiNetwork, WifiPage } from '@/lib/wifi';
+import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
+import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
 
 export type { ApiRequestOptions };
 
@@ -54,6 +70,8 @@ class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    /** The error response's JSON, for routes that say more than a message (e.g. problems by step). */
+    public body: unknown = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -88,13 +106,14 @@ async function request<T>(path: string, init?: RequestInit & ApiRequestOptions):
 
     if (!res.ok) {
       let message = res.statusText;
+      let body: unknown = null;
       try {
-        const body = await res.json();
-        message = body.error ?? message;
+        body = await res.json();
+        message = (body as { error?: string } | null)?.error ?? message;
       } catch {
         /* ignore */
       }
-      throw new ApiError(message, res.status);
+      throw new ApiError(message, res.status, body);
     }
 
     if (res.status === 204) return undefined as T;
@@ -166,6 +185,24 @@ export const api = {
       `/v1/factories/${factoryId}/lines${qs(params)}`,
       options,
     ),
+
+  /** Predictive maintenance: every machine's condition from its signs (the page must be switched on for the factory). */
+  maintenance: (factoryId: string, params?: { line_id?: string; machine_id?: string }, options?: ApiRequestOptions) =>
+    request<MaintenanceOverview>(`/v1/factories/${factoryId}/maintenance${qs(params)}`, options),
+  maintenanceLog: (factoryId: string, params?: { machine_id?: string; limit?: number }, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; entries: MaintenanceEntry[] }>(`/v1/factories/${factoryId}/maintenance/log${qs(params)}`, options),
+  addMaintenanceLog: (factoryId: string, body: { machine_id: string; done_at: string; kind: string; note?: string }) =>
+    request<MaintenanceEntry>(`/v1/factories/${factoryId}/maintenance/log`, { method: 'POST', body: JSON.stringify(body) }),
+  deleteMaintenanceLog: (factoryId: string, id: number) =>
+    request<{ ok: true }>(`/v1/factories/${factoryId}/maintenance/log/${id}`, { method: 'DELETE' }),
+  setServiceInterval: (factoryId: string, machineId: string, hours: number | null) =>
+    request<{ machine_id: string; service_interval_hours: number | null }>(`/v1/factories/${factoryId}/machines/${machineId}/service-interval`, {
+      method: 'PUT', body: JSON.stringify({ service_interval_hours: hours }),
+    }),
+
+  /** Temperature or vibration figures per machine for a window (the page must be switched on for the factory). */
+  sensorFigures: (factoryId: string, kind: SensorKind, params?: DateRangeParams, options?: ApiRequestOptions) =>
+    request<SensorFiguresResponse>(`/v1/factories/${factoryId}/metrics/${kind}${qs(params)}`, options),
 
   availability: async (factoryId: string, params?: DateRangeParams, options?: ApiRequestOptions) => {
     const data = await request<AvailabilityResponse>(
@@ -308,6 +345,57 @@ export const api = {
       { method: 'POST', body: JSON.stringify(body), ...options },
     ),
 
+  // ── Calibration from the dashboard (factory admins) ──────────────────────────────
+  calibrationContext: (factoryId: string, machineId: string, options?: ApiRequestOptions) =>
+    request<CalibrationContext>(
+      `/v1/factories/${factoryId}/calibration/machines/${encodeURIComponent(machineId)}`,
+      options,
+    ),
+
+  /** One-minute current windows of a channel that began at or after `since`. */
+  calibrationCurrentSamples: (
+    factoryId: string,
+    params: { binding_id: string; since: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<CurrentSamplesResponse>(
+      `/v1/factories/${factoryId}/calibration/current-samples?binding_id=${encodeURIComponent(params.binding_id)}&since=${encodeURIComponent(params.since)}`,
+      options,
+    ),
+
+  /** A machine's proximity pulses since `since`, and the units its current setting makes of them. */
+  calibrationCountSamples: (
+    factoryId: string,
+    params: { machine_id: string; since: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<CountSamplesResponse>(
+      `/v1/factories/${factoryId}/calibration/count-samples?machine_id=${encodeURIComponent(params.machine_id)}&since=${encodeURIComponent(params.since)}`,
+      options,
+    ),
+
+  saveCurrentCalibration: (
+    factoryId: string,
+    bindingId: string,
+    body: SaveCurrentCalibrationBody,
+    options?: ApiRequestOptions,
+  ) =>
+    request<SaveCurrentCalibrationResponse>(
+      `/v1/factories/${factoryId}/calibration/current/${encodeURIComponent(bindingId)}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  saveCountCalibration: (
+    factoryId: string,
+    machineId: string,
+    body: SaveCountCalibrationBody,
+    options?: ApiRequestOptions,
+  ) =>
+    request<SaveCountCalibrationResponse>(
+      `/v1/factories/${factoryId}/calibration/count/${encodeURIComponent(machineId)}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
   /** Change a machine's production unit: proximity pulses per unit and the unit name. */
   adminUpdateMachineUnits: (
     factoryId: string,
@@ -371,7 +459,7 @@ export const api = {
 
   quality: (
     factoryId: string,
-    params?: DateRangeParams & PaginationParams & { machine_id?: string },
+    params?: DateRangeParams & PaginationParams & { machine_id?: string; line_id?: string },
     options?: ApiRequestOptions,
   ) =>
     request<{ factory_id: string; records: QualityRecord[] } & PaginatedMeta>(
@@ -666,6 +754,39 @@ export const api = {
       ...options,
     }),
 
+  /** Confirm (or take back) that a stop was fixed; first confirmation stands. Factory admins. */
+  setDowntimeFixed: (factoryId: string, reportId: string, fixed: boolean, options?: ApiRequestOptions) =>
+    request<DowntimeReport>(
+      `/v1/factories/${factoryId}/downtime-reports/${encodeURIComponent(reportId)}/fixed`,
+      { method: 'PUT', body: JSON.stringify({ fixed }), ...options },
+    ),
+
+  /** How the stops that began in [from, to) were followed up (at most 92 days). */
+  stopFollowUp: (factoryId: string, params: { from: string; to: string }, options?: ApiRequestOptions) =>
+    request<StopFollowUp>(
+      `/v1/factories/${factoryId}/stop-follow-up?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}`,
+      options,
+    ),
+
+  // ── Results: what the service gave the factory back ───────────────────────────────
+  /** A month's results ('YYYY-MM'; this month when left out). Rupees only for admins and staff. */
+  results: (factoryId: string, month?: string, options?: ApiRequestOptions) =>
+    request<ResultsResponse>(
+      `/v1/factories/${factoryId}/results${month ? `?month=${encodeURIComponent(month)}` : ''}`,
+      options,
+    ),
+
+  saveResultsSettings: (factoryId: string, body: Partial<ResultsSettings>, options?: ApiRequestOptions) =>
+    request<{ settings: ResultsSettings }>(`/v1/factories/${factoryId}/results/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      ...options,
+    }),
+
+  /** The first-week rollout checklist (shown to admins and staff until every machine is live). */
+  setupProgress: (factoryId: string, options?: ApiRequestOptions) =>
+    request<SetupProgress>(`/v1/factories/${factoryId}/setup-progress`, options),
+
   configSelections: (
     factoryId: string,
     params?: PaginationParams & { machine_id?: string; latest?: string },
@@ -704,11 +825,11 @@ export const api = {
       options,
     ),
 
-  onboardFactory: (body: Record<string, unknown>, options?: ApiRequestOptions) =>
-    request<{ factory: Factory; admin: import('./auth-types').AuthUser }>('/v1/admin/factories', {
-      method: 'POST',
-      body: JSON.stringify(body),
-      ...options,
+  /** A factory with its first admins; each admin is emailed their sign-in details. */
+  /** A whole factory in one go (/internal/onboard): created all or nothing. Staff only. */
+  adminSetupFactory: (body: import('./onboarding').SetupRequest, options?: ApiRequestOptions) =>
+    request<import('./onboarding').SetupResponse>('/v1/admin/factories/setup', {
+      method: 'POST', body: JSON.stringify(body), ...options,
     }),
 
   /** Switch factory pages / page sections (keys from adminDisplayCatalog). Staff only. */
@@ -734,6 +855,38 @@ export const api = {
     request<{ factory_id: string; branding: import('./branding').FactoryBranding }>(
       `/v1/admin/factories/${factoryId}/branding`,
       { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Set or clear the partner (machine dealer, electrician) who referred a factory. Staff only. */
+  adminSetFactoryReferral: (factoryId: string, referredBy: string | null, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; referred_by: string | null }>(
+      `/v1/admin/factories/${factoryId}/referral`,
+      { method: 'PUT', body: JSON.stringify({ referred_by: referredBy }), ...options },
+    ),
+
+  /** A factory's subscription: its state and every period. Staff only. */
+  adminSubscription: (factoryId: string, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse>(`/v1/admin/factories/${factoryId}/subscription`, options),
+
+  /** Add a subscription period (a renewal is the next one). Staff only. */
+  adminAddSubscriptionPeriod: (factoryId: string, body: PeriodBody, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { period: SubscriptionPeriod }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Change a subscription period. Staff only. */
+  adminUpdateSubscriptionPeriod: (factoryId: string, periodId: number, body: Partial<PeriodBody>, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { period: SubscriptionPeriod }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods/${periodId}`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
+  /** Remove a subscription period. Staff only. */
+  adminDeleteSubscriptionPeriod: (factoryId: string, periodId: number, options?: ApiRequestOptions) =>
+    request<SubscriptionResponse & { deleted: boolean }>(
+      `/v1/admin/factories/${factoryId}/subscription/periods/${periodId}`,
+      { method: 'DELETE', ...options },
     ),
 
   /** Every page that can be switched per factory, with its sections. Staff only. */
@@ -789,6 +942,8 @@ export const api = {
         device_stale_count: number;
         stale_threshold_minutes: number;
       };
+      /** The server's disk, database growth and machines (null: not known here). */
+      capacity?: Capacity | null;
       aggregator?: {
         pending_failures: number;
         failures_since: string | null;
@@ -798,9 +953,45 @@ export const api = {
       } | null;
     }>(`/v1/admin/health${qs(params)}`, options),
 
+  /** A factory's WiFi networks and where each of its boards stands (its admins and the super admin). */
+  factoryWifi: (factoryId: string, options?: ApiRequestOptions) =>
+    request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, options),
+
+  /** Save a factory's WiFi networks: sent at once to every board placed in it. */
+  saveFactoryWifi: (factoryId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
+    request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, {
+      method: 'PUT', body: JSON.stringify({ networks }), ...options,
+    }),
+
   /** Real boards with their state (staff); see AdminBoard. */
   adminBoards: (options?: ApiRequestOptions) =>
-    request<{ broker: 'ok' | 'unreachable' | 'unavailable'; boards: AdminBoard[] }>('/v1/admin/boards', options),
+    request<{ broker: 'ok' | 'unreachable' | 'unavailable'; logins: BrokerLogins | null; boards: AdminBoard[] }>(
+      '/v1/admin/boards', options,
+    ),
+
+  /** Firmware releases uploaded for remote updates (staff). */
+  adminFirmware: (options?: ApiRequestOptions) => request<{ releases: FirmwareRelease[] }>('/v1/admin/firmware', options),
+
+  /** Super admin: upload a signed release (the image as base64, with its .sig.json). */
+  adminFirmwareUpload: (body: ReleaseSignature & { image_base64: string; notes?: string }, options?: ApiRequestOptions) =>
+    request<{ release: FirmwareRelease }>('/v1/admin/firmware', { method: 'POST', body: JSON.stringify(body), ...options }),
+
+  adminFirmwareDelete: (target: string, version: string, options?: ApiRequestOptions) =>
+    request<{ ok: boolean }>(`/v1/admin/firmware/${encodeURIComponent(target)}/${encodeURIComponent(version)}`, {
+      method: 'DELETE', ...options,
+    }),
+
+  /** Super admin: offer a board a firmware update (null withdraws the offer). */
+  adminBoardUpdate: (boardId: string, version: string | null, options?: ApiRequestOptions) =>
+    request<{ ok: boolean; version: string | null }>(`/v1/admin/boards/${encodeURIComponent(boardId)}/update`, {
+      method: 'POST', body: JSON.stringify({ version }), ...options,
+    }),
+
+  /** Super admin: restrict the shared fleet MQTT login to new boards, or open it again. */
+  adminSharedLogin: (restricted: boolean, options?: ApiRequestOptions) =>
+    request<{ ok: boolean; restricted: boolean; cut_off: string[] }>('/v1/admin/mqtt/shared-login', {
+      method: 'POST', body: JSON.stringify({ restricted }), ...options,
+    }),
 
   /** Super admin: send a board its settings (retained on its config topic). */
   adminBoardSettings: (boardId: string, settings: BoardSettings, options?: ApiRequestOptions) =>
@@ -808,10 +999,13 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ settings }), ...options,
     }),
 
-  /** Super admin: claim a new board, or move one — factory, line, settings and its own login at once. */
+  /**
+   * Super admin: claim a new board, or move one — factory, line, settings and its own login at once.
+   * A rescue box: its factory alone (it gets the factory's signed WiFi list and a PIN).
+   */
   adminBoardClaim: (
     boardId: string,
-    body: { factory_id: string; line_id: string; settings: BoardSettings },
+    body: { factory_id: string; line_id?: string; settings?: BoardSettings },
     options?: ApiRequestOptions,
   ) =>
     request<{ ok: boolean; cfg_version: number; factory_id: string; line_id: string }>(
@@ -946,7 +1140,10 @@ export const api = {
     body: { username: string; password: string; email?: string },
     options?: ApiRequestOptions,
   ) =>
-    request<import('./auth-types').AuthUser>(`/v1/admin/factories/${factoryId}/admins`, {
+    request<import('./auth-types').AuthUser & {
+      /** The welcome email (sign-in details) when an email was given; null when not. */
+      welcome_email: { email: string; sent: boolean; error?: string } | null;
+    }>(`/v1/admin/factories/${factoryId}/admins`, {
       method: 'POST',
       body: JSON.stringify(body),
       ...options,

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 export function Modal({
@@ -20,6 +21,7 @@ export function Modal({
   onClose: () => void;
   className?: string;
 }) {
+  const { t } = useT();
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -36,7 +38,7 @@ export function Modal({
       <button
         type="button"
         className="absolute inset-0 bg-black/40"
-        aria-label="Close dialog"
+        aria-label={t('Close dialog')}
         onClick={onClose}
       />
       <div

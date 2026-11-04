@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 
 import { Field, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
+import { lineLabel } from '@/lib/lines';
 
 function useLineMachineOptions(factoryId: string, lineFilter: string) {
   const linesQuery = useQuery({
@@ -42,28 +44,29 @@ export function LineMachineAlertFilters({
   onChange: (patch: Record<string, string | null>) => void;
 }) {
   const { linesQuery, machinesForSelect } = useLineMachineOptions(factoryId, lineFilter);
+  const { t } = useT();
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label="Line">
+      <Field label={t('Line')}>
         <Select
           value={lineFilter}
           onChange={(e) => onChange({ line_id: e.target.value || null })}
         >
-          <option value="">All lines</option>
+          <option value="">{t('All lines')}</option>
           {(linesQuery.data?.lines ?? []).map((l) => (
             <option key={l.line_id} value={l.line_id}>
-              {l.name ?? l.line_id}
+              {lineLabel(l)}
             </option>
           ))}
         </Select>
       </Field>
-      <Field label="Machine">
+      <Field label={t('Machine')}>
         <Select
           value={machineFilter}
           onChange={(e) => onChange({ machine_id: e.target.value || null })}
         >
-          <option value="">All machines</option>
+          <option value="">{t('All machines')}</option>
           {machinesForSelect.map((m) => (
             <option key={m.machine_id} value={m.machine_id}>
               {m.name ?? m.machine_id}
@@ -91,15 +94,16 @@ export function FactoryLineMachineAlertFilters({
   });
 
   const { linesQuery, machinesForSelect } = useLineMachineOptions(factoryFilter, lineFilter);
+  const { t } = useT();
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <Field label="Factory">
+      <Field label={t('Factory')}>
         <Select
           value={factoryFilter}
           onChange={(e) => onChange({ factory_id: e.target.value || null })}
         >
-          <option value="">All factories</option>
+          <option value="">{t('All factories')}</option>
           {(factoriesQuery.data?.factories ?? []).map((f) => (
             <option key={f.factory_id} value={f.factory_id}>
               {f.name ?? f.factory_id}
@@ -107,27 +111,27 @@ export function FactoryLineMachineAlertFilters({
           ))}
         </Select>
       </Field>
-      <Field label="Line">
+      <Field label={t('Line')}>
         <Select
           value={lineFilter}
           disabled={!factoryFilter}
           onChange={(e) => onChange({ line_id: e.target.value || null })}
         >
-          <option value="">{factoryFilter ? 'All lines' : 'Select factory first'}</option>
+          <option value="">{factoryFilter ? t('All lines') : t('Select factory first')}</option>
           {(linesQuery.data?.lines ?? []).map((l) => (
             <option key={l.line_id} value={l.line_id}>
-              {l.name ?? l.line_id}
+              {lineLabel(l)}
             </option>
           ))}
         </Select>
       </Field>
-      <Field label="Machine">
+      <Field label={t('Machine')}>
         <Select
           value={machineFilter}
           disabled={!factoryFilter}
           onChange={(e) => onChange({ machine_id: e.target.value || null })}
         >
-          <option value="">{factoryFilter ? 'All machines' : 'Select factory first'}</option>
+          <option value="">{factoryFilter ? t('All machines') : t('Select factory first')}</option>
           {machinesForSelect.map((m) => (
             <option key={m.machine_id} value={m.machine_id}>
               {m.name ?? m.machine_id}

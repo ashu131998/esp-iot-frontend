@@ -4,9 +4,11 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Search, ChevronDown, X } from 'lucide-react';
 
+import { useT } from '@/lib/i18n/context';
 import type { Machine, ProductionLine } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 
 export const MACHINE_PARAM = 'machine_id';
 
@@ -25,12 +27,13 @@ export function MachineSelector({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useT();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
 
   const lineMap = useMemo(
-    () => Object.fromEntries(lines.map((l) => [l.line_id, l.name])),
+    () => Object.fromEntries(lines.map((l) => [l.line_id, lineLabel(l)])),
     [lines],
   );
 
@@ -90,14 +93,14 @@ export function MachineSelector({
           selectedMachineId && 'border-primary/50 bg-primary/5 text-primary',
         )}
       >
-        <span className="font-medium text-muted mr-1">Machine</span>
+        <span className="font-medium text-muted mr-1">{t('Machine')}</span>
         <span className={cn('max-w-[140px] truncate', selectedMachineId ? 'text-primary font-medium' : 'text-foreground')}>
-          {selectedMachine ? selectedMachine.name : 'All'}
+          {selectedMachine ? selectedMachine.name : t('All')}
         </span>
         {selectedMachineId ? (
           <span
             role="button"
-            aria-label="Clear machine filter"
+            aria-label={t('Clear machine filter')}
             className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
             onClick={(e) => {
               e.stopPropagation();
@@ -121,7 +124,7 @@ export function MachineSelector({
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Search machines…"
+                  placeholder={t('Search machines…')}
                   className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -138,7 +141,7 @@ export function MachineSelector({
                   !selectedMachineId && 'bg-accent font-medium',
                 )}
               >
-                All Machines
+                {t('All Machines')}
               </button>
 
               {Object.entries(grouped).map(([lineId, lineMs]) => (
@@ -163,7 +166,7 @@ export function MachineSelector({
               ))}
 
               {filtered.length === 0 && (
-                <p className="px-3 py-4 text-center text-xs text-muted">No machines found</p>
+                <p className="px-3 py-4 text-center text-xs text-muted">{t('No machines found')}</p>
               )}
             </div>
           </div>

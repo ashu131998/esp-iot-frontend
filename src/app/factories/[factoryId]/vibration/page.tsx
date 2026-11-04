@@ -1,16 +1,7 @@
-import { VibrationDashboard } from '@/components/factory/vibration-dashboard';
-import { factoryPage } from '@/lib/server/factory-page';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-// The switch check runs in factoryPage, which is all this page needs the factory for.
-async function VibrationPage() {
-
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <VibrationDashboard />
-    </div>
-  );
+/** The vibration page lives on Predictive maintenance now; old links land there. */
+export default async function VibrationPage({ params }: { params: Promise<{ factoryId: string }> }) {
+  const { factoryId } = await params;
+  redirect(`/factories/${factoryId}/maintenance?tab=vibration`);
 }
-
-export default factoryPage('vibration', VibrationPage);

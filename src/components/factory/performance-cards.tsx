@@ -2,8 +2,9 @@
 
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { StatCard } from '@/components/ui/badge';
+import { SummaryCard } from '@/components/ui/simple';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -12,11 +13,13 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { averageKnown, formatPercent } from '@/lib/utils';
+import { runTone, wholePercent } from '@/lib/plain-words';
 
 const PERFORMANCE_REFRESH_MS = 60_000;
 const PERFORMANCE_REFRESH_SEC = 60;
 
 export function PerformanceCards({ factoryId }: { factoryId: string }) {
+  const { t, locale } = useT();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
@@ -39,10 +42,13 @@ export function PerformanceCards({ factoryId }: { factoryId: string }) {
       : data.avg_performance_percent;
 
   return (
-    <StatCard
-      label="Avg Performance (OEE-like)"
-      value={formatPercent(avgPerformance)}
-      sub="Availability × throughput vs target"
+    <SummaryCard
+      tone={runTone(avgPerformance)}
+      badge={avgPerformance == null ? undefined : wholePercent(avgPerformance)}
+      title={avgPerformance == null
+        ? t('No performance figures yet')
+        : t('Machines made {pct} of their target', { pct: formatPercent(avgPerformance, locale) })}
+      subtitle={t('Availability × throughput vs target')}
     />
   );
 }

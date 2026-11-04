@@ -15,10 +15,25 @@ import {
 } from 'date-fns';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { useT } from '@/lib/i18n/context';
+import { localeTag, type Locale } from '@/lib/i18n/locale';
 import { cn } from '@/lib/utils';
 
-export const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-export const DOW = ['S','M','T','W','T','F','S'];
+/** January … December in the page's language (Hindi: जनवरी …). */
+export function monthNames(locale: Locale = 'en'): string[] {
+  const fmt = new Intl.DateTimeFormat(localeTag(locale), { month: 'long' });
+  return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2026, m, 15)));
+}
+
+/** One letter per weekday, Sunday first (Hindi: र सो मं …). */
+export function weekdayLetters(locale: Locale = 'en'): string[] {
+  const fmt = new Intl.DateTimeFormat(localeTag(locale), { weekday: 'narrow' });
+  // 2026-01-04 is a Sunday.
+  return Array.from({ length: 7 }, (_, d) => fmt.format(new Date(2026, 0, 4 + d)));
+}
+
+export const MONTH_NAMES = monthNames('en');
+export const DOW = weekdayLetters('en');
 
 export function buildGrid(month: Date): (Date | null)[] {
   const first = startOfMonth(month);
@@ -39,6 +54,7 @@ export function MonthCalendar({
   onDayClick,
   onDayHover,
   minDate,
+  maxDate,
 }: {
   label: string;
   month: Date;
@@ -49,9 +65,14 @@ export function MonthCalendar({
   onDayClick: (d: Date) => void;
   onDayHover: (d: Date | null) => void;
   minDate?: Date | null;
+  /** The last day that may be picked (an ended subscription), when before today. */
+  maxDate?: Date | null;
 }) {
-  const today = useMemo(() => new Date(), []);
+  const { locale } = useT();
+  const today = useMemo(() => (maxDate && maxDate < new Date() ? maxDate : new Date()), [maxDate]);
   const cells = useMemo(() => buildGrid(month), [month]);
+  const months = useMemo(() => monthNames(locale), [locale]);
+  const dow = useMemo(() => weekdayLetters(locale), [locale]);
 
   const effEnd   = rangeEnd ?? (rangeStart && hoverDate && !isBefore(hoverDate, rangeStart) ? hoverDate : null);
   const effStart = rangeStart && !rangeEnd && hoverDate && isBefore(hoverDate, rangeStart) ? hoverDate : rangeStart;
@@ -84,7 +105,7 @@ export function MonthCalendar({
             onChange={e => onMonthChange(new Date(month.getFullYear(), +e.target.value, 1))}
             className="appearance-none bg-transparent cursor-pointer pr-1 focus:outline-none"
           >
-            {MONTH_NAMES.map((m, i) => <option key={m} value={i}>{m}</option>)}
+            {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
           </select>
           <ChevronDown className="h-3 w-3 text-gray-400 -ml-1 mr-1" />
           <select
@@ -108,7 +129,7 @@ export function MonthCalendar({
       </div>
 
       <div className="grid grid-cols-7 mb-0.5">
-        {DOW.map((d, i) => (
+        {dow.map((d, i) => (
           <div key={i} className="h-8 flex items-center justify-center text-[11px] font-semibold text-gray-400">
             {d}
           </div>

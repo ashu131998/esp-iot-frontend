@@ -131,6 +131,49 @@ describe('resolveDateRange with no params', () => {
   });
 });
 
+// ── a viewer whose data stops at an end (an ended subscription) ───────────────
+
+describe('resolveDateRange / presetRange with an end (factory.data_limit)', () => {
+  const END = '2026-12-01T18:30:00.000Z'; // the midnight after 1 Dec, India time
+  const later = (fn: () => void) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-12-05T06:00:00Z')); // four days after it
+      fn();
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+
+  it('"now" is the end: the default window is the last shift before it', () => later(() => {
+    // The night shift that ran into the end started 18:00 IST on 1 Dec (12:30Z).
+    expect(resolveDateRange({}, null, null, END)).toEqual({ from: '2026-12-01T12:30:00.000Z', to: END });
+  }));
+
+  it('an end asked for after it is cut; a window starting after it falls back to its last production day', () => later(() => {
+    expect(resolveDateRange({ from: '2026-11-30T00:00:00.000Z', to: '2026-12-04T00:00:00.000Z' }, null, null, END))
+      .toEqual({ from: '2026-11-30T00:00:00.000Z', to: END });
+    // The production day that holds the end (local clock, like every fallback here).
+    expect(resolveDateRange({ from: '2026-12-03T00:00:00.000Z', to: '2026-12-04T00:00:00.000Z' }, null, null, END))
+      .toEqual({ from: productionDayStart(new Date(END)).toISOString(), to: END });
+    expect(resolveDateRange({ from: '2026-11-01T00:00:00.000Z', to: '2026-11-02T00:00:00.000Z' }, null, null, END))
+      .toEqual({ from: '2026-11-01T00:00:00.000Z', to: '2026-11-02T00:00:00.000Z' });
+  }));
+
+  it('presets count back from the end', () => later(() => {
+    const week = presetRange('7d', null, END);
+    expect(week.to).toBe(END);
+    expect(parseISO(week.from).getTime()).toBeLessThan(parseISO(END).getTime());
+    expect(presetRange('today', null, END).to).toBe(END);
+  }));
+
+  it('an end still ahead changes nothing', () => {
+    const ahead = new Date(Date.now() + 86_400_000).toISOString();
+    const result = resolveDateRange({}, null, null, ahead);
+    expect(Math.abs(parseISO(result.to).getTime() - Date.now())).toBeLessThan(5000);
+  });
+});
+
 // ── presetRange ───────────────────────────────────────────────────────────────
 
 describe('presetRange', () => {

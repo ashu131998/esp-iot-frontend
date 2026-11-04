@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/input';
+import { useT } from '@/lib/i18n/context';
 import { useIsNavigating, useNavigate } from '@/lib/navigation-context';
 import {
   LIMIT_PARAM,
@@ -34,6 +35,7 @@ export function TablePagination({
   const searchParams = useSearchParams();
   const navigate = useNavigate();
   const isPending = useIsNavigating();
+  const { t } = useT();
   const routerless = Boolean(onPaginationChange);
 
   const safeTotal = coerceTotal(total);
@@ -73,12 +75,13 @@ export function TablePagination({
       )}
     >
       <p className="text-xs text-muted">
-        Showing {start}–{end} of {safeTotal}
+        {t('Showing {start}–{end} of {total}', { start, end, total: safeTotal })}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-xs text-muted">
-          Rows
+        {/* Phones: always the default 10 a page, with Previous and Next. */}
+        <label className="hidden items-center gap-2 text-xs text-muted sm:flex">
+          {t('Rows')}
           <Select
             className="h-8 w-auto min-w-[4.5rem] py-1 text-xs"
             value={String(safeLimit)}
@@ -89,7 +92,7 @@ export function TablePagination({
               })
             }
             disabled={pending}
-            aria-label="Rows per page"
+            aria-label={t('Rows per page')}
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
@@ -100,7 +103,7 @@ export function TablePagination({
         </label>
 
         <span className="text-xs text-muted">
-          Page {currentPage} of {totalPages}
+          {t('Page {page} of {total}', { page: currentPage, total: totalPages })}
         </span>
 
         <Button
@@ -116,7 +119,7 @@ export function TablePagination({
             })
           }
         >
-          Previous
+          {t('Previous')}
         </Button>
         <Button
           type="button"
@@ -131,7 +134,7 @@ export function TablePagination({
             })
           }
         >
-          Next
+          {t('Next')}
         </Button>
       </div>
     </div>

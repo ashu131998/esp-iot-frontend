@@ -9,15 +9,18 @@ import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noPerformance, noProduction, offQuery } from '@/lib/display';
 import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { overviewFigures } from '@/lib/overview-figures';
+import { overviewQueryKey } from '@/lib/overview-queries';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
-  factoryScopeQueryKey,
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatNumber, formatPercent, formatUnits } from '@/lib/utils';
+import { SummaryCard } from '@/components/ui/simple';
+import { RUN_BAD_PCT, periodPhrase, runTone, wholePercent } from '@/lib/plain-words';
 
 const REFRESH_MS = 60_000;
 const REFRESH_SEC = 60;
@@ -33,10 +36,11 @@ export function FactoryOverviewStatCards({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
+  const { t, tn, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
-  const scopeKey = factoryScopeQueryKey({ machineId, lineId });
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
+  const queryScope = { from, to, lineId, machineId };
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const refetchInterval = useRefetchInterval(REFRESH_MS);
   // Modules switched off for the factory: their data is not requested, their cards not shown.
@@ -53,7 +57,7 @@ export function FactoryOverviewStatCards({
   ] = useSuspenseQueries({
     queries: [
       {
-        queryKey: ['availability', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+        queryKey: overviewQueryKey('availability', factoryId, queryScope),
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           api.availability(factoryId, apiRange, { signal }),
         refetchInterval,
@@ -61,7 +65,7 @@ export function FactoryOverviewStatCards({
       },
       energyOn
         ? {
-          queryKey: ['energy', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('energy', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.energy(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -70,7 +74,7 @@ export function FactoryOverviewStatCards({
         : offQuery('energy', noEnergy(factoryId)),
       productionOn
         ? {
-          queryKey: ['production', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('production', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.production(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -79,7 +83,7 @@ export function FactoryOverviewStatCards({
         : offQuery('production', noProduction(factoryId)),
       performanceOn
         ? {
-          queryKey: ['performance', factoryId, from ?? 'live', to ?? 'live', ...scopeKey],
+          queryKey: overviewQueryKey('performance', factoryId, queryScope),
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.performance(factoryId, apiRange, { signal }),
           refetchInterval,
@@ -100,29 +104,50 @@ export function FactoryOverviewStatCards({
   });
 
   const cards = 1 + Number(energyOn) + Number(productionOn) + Number(performanceOn);
+  // Two per row up to lg (phones too); with an odd count, availability takes a whole row.
+  const firstWide = cards > 1 && cards % 2 === 1;
+
+  const ran = filterMachinesByScope(availability.machines, scope).map((m) => m.availability_percent).filter((v): v is number => v !== null);
+  const below = ran.filter((v) => v < RUN_BAD_PCT).length;
+  const period = t(periodPhrase(from, to));
 
   return (
-    <div className={`grid gap-4 ${cards > 1 ? 'sm:grid-cols-2' : ''} ${LG_COLS[cards]}`}>
+    <div className="space-y-4">
+    <SummaryCard
+      tone={runTone(figures.runningPercent)}
+      badge={figures.runningPercent == null ? undefined : wholePercent(figures.runningPercent)}
+      title={figures.runningPercent == null
+        ? t('No running data yet')
+        : ran.length > 1
+          ? t('On average, machines ran {pct} of {period}', { pct: wholePercent(figures.runningPercent), period })
+          : t('Machine ran {pct} of {period}', { pct: wholePercent(figures.runningPercent), period })}
+      subtitle={ran.length === 0 ? undefined : below > 0
+        ? tn(below, '{count} machine ran under {pct}%', '{count} machines ran under {pct}%', { count: below, pct: RUN_BAD_PCT })
+        : t('Every machine ran {pct}% or more', { pct: RUN_BAD_PCT })}
+    />
+    <div className={`grid gap-3 sm:gap-4 ${cards > 1 ? 'grid-cols-2' : ''} ${LG_COLS[cards]}`}>
       <StatCard
-        label="Availability"
-        value={formatPercent(figures.runningPercent)}
+        label={t('Availability')}
+        value={formatPercent(figures.runningPercent, locale)}
         icon={<Activity className="h-4 w-4 text-muted" />}
+        className={firstWide ? 'col-span-2 lg:col-span-1' : undefined}
       />
       {energyOn && (
         <StatCard
-          label="Energy"
-          value={figures.kwh != null ? `${formatNumber(figures.kwh)} kWh` : '—'}
+          label={t('Energy')}
+          value={figures.kwh != null ? `${formatNumber(figures.kwh, 1, locale)} kWh` : '—'}
           icon={<Zap className="h-4 w-4 text-muted" />}
         />
       )}
       {productionOn && (
         <StatCard
-          label="Units Produced"
-          value={formatUnits(figures.units, figures.unitLabel)}
+          label={t('Units Produced')}
+          value={formatUnits(figures.units, figures.unitLabel, locale, t('(mixed units)'))}
           icon={<Package className="h-4 w-4 text-muted" />}
         />
       )}
-      {performanceOn && <StatCard label="Performance" value={formatPercent(figures.onTargetPercent)} />}
+      {performanceOn && <StatCard label={t('Performance')} value={formatPercent(figures.onTargetPercent, locale)} />}
+    </div>
     </div>
   );
 }

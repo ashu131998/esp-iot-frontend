@@ -27,7 +27,8 @@ function hostMatchesAllowed(hostname: string, allowed: string): boolean {
  */
 export function internalHostAllowed(req: NextRequest): boolean {
   const allowed = parseStaffHostnames();
-  const host = req.nextUrl.hostname;
+  // The Host header: next dev reports localhost in nextUrl whatever the address (Cloudflare gives both).
+  const host = req.headers.get('host') ?? req.nextUrl.hostname;
 
   if (allowed.length > 0) {
     return allowed.some((a) => hostMatchesAllowed(host, a));

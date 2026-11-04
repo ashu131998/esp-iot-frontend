@@ -32,6 +32,16 @@ export interface ResolvedDateRange {
   to: string;
 }
 
+/**
+ * "Now" for a dashboard: the real now, or the end of what this viewer may see when it is earlier
+ * (a factory whose subscription ended: its users see data up to the end, factory.data_limit).
+ */
+export function dashboardNow(maxDate?: string | Date | null): Date {
+  const now = new Date();
+  const max = parseMinDate(maxDate);
+  return max && max.getTime() < now.getTime() ? max : now;
+}
+
 export function parseMinDate(minDate?: string | Date | null): Date | null {
   if (!minDate) return null;
   const d = minDate instanceof Date ? minDate : parseISO(String(minDate));
@@ -75,14 +85,16 @@ export function todayProductionRange(ref: Date = new Date()): ResolvedDateRange 
 
 /**
  * Resolve URL search params into ISO from/to bounds.
- * Default: the current shift (shift start → now).
+ * Default: the current shift (shift start → now). With `maxDate` (the end of what this viewer may
+ * see), "now" is that end and nothing later is asked for.
  */
 export function resolveDateRange(
   params: DateRangeSearchParams,
   minDate?: string | Date | null,
   shifts?: Shift[] | null,
+  maxDate?: string | Date | null,
 ): ResolvedDateRange {
-  const now = new Date();
+  const now = dashboardNow(maxDate);
   const min = parseMinDate(minDate);
 
   if (!params.from && !params.to) {
@@ -100,6 +112,7 @@ export function resolveDateRange(
     // Preserve an explicit time component (e.g. "2025-01-10T17:00"); otherwise snap to end-of-day.
     if (isValid(parsed)) end = params.to.includes('T') ? parsed : endOfDay(parsed);
   }
+  if (maxDate && end > now) end = now;
 
   let start: Date;
   if (params.from) {
@@ -123,8 +136,9 @@ export function resolveDateRange(
 export function presetRange(
   preset: DateRangePreset,
   minDate?: string | Date | null,
+  maxDate?: string | Date | null,
 ): ResolvedDateRange {
-  const now = new Date();
+  const now = dashboardNow(maxDate);
   const end = now.toISOString();
   const min = parseMinDate(minDate);
 

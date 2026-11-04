@@ -3,6 +3,9 @@
 import dynamic from 'next/dynamic';
 import type { ApexOptions } from 'apexcharts';
 
+import { formatCompact, formatUpTo } from '@/lib/format';
+import type { Locale } from '@/lib/i18n/locale';
+
 // ApexCharts references `window` at import time, so it must never run during SSR.
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
@@ -18,7 +21,7 @@ export function ApexChart({
   height = 320,
   width = '100%',
 }: {
-  type: 'bar' | 'line' | 'area';
+  type: 'bar' | 'line' | 'area' | 'donut';
   series: ApexOptions['series'];
   options: ApexOptions;
   height?: number;
@@ -39,10 +42,11 @@ export const baseChartOptions: ApexOptions = {
     zoom: { enabled: false },
     animations: { enabled: true, speed: 300 },
     parentHeightOffset: 0,
+    foreColor: '#64748b',
   },
   grid: {
-    borderColor: '#e2e8f0',
-    strokeDashArray: 3,
+    borderColor: '#f1f5f9',
+    strokeDashArray: 4,
     padding: { left: 8, right: 8, top: 0, bottom: 0 },
   },
   dataLabels: { enabled: false },
@@ -50,19 +54,17 @@ export const baseChartOptions: ApexOptions = {
     show: true,
     position: 'bottom',
     fontSize: '12px',
-    markers: { size: 6 },
+    markers: { size: 5, shape: 'circle' },
     itemMargin: { horizontal: 8, vertical: 4 },
   },
   tooltip: { theme: 'light', style: { fontSize: '12px' } },
 };
 
-/** Compact axis tick formatter (mirrors the old recharts formatChartAxisTick). */
-export function formatAxisTick(value: number): string {
+/** Compact axis tick: 1200 → "1.2K", 123456 → "1.2L" (Hindi: "1.2 लाख"), 42.25 → "42.3". */
+export function formatAxisTick(value: number, locale: Locale = 'en'): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   if (n === 0) return '0';
-  if (Math.abs(n) >= 1000) {
-    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
-  }
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  if (Math.abs(n) >= 1000) return formatCompact(n, locale);
+  return formatUpTo(n, 1, locale);
 }

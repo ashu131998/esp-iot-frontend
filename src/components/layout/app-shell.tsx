@@ -9,23 +9,23 @@ export { PageContent, PageHeader };
 export function AppShellFallback() {
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="hidden h-screen w-64 shrink-0 bg-sidebar lg:block">
-        <div className="border-b border-white/10 px-5 py-5">
+      <aside className="sidebar-surface hidden h-screen w-64 shrink-0 border-r border-white/[0.06] lg:block">
+        <div className="px-5 pb-3 pt-5">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-lg bg-white/10" />
+            <Skeleton className="h-9 w-9 rounded-lg bg-white/[0.08]" />
             <div className="space-y-1.5">
-              <Skeleton className="h-3.5 w-16 bg-white/10" />
-              <Skeleton className="h-3 w-24 bg-white/10" />
+              <Skeleton className="h-3.5 w-16 bg-white/[0.08]" />
+              <Skeleton className="h-3 w-24 bg-white/[0.08]" />
             </div>
           </div>
         </div>
         <div className="space-y-2 px-3 py-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full rounded-lg bg-white/10" />
+            <Skeleton key={i} className="h-9 w-full rounded-lg bg-white/[0.08]" />
           ))}
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
         <PlatformPageSkeleton />
       </main>
     </div>
@@ -44,7 +44,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar factories={factories} />
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">{children}</main>
     </div>
   );
 }

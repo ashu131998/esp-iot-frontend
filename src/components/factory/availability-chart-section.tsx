@@ -8,6 +8,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -25,9 +26,10 @@ export function AvailabilityChartSection({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
+  const { t } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
@@ -50,12 +52,12 @@ export function AvailabilityChartSection({
 
   return (
     <Card>
-      <CardHeader title="Uptime vs Downtime" description="Per machine" />
+      <CardHeader title={t('Uptime vs Downtime')} description={t('Per machine')} />
       <StackedBarChart
         data={chartData}
         keys={[
-          { key: 'uptime', color: '#10b981', label: 'Uptime (h)' },
-          { key: 'downtime', color: '#ef4444', label: 'Downtime (h)' },
+          { key: 'uptime', color: '#10b981', label: t('Uptime (h)') },
+          { key: 'downtime', color: '#ef4444', label: t('Downtime (h)') },
         ]}
       />
     </Card>

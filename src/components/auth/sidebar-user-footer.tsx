@@ -2,8 +2,10 @@
 
 import { LogOut } from 'lucide-react';
 
+import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
 import type { AuthUser } from '@/lib/auth-types';
+import { useT } from '@/lib/i18n/context';
 import { isStaffRole } from '@/lib/internal-auth';
 
 function loginPathFor(user: AuthUser | null, factoryId?: string): string {
@@ -31,6 +33,7 @@ export function SignOutButton({
   className?: string;
 }) {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const signOut = useSignOut(factoryId);
 
   if (loading || !user) return null;
@@ -45,28 +48,41 @@ export function SignOutButton({
       }
     >
       <LogOut className="h-4 w-4" />
-      Sign out
+      {t('Sign out')}
     </button>
   );
 }
 
-export function SidebarUserFooter({ factoryId }: { factoryId?: string }) {
+export function SidebarUserFooter({ factoryId, children }: { factoryId?: string; children?: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const { t } = useT();
   const signOut = useSignOut(factoryId);
 
   if (loading || !user) return null;
+  const initial = (user.username || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div className="border-t border-white/10 px-5 py-4">
-      <p className="mb-2 truncate text-xs text-slate-400">Signed in as {user.username}</p>
-      <button
-        type="button"
-        onClick={signOut}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
-      >
-        <LogOut className="h-4 w-4" />
-        Sign out
-      </button>
+    <div className="space-y-3 border-t border-white/[0.06] p-3">
+      {children}
+      <LanguageToggle tone="dark" fill />
+      <div className="flex items-center gap-3 rounded-xl px-1 py-1">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground ring-2 ring-white/10">
+          {initial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-slate-100">{user.username}</p>
+          <p className="truncate text-xs text-slate-500">{t('Signed in')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={signOut}
+          aria-label={t('Sign out')}
+          title={t('Sign out')}
+          className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-white"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -11,69 +11,35 @@ import {
   parseISO,
   startOfDay,
   startOfMonth,
-  subDays,
-  subHours,
-  subMonths,
 } from 'date-fns';
-import { currentShiftWindow, previousShiftWindow } from '@/lib/shifts';
+import { previousShiftWindow } from '@/lib/shifts';
 import { Calendar, ChevronDown, Clock, Loader2, Search, X } from 'lucide-react';
 
 import { MonthCalendar } from '@/components/ui/date-range-calendar';
 import { RefreshCountdown } from '@/components/uptime/refresh-countdown';
 import { useIsNavigating, useNavigate } from '@/lib/navigation-context';
+import { dashboardNow, DATE_PARAM_FROM, DATE_PARAM_TO, isLiveRange, resolveDateRange } from '@/lib/date-range';
 import {
-  DATE_PARAM_FROM,
-  DATE_PARAM_TO,
-  isLiveRange,
-  resolveDateRange,
-} from '@/lib/date-range';
+  CURRENT_SHIFT,
+  LAST_SHIFT,
+  aggregatesOnly,
+  buildPresets,
+  phonePresets,
+  presetSelection,
+  selectionRange,
+  type Preset,
+  type Selection,
+} from '@/lib/date-presets';
+import { formatFullDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { useRefreshInfo } from '@/lib/refresh-context';
+import { useWideScreen } from '@/lib/use-wide-screen';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 
 // ── Presets ──────────────────────────────────────────────────────────────────
-
-const CURRENT_SHIFT = 'current-shift';
-const LAST_SHIFT = 'last-shift';
-
-interface Preset {
-  id: string;
-  label: string;
-  hint?: string;
-  getDates: () => { from: Date; to: Date };
-}
-
-/** "Night Shift" → "Night"; custom names without the suffix pass through. */
-function shortShiftName(shift: Shift): string {
-  return shift.name.replace(/\s*shift$/i, '') || shift.name;
-}
-
-function buildPresets(shifts: Shift[] | undefined): Preset[] {
-  const now = new Date();
-  const cur = currentShiftWindow(shifts, now);
-  const prev = previousShiftWindow(shifts, now);
-  return [
-    {
-      id: CURRENT_SHIFT,
-      label: 'Current Shift',
-      hint: `${shortShiftName(cur.shift)} · since ${format(cur.from, 'HH:mm')}`,
-      getDates: () => ({ from: cur.from, to: new Date() }),
-    },
-    {
-      id: LAST_SHIFT,
-      label: 'Last Shift',
-      hint: `${shortShiftName(prev.shift)} · ${format(prev.from, 'HH:mm')}–${format(prev.to, 'HH:mm')}`,
-      getDates: () => ({ from: prev.from, to: prev.to }),
-    },
-    { id: '24h', label: 'Last 24 Hours', getDates: () => { const n = new Date(); return { from: subHours(n, 24), to: n }; } },
-    { id: 'today', label: 'Today',         getDates: () => { const n = new Date(); return { from: startOfDay(n), to: n }; } },
-    { id: '3d',  label: 'Last 3 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 3)), to: n }; } },
-    { id: '7d',  label: 'Last 7 Days',   getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 7)), to: n }; } },
-    { id: '10d', label: 'Last 10 Days',  getDates: () => { const n = new Date(); return { from: startOfDay(subDays(n, 10)), to: n }; } },
-    { id: '3m',  label: 'Last 3 Months', getDates: () => { const n = new Date(); return { from: startOfDay(subMonths(n, 3)), to: n }; } },
-  ];
-}
 
 /** Matches the URL range to a shift preset so reopening the panel highlights it. */
 function detectShiftPreset(
@@ -102,6 +68,7 @@ export function DateRangePicker({
   machines,
   lines,
   shifts,
+  maxDate = null,
   hideDateRange = false,
 }: {
   minDate?: string | null;
@@ -113,12 +80,16 @@ export function DateRangePicker({
   machines?: Machine[];
   lines?: ProductionLine[];
   shifts?: Shift[];
+  /** The end of what this viewer may see (an ended subscription): nothing later is offered. */
+  maxDate?: string | null;
   hideDateRange?: boolean;
 }) {
   const pathname   = usePathname();
   const navigate   = useNavigate();
   const isNavigating = useIsNavigating();
   const refreshInfo = useRefreshInfo();
+  const wide = useWideScreen();
+  const { t, locale } = useT();
 
   // Line / machine selector state
   const [lineOpen,      setLineOpen]      = useState(false);
@@ -132,8 +103,8 @@ export function DateRangePicker({
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [selecting,    setSelecting]    = useState<'start' | 'end'>('start');
   const [hoverDate,    setHoverDate]    = useState<Date | null>(null);
-  const [fromMonth,    setFromMonth]    = useState<Date>(startOfMonth(new Date()));
-  const [toMonth,      setToMonth]      = useState<Date>(startOfMonth(addMonths(new Date(), 1)));
+  const [fromMonth,    setFromMonth]    = useState<Date>(() => startOfMonth(dashboardNow(maxDate)));
+  const [toMonth,      setToMonth]      = useState<Date>(() => startOfMonth(addMonths(dashboardNow(maxDate), 1)));
 
   // Time-of-day state
   const [draftFromTime, setDraftFromTime] = useState('00:00');
@@ -141,6 +112,12 @@ export function DateRangePicker({
 
   const panelRef   = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const maxDateObj = useMemo(() => {
+    if (!maxDate) return null;
+    const d = parseISO(maxDate);
+    return isNaN(d.getTime()) ? null : d;
+  }, [maxDate]);
 
   const minDateObj = useMemo(() => {
     if (!minDate) return null;
@@ -151,20 +128,20 @@ export function DateRangePicker({
   const liveNow = !to ? (refreshInfo?.lastUpdatedAt ?? 0) : 0;
 
   const current = useMemo(
-    () => resolveDateRange({ from, to }, minDate, shifts),
+    () => resolveDateRange({ from, to }, minDate, shifts, maxDate),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [from, to, minDate, shifts, liveNow],
+    [from, to, minDate, shifts, maxDate, liveNow],
   );
 
   const presets = useMemo(
-    () => buildPresets(shifts),
+    () => buildPresets(shifts, maxDate ? () => dashboardNow(maxDate) : undefined, t),
     // Rebuilt on open so shift labels reflect the time the panel was opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shifts, open],
+    [shifts, open, t, maxDate],
   );
 
   const lineMap = useMemo(
-    () => Object.fromEntries((lines ?? []).map(l => [l.line_id, l.name])),
+    () => Object.fromEntries((lines ?? []).map(l => [l.line_id, lineLabel(l)])),
     [lines],
   );
 
@@ -335,36 +312,31 @@ export function DateRangePicker({
   // Reset to the app default: the current shift.
   const handleClear = () => handlePreset(presets[0]);
 
-  const timeCutoff  = startOfDay(subDays(new Date(), 3));
-  const timeDisabled = !!draftFrom && draftFrom < timeCutoff;
+  const timeDisabled = !!draftFrom && aggregatesOnly(draftFrom);
 
-  const handleApply = () => {
-    if (activePreset === CURRENT_SHIFT) {
+  // The panel's choice and a phone's one-tap preset go out the same way (lib/date-presets.ts).
+  const applySelection = (selection: Selection) => {
+    if (selection === 'live') {
       // No date params = live current shift, which rolls over at shift change.
       const params = new URLSearchParams();
       appendFilterParams(params);
       push(params);
-    } else if (draftFrom && draftTo) {
-      if (timeDisabled) {
-        applyRange(startOfDay(draftFrom), endOfDay(draftTo), true);
-      } else {
-        const fromDate = new Date(draftFrom);
-        const toDate   = new Date(draftTo);
-        const [fh, fm] = draftFromTime.split(':').map(Number);
-        const [th, tm] = draftToTime.split(':').map(Number);
-        fromDate.setHours(fh, fm, 0, 0);
-        toDate.setHours(th, tm, 59, 999);
-        applyRange(fromDate, toDate);
-      }
+    } else if (selection) {
+      applyRange(selection.from, selection.to, selection.dateOnly);
     }
     setOpen(false);
   };
+
+  const handleApply = () =>
+    applySelection(selectionRange(activePreset, draftFrom, draftTo, draftFromTime, draftToTime));
+
+  const applyPresetNow = (preset: Preset) => applySelection(presetSelection(preset, dashboardNow(maxDate)));
 
   const rangeStart = draftFrom && !draftTo && hoverDate && isBefore(hoverDate, draftFrom)
     ? hoverDate : draftFrom;
   const rangeEnd   = draftTo ?? (draftFrom && hoverDate && !isBefore(hoverDate, draftFrom) ? hoverDate : null);
 
-  const triggerLabel = `${format(parseISO(current.from), 'd MMM yyyy, HH:mm')} → ${format(parseISO(current.to), 'd MMM yyyy, HH:mm')}`;
+  const triggerLabel = `${formatFullDateTime(current.from, locale)} → ${formatFullDateTime(current.to, locale)}`;
   const showMachines = machines && machines.length > 0;
   const showLines = showMachines && lines && lines.length > 0;
 
@@ -400,14 +372,14 @@ export function DateRangePicker({
                 lineId && 'border-primary/50 bg-primary/5',
               )}
             >
-              <span className="font-medium text-muted">Line</span>
+              <span className="font-medium text-muted">{t('Line')}</span>
               <span className={cn('max-w-[120px] truncate font-medium', lineId ? 'text-primary' : 'text-foreground')}>
-                {selectedLine ? selectedLine.name : 'All'}
+                {selectedLine ? selectedLine.name : t('All')}
               </span>
               {lineId ? (
                 <span
                   role="button"
-                  aria-label="Clear line filter"
+                  aria-label={t('Clear line filter')}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
                   onClick={(e) => { e.stopPropagation(); applyLine(undefined); }}
                 >
@@ -426,7 +398,7 @@ export function DateRangePicker({
                     onClick={() => applyLine(undefined)}
                     className={cn('w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent', !lineId && 'bg-accent font-medium')}
                   >
-                    All lines
+                    {t('All lines')}
                   </button>
                   {(lines ?? []).map((line) => (
                     <button
@@ -462,14 +434,14 @@ export function DateRangePicker({
                 machineId && 'border-primary/50 bg-primary/5',
               )}
             >
-              <span className="font-medium text-muted">Machine</span>
+              <span className="font-medium text-muted">{t('Machine')}</span>
               <span className={cn('max-w-[120px] truncate font-medium', machineId ? 'text-primary' : 'text-foreground')}>
-                {selectedMachine ? selectedMachine.name : 'All'}
+                {selectedMachine ? selectedMachine.name : t('All')}
               </span>
               {machineId ? (
                 <span
                   role="button"
-                  aria-label="Clear machine filter"
+                  aria-label={t('Clear machine filter')}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
                   onClick={e => { e.stopPropagation(); applyMachine(undefined); }}
                 >
@@ -490,7 +462,7 @@ export function DateRangePicker({
                       <input
                         autoFocus
                         type="text"
-                        placeholder="Search machines…"
+                        placeholder={t('Search machines…')}
                         className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
                         value={machineSearch}
                         onChange={e => setMachineSearch(e.target.value)}
@@ -503,7 +475,7 @@ export function DateRangePicker({
                       onClick={() => applyMachine(undefined)}
                       className={cn('w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent', !machineId && 'bg-accent font-medium')}
                     >
-                      All Machines
+                      {t('All Machines')}
                     </button>
                     {Object.entries(groupedMachines).map(([lineId, lineMs]) => (
                       <div key={lineId}>
@@ -523,7 +495,7 @@ export function DateRangePicker({
                       </div>
                     ))}
                     {filteredMachines.length === 0 && (
-                      <p className="px-3 py-4 text-center text-xs text-muted">No machines found</p>
+                      <p className="px-3 py-4 text-center text-xs text-muted">{t('No machines found')}</p>
                     )}
                   </div>
                 </div>
@@ -537,7 +509,7 @@ export function DateRangePicker({
       {isNavigating && (
         <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-primary">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Updating…
+          {t('Updating…')}
         </span>
       )}
 
@@ -549,8 +521,32 @@ export function DateRangePicker({
         </div>
       )}
 
+      {/* ── Phone panel: the periods only, one tap each ────────────────────── */}
+      {open && !hideDateRange && !wide && (
+        <div ref={panelRef} className="absolute inset-x-0 top-full z-50 mt-2 rounded-xl border bg-white p-3 shadow-2xl">
+          <div className="grid grid-cols-2 gap-2">
+            {phonePresets(presets).map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPresetNow(preset)}
+                className={cn(
+                  'rounded-lg border px-3 py-2.5 text-left text-sm',
+                  activePreset === preset.id
+                    ? 'border-primary bg-primary/5 font-semibold text-primary'
+                    : 'text-gray-700 active:bg-gray-50',
+                )}
+              >
+                {t(preset.label)}
+                {preset.hint && <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Calendar panel ───────────────────────────────────────────────── */}
-      {open && !hideDateRange && (
+      {open && !hideDateRange && wide && (
         <div
           ref={panelRef}
           className="absolute left-0 top-full z-50 mt-2 rounded-xl border bg-white shadow-2xl"
@@ -562,14 +558,14 @@ export function DateRangePicker({
               onClick={handleClear}
               className="ml-auto text-xs text-blue-500 underline-offset-2 hover:underline"
             >
-              Clear filters
+              {t('Clear filters')}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-md border px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
@@ -577,7 +573,7 @@ export function DateRangePicker({
               disabled={!draftFrom || !draftTo}
               className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
-              Apply
+              {t('Apply')}
             </button>
           </div>
 
@@ -596,7 +592,7 @@ export function DateRangePicker({
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                   )}
                 >
-                  {preset.label}
+                  {t(preset.label)}
                   {preset.hint && (
                     <span className="block text-[11px] font-normal text-gray-400">{preset.hint}</span>
                   )}
@@ -607,7 +603,7 @@ export function DateRangePicker({
             <div className="flex flex-col px-6">
               <div className="flex gap-6 py-4">
                 <MonthCalendar
-                  label="From"
+                  label={t('From')}
                   month={fromMonth}
                   onMonthChange={setFromMonth}
                   rangeStart={rangeStart}
@@ -616,10 +612,11 @@ export function DateRangePicker({
                   onDayClick={handleDayClick}
                   onDayHover={setHoverDate}
                   minDate={minDateObj}
+                  maxDate={maxDateObj}
                 />
                 <div className="w-px bg-gray-100" />
                 <MonthCalendar
-                  label="To"
+                  label={t('To')}
                   month={toMonth}
                   onMonthChange={setToMonth}
                   rangeStart={rangeStart}
@@ -628,13 +625,14 @@ export function DateRangePicker({
                   onDayClick={handleDayClick}
                   onDayHover={setHoverDate}
                   minDate={minDateObj}
+                  maxDate={maxDateObj}
                 />
               </div>
 
               <div className="flex gap-6 border-t py-3">
                 <div className="flex w-[260px] items-center gap-2 text-xs text-gray-600">
                   <Clock className={cn('h-3.5 w-3.5 shrink-0', timeDisabled ? 'text-gray-300' : 'text-gray-400')} />
-                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>From time</span>
+                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>{t('From time')}</span>
                   <input
                     type="time"
                     value={draftFromTime}
@@ -649,7 +647,7 @@ export function DateRangePicker({
                 <div className="w-px bg-gray-100" />
                 <div className="flex w-[260px] items-center gap-2 text-xs text-gray-600">
                   <Clock className={cn('h-3.5 w-3.5 shrink-0', timeDisabled ? 'text-gray-300' : 'text-gray-400')} />
-                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>To time</span>
+                  <span className={cn('font-medium', timeDisabled ? 'text-gray-300' : 'text-gray-500')}>{t('To time')}</span>
                   <input
                     type="time"
                     value={draftToTime}
@@ -665,7 +663,7 @@ export function DateRangePicker({
 
               {timeDisabled && (
                 <p className="border-t py-2 text-[11px] text-amber-600">
-                  Time-of-day filtering is unavailable for dates older than 3 days — only daily aggregates are stored for that period.
+                  {t('Time-of-day filtering is unavailable for dates older than 3 days — only daily aggregates are stored for that period.')}
                 </p>
               )}
             </div>

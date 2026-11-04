@@ -18,14 +18,15 @@ export function machineDailyTrendQuery(
   from: string | undefined,
   to: string | undefined,
   shifts?: Shift[],
+  maxDate?: string | null,
 ) {
   return {
-    queryKey: ['machine-daily-trend', factoryId, machineId, from ?? null, to ?? null] as const,
+    queryKey: ['machine-daily-trend', factoryId, machineId, from ?? null, to ?? null, maxDate ?? null] as const,
     queryFn: (): Promise<MachineDailyTrendResponse> => {
       // Use the same absolute window the stat cards use, so the trend and the
       // "Availability (today)" card agree. The backend buckets these instants
       // into IST calendar days.
-      const range = resolveDateRange({ from, to }, null, shifts);
+      const range = resolveDateRange({ from, to }, null, shifts, maxDate);
       return api.machineDailyTrend(factoryId, machineId, { from: range.from, to: range.to });
     },
     staleTime: 5 * 60 * 1000,

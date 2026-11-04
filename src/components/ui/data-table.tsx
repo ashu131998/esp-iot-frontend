@@ -3,24 +3,39 @@
 import { useState } from 'react';
 import {
   type ColumnDef,
+  type RowData,
   type SortingState,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 
-import { Table, THead, TBody, TR, TH, TD } from './table';
-import { Button } from './button';
+import { LoadMore, ScrollTable, useShowMore } from './load-more';
+import { PHONE_HIDDEN, Table, THead, TBody, TR, TH, TD } from './table';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- must match TanStack's generic signature
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Left out on phones held upright (below sm): only what matters fits there. */
+    phoneHidden?: boolean;
+  }
+}
 
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
   data: T[];
-  /** Enable client-side pagination at this page size. Omit to render all rows. */
-  pageSize?: number;
+  /**
+   * Infinite scroll: this many rows first, and as many more each time the table's end scrolls into
+   * view (lib/infinite.ts). Omit to render all rows.
+   */
+  scrollStep?: number;
+  /** What the rows are of (dates, filters): when it changes the table starts again from its first rows. */
+  resetKey?: string;
+  /** Shown instead of the table when there are no rows; already translated. Default: "No data available". */
   emptyMessage?: string;
   initialSorting?: SortingState;
   className?: string;
@@ -31,12 +46,14 @@ interface DataTableProps<T> {
 export function DataTable<T>({
   columns,
   data,
-  pageSize,
-  emptyMessage = 'No data available',
+  scrollStep,
+  resetKey,
+  emptyMessage,
   initialSorting = [],
   className,
   rowClassName,
 }: DataTableProps<T>) {
+  const { t } = useT();
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
   const table = useReactTable({
@@ -46,27 +63,17 @@ export function DataTable<T>({
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    ...(pageSize
-      ? {
-          getPaginationRowModel: getPaginationRowModel(),
-          initialState: { pagination: { pageSize } },
-        }
-      : {}),
   });
+  const rows = table.getRowModel().rows;
+  const { shown, more, hasMore } = useShowMore(rows.length, resetKey ?? String(data.length), scrollStep ?? Math.max(rows.length, 1));
 
   if (data.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted">{emptyMessage}</p>;
+    return <p className="py-8 text-center text-sm text-muted">{emptyMessage ?? t('No data available')}</p>;
   }
-
-  const paginated = pageSize != null;
-  const pageIndex = table.getState().pagination.pageIndex;
-  const total = data.length;
-  const start = paginated ? pageIndex * pageSize + 1 : 1;
-  const end = paginated ? Math.min((pageIndex + 1) * pageSize, total) : total;
 
   return (
     <>
-      <Table className={className}>
+      <TableFor scroll={scrollStep != null} className={className} rowCount={shown} resetKey={resetKey ?? String(data.length)}>
         <THead>
           {table.getHeaderGroups().map((group) => (
             <TR key={group.id}>
@@ -74,7 +81,13 @@ export function DataTable<T>({
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
                 return (
-                  <TH key={header.id} className={cn(canSort && 'cursor-pointer select-none')}>
+                  <TH
+                    key={header.id}
+                    className={cn(
+                      canSort && 'cursor-pointer select-none',
+                      header.column.columnDef.meta?.phoneHidden && PHONE_HIDDEN,
+                    )}
+                  >
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
@@ -100,48 +113,28 @@ export function DataTable<T>({
           ))}
         </THead>
         <TBody>
-          {table.getRowModel().rows.map((row) => (
+          {rows.slice(0, shown).map((row) => (
             <TR key={row.id} className={rowClassName?.(row.original)}>
               {row.getVisibleCells().map((cell) => (
-                <TD key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TD>
+                <TD key={cell.id} className={cn(cell.column.columnDef.meta?.phoneHidden && PHONE_HIDDEN)}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TD>
               ))}
             </TR>
           ))}
         </TBody>
-      </Table>
+      </TableFor>
 
-      {paginated && total > pageSize && (
-        <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted">
-          <span>
-            Showing {start}–{end} of {total}
-          </span>
-          <div className="flex items-center gap-2">
-            <span>
-              Page {pageIndex + 1} of {table.getPageCount()}
-            </span>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      {scrollStep != null && <LoadMore shown={shown} total={rows.length} hasMore={hasMore} onMore={more} />}
     </>
   );
+}
+
+/** A table that grows as it scrolls holds its column widths (ScrollTable); one shown whole does not need to. */
+function TableFor({
+  scroll, className, rowCount, resetKey, children,
+}: { scroll: boolean; className?: string; rowCount: number; resetKey: string; children: React.ReactNode }) {
+  return scroll
+    ? <ScrollTable className={className} rowCount={rowCount} resetKey={resetKey}>{children}</ScrollTable>
+    : <Table className={className}>{children}</Table>;
 }

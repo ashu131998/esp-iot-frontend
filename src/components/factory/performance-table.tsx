@@ -1,14 +1,15 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { TBody, TD, THead, TH, TR } from '@/components/ui/table';
+import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
 import { api } from '@/lib/api';
-import { resolvePagination } from '@/lib/pagination';
+import { useLineName } from '@/lib/factory-refs-context';
+import { formatUpTo } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -17,8 +18,12 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { formatPercent, formatUnits } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { runTone } from '@/lib/plain-words';
 
 export function PerformanceTable({ factoryId }: { factoryId: string }) {
+  const { t, locale } = useT();
+  const lineName = useLineName();
   const { range, live, machineId, lineId } = useFactoryDateRange();
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
@@ -33,26 +38,33 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
 
   const allMachines = filterMachinesByScope(data.machines, { machineId, lineId });
 
-  const searchParams = useSearchParams();
-  const { page, limit } = resolvePagination({
-    page: searchParams.get('page') ?? undefined,
-    limit: searchParams.get('limit') ?? undefined,
-  });
   const total = allMachines.length;
-  const offset = (page - 1) * limit;
-  const pageRows = allMachines.slice(offset, offset + limit);
+  // Infinite scroll: the first rows, then more as the table's end comes into view (all are loaded).
+  const listKey = [live ? 'live' : range.from, live ? 'live' : range.to, ...scopeKey].join('|');
+  const { shown, more, hasMore } = useShowMore(total, listKey);
+  const pageRows = allMachines.slice(0, shown);
+  const mixedWord = t('(mixed units)');
 
   return (
     <Card>
       <CardHeader
-        title="Machine Performance"
+        title={t('Machine Performance')}
         action={
           <ExportCsvButton
             filename="machine-performance"
-            headers={['Machine', 'Line', 'Performance (A × T)', 'Availability (A)', 'Throughput (T)', 'Units Produced', 'Target Units', 'Cycle Target (s)']}
+            headers={[
+              t('Machine'),
+              t('Line'),
+              t('Performance (A × T)'),
+              t('Availability (A)'),
+              t('Throughput (T)'),
+              t('Units Produced'),
+              t('Target Units'),
+              t('Cycle Target (s)'),
+            ]}
             rows={allMachines.map((m) => [
               m.machine_name,
-              m.line_id,
+              lineName(m.line_id),
               m.performance_percent,
               m.availability_percent,
               m.throughput_percent,
@@ -63,35 +75,54 @@ export function PerformanceTable({ factoryId }: { factoryId: string }) {
           />
         }
       />
-      <Table>
+      <PhoneRows>
+        {pageRows.map((m) => (
+          <ListRow
+            key={m.machine_id}
+            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            tone={runTone(m.performance_percent)}
+            title={m.machine_name}
+            tag={lineName(m.line_id)}
+            detail={m.availability_percent == null && m.throughput_percent == null
+              ? t('No data')
+              : t('Running {availability} · pace {throughput}', {
+                availability: formatPercent(m.availability_percent, locale),
+                throughput: formatPercent(m.throughput_percent, locale),
+              })}
+            value={formatPercent(m.performance_percent, locale)}
+            valueHint={m.performance_percent != null ? t('of target') : undefined}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Performance (A × T)</TH>
-            <TH>Availability (A)</TH>
-            <TH>Throughput (T)</TH>
-            <TH>Units / Target</TH>
-            <TH>Cycle Target</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Performance (A × T)')}</TH>
+            <TH>{t('Availability (A)')}</TH>
+            <TH>{t('Throughput (T)')}</TH>
+            <TH>{t('Units / Target')}</TH>
+            <TH>{t('Cycle Target')}</TH>
           </TR>
         </THead>
         <TBody>
           {pageRows.map((m) => (
             <TR key={m.machine_id}>
               <TD className="font-medium">{m.machine_name}</TD>
-              <TD>{m.line_id}</TD>
-              <TD>{formatPercent(m.performance_percent)}</TD>
-              <TD>{formatPercent(m.availability_percent)}</TD>
-              <TD>{formatPercent(m.throughput_percent)}</TD>
+              <TD>{lineName(m.line_id)}</TD>
+              <TD>{formatPercent(m.performance_percent, locale)}</TD>
+              <TD>{formatPercent(m.availability_percent, locale)}</TD>
+              <TD>{formatPercent(m.throughput_percent, locale)}</TD>
               <TD>
-                {formatUnits(m.units_produced, m.unit_label)} / {m.target_units > 0 ? formatUnits(m.target_units, m.unit_label) : '—'}
+                {formatUnits(m.units_produced, m.unit_label, locale, mixedWord)} / {m.target_units > 0 ? formatUnits(m.target_units, m.unit_label, locale, mixedWord) : '—'}
               </TD>
-              <TD>{m.target_cycle_time_sec ? `${m.target_cycle_time_sec}s` : '—'}</TD>
+              <TD>{m.target_cycle_time_sec ? `${formatUpTo(m.target_cycle_time_sec, 2, locale)}s` : '—'}</TD>
             </TR>
           ))}
         </TBody>
-      </Table>
-      <TablePagination total={total} page={page} limit={limit} />
+      </ScrollTable>
+      <LoadMore shown={shown} total={total} hasMore={hasMore} onMore={more} />
     </Card>
   );
 }

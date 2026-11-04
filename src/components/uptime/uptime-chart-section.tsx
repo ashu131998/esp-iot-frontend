@@ -6,6 +6,7 @@ import { StackedBarChart } from '@/components/charts/metric-chart';
 import { UPTIME_REFRESH_MS } from '@/components/uptime/refresh-countdown';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   filterMachinesByScope,
@@ -15,6 +16,7 @@ import { expandUptimeMachines } from '@/lib/uptime-streams';
 
 export function UptimeChartSection({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
+  const { t } = useT();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
@@ -36,12 +38,12 @@ export function UptimeChartSection({ factoryId }: { factoryId: string }) {
 
   return (
     <Card>
-      <CardHeader title="Uptime vs Downtime" description="Running/stopped hours per machine" />
+      <CardHeader title={t('Uptime vs Downtime')} description={t('Running/stopped hours per machine')} />
       <StackedBarChart
         data={summaryData}
         keys={[
-          { key: 'up', color: '#10b981', label: 'Running (hours)' },
-          { key: 'down', color: '#ef4444', label: 'Stopped (hours)' },
+          { key: 'up', color: '#10b981', label: t('Running (hours)') },
+          { key: 'down', color: '#ef4444', label: t('Stopped (hours)') },
         ]}
       />
     </Card>

@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import type { Machine, MachineConfiguration, ProductionLine } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 
 export function ConfigurationPanel({
   factoryId,
@@ -44,7 +45,7 @@ export function ConfigurationPanel({
   function targetLabel(config: MachineConfiguration) {
     if (config.line_id && !config.machine_id) {
       const line = lines.find((l) => l.line_id === config.line_id);
-      return line ? `${line.name} (line)` : `${config.line_id} (line)`;
+      return `${lineLabel(line ?? { line_id: config.line_id })} (line)`;
     }
 
     const machine = machines.find((m) => m.machine_id === config.machine_id);

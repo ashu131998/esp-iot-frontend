@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
+import { useWideScreen } from '@/lib/use-wide-screen';
 
 const ProductionChartSection = dynamic(
   () => import('@/components/factory/production-chart-section').then((m) => m.ProductionChartSection),
@@ -32,10 +33,11 @@ export function ProductionDashboard({
 }) {
   // Parts our staff switched off for this factory are neither shown nor fetched.
   const shown = useShown();
+  const wide = useWideScreen();
   return (
     <QuerySuspense fallback={<SingleStatChartTableSkeleton tableCols={5} />}>
       {shown('production.cards') && <ProductionCards factoryId={factoryId} from={from} to={to} />}
-      {shown('production.chart') && <ProductionChartSection factoryId={factoryId} from={from} to={to} />}
+      {wide && shown('production.chart') && <ProductionChartSection factoryId={factoryId} from={from} to={to} />}
       {shown('production.table') && <ProductionTable factoryId={factoryId} from={from} to={to} />}
     </QuerySuspense>
   );

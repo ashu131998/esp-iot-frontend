@@ -30,7 +30,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
   const emptyMachineForm = {
     line_id: '',
     name: '',
-    type: 'loom',
+    type: '',
     rotations_per_unit: '1',
     unit_label: '',
   };
@@ -209,7 +209,7 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
               {machines.map((m) => (
                 <TR key={m.machine_id}>
                   <TD className="font-medium">{m.name}</TD>
-                  <TD className="font-mono text-xs">{m.line_id}</TD>
+                  <TD>{lines.find((l) => l.line_id === m.line_id)?.name || m.line_id}</TD>
                   <TD className="capitalize">{m.type}</TD>
                   <TD className="text-xs">{unitSummary(m)}</TD>
                   <TD>
@@ -266,16 +266,19 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
               onChange={(e) => setLineForm({ ...lineForm, line_id: e.target.value })}
             />
           </Field>
-          <Field label="Display name">
+          <Field label="Label (what the factory sees)">
             <Input
+              required
               value={lineForm.name}
               placeholder="Weaving hall A"
+              maxLength={80}
               onChange={(e) => setLineForm({ ...lineForm, name: e.target.value })}
             />
+            <p className="text-xs text-muted">The factory&apos;s people see this name on every page; the ID is only for us.</p>
           </Field>
           {message && lineModal && <p className="text-sm text-red-600">{message}</p>}
           <div className="flex gap-2">
-            <Button type="submit" disabled={createLine.isPending}>
+            <Button type="submit" disabled={createLine.isPending || !lineForm.line_id.trim() || !lineForm.name.trim()}>
               {createLine.isPending ? 'Creating…' : 'Create line'}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setLineModal(false)}>
@@ -312,10 +315,11 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
               ))}
             </Select>
           </Field>
-          <Field label="Name">
+          <Field label="Name (what the factory sees)">
             <Input
               required
               value={machineForm.name}
+              placeholder="Mixer 1"
               onChange={(e) => setMachineForm({ ...machineForm, name: e.target.value })}
             />
           </Field>

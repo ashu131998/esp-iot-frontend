@@ -99,6 +99,37 @@ describe('a factory\'s own address', () => {
   });
 });
 
+describe('app.floorbeat.in is gone: old links go to the factory\'s own address', () => {
+  const APP = 'https://app.floorbeat.in';
+  beforeEach(() => vi.stubEnv('STAFF_URL', 'https://ops.floorbeat.in/internal'));
+
+  it('a factory\'s pages and sign-in, any case, path and query kept', async () => {
+    expect((await visit(`${APP}/f/shree-mills/login`)).location).toBe('https://shree-mills.floorbeat.in/f/shree-mills/login');
+    expect((await visit(`${APP}/f/shree-mills`)).location).toBe('https://shree-mills.floorbeat.in/f/shree-mills');
+    expect((await visit(`${APP}/factories/Shree-Mills/energy?from=2026-11-01`)).location)
+      .toBe('https://shree-mills.floorbeat.in/factories/Shree-Mills/energy?from=2026-11-01');
+  });
+
+  it('reset links: a factory account\'s to its address, a staff account\'s to the staff console', async () => {
+    expect((await visit(`${APP}/reset-password?token=t1&factory=shree-mills`)).location)
+      .toBe('https://shree-mills.floorbeat.in/reset-password?token=t1&factory=shree-mills');
+    expect((await visit(`${APP}/reset-password?token=t2`)).location).toBe('https://ops.floorbeat.in/reset-password?token=t2');
+  });
+
+  it('anything else, and an ID that cannot be an address, go to the website', async () => {
+    expect((await visit(`${APP}/`)).location).toBe('https://floorbeat.in/');
+    expect((await visit(`${APP}/internal`)).location).toBe('https://floorbeat.in/');
+    expect((await visit(`${APP}/f/mill_01/login`)).location).toBe('https://floorbeat.in/');
+    expect((await visit('https://esp-iot-frontend-app.ashu131998.workers.dev/f/shree-mills/login')).location)
+      .toBe('https://shree-mills.floorbeat.in/f/shree-mills/login');
+  });
+
+  it('stage and dev (no factory addresses) are as before', async () => {
+    vi.stubEnv('FACTORY_HOST_SUFFIX', '');
+    expect(await visit('https://stage-app.floorbeat.in/f/shree-mills/login')).toMatchObject({ status: 200, to: null });
+  });
+});
+
 describe('the staff addresses', () => {
   it('superadmin.floorbeat.in: the super admin only; staff are sent to admin', async () => {
     expect(await visit('https://superadmin.floorbeat.in/internal/boards', { role: 'super_admin' })).toMatchObject({ status: 200, to: null });

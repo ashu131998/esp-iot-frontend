@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
-import { factoryFromHost, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
+import { factoryFromHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
 
@@ -194,6 +194,24 @@ export async function middleware(req: NextRequest) {
     }
     const page = pathname.match(/^\/(?:factories|f)\/([^/]+)/);
     if (page && decodeSegment(page[1]).toLowerCase() !== hostFactory) return redirectTo('/');
+  }
+
+  // The customer Worker on an address that is not a factory's (app.floorbeat.in, gone; workers.dev):
+  // a link to a factory goes to that factory's own address, a staff reset link to the staff console,
+  // anything else to the website. Old emails keep working.
+  const factorySuffix = process.env.FACTORY_HOST_SUFFIX?.trim();
+  if (factorySuffix && !hostFactory && !internalHostAllowed(req)) {
+    const scheme = req.nextUrl.protocol;
+    const rest = `${pathname}${req.nextUrl.search}`;
+    const page = pathname.match(/^\/(?:factories|f)\/([^/]+)/);
+    const linked = page ? decodeSegment(page[1]).toLowerCase() : req.nextUrl.searchParams.get('factory')?.trim().toLowerCase();
+    if ((page || pathname === '/reset-password') && linked && isFactorySubdomain(linked)) {
+      return NextResponse.redirect(`${scheme}//${linked}${factorySuffix.startsWith('.') ? '' : '.'}${factorySuffix}${rest}`);
+    }
+    const staffUrl = process.env.STAFF_URL?.trim();
+    if (pathname === '/reset-password' && staffUrl) return NextResponse.redirect(`${new URL(staffUrl).origin}${rest}`);
+    const marketingUrl = process.env.MARKETING_URL?.trim();
+    if (marketingUrl) return NextResponse.redirect(marketingUrl);
   }
 
   // Public pages of a factory: sign in, sign up and "forgot password" (a signed-in person is sent home).

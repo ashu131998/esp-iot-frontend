@@ -34,13 +34,10 @@
   "env": {
     "app": {
       "name": "esp-iot-frontend-app",
-      "routes": [
-        { "pattern": "app.floorbeat.in", "custom_domain": true },
-        { "pattern": "app.floorbeat.in/*", "zone_name": "floorbeat.in" },
-        // Every factory's own address, <id>.floorbeat.in (with the proxied DNS record "*"). Every
-        // other address has an exact route of its own, which wins (worker-routes.test.ts).
-        { "pattern": "*.floorbeat.in/*", "zone_name": "floorbeat.in" }
-      ],
+      // Every factory's own address, <id>.floorbeat.in (with the proxied DNS record "*"); every other
+      // address has an exact route of its own, which wins (worker-routes.test.ts). app.floorbeat.in
+      // is gone: the "*" record brings it here too, where old links go to the factory's own address.
+      "routes": [{ "pattern": "*.floorbeat.in/*", "zone_name": "floorbeat.in" }],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,admin.floorbeat.in,superadmin.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",

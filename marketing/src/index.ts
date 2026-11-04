@@ -31,10 +31,12 @@ function withPageHeaders(res: Response, env: Env): Response {
   out.headers.set('X-Frame-Options', 'DENY');
   out.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   // form-action also governs where a submitted form may be redirected, and the
-  // factory login form is answered with a redirect to the app host.
+  // factory login form is answered with a redirect to the factory's own address (production) or the app.
+  const suffix = env.FACTORY_HOST_SUFFIX?.trim();
+  const factories = suffix ? ` https://*${suffix.startsWith('.') ? '' : '.'}${suffix}` : '';
   out.headers.set(
     'Content-Security-Policy',
-    `default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${env.APP_ORIGIN} mailto:`,
+    `default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' ${env.APP_ORIGIN}${factories} mailto:`,
   );
   return out;
 }

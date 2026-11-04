@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { alwaysShown, factoryLoginUrl, forwardTarget, lookupFactoryId, readCookie, signedInHome } from './redirect';
+import { alwaysShown, factoryLoginUrl, factoryOrigin, forwardTarget, lookupFactoryId, readCookie, signedInHome } from './redirect';
 
 function respond(status: number, body: unknown): typeof fetch {
   return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
@@ -131,5 +131,29 @@ describe('forwardTarget (addresses that lost their subdomain)', () => {
       expect(forwardTarget(p, '', o)).toBeNull();
     }
     expect(forwardTarget(`/f/${'a'.repeat(65)}`, '', o)).toBeNull();
+  });
+});
+
+describe('production: each factory has its own address (<id>.floorbeat.in)', () => {
+  const prod = { APP_ORIGIN: 'https://app.floorbeat.in', STAFF_ORIGIN: 'https://ops.floorbeat.in', FACTORY_HOST_SUFFIX: '.floorbeat.in' };
+
+  it('a factory\'s origin; an ID that cannot be an address keeps the app', () => {
+    expect(factoryOrigin('factory-01', prod)).toBe('https://factory-01.floorbeat.in');
+    expect(factoryOrigin('Factory-01', prod)).toBe('https://factory-01.floorbeat.in');
+    expect(factoryOrigin('f_2', prod)).toBe('https://app.floorbeat.in');
+    expect(factoryOrigin('factory-01', origins)).toBe('https://app.floorbeat.in');   // stage, dev: as before
+  });
+
+  it('the login form, the signed-in visitor and lost-subdomain links go to the factory\'s address', () => {
+    expect(factoryLoginUrl('factory-01', prod)).toBe('https://factory-01.floorbeat.in/f/factory-01/login');
+    expect(signedInHome('fb_home=/factories/factory-01', prod)).toBe('https://factory-01.floorbeat.in/factories/factory-01');
+    expect(forwardTarget('/f/factory-01/login', '', prod)).toBe('https://factory-01.floorbeat.in/f/factory-01/login');
+    expect(forwardTarget('/factories/factory-01/results', '?month=2026-10', prod)).toBe('https://factory-01.floorbeat.in/factories/factory-01/results?month=2026-10');
+  });
+
+  it('reset links: a factory account\'s to its address, a staff account\'s to the staff console', () => {
+    expect(forwardTarget('/reset-password', '?token=t&factory=factory-01', prod)).toBe('https://factory-01.floorbeat.in/reset-password?token=t&factory=factory-01');
+    expect(forwardTarget('/reset-password', '?token=t', prod)).toBe('https://ops.floorbeat.in/reset-password?token=t');
+    expect(forwardTarget('/reset-password', '?token=t', origins)).toBe('https://app.floorbeat.in/reset-password?token=t');   // stage, dev
   });
 });

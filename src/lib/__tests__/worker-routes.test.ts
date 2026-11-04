@@ -42,7 +42,7 @@ describe('every address on floorbeat.in is safe from the factories\' *.floorbeat
   it('reads both configs (the scan sees the addresses)', () => {
     const hosts = workers().flatMap((w) => w.routes.filter((r) => r.custom_domain).map((r) => r.pattern));
     expect(hosts).toEqual(expect.arrayContaining([
-      'ops.floorbeat.in', 'admin.floorbeat.in', 'superadmin.floorbeat.in', 'app.floorbeat.in',
+      'ops.floorbeat.in', 'admin.floorbeat.in', 'superadmin.floorbeat.in',
       'stage-ops.floorbeat.in', 'stage-app.floorbeat.in', 'dev-ops.floorbeat.in', 'dev-app.floorbeat.in',
       'floorbeat.in', 'www.floorbeat.in', 'stage-www.floorbeat.in', 'dev-www.floorbeat.in',
     ]));
@@ -67,6 +67,15 @@ describe('every address on floorbeat.in is safe from the factories\' *.floorbeat
     }
   });
 
+  it('app.floorbeat.in is gone: no Worker answers on it by name (the factories\' route forwards its old links)', () => {
+    for (const w of workers()) expect(w.routes.map((r) => r.pattern.replace(/\/\*$/, ''))).not.toContain('app.floorbeat.in');
+  });
+
+  it('the customer Worker answers on factories\' addresses', () => {
+    const app = workers().find((w) => w.file === 'app' && w.env === 'app')!;
+    expect(app.routes).toEqual([{ pattern: `*.${ZONE}/*`, zone_name: ZONE }]);
+  });
+
   it('only the customer Worker may take *.floorbeat.in, and nothing wider', () => {
     for (const w of workers()) {
       for (const r of w.routes.filter((x) => x.pattern.includes('*') && !/^[a-z0-9.-]+\/\*$/.test(x.pattern))) {
@@ -89,9 +98,10 @@ describe('the staff console\'s addresses', () => {
     expect(rules.get('admin.floorbeat.in')).toEqual(['internal_admin', 'internal_viewer']);
   });
 
-  it('factories\' own addresses are switched on for the customer Worker only', () => {
+  it('factories\' own addresses are switched on in production only: the customer Worker and the website', () => {
+    const on = (w: { file: string; env: string }) => (w.file === 'app' && w.env === 'app') || (w.file === 'site' && w.env === '(default)');
     for (const w of workers()) {
-      expect(w.vars.FACTORY_HOST_SUFFIX ?? null, `${w.file} ${w.env}`).toBe(w.file === 'app' && w.env === 'app' ? '.floorbeat.in' : null);
+      expect(w.vars.FACTORY_HOST_SUFFIX ?? null, `${w.file} ${w.env}`).toBe(on(w) ? '.floorbeat.in' : null);
     }
   });
 });

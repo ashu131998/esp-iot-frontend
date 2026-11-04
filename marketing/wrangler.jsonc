@@ -11,9 +11,13 @@
     "run_worker_first": true,
     "not_found_handling": "404-page"
   },
+  // www also has an exact route: a route wins over a custom domain, and the customer Worker's
+  // *.floorbeat.in route (factories' own addresses) must never take it. The bare domain is not
+  // under *.floorbeat.in. worker-routes.test.ts (the app's tests) holds the rule.
   "routes": [
     { "pattern": "floorbeat.in", "custom_domain": true },
-    { "pattern": "www.floorbeat.in", "custom_domain": true }
+    { "pattern": "www.floorbeat.in", "custom_domain": true },
+    { "pattern": "www.floorbeat.in/*", "zone_name": "floorbeat.in" }
   ],
   "vars": {
     "APP_ORIGIN": "https://app.floorbeat.in",
@@ -26,7 +30,10 @@
   "env": {
     "stage": {
       "name": "floorbeat-site-stage",
-      "routes": [{ "pattern": "stage-www.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "stage-www.floorbeat.in", "custom_domain": true },
+        { "pattern": "stage-www.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "vars": {
         "APP_ORIGIN": "https://stage-app.floorbeat.in",
         "STAFF_ORIGIN": "https://stage-ops.floorbeat.in",
@@ -36,7 +43,10 @@
     },
     "dev": {
       "name": "floorbeat-site-dev",
-      "routes": [{ "pattern": "dev-www.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "dev-www.floorbeat.in", "custom_domain": true },
+        { "pattern": "dev-www.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "vars": {
         "APP_ORIGIN": "https://dev-app.floorbeat.in",
         "STAFF_ORIGIN": "https://dev-ops.floorbeat.in",

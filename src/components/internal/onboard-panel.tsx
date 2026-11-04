@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { BoardsStep } from '@/components/internal/onboard/boards-step';
+import { FactoryIdHint } from '@/components/internal/onboard/factory-id-hint';
 import { LinesStep } from '@/components/internal/onboard/lines-step';
 import { LookStep } from '@/components/internal/onboard/look-step';
 import { OnboardDone, type OnboardResult } from '@/components/internal/onboard/onboard-done';
@@ -236,11 +237,7 @@ export function OnboardPanel() {
                       onChange={(e) => patch({ idEdited: true, factory: { ...d.factory, factory_id: e.target.value.toLowerCase() } })}
                     />
                     {(tried || (d.factory.factory_id && fProblems.factory_id)) && <FieldError>{fProblems.factory_id}</FieldError>}
-                    <p className="text-xs text-muted">
-                      The factory&apos;s own address, where its people sign in:{' '}
-                      <span className="font-mono">{d.factory.factory_id.trim() || '…'}.floorbeat.in</span>. Lowercase letters, digits
-                      and hyphens. It cannot be changed later.
-                    </p>
+                    <FactoryIdHint id={d.factory.factory_id} />
                   </Field>
                 </div>
                 <div className="md:col-span-2">

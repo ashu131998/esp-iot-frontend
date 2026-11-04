@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { FactoryIdHint } from '@/components/internal/onboard/factory-id-hint';
 import type { AdminBoard } from '@/lib/board-status';
 import type { DisplayPage } from '@/lib/display';
 import {
@@ -51,6 +52,17 @@ function filled(): SetupDraft {
   d.reports = { ...d.reports, emails: 'owner@shree.in', owner_contacts: [{ ...newContact(), name: 'Mr Shah', phone: '+919876543210' }], value_per_loom_hour: '350' };
   return d;
 }
+
+describe('the factory ID hint', () => {
+  it('the address it becomes, the characters allowed, and that it is for good', () => {
+    const html = renderToString(<FactoryIdHint id="shree-mills" />).replaceAll('<!-- -->', '');
+    expect(html).toContain('shree-mills.floorbeat.in');
+    expect(html).toContain('Only lowercase letters (a–z), digits (0–9) and hyphens (-)');
+    expect(html).toContain('no spaces, no &quot;_&quot;, no capital letters');
+    expect(html).toContain('It cannot be changed later.');
+    expect(renderToString(<FactoryIdHint id="  " />).replaceAll('<!-- -->', '')).toContain('….floorbeat.in');   // nothing typed yet
+  });
+});
 
 describe('wizard steps', () => {
   it('Look: logo, colour, and the pages with their default switches', () => {

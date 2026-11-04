@@ -22,6 +22,7 @@ import type { SensorKind } from '@/lib/types';
 import { factoryMetricsApiRange, factoryScopeQueryKey, useFactoryDateRange } from '@/lib/use-factory-date-range';
 import { useWideScreen } from '@/lib/use-wide-screen';
 import { cn } from '@/lib/utils';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const REFRESH_MS = 60_000;
 const TONE_BADGE: Record<Tone, string> = {
@@ -37,6 +38,7 @@ const TONE_BADGE: Record<Tone, string> = {
  * levels) and each machine's figures. Sections can be switched off per factory (Pages & branding).
  */
 export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: SensorKind }) {
+  const link = useFactoryHref();
   const { t, tn, locale } = useT();
   const shown = useShown();
   const wide = useWideScreen();
@@ -118,7 +120,7 @@ export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: 
                   return (
                     <TR key={r.machine_id}>
                       <TD>
-                        <Link href={`/factories/${factoryId}/machines/${r.machine_id}`} className="font-medium hover:underline">{r.machine_name}</Link>
+                        <Link href={link(`/factories/${factoryId}/machines/${r.machine_id}`)} className="font-medium hover:underline">{r.machine_name}</Link>
                         {r.sensors > 1 && <span className="ml-1 text-xs text-muted">· {tn(r.sensors, '{count} sensor', '{count} sensors', { count: r.sensors })}</span>}
                       </TD>
                       <TD className={PHONE_HIDDEN}>{lineName(r.line_id)}</TD>
@@ -145,7 +147,7 @@ export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: 
                 }).join(', '),
               })}
               {' '}
-              <Link href={`/factories/${factoryId}/sensor-mapping`} className="font-medium underline">{t('Sensor mapping')}</Link>
+              <Link href={link(`/factories/${factoryId}/sensor-mapping`)} className="font-medium underline">{t('Sensor mapping')}</Link>
             </p>
           )}
         </Card>

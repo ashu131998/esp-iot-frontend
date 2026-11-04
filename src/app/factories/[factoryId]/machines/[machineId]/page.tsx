@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { factoryLinks } from '@/lib/server/factory-links';
 import { Badge } from '@/components/ui/badge';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { QuerySuspense } from '@/components/ui/query-suspense';
@@ -20,6 +21,7 @@ export default async function MachineDetailPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { factoryId, machineId } = await params;
+  const link = await factoryLinks(factoryId);
   const sp = await searchParams;
   const { t } = await getT();
 
@@ -44,7 +46,7 @@ export default async function MachineDetailPage({
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted">
         <Link
-          href={`/factories/${factoryId}/lines`}
+          href={link(`/factories/${factoryId}/lines`)}
           className="hover:underline hover:text-foreground transition-colors"
         >
           {t('Production Lines')}
@@ -53,7 +55,7 @@ export default async function MachineDetailPage({
           <>
             <span>/</span>
             <Link
-              href={`/factories/${factoryId}/lines/${line.line_id}`}
+              href={link(`/factories/${factoryId}/lines/${line.line_id}`)}
               className="hover:underline hover:text-foreground transition-colors"
             >
               {line.name}

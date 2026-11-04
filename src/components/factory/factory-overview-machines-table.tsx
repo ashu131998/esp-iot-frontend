@@ -28,6 +28,7 @@ import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
 import { ListRow, PhoneRows } from '@/components/ui/simple';
 import { STATE_TONE, STATE_WORD, machineState } from '@/lib/plain-words';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 const REFRESH_MS = 60_000;
 
@@ -48,6 +49,7 @@ export function FactoryOverviewMachinesTable({
   from?: string;
   to?: string;
 }) {
+  const link = useFactoryHref();
   const { minDate, machines, shifts, maxDate } = useFactoryRefs();
   const lineName = useLineName();
   const { t, locale } = useT();
@@ -190,7 +192,7 @@ export function FactoryOverviewMachinesTable({
               ])}
             />
             <Link
-              href={`/factories/${factoryId}/configuration`}
+              href={link(`/factories/${factoryId}/configuration`)}
               className="text-sm text-primary hover:underline"
             >
               {t('Manage config')} →
@@ -203,7 +205,7 @@ export function FactoryOverviewMachinesTable({
         {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
           <ListRow
             key={machine.machine_id}
-            href={`/factories/${factoryId}/machines/${machine.machine_id}`}
+            href={link(`/factories/${factoryId}/machines/${machine.machine_id}`)}
             tone={STATE_TONE[machineState(machineStatus(uptime, avail))]}
             title={machine.name}
             tag={lineName(machine.line_id)}

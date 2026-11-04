@@ -112,6 +112,16 @@ describe('the staff console\'s addresses', () => {
     }
   });
 
+  it('one test backend: stage\'s and dev\'s Workers and websites all use stage\'s API; production its own', () => {
+    const api = (w: { vars: Record<string, string> }) => w.vars.API_INTERNAL_URL ?? w.vars.API_ORIGIN;
+    for (const w of workers()) {
+      const environment = /(^|-)(stage|dev)(-|$)/.exec(w.env)?.[2] ?? 'production';
+      const want = environment === 'production' ? [undefined, 'https://api.floorbeat.in'] : ['https://api-stage.floorbeat.in'];
+      expect(want, `${w.file} ${w.env}: ${api(w)}`).toContain(api(w));
+    }
+    expect(JSON.stringify(workers().map((w) => w.vars))).not.toContain('api-dev.floorbeat.in');
+  });
+
   it('a customer Worker\'s wildcard is exactly its factories\' addresses', () => {
     for (const w of workers().filter((x) => x.file === 'app' && CUSTOMER[x.env])) {
       expect(w.routes).toContainEqual({ pattern: `*${w.vars.FACTORY_HOST_SUFFIX}/*`, zone_name: ZONE });

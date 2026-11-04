@@ -21,6 +21,7 @@ import {
 } from '@/lib/use-factory-date-range';
 import { cn, formatUnits } from '@/lib/utils';
 import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 export function ProductionTable({
   factoryId,
@@ -31,6 +32,7 @@ export function ProductionTable({
   from?: string;
   to?: string;
 }) {
+  const link = useFactoryHref();
   const { minDate, shifts, maxDate } = useFactoryRefs();
   const lineName = useLineName();
   const { t, locale } = useT();
@@ -82,7 +84,7 @@ export function ProductionTable({
         {pageRows.map((m) => (
           <ListRow
             key={m.machine_id}
-            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
             title={m.machine_name}
             tag={lineName(m.line_id)}
             detail={m.status === 'no_sensor' ? t('No proximity sensor') : t('{count} readings', { count: m.data_points != null ? formatInt(m.data_points, locale) : '0' })}

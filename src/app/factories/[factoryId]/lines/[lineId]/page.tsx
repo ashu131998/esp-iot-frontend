@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { factoryLinks } from '@/lib/server/factory-links';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ export default async function LineDetailPage({
   searchParams: Promise<{ from?: string; to?: string; machine_id?: string; line_id?: string }>;
 }) {
   const { factoryId, lineId } = await params;
+  const link = await factoryLinks(factoryId);
   const display = await requireFactoryPage(factoryId, 'lines');
   const sp = await searchParams;
   const { t, tn, locale } = await getT();
@@ -92,7 +94,7 @@ export default async function LineDetailPage({
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted">
         <Link
-          href={`/factories/${factoryId}/lines`}
+          href={link(`/factories/${factoryId}/lines`)}
           className="hover:underline hover:text-foreground transition-colors"
         >
           {t('Production Lines')}

@@ -20,6 +20,7 @@ import {
 } from '@/lib/use-factory-date-range';
 import { formatNumber, formatVolts } from '@/lib/utils';
 import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 export function EnergyTable({
   factoryId,
@@ -30,6 +31,7 @@ export function EnergyTable({
   from?: string;
   to?: string;
 }) {
+  const link = useFactoryHref();
   const { minDate, shifts, maxDate } = useFactoryRefs();
   const lineName = useLineName();
   const { t, locale } = useT();
@@ -80,7 +82,7 @@ export function EnergyTable({
         {pageRows.map((m) => (
           <ListRow
             key={m.machine_id}
-            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
             title={m.machine_name}
             tag={lineName(m.line_id)}
             detail={t('Avg {avg} A · peak {peak} A', {

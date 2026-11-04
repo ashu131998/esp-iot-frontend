@@ -144,11 +144,12 @@ describe('production: each factory has its own address (<id>.floorbeat.in)', () 
     expect(factoryOrigin('factory-01', origins)).toBe('https://app.floorbeat.in');   // stage, dev: as before
   });
 
-  it('the login form, the signed-in visitor and lost-subdomain links go to the factory\'s address', () => {
-    expect(factoryLoginUrl('factory-01', prod)).toBe('https://factory-01.floorbeat.in/f/factory-01/login');
-    expect(signedInHome('fb_home=/factories/factory-01', prod)).toBe('https://factory-01.floorbeat.in/factories/factory-01');
-    expect(forwardTarget('/f/factory-01/login', '', prod)).toBe('https://factory-01.floorbeat.in/f/factory-01/login');
-    expect(forwardTarget('/factories/factory-01/results', '?month=2026-10', prod)).toBe('https://factory-01.floorbeat.in/factories/factory-01/results?month=2026-10');
+  it('the login form, the signed-in visitor and lost-subdomain links go to the factory\'s plain address', () => {
+    expect(factoryLoginUrl('factory-01', prod)).toBe('https://factory-01.floorbeat.in/login');
+    expect(signedInHome('fb_home=/factories/factory-01', prod)).toBe('https://factory-01.floorbeat.in/');
+    expect(forwardTarget('/f/factory-01/login', '', prod)).toBe('https://factory-01.floorbeat.in/login');
+    expect(forwardTarget('/f/factory-01', '?next=%2Fenergy', prod)).toBe('https://factory-01.floorbeat.in/?next=%2Fenergy');
+    expect(forwardTarget('/factories/factory-01/results', '?month=2026-10', prod)).toBe('https://factory-01.floorbeat.in/results?month=2026-10');
   });
 
   it('reset links: a factory account\'s to its address, a staff account\'s to the staff console', () => {
@@ -162,8 +163,8 @@ describe('stage and dev: their factories have addresses too (<id>.stage.floorbea
   const stage = { APP_ORIGIN: 'https://stage-app.floorbeat.in', STAFF_ORIGIN: 'https://stage-ops.floorbeat.in', FACTORY_HOST_SUFFIX: '.stage.floorbeat.in' };
 
   it('the login form and lost-subdomain links go to the stage factory; a staff reset to stage-ops', () => {
-    expect(factoryLoginUrl('factory-01', stage)).toBe('https://factory-01.stage.floorbeat.in/f/factory-01/login');
-    expect(forwardTarget('/f/factory-01/login', '', stage)).toBe('https://factory-01.stage.floorbeat.in/f/factory-01/login');
+    expect(factoryLoginUrl('factory-01', stage)).toBe('https://factory-01.stage.floorbeat.in/login');
+    expect(forwardTarget('/f/factory-01/login', '', stage)).toBe('https://factory-01.stage.floorbeat.in/login');
     expect(forwardTarget('/reset-password', '?token=t', stage)).toBe('https://stage-ops.floorbeat.in/reset-password?token=t');
   });
 });

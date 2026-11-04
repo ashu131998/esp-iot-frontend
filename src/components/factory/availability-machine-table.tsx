@@ -24,6 +24,7 @@ import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { STATE_TONE, humanMinutes, machineState } from '@/lib/plain-words';
 import { formatPercent, statusLabel } from '@/lib/utils';
 import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { useFactoryHref } from '@/lib/factory-links-context';
 
 export function AvailabilityMachineTable({
   factoryId,
@@ -34,6 +35,7 @@ export function AvailabilityMachineTable({
   from?: string;
   to?: string;
 }) {
+  const link = useFactoryHref();
   const { minDate, shifts, maxDate } = useFactoryRefs();
   const lineName = useLineName();
   const { t, locale } = useT();
@@ -111,7 +113,7 @@ export function AvailabilityMachineTable({
         {pageRows.map((m) => (
           <ListRow
             key={m.machine_id}
-            href={`/factories/${factoryId}/machines/${m.machine_id}`}
+            href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
             tone={STATE_TONE[machineState(uptimeByMachine[m.machine_id]?.timeline.at(-1)?.status ?? 'no_data')]}
             title={m.machine_name}
             tag={lineName(m.line_id)}

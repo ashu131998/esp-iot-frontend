@@ -92,7 +92,8 @@
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
-        "API_INTERNAL_URL": "https://api-dev.floorbeat.in"
+        // Dev shares stage's backend and database (one test backend): the same factories and data.
+        "API_INTERNAL_URL": "https://api-stage.floorbeat.in"
       }
     },
     "dev-app": {
@@ -109,7 +110,8 @@
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
-        "API_INTERNAL_URL": "https://api-dev.floorbeat.in",
+        // Stage's backend, as the dev staff console's.
+        "API_INTERNAL_URL": "https://api-stage.floorbeat.in",
         "FACTORY_HOST_SUFFIX": ".dev.floorbeat.in",
         "MARKETING_URL": "https://dev-www.floorbeat.in",
         "STAFF_URL": "https://dev-ops.floorbeat.in/internal"

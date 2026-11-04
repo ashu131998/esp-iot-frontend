@@ -1,6 +1,6 @@
 import type { UptimeMachine, UptimeStream } from '@/lib/types';
 
-/** Avoid "Loom #1: Loom #1 · current" when the binding label already includes the machine name. */
+/** Avoid "Machine #1: Machine #1 · current" when the binding label already includes the machine name. */
 export function streamDisplayName(machineName: string, label?: string | null): string {
   const t = (label ?? '').trim();
   if (!t) return machineName;

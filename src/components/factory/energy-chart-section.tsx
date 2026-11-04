@@ -8,6 +8,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -25,9 +26,10 @@ export function EnergyChartSection({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
+  const { t } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
@@ -48,10 +50,10 @@ export function EnergyChartSection({
 
   return (
     <Card>
-      <CardHeader title="Energy by Machine" description="kWh estimated from RMS current × voltage × time" />
+      <CardHeader title={t('Energy by Machine')} description={t('kWh estimated from RMS current × voltage × time')} />
       <MetricBarChart
         data={chartData}
-        bars={[{ key: 'energy', color: '#f59e0b', label: 'Energy (kWh)' }]}
+        bars={[{ key: 'energy', color: '#f59e0b', label: t('Energy (kWh)') }]}
       />
     </Card>
   );

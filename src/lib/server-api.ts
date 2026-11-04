@@ -21,6 +21,7 @@ import type {
   WorkerSchedule,
 } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
+import type { ResultsResponse, SetupProgress } from '@/lib/results';
 import { sortByMachineName } from '@/lib/machine-sort';
 
 function qs(
@@ -98,6 +99,14 @@ export const serverApi = {
     serverRequest<{ factory_id: string; lines: ProductionLine[] }>(
       `/v1/factories/${factoryId}/lines${qs({ limit, offset })}`,
     ),
+  ),
+  results: cache((factoryId: string, month?: string) =>
+    serverRequest<ResultsResponse>(
+      `/v1/factories/${factoryId}/results${month ? `?month=${encodeURIComponent(month)}` : ''}`,
+    ),
+  ),
+  setupProgress: cache((factoryId: string) =>
+    serverRequest<SetupProgress>(`/v1/factories/${factoryId}/setup-progress`),
   ),
   availability: cache(async (factoryId: string, params?: DateRangeParams) =>
     withSortedMachines(

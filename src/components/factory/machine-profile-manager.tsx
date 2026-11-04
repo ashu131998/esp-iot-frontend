@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
@@ -73,10 +74,7 @@ function ProfileForm({
     form.parameters.every((p) => p.key.trim() && p.value !== '');
 
   return (
-    <div className="rounded-lg border bg-slate-50 p-4">
-      <h4 className="mb-4 text-sm font-semibold">
-        {initial?.name ? 'Edit Profile' : 'New Configuration Profile'}
-      </h4>
+    <Sheet title={initial?.name ? 'Edit Profile' : 'New Configuration Profile'} onClose={onCancel}>
 
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
         <Field label="Machine">
@@ -162,7 +160,7 @@ function ProfileForm({
         </Button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
-    </div>
+    </Sheet>
   );
 }
 
@@ -260,7 +258,7 @@ export function MachineProfileManager({
         machinesSorted.map((machine) => {
           const machineProfiles = profilesByMachine.get(machine.machine_id) ?? [];
           const isAddingHere = newProfileMachineId === machine.machine_id;
-          const editingHere = machineProfiles.some((p) => p.profile_id === editingId);
+          const editingProfile = machineProfiles.find((p) => p.profile_id === editingId);
 
           const profileCountLabel =
             machineProfiles.length === 0
@@ -278,7 +276,7 @@ export function MachineProfileManager({
                 }
                 description={lineName(machine.line_id)}
                 action={
-                  canWriteFactory && !isAddingHere && !editingHere ? (
+                  canWriteFactory ? (
                     <Button
                       size="sm"
                       onClick={() => {
@@ -293,121 +291,110 @@ export function MachineProfileManager({
               />
 
               {isAddingHere && (
-                <div className="mb-4">
-                  <ProfileForm
-                    machines={machines}
-                    initial={{ machine_id: machine.machine_id }}
-                    lockMachine
-                    onSave={(form) => createMutation.mutate(form)}
-                    onCancel={() => setNewProfileMachineId(null)}
-                    isSaving={createMutation.isPending}
-                    error={createMutation.isError ? createMutation.error?.message : undefined}
-                  />
-                </div>
+                <ProfileForm
+                  machines={machines}
+                  initial={{ machine_id: machine.machine_id }}
+                  lockMachine
+                  onSave={(form) => createMutation.mutate(form)}
+                  onCancel={() => setNewProfileMachineId(null)}
+                  isSaving={createMutation.isPending}
+                  error={createMutation.isError ? createMutation.error?.message : undefined}
+                />
               )}
 
-              {machineProfiles.length === 0 && !isAddingHere ? (
+              {editingProfile && (
+                <ProfileForm
+                  machines={machines}
+                  initial={editingProfile}
+                  lockMachine
+                  onSave={(form) => updateMutation.mutate({ profileId: editingProfile.profile_id, form })}
+                  onCancel={() => setEditingId(null)}
+                  isSaving={updateMutation.isPending}
+                  error={updateMutation.isError ? updateMutation.error?.message : undefined}
+                />
+              )}
+
+              {machineProfiles.length === 0 ? (
                 <p className="text-sm text-muted">No saved settings for this machine yet.</p>
               ) : (
                 <div className="space-y-4">
-                  {machineProfiles.map((profile, profileIndex) =>
-                    editingId === profile.profile_id ? (
-                      <div
-                        key={profile.profile_id}
-                        className={profileIndex > 0 ? 'border-t border-dashed pt-4' : undefined}
-                      >
-                        <ProfileForm
-                          machines={machines}
-                          initial={profile}
-                          lockMachine
-                          onSave={(form) =>
-                            updateMutation.mutate({ profileId: profile.profile_id, form })
-                          }
-                          onCancel={() => setEditingId(null)}
-                          isSaving={updateMutation.isPending}
-                          error={
-                            updateMutation.isError ? updateMutation.error?.message : undefined
-                          }
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        key={profile.profile_id}
-                        className={
-                          profileIndex > 0
-                            ? 'mt-4 rounded-lg border border-dashed bg-slate-50/50 p-4'
-                            : 'rounded-lg border bg-slate-50/50 p-4'
-                        }
-                      >
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {machineProfiles.length > 1 && (
-                              <span className="text-xs font-medium text-muted">
-                                {profileIndex + 1} of {machineProfiles.length}
-                              </span>
-                            )}
-                            <span className="font-semibold text-sm">{profile.name}</span>
-                            <Badge className="bg-blue-50 text-blue-700 text-xs">
-                              {profile.parameters.length} setting
-                              {profile.parameters.length !== 1 ? 's' : ''}
-                            </Badge>
-                            {lastAppliedAt[profile.profile_id] ? (
-                              <span className="text-xs text-muted">
-                                Last used: {formatDate(lastAppliedAt[profile.profile_id])}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted">Not used yet</span>
-                            )}
-                          </div>
-                          {canWriteFactory && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setNewProfileMachineId(null);
-                                  setEditingId(profile.profile_id);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600"
-                                onClick={() => setProfilePendingDelete(profile)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
+                  {machineProfiles.map((profile, profileIndex) => (
+                    <div
+                      key={profile.profile_id}
+                      className={
+                        profileIndex > 0
+                          ? 'mt-4 rounded-lg border border-dashed bg-slate-50/50 p-4'
+                          : 'rounded-lg border bg-slate-50/50 p-4'
+                      }
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {machineProfiles.length > 1 && (
+                            <span className="text-xs font-medium text-muted">
+                              {profileIndex + 1} of {machineProfiles.length}
+                            </span>
+                          )}
+                          <span className="font-semibold text-sm">{profile.name}</span>
+                          <Badge className="bg-blue-50 text-blue-700 text-xs">
+                            {profile.parameters.length} setting
+                            {profile.parameters.length !== 1 ? 's' : ''}
+                          </Badge>
+                          {lastAppliedAt[profile.profile_id] ? (
+                            <span className="text-xs text-muted">
+                              Last used: {formatDate(lastAppliedAt[profile.profile_id])}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted">Not used yet</span>
                           )}
                         </div>
-
-                        {profile.parameters.length > 0 && (
-                          <Table className="border-0 bg-transparent">
-                            <THead>
-                              <TR>
-                                <TH>Setting</TH>
-                                <TH>Value</TH>
-                                <TH>Unit</TH>
-                                <TH>Note</TH>
-                              </TR>
-                            </THead>
-                            <TBody>
-                              {profile.parameters.map((p, i) => (
-                                <TR key={i}>
-                                  <TD className="font-mono text-xs">{p.key}</TD>
-                                  <TD className="font-semibold">{String(p.value)}</TD>
-                                  <TD>{p.unit || '—'}</TD>
-                                  <TD className="text-muted">{p.description || '—'}</TD>
-                                </TR>
-                              ))}
-                            </TBody>
-                          </Table>
+                        {canWriteFactory && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setNewProfileMachineId(null);
+                                setEditingId(profile.profile_id);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600"
+                              onClick={() => setProfilePendingDelete(profile)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         )}
                       </div>
-                    ),
-                  )}
+
+                      {profile.parameters.length > 0 && (
+                        <Table className="border-0 bg-transparent">
+                          <THead>
+                            <TR>
+                              <TH>Setting</TH>
+                              <TH>Value</TH>
+                              <TH>Unit</TH>
+                              <TH>Note</TH>
+                            </TR>
+                          </THead>
+                          <TBody>
+                            {profile.parameters.map((p, i) => (
+                              <TR key={i}>
+                                <TD className="font-mono text-xs">{p.key}</TD>
+                                <TD className="font-semibold">{String(p.value)}</TD>
+                                <TD>{p.unit || '—'}</TD>
+                                <TD className="text-muted">{p.description || '—'}</TD>
+                              </TR>
+                            ))}
+                          </TBody>
+                        </Table>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>

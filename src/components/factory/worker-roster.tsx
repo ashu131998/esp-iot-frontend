@@ -6,11 +6,13 @@ import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { Badge } from '@/components/ui/badge';
+import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/data-table';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import type { CreateWorkerInput, Worker } from '@/lib/types';
 
 const ROLE_OPTIONS = [
@@ -33,6 +35,7 @@ export function WorkerRoster({
   readOnly?: boolean;
 }) {
   const router = useRouter();
+  const { t, tn } = useT();
   const [open, setOpen] = useState(false);
   const emptyForm: CreateWorkerInput = {
     name: '',
@@ -66,19 +69,21 @@ export function WorkerRoster({
   const columns = useMemo<ColumnDef<Worker, unknown>[]>(() => [
     {
       accessorKey: 'name',
-      header: 'Name',
+      header: t('Name'),
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     },
     {
       accessorKey: 'employee_code',
-      header: 'Code',
+      header: t('Code'),
+      meta: { phoneHidden: true },
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee_code ?? '—'}</span>,
     },
-    { accessorKey: 'role', header: 'Role' },
+    { accessorKey: 'role', header: t('Role'), cell: ({ row }) => t(row.original.role) },
     {
       id: 'skills',
-      header: 'Skills',
+      header: t('Skills'),
       enableSorting: false,
+      meta: { phoneHidden: true },
       cell: ({ row }) => (
         <div className="flex max-w-xs flex-wrap gap-1">
           {(row.original.skills ?? []).map((s) => (
@@ -89,29 +94,29 @@ export function WorkerRoster({
     },
     {
       accessorKey: 'phone',
-      header: 'Phone',
+      header: t('Phone'),
       enableSorting: false,
       cell: ({ row }) => <span className="text-muted">{row.original.phone ?? '—'}</span>,
     },
     {
       accessorKey: 'email',
-      header: 'App Login',
+      header: t('App Login'),
       enableSorting: false,
       cell: ({ row }) => (
         <span className="text-muted">
           {row.original.email ?? '—'}
           {row.original.alertops_user_id && (
-            <Badge className="ml-1 bg-emerald-50 text-emerald-700">app</Badge>
+            <Badge className="ml-1 bg-emerald-50 text-emerald-700">{t('app')}</Badge>
           )}
         </span>
       ),
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('Status'),
       cell: ({ row }) => (
         <Badge className={row.original.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-          {row.original.status}
+          {t(row.original.status)}
         </Badge>
       ),
     },
@@ -129,64 +134,64 @@ export function WorkerRoster({
                 className="text-red-600"
                 onClick={() => deleteMutation.mutate(row.original.worker_id)}
               >
-                Delete
+                {t('Delete')}
               </Button>
             ),
           } satisfies ColumnDef<Worker, unknown>,
         ]),
-  ], [deleteMutation, readOnly]);
+  ], [deleteMutation, readOnly, t]);
 
   return (
     <Card>
       <CardHeader
-        title="Workers"
-        description={`${workers.length} worker${workers.length === 1 ? '' : 's'} on the roster`}
+        title={t('Workers')}
+        description={tn(workers.length, '{count} worker on the roster', '{count} workers on the roster')}
         action={
           !readOnly && !open ? (
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-              + Add Worker
+              + {t('Add Worker')}
             </Button>
           ) : undefined
         }
       />
 
       {open && (
-        <div className="mb-4 rounded-lg border bg-slate-50 p-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Name">
+        <Sheet title={t('Add Worker')} onClose={() => setOpen(false)}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('Name')}>
               <Input
-                placeholder="Full name"
+                placeholder={t('Full name')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </Field>
-            <Field label="Employee Code">
+            <Field label={t('Employee Code')}>
               <Input
-                placeholder="e.g. EMP-1234"
+                placeholder={t('e.g. EMP-1234')}
                 value={form.employee_code}
                 onChange={(e) => setForm({ ...form, employee_code: e.target.value })}
               />
             </Field>
-            <Field label="Role">
+            <Field label={t('Role')}>
               <Select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {t(r)}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="Phone">
+            <Field label={t('Phone')}>
               <Input
-                placeholder="+91 …"
+                placeholder={t('+91 …')}
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </Field>
-            <Field label="App Login Email">
+            <Field label={t('App Login Email')}>
               <Input
                 type="email"
                 placeholder="worker@factory.com"
@@ -194,41 +199,40 @@ export function WorkerRoster({
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
             </Field>
-            <Field label="App Login Password">
+            <Field label={t('App Login Password')}>
               <Input
                 type="password"
-                placeholder="min 8 characters"
+                placeholder={t('min 8 characters')}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
             </Field>
           </div>
           <p className="mt-2 text-xs text-muted">
-            Email &amp; password create the worker&apos;s login for the AlertOps mobile app, where
-            they receive their machine and shift alerts.
+            {t("Email & password create the worker's login for the AlertOps mobile app, where they receive their machine and shift alerts.")}
           </p>
           <div className="mt-4 flex gap-2">
             <Button
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !canSubmit}
             >
-              {createMutation.isPending ? 'Saving…' : 'Add Worker'}
+              {createMutation.isPending ? t('Saving…') : t('Add Worker')}
             </Button>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             {createMutation.isError && (
               <p className="self-center text-sm text-red-600">{createMutation.error.message}</p>
             )}
           </div>
-        </div>
+        </Sheet>
       )}
 
       <DataTable
         columns={columns}
         data={workers}
         className="border-0"
-        emptyMessage="No workers yet. Add one using the button above."
+        emptyMessage={t('No workers yet. Add one using the button above.')}
       />
     </Card>
   );

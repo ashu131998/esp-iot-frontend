@@ -15,10 +15,14 @@ import { Select } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/data-table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { formatWeekdayDayMonth } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
+import type { Translate } from '@/lib/i18n/translate';
 import { useNavigate, useIsNavigating } from '@/lib/navigation-context';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 import { sortByMachineName } from '@/lib/machine-sort';
 import { cn } from '@/lib/utils';
+import { lineLabel } from '@/lib/lines';
 import type {
   Machine,
   MachineConfigProfile,
@@ -36,23 +40,16 @@ const statusStyle: Record<string, string> = {
   cancelled: 'bg-slate-100 text-slate-500',
 };
 
-/** "in_progress" -> "In Progress" */
-function formatStatus(value: string): string {
-  return value
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
+const STATUS_LABEL: Record<string, string> = {
+  scheduled: 'Scheduled',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
 
-function formatDay(value: string): string {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return new Intl.DateTimeFormat('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-  }).format(d);
+/** "in_progress" -> "In Progress" (translated) */
+function formatStatus(value: string, t: Translate): string {
+  return t(STATUS_LABEL[value] ?? value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
 }
 
 /** Normalize a schedule_date to "YYYY-MM-DD" (IST) for comparing with the date URL param. */
@@ -86,12 +83,13 @@ function SchedulingFilterBar({
 
   const dateFilter = sp.get('date') ?? '';
   const machineId = sp.get('machine_id') ?? '';
+  const { t } = useT();
 
   const [machineOpen, setMachineOpen] = useState(false);
   const [machineSearch, setMachineSearch] = useState('');
 
   const lineMap = useMemo(
-    () => Object.fromEntries((lines ?? []).map((l) => [l.line_id, l.name])),
+    () => Object.fromEntries((lines ?? []).map((l) => [l.line_id, lineLabel(l)])),
     [lines],
   );
 
@@ -161,7 +159,7 @@ function SchedulingFilterBar({
         {dateFilter && (
           <button
             type="button"
-            aria-label="Clear date filter"
+            aria-label={t('Clear date filter')}
             onClick={() => applyDate('')}
             className="ml-0.5 rounded-full p-0.5 hover:bg-gray-200"
           >
@@ -184,14 +182,14 @@ function SchedulingFilterBar({
             machineId && 'border-primary/50 bg-primary/5',
           )}
         >
-          <span className="font-medium text-muted">Machine</span>
+          <span className="font-medium text-muted">{t('Machine')}</span>
           <span className={cn('max-w-[120px] truncate font-medium', machineId ? 'text-primary' : 'text-foreground')}>
-            {selectedMachine ? selectedMachine.name : 'All'}
+            {selectedMachine ? selectedMachine.name : t('All')}
           </span>
           {machineId ? (
             <span
               role="button"
-              aria-label="Clear machine filter"
+              aria-label={t('Clear machine filter')}
               className="ml-0.5 rounded-full p-0.5 hover:bg-primary/10"
               onClick={(e) => { e.stopPropagation(); applyMachine(undefined); }}
             >
@@ -215,7 +213,7 @@ function SchedulingFilterBar({
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Search machines…"
+                    placeholder={t('Search machines…')}
                     className="w-full bg-transparent text-xs outline-none placeholder:text-muted"
                     value={machineSearch}
                     onChange={(e) => setMachineSearch(e.target.value)}
@@ -231,7 +229,7 @@ function SchedulingFilterBar({
                     !machineId && 'bg-accent font-medium',
                   )}
                 >
-                  All Machines
+                  {t('All Machines')}
                 </button>
                 {Object.entries(groupedMachines).map(([lineId, lineMs]) => (
                   <div key={lineId}>
@@ -254,7 +252,7 @@ function SchedulingFilterBar({
                   </div>
                 ))}
                 {filteredMachines.length === 0 && (
-                  <p className="px-3 py-4 text-center text-xs text-muted">No machines found</p>
+                  <p className="px-3 py-4 text-center text-xs text-muted">{t('No machines found')}</p>
                 )}
               </div>
             </div>
@@ -266,7 +264,7 @@ function SchedulingFilterBar({
       {isNavigating && (
         <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-primary">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Updating…
+          {t('Updating…')}
         </span>
       )}
     </div>
@@ -292,6 +290,7 @@ export function SchedulingPanel({
 }) {
   const router = useRouter();
   const { canWriteFactory } = useAuth();
+  const { t, locale } = useT();
   const sp = useSearchParams();
 
   const dateFilter = sp.get('date') ?? '';
@@ -302,8 +301,10 @@ export function SchedulingPanel({
     return (id: string) => map.get(id) ?? id;
   }, [machines]);
 
-  const shiftName = (shiftId: string) =>
-    DEFAULT_SHIFTS.find((s) => s.shift_id === shiftId)?.name ?? `Shift ${shiftId}`;
+  const shiftName = (shiftId: string) => {
+    const name = DEFAULT_SHIFTS.find((s) => s.shift_id === shiftId)?.name;
+    return name ? t(name) : t('Shift {id}', { id: shiftId });
+  };
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter((s) => {
@@ -385,30 +386,30 @@ export function SchedulingPanel({
     {
       id: 'worker',
       accessorFn: (s) => s.worker_name ?? s.worker_id,
-      header: 'Worker',
+      header: t('Worker'),
       cell: ({ row }) => (
         <span className="font-medium">
           {row.original.worker_name ?? row.original.worker_id}
           {row.original.worker_role && (
-            <span className="block text-xs font-normal text-muted">{row.original.worker_role}</span>
+            <span className="block text-xs font-normal text-muted">{t(row.original.worker_role)}</span>
           )}
         </span>
       ),
     },
-    { accessorKey: 'task', header: 'Task' },
+    { accessorKey: 'task', header: t('Task') },
     {
       id: 'shift',
       accessorFn: (s) => shiftName(s.shift_id),
-      header: 'Shift',
+      header: t('Shift'),
     },
     {
       accessorKey: 'schedule_date',
-      header: 'Date',
-      cell: ({ row }) => formatDay(row.original.schedule_date),
+      header: t('Date'),
+      cell: ({ row }) => formatWeekdayDayMonth(row.original.schedule_date, locale),
     },
     {
       id: 'time',
-      header: 'Time',
+      header: t('Time'),
       enableSorting: false,
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-muted">
@@ -420,7 +421,7 @@ export function SchedulingPanel({
     },
     {
       id: 'looms',
-      header: 'Machines',
+      header: t('Machines'),
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex max-w-[14rem] flex-wrap gap-1">
@@ -433,12 +434,12 @@ export function SchedulingPanel({
     },
     {
       accessorKey: 'config_profile_name',
-      header: 'Config Profile',
+      header: t('Config Profile'),
       cell: ({ row }) => row.original.config_profile_name ?? '—',
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('Status'),
       cell: ({ row }) =>
         canWriteFactory ? (
           <>
@@ -449,16 +450,16 @@ export function SchedulingPanel({
               onChange={(e) => handleStatusChange(row.original.schedule_id, e.target.value)}
             >
               {STATUS_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{formatStatus(opt)}</option>
+                <option key={opt} value={opt}>{formatStatus(opt, t)}</option>
               ))}
             </Select>
             <Badge className={`mt-1 ${statusStyle[row.original.status] ?? 'bg-slate-100 text-slate-600'}`}>
-              {formatStatus(row.original.status)}
+              {formatStatus(row.original.status, t)}
             </Badge>
           </>
         ) : (
           <Badge className={statusStyle[row.original.status] ?? 'bg-slate-100 text-slate-600'}>
-            {formatStatus(row.original.status)}
+            {formatStatus(row.original.status, t)}
           </Badge>
         ),
     },
@@ -476,13 +477,14 @@ export function SchedulingPanel({
                 disabled={deletingIds.has(row.original.schedule_id)}
                 onClick={() => handleDelete(row.original.schedule_id)}
               >
-                {deletingIds.has(row.original.schedule_id) ? 'Deleting' : 'Delete'}
+                {deletingIds.has(row.original.schedule_id) ? t('Deleting') : t('Delete')}
               </Button>
             ),
           } satisfies ColumnDef<WorkerSchedule, unknown>,
         ]
       : []),
-  ], [machineName, deletingIds, pendingStatus, canWriteFactory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shiftName/handlers are stable per render of t
+  ], [machineName, deletingIds, pendingStatus, canWriteFactory, t, locale]);
 
   const stats = useMemo(() => {
     const active = schedules.filter((s) => s.status !== 'cancelled' && s.status !== 'completed');
@@ -497,18 +499,18 @@ export function SchedulingPanel({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Total assignments" value={String(stats.total)} />
-        <StatCard label="Active (open)" value={String(stats.active)} />
-        <StatCard label="Day shift" value={String(stats.dayShift)} sub="06:00 – 18:00" />
-        <StatCard label="Night shift" value={String(stats.nightShift)} sub="18:00 – 06:00" />
+        <StatCard label={t('Total assignments')} value={String(stats.total)} />
+        <StatCard label={t('Active (open)')} value={String(stats.active)} />
+        <StatCard label={t('Day shift')} value={String(stats.dayShift)} sub="06:00 – 18:00" />
+        <StatCard label={t('Night shift')} value={String(stats.nightShift)} sub="18:00 – 06:00" />
       </div>
 
       <SchedulingFilterBar machines={machines} lines={lines} />
 
       <Card>
         <CardHeader
-          title="Task Schedule"
-          description="Assign each worker a function, shift, date, machines and a machine configuration profile"
+          title={t('Task Schedule')}
+          description={t('Assign each worker a function, shift, date, machines and a machine configuration profile')}
           action={
             canWriteFactory ? (
               <ScheduleForm
@@ -524,7 +526,7 @@ export function SchedulingPanel({
 
         {deleteMutation.isError && (
           <p className="mx-4 mb-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            Couldn&apos;t delete task: {(deleteMutation.error as Error).message}
+            {t("Couldn't delete task: {error}", { error: (deleteMutation.error as Error).message })}
           </p>
         )}
 
@@ -539,8 +541,8 @@ export function SchedulingPanel({
           }
           emptyMessage={
             dateFilter || machineFilter
-              ? 'No tasks match the selected filters.'
-              : 'No tasks scheduled yet. Use "Schedule Task" to assign a worker.'
+              ? t('No tasks match the selected filters.')
+              : t('No tasks scheduled yet. Use "Schedule Task" to assign a worker.')
           }
         />
       </Card>

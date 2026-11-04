@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
+import { LanguageToggle } from '@/components/ui/language-toggle';
+import { useT } from '@/lib/i18n/context';
 import { fetchWithSignal } from '@/lib/request-signal';
 
 function getCsrf(): string {
@@ -17,6 +19,7 @@ function getCsrf(): string {
 export default function FactorySignupPage() {
   const params = useParams<{ factoryId: string }>();
   const router = useRouter();
+  const { t } = useT();
   const factoryId = params.factoryId;
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -53,46 +56,47 @@ export default function FactorySignupPage() {
         body: JSON.stringify({ username, email: email || undefined, password, factory_id: factoryId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Signup failed');
-      setSuccess('Account created. Await admin approval before signing in.');
+      if (!res.ok) throw new Error(data.error ?? t('Signup failed'));
+      setSuccess(t('Account created. Await admin approval before signing in.'));
       setTimeout(() => router.push(`/f/${factoryId}/login`), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed');
+      setError(err instanceof Error ? err.message : t('Signup failed'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
       <Card className="w-full max-w-md p-6">
         <CardHeader
-          title="Employee Sign Up"
-          description={`Request access to ${factoryId.replace(/-/g, ' ')}`}
+          title={t('Employee Sign Up')}
+          description={t('Request access to {factory}', { factory: factoryId.replace(/-/g, ' ') })}
         />
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <Field label="Username">
+          <Field label={t('Username')}>
             <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} />
           </Field>
-          <Field label="Email (optional)">
+          <Field label={t('Email (optional)')}>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <Field label="Password">
+          <Field label={t('Password')}>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
           </Field>
           {error && <p className="text-sm text-red-600">{error}</p>}
           {success && <p className="text-sm text-green-700">{success}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Submitting…' : 'Sign up'}
+            {loading ? t('Submitting…') : t('Sign up')}
           </Button>
           <p className="text-center text-sm text-muted">
-            Already have an account?{' '}
+            {t('Already have an account?')}{' '}
             <Link href={`/f/${factoryId}/login`} className="text-primary hover:underline">
-              Sign in
+              {t('Sign in')}
             </Link>
           </p>
         </form>
       </Card>
+      <LanguageToggle />
     </div>
   );
 }

@@ -3,7 +3,9 @@
 import dynamic from 'next/dynamic';
 
 import { FactoryOverviewStatCards } from '@/components/factory/factory-overview-stat-cards';
-import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
+import { OverviewRunSplit } from '@/components/factory/period-splits';
+import { SetupChecklistCard } from '@/components/results/setup-checklist-card';
+import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
 
@@ -19,17 +21,28 @@ export function FactoryOverviewDashboard({
   factoryId,
   from,
   to,
+  ssrCards = false,
 }: {
   factoryId: string;
   from?: string;
   to?: string;
+  /** The page fetched the cards' figures on the server (HydrationBoundary): render them there too. */
+  ssrCards?: boolean;
 }) {
   const shown = useShown();
   return (
     <>
+      {shown('overview.setup') && <SetupChecklistCard factoryId={factoryId} />}
+
       {shown('overview.cards') && (
-        <QuerySuspense fallback={<StatGridSkeleton count={4} />}>
+        <QuerySuspense ssr={ssrCards} fallback={<StatGridSkeleton count={4} />}>
           <FactoryOverviewStatCards factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
+
+      {shown('overview.split') && (
+        <QuerySuspense fallback={<ChartSkeleton />}>
+          <OverviewRunSplit factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
 

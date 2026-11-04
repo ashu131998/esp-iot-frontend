@@ -3,12 +3,17 @@
  * (stored by the consumer; fields added over firmware versions, so any may be missing).
  */
 
+import { format } from 'date-fns';
+
 import type { BoardSettings } from '@/lib/board-settings';
+import { dropReason, signalWord } from '@/lib/wifi';
 
 export interface BoardBeat {
   fw?: string;
   uptime_s?: number;
   synced?: boolean;
+  /** Where its time comes from (firmware 2.1.1+): none, estimated, ntp or server. */
+  clock?: string;
   boot_count?: number;
   reset_reason?: string;
   q_bytes?: number;
@@ -18,6 +23,43 @@ export interface BoardBeat {
   vin_v?: number;
   /** Which MQTT login it connected with (firmware 2.1+). */
   login?: string;
+  /** Its hardware, and a remote update in progress (firmware 2.2+). */
+  hw?: string;
+  ota_state?: string;
+  ota_version?: string;
+  ota_error?: string;
+  ota_pct?: number;
+  /** Where its queue is (firmware 2.3+): ext = REV B's 16 MB chip, int = its own flash. */
+  qloc?: string;
+  q_cap?: number;
+  /** Lifetime: unconfirmed bytes dropped from a full queue (oldest first). */
+  q_dropped?: number;
+  /** Its WiFi (firmware 2.4+): the network, its signal, how many networks it knows, why it last left one. */
+  ssid?: string;
+  wifi_rssi?: number;
+  wifi_n?: number;
+  wifi_rsn?: number;
+  /** The settings it applied (they carry its factory's WiFi list), and that list's version (2.5+). */
+  cfg_version?: number;
+  wifi_v?: number;
+  /** 2.5+: its factory's rescue boxes it heard at its last look, and the strongest one. */
+  rsq_n?: number;
+  rsq?: string;
+  rsq_rssi?: number;
+  /** A rescue box: its own WiFi, the boards on it now, the lists it handed out since it started. */
+  ap?: string;
+  ap_n?: number;
+  served?: number;
+  /**
+   * Its start-up self-test (firmware 2.7+, REV B / IIoT base): pass or fail, the failed checks (adc, rtc,
+   * xflash, vin, flash, ct1..ct4), the bias on the four CT inputs ("1.66,1.65,-,-") and the I2C chips that answered.
+   */
+  st?: string;
+  st_fail?: string;
+  st_ct?: string;
+  st_i2c?: string;
+  /** The ESP32's revision (3 = ECO3, which secure boot v2 needs). */
+  chip_rev?: number;
 }
 
 export type Tone = 'good' | 'warn' | 'bad' | 'neutral';
@@ -27,6 +69,11 @@ export interface AdminBoard {
   board_id: string;
   factory_id: string | null;
   line_id: string | null;
+  /** When it joined: the server first heard from it, or set it up here if that came first. */
+  onboarded_at: string | null;
+  /** A rescue box (firmware 2.5+) or a measuring board; a box's setup-page PIN (super admin only). */
+  kind?: 'board' | 'rescue';
+  pin?: string | null;
   last_beat_at: string | null;
   beat: BoardBeat | null;
   /** What the dashboard last sent it (null: never set from here). */
@@ -36,11 +83,68 @@ export interface AdminBoard {
   /** A login of its own has been issued (it switches to it with firmware 2.1+). */
   own_login: boolean;
   login_issued_at: string | null;
+  /** The firmware update last offered to it from here (null: none, or withdrawn). */
+  ota_version: string | null;
+  ota_requested_at: string | null;
   /** From the broker: connected now, and with which login (null: broker unknown / never connected). */
   online: boolean | null;
   login: 'own' | 'shared' | null;
   ip: string | null;
   connected_at: number | string | null;
+}
+
+/** The server's services on the broker (GET /v1/admin/boards → logins.services). */
+export interface ServiceLogin {
+  service: string;
+  username: string;
+  online: boolean;
+  login: 'own' | 'shared' | null;
+}
+
+/** A client on the shared fleet login: what restricting it would do to it depends on its kind. */
+export interface SharedLoginClient {
+  clientid: string;
+  ip: string | null;
+  kind: 'board' | 'new-board' | 'service' | 'other';
+}
+
+export interface BrokerLogins {
+  services: ServiceLogin[];
+  shared: { username: string; restricted: boolean; clients: SharedLoginClient[] };
+}
+
+const SERVICE_NAMES: Record<string, string> = { bridge: 'Data bridge', mock: 'Demo data producer' };
+
+export function serviceName(service: string): string {
+  return SERVICE_NAMES[service] ?? service;
+}
+
+/** A server service's broker login: its own (only its topics), or still the shared one. */
+export function serviceLoginStatus(s: ServiceLogin): StatusCell {
+  const name = serviceName(s.service);
+  if (!s.online) {
+    return { label: 'Not connected', tone: s.service === 'bridge' ? 'bad' : 'neutral', detail: `${name} is not connected to the broker` };
+  }
+  if (s.login === 'own') return { label: 'Own login', tone: 'good', detail: `${name} connects as ${s.username}: only its own topics` };
+  return { label: 'Shared login', tone: 'warn', detail: `${name} still uses the shared login; the server sets up its own when it starts` };
+}
+
+export const SHARED_CLIENT_KIND: Record<SharedLoginClient['kind'], string> = {
+  'new-board': 'New board: keeps working',
+  board: 'Board: cut off until it has its own login',
+  service: 'Server service: cut off',
+  other: 'Other client (a tool): cut off',
+};
+
+/**
+ * What restricting the shared login would do now: refused while a service still needs it
+ * (the bridge on it, or not connected: all data would stop); which clients it cuts off.
+ */
+export function restrictionPlan(l: BrokerLogins): { blockedBy: string[]; cutOff: SharedLoginClient[] } {
+  const blockedBy = l.services
+    .filter((s) => s.login === 'shared' || (s.service === 'bridge' && !s.online))
+    .map((s) => (s.online ? `${serviceName(s.service)} still uses it` : `${serviceName(s.service)} is not connected`));
+  return { blockedBy, cutOff: l.shared.clients.filter((c) => c.kind !== 'new-board') };
 }
 
 /** Which MQTT login the board uses, and whether a login of its own is waiting for it. */
@@ -82,22 +186,113 @@ export function batteryClock(beat: BoardBeat | null | undefined): StatusCell {
   return { label: rtc, tone: 'neutral', detail: `Battery clock: ${rtc}` };
 }
 
-/** Bytes as "512 B", "12.4 KB", "1.2 MB". */
+/**
+ * Where the board's time comes from now (firmware 2.1.1+). "server": internet time (NTP) is
+ * blocked on its network, so the server sets its clock instead — correct, nothing to fix.
+ */
+export function timeSource(beat: BoardBeat | null | undefined): StatusCell {
+  const c = beat?.clock;
+  if (!c) return NONE;
+  if (c === 'ntp') return { label: 'Internet', tone: 'good', detail: 'Set by an internet time server (NTP)' };
+  if (c === 'server') {
+    return { label: 'From server', tone: 'good', detail: 'Internet time (NTP) is blocked on its network: the server sets its clock, to within about a second' };
+  }
+  if (c === 'estimated') {
+    return { label: 'Estimated', tone: 'warn', detail: 'Running on the time it had at power-up, until internet time or the server confirms it (seconds when online)' };
+  }
+  if (c === 'none') return { label: 'No time', tone: 'bad', detail: 'No time yet: it records nothing until internet time or the server answers' };
+  return { label: c, tone: 'neutral', detail: `Clock: ${c}` };
+}
+
+const SELF_TEST_CHECK: Record<string, string> = {
+  adc: 'CT converter (ADS1115) not answering',
+  rtc: 'battery clock chip (DS3231) not answering',
+  xflash: '16 MB queue flash not answering',
+  vin: '24 V supply missing or out of range (18-30 V)',
+  flash: 'ESP32 module flash under 4 MB (wrong module)',
+  ct1: 'CT1 input bias out of range',
+  ct2: 'CT2 input bias out of range',
+  ct3: 'CT3 input bias out of range',
+  ct4: 'CT4 input bias out of range',
+};
+const SELF_TEST_SHORT: Record<string, string> = {
+  adc: 'CT ADC', rtc: 'clock chip', xflash: 'queue flash', vin: '24 V', flash: 'module flash',
+  ct1: 'CT1', ct2: 'CT2', ct3: 'CT3', ct4: 'CT4',
+};
+
+/** What the self-test measured, for the tooltip: CT input bias (V) and the I2C chips that answered. */
+function selfTestMeasured(beat: BoardBeat): string {
+  const parts: string[] = [];
+  if (beat.st_ct) {
+    const bias = beat.st_ct.split(',').map((v, i) => `CT${i + 1} ${v === '-' ? 'not checked' : `${v} V`}`).join(', ');
+    parts.push(`CT input bias: ${bias}.`);
+  }
+  if (beat.st_i2c !== undefined) parts.push(`I2C chips answering: ${beat.st_i2c ? beat.st_i2c.split(',').map((a) => `0x${a}`).join(', ') : 'none'}.`);
+  return parts.join(' ');
+}
+
+/**
+ * The start-up self-test (firmware 2.7+): every start-up checks the board's own chips, the 24 V supply and the
+ * bias on its CT inputs. A board not yet claimed checks all four CT inputs (the end-of-line bench fixture puts a
+ * CT or a wire link on each pair); a claimed board checks the channels its settings use.
+ */
+export function selfTest(beat: BoardBeat | null | undefined): StatusCell {
+  const st = beat?.st;
+  if (!beat || !st) return { label: '—', tone: 'neutral', detail: 'Not reported: firmware before 2.7, or a board without the self-test' };
+  const measured = selfTestMeasured(beat);
+  if (st === 'pass') {
+    return { label: 'Pass', tone: 'good', detail: `Passed its start-up self-test.${measured ? ` ${measured}` : ''}` };
+  }
+  if (st === 'fail') {
+    const codes = (beat.st_fail ?? '').split(',').filter(Boolean);
+    const short = codes.map((c) => SELF_TEST_SHORT[c] ?? c).join(', ');
+    const long = codes.map((c) => SELF_TEST_CHECK[c] ?? c).join('; ');
+    return {
+      label: short ? `Fail: ${short}` : 'Fail',
+      tone: 'bad',
+      detail: `Failed its start-up self-test${long ? `: ${long}` : ''}.${measured ? ` ${measured}` : ''}`,
+    };
+  }
+  return { label: st, tone: 'neutral', detail: `Self-test: ${st}` };
+}
+
+/** Bytes as "512 B", "12.4 KB", "1.2 MB", "37.3 GB". */
 export function formatBytes(n: number): string {
   if (n < 1024) return `${Math.round(n)} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-/** Data the board holds that the server has not confirmed yet (normally empty within seconds). */
+/** Where the queue is and how much it holds (firmware 2.3+); empty for older firmware. */
+function queuePlace(beat: BoardBeat): string {
+  const room = beat.q_cap ? ` (room for ${formatBytes(beat.q_cap)})` : '';
+  if (beat.qloc === 'ext') return `On the 16 MB flash chip${room}.`;
+  if (beat.qloc === 'int') return `On the board's own flash${room}.`;
+  if (beat.qloc === 'none') return 'No flash for it: what it measures only goes out live.';
+  return '';
+}
+
+/**
+ * Data the board holds that the server has not confirmed yet (normally empty within seconds).
+ * A quarter of its room or more waiting is worth a look; anything ever dropped from a full
+ * queue (a long outage) is said too.
+ */
 export function queue(beat: BoardBeat | null | undefined): StatusCell {
   const q = beat?.q_bytes;
-  if (q === undefined || q === null || !Number.isFinite(q)) return NONE;
-  if (q === 0) return { label: 'Empty', tone: 'good', detail: 'Everything it measured has reached the server' };
+  if (!beat || q === undefined || q === null || !Number.isFinite(q)) return NONE;
+  const dropped = beat.q_dropped && beat.q_dropped > 0 ? beat.q_dropped : 0;
+  const lost = dropped ? ` ${formatBytes(dropped)} dropped since it was set up: a long outage filled it (oldest first).` : '';
+  const where = queuePlace(beat);
+  const tail = `${where ? ` ${where}` : ''}${lost}`;
+  if (q === 0) {
+    return { label: 'Empty', tone: dropped ? 'warn' : 'good', detail: `Everything it measured has reached the server.${tail}` };
+  }
+  const big = beat.q_cap ? q > beat.q_cap / 4 : q > 64 * 1024;
   return {
     label: `${formatBytes(q)} waiting`,
-    tone: q > 64 * 1024 ? 'warn' : 'neutral',
-    detail: 'Saved on the board, not yet confirmed by the server',
+    tone: big || dropped ? 'warn' : 'neutral',
+    detail: `Saved on the board, not yet confirmed by the server.${tail}`,
   };
 }
 
@@ -111,6 +306,50 @@ export function supply(beat: BoardBeat | null | undefined): StatusCell {
     : { label, tone: 'warn', detail: 'Below 20 V: low supply, or powered without 24 V (bench)' };
 }
 
+/**
+ * Its WiFi (firmware 2.4+): the network and how strong; the tooltip adds the dBm, how many
+ * networks it knows and why it last left one. Offline, or not known to be online (no broker):
+ * the network it was last on.
+ */
+export function wifi(beat: BoardBeat | null | undefined, online: boolean | null): StatusCell {
+  if (!beat?.ssid) return NONE;
+  const rssi = typeof beat.wifi_rssi === 'number' && beat.wifi_rssi < 0 ? beat.wifi_rssi : null;
+  const known = beat.wifi_n ? `Knows ${beat.wifi_n} network${beat.wifi_n === 1 ? '' : 's'}.` : '';
+  const drop = dropReason(beat.wifi_rsn ?? null);
+  const more = [known, drop ? `Last left a network: ${drop}.` : ''].filter(Boolean).join(' ');
+  if (online !== true || rssi === null) {
+    return { label: `${beat.ssid} (last)`, tone: 'neutral', detail: `Last on ${beat.ssid}.${more ? ` ${more}` : ''}` };
+  }
+  const { word, tone } = signalWord(rssi);
+  return { label: `${beat.ssid} · ${word}`, tone, detail: `On ${beat.ssid}, signal ${rssi} dBm.${more ? ` ${more}` : ''}` };
+}
+
+/** A rescue box (hardware "rescue"): claimed as one here, or saying so in its heartbeats. */
+export function isRescueBox(b: Pick<AdminBoard, 'kind' | 'beat'>): boolean {
+  return b.kind === 'rescue' || b.beat?.hw === 'rescue';
+}
+
+/** A rescue box's own WiFi: its name, with the boards on it now and the lists it handed out. */
+export function boxWifi(beat: BoardBeat | null | undefined): StatusCell {
+  if (!beat?.ap) {
+    return { label: 'Off', tone: 'neutral', detail: 'Its WiFi starts once it is claimed into a factory' };
+  }
+  const on = beat.ap_n ?? 0;
+  const served = beat.served ?? 0;
+  return {
+    label: `${beat.ap} · ${on} on it`,
+    tone: 'good',
+    detail: `${on} board${on === 1 ? '' : 's'} on its WiFi now; ${served} list${served === 1 ? '' : 's'} handed out since it started`,
+  };
+}
+
 export function firmware(beat: BoardBeat | null | undefined): string {
   return beat?.fw ?? '—';
+}
+
+/** Its onboarding date and time, in the viewer's clock: "28 Oct 2026, 22:55". */
+export function onboarded(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime()) ? '—' : format(at, 'd MMM yyyy, HH:mm');
 }

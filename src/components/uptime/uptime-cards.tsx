@@ -5,6 +5,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { UPTIME_REFRESH_MS } from '@/components/uptime/refresh-countdown';
 import { StatCard } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   filterMachinesByScope,
@@ -14,6 +15,7 @@ import { formatNumber, formatPercent } from '@/lib/utils';
 
 export function UptimeCards({ factoryId }: { factoryId: string }) {
   const { range, live, machineId, lineId } = useFactoryDateRange();
+  const { t, locale } = useT();
   const refetchInterval = useRefetchInterval(UPTIME_REFRESH_MS);
 
   const uptimeParams = { ...range, ...(machineId ? { machine_id: machineId } : {}), ...(lineId ? { line_id: lineId } : {}) };
@@ -37,9 +39,9 @@ export function UptimeCards({ factoryId }: { factoryId: string }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
-      <StatCard label="Overall Availability" value={formatPercent(overallAvailability)} />
-      <StatCard label="Uptime" value={`${formatNumber(totalUpHours, 1)} h`} />
-      <StatCard label="Downtime" value={`${formatNumber(totalDownHours, 1)} h`} />
+      <StatCard label={t('Overall Availability')} value={formatPercent(overallAvailability, locale)} />
+      <StatCard label={t('Uptime')} value={t('{h} h', { h: formatNumber(totalUpHours, 1, locale) })} />
+      <StatCard label={t('Downtime')} value={t('{h} h', { h: formatNumber(totalDownHours, 1, locale) })} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, type ReactNode } from 'react';
 
 import { isShown, type Display } from '@/lib/display';
+import { lineLabel } from '@/lib/lines';
 import type { Machine, ProductionLine, Shift } from '@/lib/types';
 
 export interface FactoryRefs {
@@ -12,6 +13,11 @@ export interface FactoryRefs {
   lines: ProductionLine[];
   /** Factory `created_at`, used as the date-picker minimum. */
   minDate: string | null;
+  /**
+   * The end of the data this viewer may see (a factory whose subscription ended: its users see
+   * data up to the end, factory.data_limit); null when not limited. Dates stop there.
+   */
+  maxDate: string | null;
   /** Shift schedule; the default date range is the current shift. */
   shifts: Shift[];
   /** Pages and page sections switched on for this factory (lib/display.ts). */
@@ -46,6 +52,18 @@ export function useFactoryRefs(): FactoryRefs {
 /** Non-throwing variant for components shared with non-factory pages (overview). */
 export function useFactoryRefsOptional(): FactoryRefs | null {
   return useContext(FactoryRefsContext);
+}
+
+/**
+ * A line's name for its ID ("Weaving A" for "line-1"; "Line 1" when it has no name of its own,
+ * lib/lines.ts), what every table shows. Nothing for no line.
+ */
+export function useLineName(): (lineId: string | null | undefined) => string {
+  const lines = useContext(FactoryRefsContext)?.lines;
+  return useCallback((lineId: string | null | undefined) => {
+    if (!lineId) return '—';
+    return lineLabel(lines?.find((l) => l.line_id === lineId) ?? { line_id: lineId });
+  }, [lines]);
 }
 
 /**

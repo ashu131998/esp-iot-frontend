@@ -6,6 +6,8 @@ import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
 import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/charts/apex';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ChartSkeleton } from '@/components/ui/page-skeletons';
+import { dayKeyToDate, formatDayMonth } from '@/lib/format';
+import { useT } from '@/lib/i18n/context';
 import { machineDailyTrendQuery, machineLiveDaysQuery } from '@/lib/machine-daily-trend';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { mergeTrendDays, trendDayRange } from '@/lib/trend-days';
@@ -22,20 +24,22 @@ export function MachinePerformanceTrend({
   from?: string;
   to?: string;
 }) {
-  const shifts = useFactoryRefsOptional()?.shifts;
-  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts));
+  const refs = useFactoryRefsOptional();
+  const shifts = refs?.shifts;
+  const { t, locale } = useT();
+  const { data, isFetching } = useSuspenseQuery(machineDailyTrendQuery(factoryId, machineId, from, to, shifts, refs?.maxDate));
   const { data: liveData, isPending: livePending } = useQuery(machineLiveDaysQuery(factoryId, machineId));
 
   // Each day whole from one source (trend-days.ts): today's performance is never a
   // saved part-day's beside today's live availability.
   const chartData = useMemo(
     () => mergeTrendDays(data.days, liveData?.days, trendDayRange(from, to)).map((d) => ({
-      date:         new Date(`${d.key}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date:         formatDayMonth(dayKeyToDate(d.key), locale),
       performance:  d.performance_percent,
       availability: d.availability_percent,
       throughput:   d.throughput_percent,
     })),
-    [data, liveData, from, to],
+    [data, liveData, from, to, locale],
   );
 
   const options = useMemo<ApexOptions>(() => ({
@@ -58,33 +62,33 @@ export function MachinePerformanceTrend({
       ...baseChartOptions.tooltip,
       shared: true,
       intersect: false,
-      x: { formatter: (_v, opts) => `Date: ${chartData[opts?.dataPointIndex ?? 0]?.date ?? ''}` },
-      y: { formatter: (v) => (typeof v === 'number' ? `${formatNumber(v, 1)}%` : '—') },
+      x: { formatter: (_v, opts) => t('Date: {date}', { date: chartData[opts?.dataPointIndex ?? 0]?.date ?? '' }) },
+      y: { formatter: (v) => (typeof v === 'number' ? `${formatNumber(v, 1, locale)}%` : '—') },
     },
-  }), [chartData]);
+  }), [chartData, t, locale]);
 
   if (isFetching || livePending) return <ChartSkeleton />;
 
   if (chartData.length === 0) {
     return (
       <Card>
-        <CardHeader title="Performance Trend" description="No data available for the selected period" />
-        <div className="px-6 py-4 text-center text-sm text-muted">No performance data</div>
+        <CardHeader title={t('Performance Trend')} description={t('No data available for the selected period')} />
+        <div className="px-6 py-4 text-center text-sm text-muted">{t('No performance data')}</div>
       </Card>
     );
   }
 
   const series = [
-    { name: 'Performance (P)', data: chartData.map((d) => d.performance) },
-    { name: 'Availability (A)', data: chartData.map((d) => d.availability) },
-    { name: 'Throughput (A×P)', data: chartData.map((d) => d.throughput) },
+    { name: t('Performance (P)'), data: chartData.map((d) => d.performance) },
+    { name: t('Availability (A)'), data: chartData.map((d) => d.availability) },
+    { name: t('Throughput (A×P)'), data: chartData.map((d) => d.throughput) },
   ];
 
   return (
     <Card>
       <CardHeader
-        title="Performance Trend"
-        description="Daily Performance (P), Availability (A) and Throughput (A × P) over the selected period"
+        title={t('Performance Trend')}
+        description={t('Daily Performance (P), Availability (A) and Throughput (A × P) over the selected period')}
       />
       <div className="px-6 pb-6">
         <ApexChart type="line" series={series} options={options} height={300} />

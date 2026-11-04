@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useSuspenseQueries } from '@tanstack/react-query';
+import { useQueries, useSuspenseQueries } from '@tanstack/react-query';
 
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
-import { TBody, TD, THead, TH, TR, Table } from '@/components/ui/table';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { LoadMore, ScrollTable, useShowMore } from '@/components/ui/load-more';
+import { TBody, TD, THead, TH, TR } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { noEnergy, noProduction, offQuery } from '@/lib/display';
-import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
+import { inBatches } from '@/lib/infinite';
+import { useFactoryRefs, useLineName, useShown } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { unitsMade } from '@/lib/overview-figures';
 import {
   factoryMetricsApiRange,
@@ -22,11 +24,20 @@ import {
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
 import { useRefetchInterval } from '@/lib/refresh-context';
-import { useClientPagination } from '@/lib/use-client-pagination';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
+import { ListRow, PhoneRows } from '@/components/ui/simple';
+import { STATE_TONE, STATE_WORD, machineState } from '@/lib/plain-words';
 
 const REFRESH_MS = 60_000;
+
+/** Machines' last 24 hours (the table's strips), for a comma-separated batch of machine ids. */
+function fetchUptime24h(factoryId: string, idsKey: string, signal: AbortSignal) {
+  if (!idsKey) return Promise.resolve({ machines: [] });
+  const now = new Date();
+  const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  return api.uptime(factoryId, { from: from24h, to: now.toISOString(), machine_ids: idsKey }, { signal });
+}
 
 export function FactoryOverviewMachinesTable({
   factoryId,
@@ -37,9 +48,11 @@ export function FactoryOverviewMachinesTable({
   from?: string;
   to?: string;
 }) {
-  const { minDate, machines, shifts } = useFactoryRefs();
+  const { minDate, machines, shifts, maxDate } = useFactoryRefs();
+  const lineName = useLineName();
+  const { t, locale } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
   const scopedMachines = useMemo(
@@ -52,13 +65,18 @@ export function FactoryOverviewMachinesTable({
   const energyOn = shown('energy');
   const productionOn = shown('production');
 
-  const { page, limit, offset, setPaginationParams } = useClientPagination();
-
-  const pageMachineIds = useMemo(
-    () => scopedMachines.slice(offset, offset + limit).map((m) => m.machine_id),
-    [scopedMachines, offset, limit],
+  // Infinite scroll: the first rows, then more as the table's end comes into view. Their figures are
+  // all loaded at once; the 24-hour strips are worked out per machine, so they come a batch at a
+  // time (the first with the page). A later batch's rows appear only once its strips are there,
+  // complete, below the rows already shown (a spinner holds their place): nothing on screen moves.
+  const total = scopedMachines.length;
+  const listKey = [from ?? 'live', to ?? 'live', ...scopeKey].join('|');
+  const { shown: rowsAsked, more } = useShowMore(total, listKey);
+  const idBatches = useMemo(
+    () => inBatches(scopedMachines.slice(0, rowsAsked).map((m) => m.machine_id)),
+    [scopedMachines, rowsAsked],
   );
-  const pageMachineIdsKey = pageMachineIds.join(',');
+  const firstBatchKey = (idBatches[0] ?? []).join(',');
 
   const [{ data: availability }, { data: energy }, { data: production }, { data: uptime24h }] =
     useSuspenseQueries({
@@ -89,34 +107,40 @@ export function FactoryOverviewMachinesTable({
           }
           : offQuery('production', noProduction(factoryId)),
         {
-          queryKey: ['uptime-24h-overview', factoryId, page, limit, pageMachineIdsKey, ...scopeKey],
-          queryFn: ({ signal }: { signal: AbortSignal }) => {
-            if (pageMachineIds.length === 0) {
-              return Promise.resolve({ machines: [] });
-            }
-            const now = new Date();
-            const from24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-            return api.uptime(
-              factoryId,
-              {
-                from: from24h,
-                to: now.toISOString(),
-                machine_ids: pageMachineIdsKey,
-              },
-              { signal },
-            );
-          },
+          queryKey: ['uptime-24h-overview', factoryId, firstBatchKey, ...scopeKey],
+          queryFn: ({ signal }: { signal: AbortSignal }) => fetchUptime24h(factoryId, firstBatchKey, signal),
           refetchInterval,
           staleTime: 0,
         },
       ],
     });
+  // Later batches: without holding up the rows already shown (their strips appear when they arrive).
+  const laterUptime = useQueries({
+    queries: idBatches.slice(1).map((ids) => {
+      const idsKey = ids.join(',');
+      return {
+        queryKey: ['uptime-24h-overview', factoryId, idsKey, ...scopeKey],
+        queryFn: ({ signal }: { signal: AbortSignal }) => fetchUptime24h(factoryId, idsKey, signal),
+        refetchInterval,
+        staleTime: 0,
+      };
+    }),
+  });
+  const uptimeMachines = [...uptime24h.machines, ...laterUptime.flatMap((q) => q.data?.machines ?? [])];
+  // Rows shown: the first batch, then each later one once it has arrived (one that failed shows
+  // without its strips rather than holding the list up), in order.
+  let rowsShown = idBatches[0]?.length ?? 0;
+  for (const [i, q] of laterUptime.entries()) {
+    if (q.data === undefined && !q.isError) break;
+    rowsShown += idBatches[i + 1].length;
+  }
+  const loadingRows = rowsShown < rowsAsked;
 
   const uptimeByMachine = Object.fromEntries(
-    uptime24h.machines.map((m) => [m.machine_id, m]),
+    uptimeMachines.map((m) => [m.machine_id, m]),
   );
   const uptimeRowsByMachine = Object.fromEntries(
-    uptime24h.machines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
+    uptimeMachines.map((m) => [m.machine_id, expandUptimeMachines([m])]),
   );
 
   const machineRows = scopedMachines.map((m) => {
@@ -127,78 +151,97 @@ export function FactoryOverviewMachinesTable({
     return { machine: m, avail, eng, prod, uptime };
   });
 
-  const pageRows = machineRows.slice(offset, offset + limit);
-  const total = scopedMachines.length;
+  const pageRows = machineRows.slice(0, rowsShown);
 
-  function currentStatus(
+  // One rule for a machine's status now, in the table, the phone cards and the CSV.
+  function machineStatus(
     uptime?: (typeof uptime24h.machines)[0],
     avail?: (typeof availability.machines)[0],
   ) {
-    return statusLabel(uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data');
+    return uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data';
   }
 
   return (
     <Card>
       <CardHeader
-        title="Machines"
-        description="All machines registered for this factory"
+        title={t('Machines')}
+        description={t('All machines registered for this factory')}
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
             <ExportCsvButton
               filename="factory-machines"
               headers={[
-                'Machine',
-                'Line',
-                'Type',
-                'Availability',
-                ...(energyOn ? ['Energy (kWh)'] : []),
-                ...(productionOn ? ['Units'] : []),
-                'Current Status',
+                t('Machine'),
+                t('Line'),
+                t('Type'),
+                t('Availability'),
+                ...(energyOn ? [t('Energy (kWh)')] : []),
+                ...(productionOn ? [t('Units')] : []),
+                t('Current Status'),
               ]}
               rows={machineRows.map(({ machine, avail, eng, prod, uptime }) => [
                 machine.name,
-                machine.line_id,
+                lineName(machine.line_id),
                 machine.type,
                 avail?.availability_percent,
                 ...(energyOn ? [eng?.energy_kwh] : []),
                 ...(productionOn ? [unitsMade(prod)] : []),
-                currentStatus(uptime, avail),
+                t(statusLabel(machineStatus(uptime, avail))),
               ])}
             />
             <Link
               href={`/factories/${factoryId}/configuration`}
               className="text-sm text-primary hover:underline"
             >
-              Manage config →
+              {t('Manage config')} →
             </Link>
           </div>
         }
       />
-      <Table>
+      {/* Phones: one row per machine, tapping through to it. */}
+      <PhoneRows>
+        {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
+          <ListRow
+            key={machine.machine_id}
+            href={`/factories/${factoryId}/machines/${machine.machine_id}`}
+            tone={STATE_TONE[machineState(machineStatus(uptime, avail))]}
+            title={machine.name}
+            tag={lineName(machine.line_id)}
+            detail={[
+              t(STATE_WORD[machineState(machineStatus(uptime, avail))]),
+              energyOn && eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : null,
+              productionOn && unitsMade(prod) != null ? formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)')) : null,
+            ].filter(Boolean).join(' · ')}
+            value={formatPercent(avail?.availability_percent, locale)}
+            valueHint={avail?.availability_percent != null ? t('running') : undefined}
+          />
+        ))}
+      </PhoneRows>
+      <ScrollTable className="hidden sm:block" rowCount={pageRows.length} resetKey={listKey}>
         <THead>
           <TR>
-            <TH>Machine</TH>
-            <TH>Line</TH>
-            <TH>Type</TH>
-            <TH>Availability</TH>
-            {energyOn && <TH>Energy</TH>}
-            {productionOn && <TH>Units</TH>}
-            <TH>Last 24h</TH>
-            <TH>Current Status</TH>
+            <TH>{t('Machine')}</TH>
+            <TH>{t('Line')}</TH>
+            <TH>{t('Type')}</TH>
+            <TH>{t('Availability')}</TH>
+            {energyOn && <TH>{t('Energy')}</TH>}
+            {productionOn && <TH>{t('Units')}</TH>}
+            <TH>{t('Last 24h')}</TH>
+            <TH>{t('Current Status')}</TH>
           </TR>
         </THead>
         <TBody>
           {pageRows.map(({ machine, avail, eng, prod, uptime }) => (
             <TR key={machine.machine_id}>
               <TD className="font-medium">{machine.name}</TD>
-              <TD>{machine.line_id}</TD>
+              <TD>{lineName(machine.line_id)}</TD>
               <TD className="capitalize">{machine.type}</TD>
-              <TD>{formatPercent(avail?.availability_percent)}</TD>
+              <TD>{formatPercent(avail?.availability_percent, locale)}</TD>
               {energyOn && (
-                <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh)} kWh` : '—'}</TD>
+                <TD>{eng?.energy_kwh != null ? `${formatNumber(eng.energy_kwh, 1, locale)} kWh` : '—'}</TD>
               )}
               {/* No production sensor, or no count received: "—", not "made 0". */}
-              {productionOn && <TD>{formatUnits(unitsMade(prod), prod?.unit_label)}</TD>}
+              {productionOn && <TD>{formatUnits(unitsMade(prod), prod?.unit_label, locale, t('(mixed units)'))}</TD>}
               <TD>
                 {(uptimeRowsByMachine[machine.machine_id]?.length ?? 0) > 1 ? (
                   <div className="flex flex-col gap-1">
@@ -214,20 +257,13 @@ export function FactoryOverviewMachinesTable({
                 )}
               </TD>
               <TD>
-                <MachineStatusBadge
-                  status={uptime?.timeline.at(-1)?.status ?? avail?.status ?? 'no_data'}
-                />
+                <MachineStatusBadge status={machineStatus(uptime, avail)} />
               </TD>
             </TR>
           ))}
         </TBody>
-      </Table>
-      <TablePagination
-        total={total}
-        page={page}
-        limit={limit}
-        onPaginationChange={setPaginationParams}
-      />
+      </ScrollTable>
+      <LoadMore shown={rowsShown} total={total} hasMore={rowsShown < total} onMore={more} loading={loadingRows} />
     </Card>
   );
 }

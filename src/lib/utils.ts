@@ -1,26 +1,42 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import { formatDateTime, formatDecimal, formatInt, formatUpTo } from '@/lib/format';
+import type { Locale } from '@/lib/i18n/locale';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatNumber(value: number | string | null | undefined, decimals = 1): string {
+/** A figure with `decimals` decimals and Indian digit grouping: 1234.56 → "1,234.6", 123456 → "1,23,456.0". */
+export function formatNumber(value: number | string | null | undefined, decimals = 1, locale: Locale = 'en'): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(n)) return '—';
-  return n.toFixed(decimals);
+  return formatDecimal(n, decimals, locale);
 }
 
 /**
- * Units produced with the machine's unit name: "25.4 m", "1200". Whole counts stay whole, others
- * keep up to 2 decimals. A 'mixed' label (machines counting in different units) is spelled out.
+ * Units produced with the machine's unit name: "25.4 m", "1,200". Whole counts stay whole, others
+ * keep up to 2 decimals; digits are grouped the Indian way (12,00,000). A 'mixed' label (machines
+ * counting in different units) is spelled out; pass `mixedWord` for its translation.
  */
-export function formatUnits(value: number | null | undefined, label?: string | null): string {
+export function formatUnits(
+  value: number | null | undefined,
+  label?: string | null,
+  locale: Locale = 'en',
+  mixedWord = '(mixed units)',
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—';
-  const n = Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
-  if (label === 'mixed') return `${n} (mixed units)`;
+  const n = Number.isInteger(value) ? formatInt(value, locale) : formatUpTo(value, 2, locale);
+  if (label === 'mixed') return `${n} ${mixedWord}`;
   return label ? `${n} ${label}` : n;
+}
+
+/** A voltage as "415 V"; "—" when unknown (not "— V"). */
+export function formatVolts(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  return `${value} V`;
 }
 
 /** The unit name the producing machines share: null when none, 'mixed' when they differ. */
@@ -54,20 +70,16 @@ export function averageKnown(values: Array<number | null | undefined>): number |
   return known.length > 0 ? Math.round((known.reduce((s, v) => s + v, 0) / known.length) * 10) / 10 : null;
 }
 
-export function formatPercent(value: number | string | null | undefined): string {
+export function formatPercent(value: number | string | null | undefined, locale: Locale = 'en'): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(n)) return '—';
-  return `${n.toFixed(1)}%`;
+  return `${formatDecimal(n, 1, locale)}%`;
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/** "2 Nov, 01:35 pm" in factory time (IST); Hindi month names in Hindi. */
+export function formatDate(iso: string, locale: Locale = 'en'): string {
+  return formatDateTime(iso, locale);
 }
 
 /** Human label for how a downtime reason or config was reported (legacy values included). */

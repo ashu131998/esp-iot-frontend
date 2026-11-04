@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 
+import { useT } from '@/lib/i18n/context';
 import { sortByMachineName } from '@/lib/machine-sort';
 import type { Machine, ProductionLine } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ export function MachineMultiSelect({
   lockedIds?: string[];
   className?: string;
 }) {
+  const { t } = useT();
   const locked = useMemo(() => new Set(lockedIds), [lockedIds]);
   const machinesByLine = useMemo(() => {
     const groups = new Map<string, Machine[]>();
@@ -55,14 +57,14 @@ export function MachineMultiSelect({
     <div className={cn('space-y-2', className)}>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium text-muted">
-          {selectedIds.length} selected
+          {t('{count} selected', { count: selectedIds.length })}
         </span>
         <button type="button" className="text-primary hover:underline" onClick={selectAll}>
-          Select all
+          {t('Select all')}
         </button>
         <span className="text-muted">·</span>
         <button type="button" className="text-muted hover:underline" onClick={clearAll}>
-          Clear
+          {t('Clear')}
         </button>
       </div>
       <div className="max-h-56 space-y-3 overflow-y-auto rounded-lg border bg-white p-3">
@@ -96,7 +98,7 @@ export function MachineMultiSelect({
           </div>
         ))}
         {machines.length === 0 && (
-          <p className="text-center text-sm text-muted">No machines in this factory.</p>
+          <p className="text-center text-sm text-muted">{t('No machines in this factory.')}</p>
         )}
       </div>
     </div>

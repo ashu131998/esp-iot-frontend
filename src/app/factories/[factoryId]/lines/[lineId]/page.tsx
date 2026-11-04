@@ -11,6 +11,7 @@ import { isShown, noEnergy, noProduction } from '@/lib/display';
 import { NavDim } from '@/lib/navigation-context';
 import { resolveDateRange } from '@/lib/date-range';
 import { getQueryClient } from '@/lib/get-query-client';
+import { getT } from '@/lib/i18n/server';
 import { requireFactoryPage } from '@/lib/server/page-guard';
 import { serverApi } from '@/lib/server-api';
 import { formatDate } from '@/lib/utils';
@@ -27,9 +28,10 @@ export default async function LineDetailPage({
   const { factoryId, lineId } = await params;
   const display = await requireFactoryPage(factoryId, 'lines');
   const sp = await searchParams;
+  const { t, tn, locale } = await getT();
 
   const factory = await serverApi.factory(factoryId);
-  const range = resolveDateRange(sp, factory.created_at, factory.shifts);
+  const range = resolveDateRange(sp, factory.created_at, factory.shifts, factory.data_limit?.until);
 
   const activeLineId = sp.line_id ?? lineId;
 
@@ -93,7 +95,7 @@ export default async function LineDetailPage({
           href={`/factories/${factoryId}/lines`}
           className="hover:underline hover:text-foreground transition-colors"
         >
-          Production Lines
+          {t('Production Lines')}
         </Link>
         <span>/</span>
         <span className="font-medium text-foreground">{line?.name ?? lineId}</span>
@@ -105,11 +107,11 @@ export default async function LineDetailPage({
             <h2 className="text-xl font-bold">{line.name}</h2>
             <p className="mt-0.5 font-mono text-xs text-muted">{line.line_id}</p>
             {line.last_seen_at && (
-              <p className="mt-1 text-xs text-muted">Last seen {formatDate(line.last_seen_at)}</p>
+              <p className="mt-1 text-xs text-muted">{t('Last seen {time}', { time: formatDate(line.last_seen_at, locale) })}</p>
             )}
           </div>
           <Badge className="bg-blue-50 text-blue-700 shrink-0">
-            {lineMachines.length} machine{lineMachines.length !== 1 ? 's' : ''}
+            {tn(lineMachines.length, '{count} machine', '{count} machines')}
           </Badge>
         </div>
       )}

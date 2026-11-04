@@ -6,6 +6,7 @@ import {
   formatPercent,
   formatAlertVia,
   formatUnits,
+  formatVolts,
   normalizeMachineStatus,
   sharedUnitLabel,
   sumUnits,
@@ -87,9 +88,23 @@ describe('statusLabel', () => {
 
 // ── production units ─────────────────────────────────────────────────────────
 
+describe('formatVolts', () => {
+  it('adds the unit', () => expect(formatVolts(415)).toBe('415 V'));
+  it('keeps decimals as given', () => expect(formatVolts(230.5)).toBe('230.5 V'));
+  it('shows a dash alone when unknown', () => {
+    expect(formatVolts(null)).toBe('—');
+    expect(formatVolts(undefined)).toBe('—');
+    expect(formatVolts(Number.NaN)).toBe('—');
+  });
+});
+
 describe('formatUnits', () => {
   it('adds the unit name', () => expect(formatUnits(25.4, 'm')).toBe('25.4 m'));
-  it('keeps whole counts whole and plain without a unit', () => expect(formatUnits(1200, null)).toBe('1200'));
+  it('keeps whole counts whole and plain without a unit, grouped the Indian way', () => {
+    expect(formatUnits(1200, null)).toBe('1,200');
+    expect(formatUnits(1234567, 'm')).toBe('12,34,567 m');
+  });
+  it('takes the translated word for mixed units', () => expect(formatUnits(10, 'mixed', 'hi', '(अलग-अलग यूनिट)')).toBe('10 (अलग-अलग यूनिट)'));
   it('rounds to 2 decimals', () => expect(formatUnits(3.333, 'cm')).toBe('3.33 cm'));
   it('spells out mixed units', () => expect(formatUnits(10, 'mixed')).toBe('10 (mixed units)'));
   it('shows a dash for no value', () => expect(formatUnits(null, 'm')).toBe('—'));

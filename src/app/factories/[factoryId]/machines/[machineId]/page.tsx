@@ -4,7 +4,9 @@ import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { MachineStatusClient } from '@/components/factory/machine-status-client';
+import { CalibrateButton } from '@/components/factory/calibrate-button';
 import { MachineConfigCard } from '@/components/factory/machine-config-card';
+import { getT } from '@/lib/i18n/server';
 import { NavDim } from '@/lib/navigation-context';
 import { serverApi } from '@/lib/server-api';
 
@@ -19,6 +21,7 @@ export default async function MachineDetailPage({
 }) {
   const { factoryId, machineId } = await params;
   const sp = await searchParams;
+  const { t } = await getT();
 
   const factory = await serverApi.factory(factoryId);
 
@@ -44,7 +47,7 @@ export default async function MachineDetailPage({
           href={`/factories/${factoryId}/lines`}
           className="hover:underline hover:text-foreground transition-colors"
         >
-          Production Lines
+          {t('Production Lines')}
         </Link>
         {line && (
           <>
@@ -67,26 +70,27 @@ export default async function MachineDetailPage({
             <h2 className="text-xl font-bold">{machine.name}</h2>
             <p className="mt-0.5 font-mono text-xs text-muted">{machine.machine_id}</p>
             {machine.type && (
-              <p className="mt-1 text-xs text-muted">Type: {machine.type}</p>
+              <p className="mt-1 text-xs text-muted">{t('Type: {type}', { type: machine.type })}</p>
             )}
             {line && (
-              <p className="mt-1 text-xs text-muted">Line: {line.name}</p>
+              <p className="mt-1 text-xs text-muted">{t('Line: {name}', { name: line.name })}</p>
             )}
           </div>
-          <div className="flex flex-col gap-2 shrink-0">
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <CalibrateButton factoryId={factoryId} machineId={machineId} />
             {machine.target_cycle_time_sec && (
               <Badge className="bg-green-50 text-green-700">
-                Target Cycle: {machine.target_cycle_time_sec}s
+                {t('Target Cycle: {seconds}s', { seconds: machine.target_cycle_time_sec })}
               </Badge>
             )}
             {machine.target_units_per_hour && (
               <Badge className="bg-blue-50 text-blue-700">
-                Target: {machine.target_units_per_hour} {machine.unit_label || 'units'}/hr
+                {t('Target: {n} {unit}/hr', { n: machine.target_units_per_hour, unit: machine.unit_label || t('units') })}
               </Badge>
             )}
             {((machine.rotations_per_unit ?? 1) !== 1 || machine.unit_label) && (
               <Badge className="bg-slate-100 text-slate-700">
-                1 {machine.unit_label || 'unit'} = {machine.rotations_per_unit ?? 1} rotations
+                {t('1 {unit} = {n} rotations', { unit: machine.unit_label || t('unit'), n: String(machine.rotations_per_unit ?? 1) })}
               </Badge>
             )}
           </div>

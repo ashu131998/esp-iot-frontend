@@ -100,6 +100,12 @@ jobs:
             echo "${{ secrets.API_INTERNAL_URL }}"  | npx wrangler secret put API_INTERNAL_URL $env_flag
           done
 
+      # Open the sign-in links customers get (and an ID typed in capitals); any
+      # dead end fails this run.
+      - name: Check customer links
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: node scripts/smoke-public-links.mjs --only app
+
       # Stage / dev: same build, deployed as <env> (staff console, <env>-ops) and
       # <env>-app (customer dashboard). API_INTERNAL_URL is a plain var in
       # wrangler.jsonc; JWT_ACCESS_SECRET must match that backend's .env.

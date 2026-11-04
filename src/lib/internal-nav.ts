@@ -15,6 +15,7 @@ export const INTERNAL_NAV: InternalNavItem[] = [
   { href: '/internal/shift-reports', label: 'Email cron (shift reports)' },
   { href: '/internal/nodes', label: 'Nodes' },
   { href: '/internal/boards', label: 'Boards' },
+  { href: '/internal/firmware', label: 'Firmware' },
   { href: '/internal/health', label: 'System health' },
   { href: '/internal/onboard', label: 'Onboard', writeOnly: true },
   { href: '/internal/features', label: 'Pages & branding', writeOnly: true },

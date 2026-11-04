@@ -12,7 +12,7 @@ export function PageHeaderSkeleton() {
 
 export function StatCardSkeleton() {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:p-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-4 w-4 rounded-full" />
@@ -41,8 +41,8 @@ export function StatGridSkeleton({ count = 4 }: { count?: number }) {
 
 export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="border-b bg-slate-50 px-4 py-3">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+      <div className="border-b border-gray-100 px-4 py-3">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-2 h-3 w-48" />
       </div>
@@ -64,7 +64,7 @@ export function TableSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: nu
 
 export function ChartSkeleton() {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm sm:p-5">
+    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:p-5">
       <Skeleton className="h-4 w-40" />
       <Skeleton className="mt-2 h-3 w-56" />
       <Skeleton className="mt-6 h-64 w-full rounded-lg" />

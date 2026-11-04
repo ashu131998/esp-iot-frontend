@@ -4,10 +4,12 @@ import dynamic from 'next/dynamic';
 
 import { AvailabilityCards } from '@/components/factory/availability-cards';
 import { FactoryAvailabilityTrend } from '@/components/factory/factory-availability-trend';
+import { AvailabilitySplit } from '@/components/factory/period-splits';
 import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
 import { useFactoryDateRange } from '@/lib/use-factory-date-range';
+import { useWideScreen } from '@/lib/use-wide-screen';
 
 const AvailabilityChartSection = dynamic(
   () => import('@/components/factory/availability-chart-section').then((m) => m.AvailabilityChartSection),
@@ -31,6 +33,7 @@ export function AvailabilityDashboard({
   const { machineId } = useFactoryDateRange();
   // Parts our staff switched off for this factory are neither shown nor fetched.
   const shown = useShown();
+  const wide = useWideScreen();
 
   return (
     <>
@@ -41,15 +44,22 @@ export function AvailabilityDashboard({
         </QuerySuspense>
       )}
 
+      {/* Pie: running against stopped time, from the same availability query */}
+      {shown('availability.split') && (
+        <QuerySuspense fallback={<ChartSkeleton />}>
+          <AvailabilitySplit factoryId={factoryId} from={from} to={to} />
+        </QuerySuspense>
+      )}
+
       {/* Bar chart — lazy JS bundle, shares the cached availability query */}
-      {shown('availability.chart') && (
+      {wide && shown('availability.chart') && (
         <QuerySuspense fallback={<ChartSkeleton />}>
           <AvailabilityChartSection factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>
       )}
 
       {/* Daily trend — lazy JS bundle, own separate API call */}
-      {!machineId && shown('availability.trend') && (
+      {wide && !machineId && shown('availability.trend') && (
         <QuerySuspense fallback={<ChartSkeleton />}>
           <FactoryAvailabilityTrend factoryId={factoryId} from={from} to={to} />
         </QuerySuspense>

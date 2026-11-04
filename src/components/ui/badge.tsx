@@ -1,6 +1,7 @@
-import { cn, normalizeMachineStatus, statusColor, statusLabel } from '@/lib/utils';
+'use client';
 
-import { Card } from './card';
+import { useT } from '@/lib/i18n/context';
+import { cn, normalizeMachineStatus, statusColor, statusLabel } from '@/lib/utils';
 
 export function Badge({
   children,
@@ -34,10 +35,11 @@ function statusDotClass(status: string): string {
 
 /** Running | Stopped | No signal — the only three statuses shown to factory owners. */
 export function MachineStatusBadge({ status }: { status: string }) {
+  const { t } = useT();
   return (
     <Badge className={statusColor(status)}>
       <span className={`mr-1.5 inline-flex h-2 w-2 shrink-0 rounded-full ${statusDotClass(status)}`} />
-      {statusLabel(status)}
+      {t(statusLabel(status))}
     </Badge>
   );
 }
@@ -50,20 +52,22 @@ export function StatCard({
   value,
   sub,
   icon,
+  className,
 }: {
   label: string;
   value: string;
   sub?: string;
   icon?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card className="flex h-full flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted">{label}</span>
-        {icon}
+    <div className={cn('flex h-full flex-col rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-gray-100', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-medium text-muted">{label}</span>
+        {icon && <span className="shrink-0 text-gray-300">{icon}</span>}
       </div>
-      <div className="text-xl font-bold tracking-tight sm:text-2xl">{value}</div>
-      {sub && <p className="text-xs text-muted">{sub}</p>}
-    </Card>
+      <div className="mt-1 text-2xl font-bold tracking-tight text-foreground tabular-nums sm:text-3xl">{value}</div>
+      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+    </div>
   );
 }

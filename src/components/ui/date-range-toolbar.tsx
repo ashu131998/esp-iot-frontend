@@ -50,6 +50,7 @@ export function DateRangeToolbar({
       machines={hideMachineSelector ? undefined : machines ?? refs?.machines}
       lines={lines ?? refs?.lines}
       shifts={refs?.shifts}
+      maxDate={refs?.maxDate ?? null}
       hideDateRange={hideDateRange}
     />
   );

@@ -1,5 +1,6 @@
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getT } from '@/lib/i18n/server';
 import { factoryPage } from '@/lib/server/factory-page';
 
 /**
@@ -8,7 +9,7 @@ import { factoryPage } from '@/lib/server/factory-page';
  */
 // The switch check runs in factoryPage, which is all this page needs the factory for.
 async function CompliancePage() {
-
+  const { t } = await getT();
   const audits = [
     { id: 'ISO-9001', status: 'Certified', expiry: '2027-03-15', score: 94 },
     { id: 'ISO-14001', status: 'In Review', expiry: '2026-09-01', score: 88 },
@@ -19,8 +20,8 @@ async function CompliancePage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Card>
         <CardHeader
-          title="Compliance Dashboard"
-          description="Factory compliance and certification status"
+          title={t('Compliance Dashboard')}
+          description={t('Factory compliance and certification status')}
         />
         <div className="grid gap-4 md:grid-cols-3">
           {audits.map((a) => (
@@ -34,23 +35,23 @@ async function CompliancePage() {
                       : 'bg-amber-50 text-amber-700'
                   }
                 >
-                  {a.status}
+                  {t(a.status)}
                 </Badge>
               </div>
               <dl className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-muted">Audit Score</dt>
+                  <dt className="text-muted">{t('Audit Score')}</dt>
                   <dd className="font-semibold">{a.score}%</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted">Expiry</dt>
+                  <dt className="text-muted">{t('Expiry')}</dt>
                   <dd>{a.expiry}</dd>
                 </div>
               </dl>
             </div>
           ))}
         </div>
-        <p className="mt-6 text-sm text-muted">Sample data — not yet connected to audit records.</p>
+        <p className="mt-6 text-sm text-muted">{t('Sample data — not yet connected to audit records.')}</p>
       </Card>
     </div>
   );

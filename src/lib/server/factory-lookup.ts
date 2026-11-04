@@ -2,7 +2,8 @@ import type { FactoryBranding } from '@/lib/branding';
 import { internalApiBase } from '@/lib/server/bff';
 
 export type FactoryLookup =
-  | { status: 'found'; name: string; branding: FactoryBranding | null }
+  /** factoryId: the factory's real ID; the API also finds one typed in other letters. */
+  | { status: 'found'; factoryId: string; name: string; branding: FactoryBranding | null }
   | { status: 'missing' }
   | { status: 'unknown' };
 
@@ -33,12 +34,15 @@ export async function lookupFactory(
       { cache: 'no-store', signal: AbortSignal.timeout(3000) },
     );
     const body = (await res.json().catch(() => null)) as
-      | { name?: unknown; error?: unknown; branding?: unknown }
+      | { factory_id?: unknown; name?: unknown; error?: unknown; branding?: unknown }
       | null;
     // A 404 for an unknown *route* has a different body; only this one means the factory is missing.
     if (res.status === 404 && body?.error === NOT_FOUND_ERROR) return { status: 'missing' };
     if (res.ok && typeof body?.name === 'string') {
-      return { status: 'found', name: body.name, branding: brandingOf(body.branding) };
+      const real = typeof body.factory_id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(body.factory_id)
+        ? body.factory_id
+        : factoryId;
+      return { status: 'found', factoryId: real, name: body.name, branding: brandingOf(body.branding) };
     }
     return { status: 'unknown' };
   } catch {

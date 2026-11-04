@@ -50,7 +50,7 @@ export function isShown(display: Display | null | undefined, key: string): boole
 }
 
 // Before the backend sent `display`, only these pages could be switched (via `features`).
-const LEGACY_DEFAULTS: Display = { vibration: false, temperature: false, compliance: false };
+const LEGACY_DEFAULTS: Display = { compliance: false };
 
 /** A factory's display map, falling back to the older `features` flags. */
 export function displayOf(
@@ -63,12 +63,12 @@ export function displayOf(
 /** Factory pages in menu order. Team sits before Compliance and is always shown. */
 export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'overview', label: 'Overview' },
+  { slug: 'results', label: 'Results' },
   { slug: 'status-timeline', label: 'Status Timeline' },
   { slug: 'availability', label: 'Availability' },
   { slug: 'alerts', label: 'Alerts' },
   { slug: 'energy', label: 'Energy' },
-  { slug: 'vibration', label: 'Vibration' },
-  { slug: 'temperature', label: 'Temperature' },
+  { slug: 'maintenance', label: 'Maintenance' },
   { slug: 'performance', label: 'Performance' },
   { slug: 'production', label: 'Production' },
   { slug: 'quality', label: 'Quality' },
@@ -77,9 +77,32 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'scheduling', label: 'Scheduling' },
   { slug: 'shift-reports', label: 'Shift reports' },
   { slug: 'sensor-mapping', label: 'Sensor mapping' },
+  { slug: 'wifi', label: 'WiFi' },
   { slug: 'team', label: 'Team' },
   { slug: 'compliance', label: 'Compliance' },
 ];
+
+/** Pages only for people who can change the factory (its admins and our super admin): WiFi shows the passwords. */
+const ADMIN_PAGES: readonly string[] = ['wifi'];
+
+/** The menu as this person sees it: admin-only pages left out for everyone else. */
+export function tabsFor<T extends { slug: string }>(tabs: readonly T[], canWrite: boolean): T[] {
+  return tabs.filter((t) => canWrite || !ADMIN_PAGES.includes(t.slug));
+}
+
+/** The pages people set the factory up with: the sidebar lists them under Manage, the rest under Monitor. */
+export const MANAGE_PAGES: ReadonlySet<string> = new Set([
+  'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
+]);
+
+/** The sidebar's groups in menu order: what people read (Monitor), then what they set up (Manage); an empty one left out. */
+export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): Array<{ key: 'monitor' | 'manage'; tabs: T[] }> {
+  const groups: Array<{ key: 'monitor' | 'manage'; tabs: T[] }> = [
+    { key: 'monitor', tabs: tabs.filter((tab) => !MANAGE_PAGES.has(tab.slug)) },
+    { key: 'manage', tabs: tabs.filter((tab) => MANAGE_PAGES.has(tab.slug)) },
+  ];
+  return groups.filter((g) => g.tabs.length > 0);
+}
 
 /** The factory's menu: its pages that are switched on. */
 export function factoryTabs(

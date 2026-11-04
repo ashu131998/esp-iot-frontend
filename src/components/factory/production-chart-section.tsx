@@ -8,6 +8,7 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { resolveDateRange } from '@/lib/date-range';
 import { useFactoryRefs } from '@/lib/factory-refs-context';
+import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -27,9 +28,10 @@ export function ProductionChartSection({
   from?: string;
   to?: string;
 }) {
-  const { minDate, shifts } = useFactoryRefs();
+  const { minDate, shifts, maxDate } = useFactoryRefs();
+  const { t } = useT();
   const { machineId, lineId } = useFactoryDateRange();
-  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts), [from, to, minDate, shifts]);
+  const range = useMemo(() => resolveDateRange({ from, to }, minDate, shifts, maxDate), [from, to, minDate, shifts, maxDate]);
   const scopeKey = factoryScopeQueryKey({ machineId, lineId });
   const apiRange = factoryMetricsApiRange(range, { machineId, lineId });
 
@@ -49,14 +51,19 @@ export function ProductionChartSection({
     .filter((m) => m.status !== 'no_sensor')
     .map((m) => ({ name: m.machine_name, units: unitsMade(m) }));
   const unit = sharedUnitLabel(displayMachines);
-  const unitSuffix = unit === 'mixed' ? ' (mixed units)' : unit ? ` (${unit})` : '';
+  const unitsLabel =
+    unit === 'mixed'
+      ? t('Units Produced (mixed units)')
+      : unit
+        ? t('Units Produced ({unit})', { unit })
+        : t('Units Produced');
 
   return (
     <Card>
-      <CardHeader title="Production by Machine" description="Units counted from proximity sensor rising edges" />
+      <CardHeader title={t('Production by Machine')} description={t('Units counted from proximity sensor rising edges')} />
       <MetricBarChart
         data={chartData}
-        bars={[{ key: 'units', color: '#2563eb', label: `Units Produced${unitSuffix}` }]}
+        bars={[{ key: 'units', color: '#2563eb', label: unitsLabel }]}
         showAllXLabels
         xLabelRotate={-45}
         height={360}

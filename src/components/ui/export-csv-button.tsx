@@ -5,6 +5,8 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { buildCsv, downloadCsv, type CsvCell } from '@/lib/export-csv';
+import { useT } from '@/lib/i18n/context';
+import { cn } from '@/lib/utils';
 
 export function ExportCsvButton({
   filename,
@@ -24,6 +26,7 @@ export function ExportCsvButton({
   className?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const { t } = useT();
 
   const isEmpty = rowCount !== undefined ? rowCount === 0 : (rows?.length ?? 0) === 0;
 
@@ -41,12 +44,13 @@ export function ExportCsvButton({
     <Button
       variant="secondary"
       size="sm"
-      className={className}
+      // Not on phones: a CSV download is for a computer.
+      className={cn('hidden sm:inline-flex', className)}
       disabled={(disabled ?? isEmpty) || loading}
       onClick={handleExport}
     >
       <Download className="mr-1.5 h-3.5 w-3.5" />
-      {loading ? 'Exporting…' : 'Export CSV'}
+      {loading ? t('Exporting…') : t('Export CSV')}
     </Button>
   );
 }

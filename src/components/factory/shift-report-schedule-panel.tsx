@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useT } from '@/lib/i18n/context';
 
 const DEFAULT_OWNER_EMAIL = 'khandelwalashutosh73@gmail.com';
 
@@ -23,6 +24,7 @@ function textToEmails(text: string) {
 
 export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
   const { canWriteFactory } = useAuth();
+  const { t } = useT();
   const qc = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -48,7 +50,7 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['shift-report-schedule', factoryId] });
-      setSaveMsg('ok:Saved.');
+      setSaveMsg(`ok:${t('Saved.')}`);
       setEnabled(null);
       setEmailText(null);
     },
@@ -60,12 +62,12 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
       api.testShiftReportSchedule(factoryId, {
         recipient_emails: textToEmails(effectiveEmails),
       }),
-    onSuccess: () => setTestMsg('ok:Test email sent — check the inbox (and spam).'),
+    onSuccess: () => setTestMsg(`ok:${t('Test email sent — check the inbox (and spam).')}`),
     onError: (e: Error) => setTestMsg(`err:${e.message}`),
   });
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-muted">Loading…</p>;
+    return <p className="p-6 text-sm text-muted">{t('Loading…')}</p>;
   }
   if (error) {
     return <p className="p-6 text-sm text-red-600">{(error as Error).message}</p>;
@@ -75,18 +77,18 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
     <div className="space-y-6">
       <Card className="p-6">
         <CardHeader
-          title="Email after each shift"
-          description="Pick who gets a short email when each shift ends."
+          title={t('Email after each shift')}
+          description={t('Pick who gets a short email when each shift ends.')}
         />
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted">Sending:</span>
+          <span className="text-muted">{t('Sending:')}</span>
           {data?.platform_scheduler_enabled ? (
-            <Badge className="bg-emerald-100 text-emerald-800">Active</Badge>
+            <Badge className="bg-emerald-100 text-emerald-800">{t('Active')}</Badge>
           ) : (
-            <Badge className="bg-slate-100 text-slate-700">Not switched on yet — ask FloorBeat support</Badge>
+            <Badge className="bg-slate-100 text-slate-700">{t('Not switched on yet — ask FloorBeat support')}</Badge>
           )}
           {!data?.email_delivery_configured && (
-            <Badge className="bg-amber-100 text-amber-900">Email is not set up yet — ask FloorBeat support</Badge>
+            <Badge className="bg-amber-100 text-amber-900">{t('Email is not set up yet — ask FloorBeat support')}</Badge>
           )}
         </div>
 
@@ -98,14 +100,14 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
               disabled={!canWriteFactory}
               onChange={(e) => setEnabled(e.target.checked)}
             />
-            Send the email after each shift
+            {t('Send the email after each shift')}
           </label>
 
           <div>
             <label className="text-sm font-medium" htmlFor="shift-report-emails">
-              Who gets the email
+              {t('Who gets the email')}
             </label>
-            <p className="text-xs text-muted">Write one email address on each line.</p>
+            <p className="text-xs text-muted">{t('Write one email address on each line.')}</p>
             <textarea
               id="shift-report-emails"
               className="mt-1 w-full max-w-lg rounded-lg border border-slate-200 p-2 font-mono text-sm"
@@ -119,11 +121,11 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
 
           {data?.shifts?.length ? (
             <div className="text-sm text-muted">
-              <p className="font-medium text-foreground">Shifts:</p>
+              <p className="font-medium text-foreground">{t('Shifts:')}</p>
               <ul className="mt-1 list-disc pl-5">
                 {data.shifts.map((s) => (
                   <li key={s.shift_id}>
-                    {s.name ?? s.shift_id} — {s.label ?? `${s.start_hour}:00`}
+                    {t(s.name ?? s.shift_id)} — {s.label ?? `${s.start_hour}:00`}
                   </li>
                 ))}
               </ul>
@@ -138,7 +140,7 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
                 disabled={saveMutation.isPending}
                 onClick={() => saveMutation.mutate()}
               >
-                {saveMutation.isPending ? 'Saving…' : 'Save'}
+                {saveMutation.isPending ? t('Saving…') : t('Save')}
               </button>
               <button
                 type="button"
@@ -146,7 +148,7 @@ export function ShiftReportSchedulePanel({ factoryId }: { factoryId: string }) {
                 disabled={testMutation.isPending}
                 onClick={() => testMutation.mutate()}
               >
-                {testMutation.isPending ? 'Sending…' : 'Send test email'}
+                {testMutation.isPending ? t('Sending…') : t('Send test email')}
               </button>
             </div>
           )}

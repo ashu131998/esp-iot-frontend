@@ -48,8 +48,10 @@ Full details: `docs/ENVIRONMENTS.md` in the backend repo (`~/esp-intro/backend`)
 
 ## Email
 - Inbox: Zoho Mail (free) on `floorbeat.in`; MX/SPF/DKIM/DMARC in Cloudflare DNS.
-- Sending: Resend from `reports@floorbeat.in`, reply-to `support@floorbeat.in`;
-  bounce webhook `POST https://api.floorbeat.in/v1/webhooks/resend`.
+- Sending (Resend): shift reports `FloorBeat Reports <reports@>`, board alerts `FloorBeat Alerts <alerts@>`,
+  welcome emails `FloorBeat <hello@>`; replies to `support@floorbeat.in`. admin@/alerts@/hello@/reports@/support@
+  are Zoho aliases of ashutosh@floorbeat.in. Bounce webhook `POST https://api.floorbeat.in/v1/webhooks/resend`.
+- Email layout, footer and design rules: `floorbeat-emails.mdc` / `backend/docs/EMAILS.md`.
 
 ## Secrets
 Never print or commit secrets. Read them with hidden input (`read -rs`) or pipe them over ssh into `gh secret set`.

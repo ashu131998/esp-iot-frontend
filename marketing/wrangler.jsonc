@@ -22,7 +22,9 @@
   "vars": {
     "APP_ORIGIN": "https://app.floorbeat.in",
     "STAFF_ORIGIN": "https://ops.floorbeat.in",
-    "API_ORIGIN": "https://api.floorbeat.in"
+    "API_ORIGIN": "https://api.floorbeat.in",
+    // Each factory signs in at its own address, <id>.floorbeat.in (src/redirect.ts factoryOrigin).
+    "FACTORY_HOST_SUFFIX": ".floorbeat.in"
   },
   "observability": {
     "enabled": true
@@ -38,6 +40,7 @@
         "APP_ORIGIN": "https://stage-app.floorbeat.in",
         "STAFF_ORIGIN": "https://stage-ops.floorbeat.in",
         "API_ORIGIN": "https://api-stage.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".stage.floorbeat.in",
         "NON_PRODUCTION": "true"
       }
     },
@@ -51,6 +54,7 @@
         "APP_ORIGIN": "https://dev-app.floorbeat.in",
         "STAFF_ORIGIN": "https://dev-ops.floorbeat.in",
         "API_ORIGIN": "https://api-dev.floorbeat.in",
+        "FACTORY_HOST_SUFFIX": ".dev.floorbeat.in",
         "NON_PRODUCTION": "true"
       }
     }

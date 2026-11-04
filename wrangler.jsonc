@@ -10,7 +10,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  "routes": [{ "pattern": "ops.floorbeat.in", "custom_domain": true }],
+  // Every address also has an exact route: a route wins over a custom domain, and the customer
+  // Worker's *.floorbeat.in route (factories' own addresses) must never take these.
+  "routes": [
+    { "pattern": "ops.floorbeat.in", "custom_domain": true },
+    { "pattern": "ops.floorbeat.in/*", "zone_name": "floorbeat.in" }
+  ],
   "workers_dev": true,
   "vars": {
     "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
@@ -19,7 +24,10 @@
   "env": {
     "app": {
       "name": "esp-iot-frontend-app",
-      "routes": [{ "pattern": "app.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "app.floorbeat.in", "custom_domain": true },
+        { "pattern": "app.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "ops.floorbeat.in,esp-iot-frontend.ashu131998.workers.dev",
@@ -33,7 +41,10 @@
     // would live on floorbeat.in next to production's. JWT_ACCESS_SECRET is set by CI.
     "stage": {
       "name": "esp-iot-frontend-stage",
-      "routes": [{ "pattern": "stage-ops.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "stage-ops.floorbeat.in", "custom_domain": true },
+        { "pattern": "stage-ops.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "stage-ops.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
@@ -42,7 +53,10 @@
     },
     "stage-app": {
       "name": "esp-iot-frontend-stage-app",
-      "routes": [{ "pattern": "stage-app.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "stage-app.floorbeat.in", "custom_domain": true },
+        { "pattern": "stage-app.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "stage-ops.floorbeat.in,esp-iot-frontend-stage.ashu131998.workers.dev",
@@ -53,7 +67,10 @@
     },
     "dev": {
       "name": "esp-iot-frontend-dev",
-      "routes": [{ "pattern": "dev-ops.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "dev-ops.floorbeat.in", "custom_domain": true },
+        { "pattern": "dev-ops.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",
@@ -62,7 +79,10 @@
     },
     "dev-app": {
       "name": "esp-iot-frontend-dev-app",
-      "routes": [{ "pattern": "dev-app.floorbeat.in", "custom_domain": true }],
+      "routes": [
+        { "pattern": "dev-app.floorbeat.in", "custom_domain": true },
+        { "pattern": "dev-app.floorbeat.in/*", "zone_name": "floorbeat.in" }
+      ],
       "workers_dev": true,
       "vars": {
         "INTERNAL_STAFF_HOSTNAMES": "dev-ops.floorbeat.in,esp-iot-frontend-dev.ashu131998.workers.dev",

@@ -12,6 +12,7 @@ import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
 import { useT } from '@/lib/i18n/context';
+import { PlantSwitcher } from '@/components/layout/plant-switcher';
 import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -83,10 +84,7 @@ export function FactoryMobileNav({
         ) : (
           <BrandMark className="h-8 w-8" />
         )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold leading-tight">{factoryName}</p>
-          {location && <p className="truncate text-xs leading-tight text-muted">{location}</p>}
-        </div>
+        <PlantSwitcher factoryId={factoryId} factoryName={factoryName} subtitle={location} tone="light" />
         <button
           type="button"
           aria-label={t('Menu')}

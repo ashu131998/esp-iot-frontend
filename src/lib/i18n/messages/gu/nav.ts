@@ -35,4 +35,7 @@ export const nav: Messages = {
   'Back to Internal': 'ઇન્ટરનલ પર પાછા',
   'Factory home': 'ફેક્ટરી હોમ',
   'Production Lines': 'પ્રોડક્શન લાઇનો',
+  'Switch factory': 'ફેક્ટરી બદલો',
+  'Your factories': 'તમારી ફેક્ટરીઓ',
+  'Could not open that factory': 'એ ફેક્ટરી ખૂલી નહીં',
 };

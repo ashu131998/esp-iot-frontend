@@ -17,7 +17,12 @@ export type UserStatus = 'active' | 'pending' | 'disabled';
 export interface AuthUser {
   user_id: string;
   role: Role;
+  /** The factory this session is at (a company's admin: any of its factories). */
   factory_id: string | null;
+  /** Set for a company's admin: one account for every factory of that company. */
+  company_id?: string | null;
+  /** The factory the account was made at. */
+  home_factory_id?: string | null;
   username: string;
   email: string | null;
   status: UserStatus;

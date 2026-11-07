@@ -22,6 +22,8 @@ export interface Factory {
   display?: import('./display').Display;
   /** Accent colour and logo set by our staff (lib/branding.ts). */
   branding?: import('./branding').FactoryBranding;
+  /** The company it belongs to (staff lists); null for one onboarded before companies. */
+  company?: { company_id: string; name: string } | null;
   machine_count: number;
   device_count: number;
   line_count: number;

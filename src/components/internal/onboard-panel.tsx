@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { BoardsStep } from '@/components/internal/onboard/boards-step';
+import { CompanyStep } from '@/components/internal/onboard/company-step';
 import { FactoryIdHint } from '@/components/internal/onboard/factory-id-hint';
 import { LinesStep } from '@/components/internal/onboard/lines-step';
 import { LookStep } from '@/components/internal/onboard/look-step';
@@ -26,6 +27,8 @@ import {
   addShift,
   adminProblems,
   buildSetupRequest,
+  companyAdminsOf,
+  isBlankAdmin,
   emailList,
   emptyAdmin,
   emptySetupDraft,
@@ -63,6 +66,7 @@ function reviveDraft(stored: unknown, fresh: SetupDraft): SetupDraft {
     ...fresh,
     step: typeof s.step === 'number' ? s.step : 0,
     idEdited: Boolean(s.idEdited),
+    company: { ...fresh.company, ...(s.company ?? {}) },
     factory: { ...fresh.factory, ...(s.factory ?? {}) },
     look: { ...fresh.look, ...(s.look ?? {}) },
     subscription: { ...fresh.subscription, ...(s.subscription ?? {}) },
@@ -127,8 +131,10 @@ export function OnboardPanel() {
 
   const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
   const takenIds = useMemo(() => (factoriesQuery.data?.factories ?? []).map((f) => f.factory_id), [factoriesQuery.data]);
+  const companiesQuery = useQuery({ queryKey: ['admin-companies'], queryFn: ({ signal }) => api.adminCompanies({ signal }) });
+  const companies = useMemo(() => companiesQuery.data?.companies ?? [], [companiesQuery.data]);
 
-  const ok = setupStepsOk(d, takenIds, draftProblems);
+  const ok = setupStepsOk(d, takenIds, draftProblems, companies);
   const bad = ok.map((x) => !x);
   const fProblems = factoryProblems(d.factory, takenIds);
   const sProblem = shiftProblem(d.shifts);
@@ -148,6 +154,7 @@ export function OnboardPanel() {
       stored.clear();
       setServerProblems([]);
       qc.invalidateQueries({ queryKey: ['admin-factories'] });
+      qc.invalidateQueries({ queryKey: ['admin-companies'] });
     },
     onError: (err) => {
       const problems = ((err as ApiError).body as { problems?: Problem[] } | null)?.problems ?? [];
@@ -159,6 +166,11 @@ export function OnboardPanel() {
   const next = () => {
     setTried(true);
     if (!ok[step]) return;
+    // A new customer's first factory is usually named like the company: start the name from it.
+    if (current === 'company' && d.company.mode === 'new' && !d.factory.name.trim()) {
+      const name = d.company.name.replace(/\s+/g, ' ').trim();
+      set((x) => ({ ...x, factory: { ...x.factory, name, factory_id: x.idEdited ? x.factory.factory_id : suggestFactoryId(name) } }));
+    }
     goTo(step + 1);
   };
   const create = () => {
@@ -189,6 +201,9 @@ export function OnboardPanel() {
   const setAdmins = (fn: (a: AdminDraft[]) => AdminDraft[]) => set((x) => ({ ...x, admins: fn(x.admins) }));
   const updateAdmin = (k: string, fn: (a: AdminDraft) => AdminDraft) => setAdmins((list) => list.map((a) => (a.key === k ? fn(a) : a)));
   const stepProblems = serverProblems.filter((p) => stepOfSection(p.section) === step);
+  // A factory of an existing company: its admins sign in here too, so new ones are optional.
+  const companyAdmins = companyAdminsOf(d.company, companies);
+  const adminsOptional = companyAdmins.length > 0;
   const isLast = step === SETUP_STEPS.length - 1;
 
   return (
@@ -209,9 +224,19 @@ export function OnboardPanel() {
             </div>
           )}
 
+          {current === 'company' && (
+            <CompanyStep
+              value={d.company}
+              onChange={(company) => patch({ company })}
+              companies={companies}
+              loading={companiesQuery.isLoading}
+              tried={tried}
+            />
+          )}
+
           {current === 'factory' && (
             <>
-              <CardHeader title="Factory" description="The customer's factory, as it will appear in the dashboard. The only required step, with one admin." />
+              <CardHeader title="Factory" description="This plant, as it will appear in its dashboard at its own address. Required, like the company and one admin." />
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Factory name">
                   <Input
@@ -318,11 +343,21 @@ export function OnboardPanel() {
             <>
               <CardHeader
                 title="People"
-                description="At least one admin: each gets a welcome email with their sign-in details and a link to the factory dashboard. Workers are optional."
+                description={adminsOptional
+                  ? `${d.company.name}'s admins sign in at this factory too: add another admin only if needed. Workers belong to this factory and are optional.`
+                  : 'At least one admin: each gets a welcome email with their sign-in details and a link to the factory dashboard. Admins work at every factory of the company; workers belong to this one and are optional.'}
               />
+              {adminsOptional && (
+                <div className="mb-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
+                  <div className="font-medium">Admins of {d.company.name}</div>
+                  <div className="break-words">{companyAdmins.map((a) => a.email ?? a.username).join(', ')}</div>
+                  <div className="mt-1 text-xs text-indigo-800/80">One account each for every factory of the company. Leave the row below empty to add none.</div>
+                </div>
+              )}
               <div className="space-y-3">
                 {d.admins.map((a, i) => {
-                  const p = aProblems[i];
+                  // An empty row is none when the company's admins cover the factory: no errors for it.
+                  const p = adminsOptional && isBlankAdmin(a) ? {} : aProblems[i];
                   return (
                     <div key={a.key} className="rounded-lg border p-4">
                       <div className="mb-3 flex items-center justify-between">

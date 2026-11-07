@@ -156,4 +156,5 @@ export const factory_admin: Messages = {
   'Couldn\'t delete task: {error}': 'કામ કાઢી શકાયું નહીં: {error}',
   'No tasks match the selected filters.': 'પસંદ કરેલા ફિલ્ટર મુજબ કોઈ કામ મળ્યું નહીં.',
   'No tasks scheduled yet. Use "Schedule Task" to assign a worker.': 'હજી કોઈ કામ શેડ્યૂલ નથી. કારીગરને કામ આપવા "કામ શેડ્યૂલ કરો" દબાવો.',
+  'All factories': 'બધી ફેક્ટરીઓ',
 };

@@ -43,9 +43,11 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
       <Card className="p-6">
         <CardHeader
           title={`${factory.name} is set up`}
-          description={failed.length === 0
-            ? `Welcome email sent to ${emails.length === 1 ? 'the admin' : `all ${emails.length} admins`}.${made.length > 0 ? ` Also created: ${made.join(', ')}.` : ''}`
-            : `${failed.length} of ${emails.length} welcome emails did not go: copy those sign-in details and send them yourself.`}
+          description={emails.length === 0
+            ? `No new admin: the admins of ${result.company?.name ?? 'its company'} sign in here too.${made.length > 0 ? ` Also created: ${made.join(', ')}.` : ''}`
+            : failed.length === 0
+              ? `Welcome email sent to ${emails.length === 1 ? 'the admin' : `all ${emails.length} admins`}.${made.length > 0 ? ` Also created: ${made.join(', ')}.` : ''}`
+              : `${failed.length} of ${emails.length} welcome emails did not go: copy those sign-in details and send them yourself.`}
         />
         {result.company && <p className="-mt-2 mb-4 text-sm text-muted">Company: <span className="font-medium text-foreground">{result.company.name}</span></p>}
         <ul className="divide-y rounded-lg border text-sm">

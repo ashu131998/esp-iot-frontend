@@ -166,6 +166,7 @@ describe('wizard steps', () => {
     const html = render(<ReviewStep d={filled()} onEdit={noop} />);
     expect(html).toContain('Shree Group');
     expect(html).toContain(' · a plant added to it');
+    expect(html).toContain('The admins of Shree Group sign in here too');
     for (const text of ['Shree Mills', 'shree-mills', 'Patel Looms', '3 Nov 2026 – 2 Nov 2027', 'Weaving A', '2 machines', 'Shree-Office', '(open)', 'revb-311d80', 'I1 Machine #1, P1 Machine #1', 'owner@shree.in', '2 workers, 1 with the alert app', 'Mobile alerts on']) {
       expect(html).toContain(text);
     }
@@ -192,6 +193,21 @@ describe('wizard steps', () => {
     expect(html).toContain('Ravi: failed: AlertOps down');
     expect(html).not.toContain('Sita: none');
     expect(html).toContain('Claim its boards');
+  });
+
+  it('Done: a factory of a company without new admins says its admins sign in there', () => {
+    const html = render(<OnboardDone
+      onAnother={noop}
+      result={{
+        company: { company_id: 'shree-group', name: 'Shree Group' },
+        factory: { factory_id: 'shree-pune', name: 'Shree Pune' } as never,
+        admins: [], emails: [], lines: 0, machines: 0, wifi: 0, workers: [],
+        dashboard_url: 'https://shree-pune.floorbeat.in/',
+        request: { company: { company_id: 'shree-group' }, factory: { factory_id: 'shree-pune', name: 'Shree Pune', location: '' }, shifts: [], admins: [] },
+      }}
+    />);
+    expect(html).toContain('No new admin: the admins of Shree Group sign in here too.');
+    expect(html).not.toContain('Welcome email sent');
   });
 
   it('Done: each board claimed or not, and where to claim the rest', () => {

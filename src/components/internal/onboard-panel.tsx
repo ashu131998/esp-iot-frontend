@@ -27,6 +27,8 @@ import {
   addShift,
   adminProblems,
   buildSetupRequest,
+  companyAdminsOf,
+  isBlankAdmin,
   emailList,
   emptyAdmin,
   emptySetupDraft,
@@ -199,6 +201,9 @@ export function OnboardPanel() {
   const setAdmins = (fn: (a: AdminDraft[]) => AdminDraft[]) => set((x) => ({ ...x, admins: fn(x.admins) }));
   const updateAdmin = (k: string, fn: (a: AdminDraft) => AdminDraft) => setAdmins((list) => list.map((a) => (a.key === k ? fn(a) : a)));
   const stepProblems = serverProblems.filter((p) => stepOfSection(p.section) === step);
+  // A factory of an existing company: its admins sign in here too, so new ones are optional.
+  const companyAdmins = companyAdminsOf(d.company, companies);
+  const adminsOptional = companyAdmins.length > 0;
   const isLast = step === SETUP_STEPS.length - 1;
 
   return (
@@ -338,11 +343,21 @@ export function OnboardPanel() {
             <>
               <CardHeader
                 title="People"
-                description="At least one admin: each gets a welcome email with their sign-in details and a link to the factory dashboard. Workers are optional."
+                description={adminsOptional
+                  ? `${d.company.name}'s admins sign in at this factory too: add another admin only if needed. Workers belong to this factory and are optional.`
+                  : 'At least one admin: each gets a welcome email with their sign-in details and a link to the factory dashboard. Admins work at every factory of the company; workers belong to this one and are optional.'}
               />
+              {adminsOptional && (
+                <div className="mb-3 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
+                  <div className="font-medium">Admins of {d.company.name}</div>
+                  <div className="break-words">{companyAdmins.map((a) => a.email ?? a.username).join(', ')}</div>
+                  <div className="mt-1 text-xs text-indigo-800/80">One account each for every factory of the company. Leave the row below empty to add none.</div>
+                </div>
+              )}
               <div className="space-y-3">
                 {d.admins.map((a, i) => {
-                  const p = aProblems[i];
+                  // An empty row is none when the company's admins cover the factory: no errors for it.
+                  const p = adminsOptional && isBlankAdmin(a) ? {} : aProblems[i];
                   return (
                     <div key={a.key} className="rounded-lg border p-4">
                       <div className="mb-3 flex items-center justify-between">

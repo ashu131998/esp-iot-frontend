@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  SETUP_STEPS, boardProblems, buildSetupRequest, bulkMachines, companyProblems, emailList, emptySetupDraft, lineProblems, lookProblems,
+  SETUP_STEPS, adminRows, boardProblems, buildSetupRequest, bulkMachines, companyAdminsOf, companyProblems, emailList, emptySetupDraft, emptyAdmin, isBlankAdmin, lineProblems, lookProblems,
   machineProblems, newBoard, newContact, newLine, newMachine, newWifi, newWorker, reportsProblems, setAdminEmail,
   setupStepsOk, stepOfSection, wifiProblems, workerProblems, type SetupDraft,
 } from '@/lib/onboarding';
@@ -57,6 +57,25 @@ describe('the company (the first step)', () => {
     expect(companyProblems({ mode: 'existing', company_id: 'gone', name: 'Gone' }, companies))
       .toEqual({ company: 'That company no longer exists: pick another' });
     expect(companyProblems({ mode: 'existing', company_id: 'gone', name: 'Gone' }, [])).toEqual({});
+  });
+
+  it('a factory of a company with admins: they cover it, a new admin is optional (an empty row is none)', () => {
+    const withAdmins = [{ ...companies[0], admins: [{ username: 'boss', email: 'boss@shree.in' }] }, companies[1]];
+    const d = minimal();
+    const blank = emptyAdmin('k2');
+    expect(isBlankAdmin(blank)).toBe(true);
+    expect(isBlankAdmin(d.admins[0])).toBe(false);
+    const existing = { ...d, company: { mode: 'existing' as const, company_id: 'shree-group', name: 'Shree Group' }, admins: [blank] };
+    expect(companyAdminsOf(existing.company, withAdmins)).toEqual([{ username: 'boss', email: 'boss@shree.in' }]);
+    expect(adminRows(existing, withAdmins)).toEqual([]);
+    expect(setupStepsOk(existing, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(true);
+    expect(buildSetupRequest(existing, draftBody).admins).toEqual([]);
+    // A company without admins, or a new one: the row is needed.
+    expect(setupStepsOk({ ...existing, company: { ...existing.company, company_id: 'patel' } }, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
+    expect(setupStepsOk({ ...existing, company: { mode: 'new', company_id: '', name: 'New Co' } }, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
+    // A row someone started is checked as before.
+    const started = { ...existing, admins: [{ ...blank, email: 'half@' }] };
+    expect(setupStepsOk(started, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
   });
 
   it('the step follows it; to the API: the picked company\'s id, or the new name tidied', () => {

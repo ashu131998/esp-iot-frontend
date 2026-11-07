@@ -816,6 +816,16 @@ export const api = {
   adminFactories: (options?: ApiRequestOptions) =>
     request<{ factories: Factory[] }>('/v1/admin/factories', options),
 
+  /** The factories this account can be at: a company's admin, all of its company's. */
+  authPlants: (options?: ApiRequestOptions) =>
+    request<{ plants: { factory_id: string; name: string }[]; current: string | null }>('/v1/auth/plants', options),
+
+  /** A one-time pass to another factory of the company: opening `url` signs in there. */
+  authSwitch: (factoryId: string, options?: ApiRequestOptions) =>
+    request<{ factory_id: string; url: string; expires_in: number }>('/v1/auth/switch', {
+      method: 'POST', body: JSON.stringify({ factory_id: factoryId }), ...options,
+    }),
+
   /** The companies, each with its factories (the onboarding form's first step). */
   adminCompanies: (options?: ApiRequestOptions) =>
     request<{ companies: import('./onboarding').CompanyOption[] }>('/v1/admin/companies', options),

@@ -27,6 +27,8 @@ export interface CompanyOption {
   company_id: string;
   name: string;
   factories: { factory_id: string; name: string | null }[];
+  /** Its admins: one account each for every factory of the company. */
+  admins?: { username: string; email: string | null }[];
 }
 
 /**
@@ -224,6 +226,20 @@ export function adminProblems(admins: AdminDraft[]): AdminProblems[] {
     if (username) seenUser.add(username.toLowerCase());
     return out;
   });
+}
+
+/** An admin row nobody filled in. */
+export const isBlankAdmin = (a: AdminDraft) => !a.email.trim() && !a.username.trim() && !a.password;
+
+/** The picked company's admins, who sign in at the new factory too (a new company has none). */
+export function companyAdminsOf(c: CompanyDraft, companies: CompanyOption[]): { username: string; email: string | null }[] {
+  if (c.mode !== 'existing') return [];
+  return companies.find((x) => x.company_id === c.company_id)?.admins ?? [];
+}
+
+/** The admin rows to check: with the company's admins covering the factory, an empty row is none. */
+export function adminRows(d: Pick<SetupDraft, 'company' | 'admins'>, companies: CompanyOption[] = []): AdminDraft[] {
+  return companyAdminsOf(d.company, companies).length > 0 ? d.admins.filter((a) => !isBlankAdmin(a)) : d.admins;
 }
 
 export function hasProblems(p: object | object[]): boolean {
@@ -629,7 +645,7 @@ export function setupStepsOk(
       case 'lines': return !hasProblems(lineProblems(d.lines)) && !hasProblems(machineProblems(d.machines, d.lines));
       case 'wifi': return !hasProblems(wifiProblems(d.wifi));
       case 'boards': return !hasProblems(boardProblems(d.boards, d.lines, d.machines));
-      case 'people': return !hasProblems(adminProblems(d.admins)) && !hasProblems(workerProblems(d.workers));
+      case 'people': return !hasProblems(adminProblems(adminRows(d, companies))) && !hasProblems(workerProblems(d.workers));
       case 'reports': return !hasProblems(reportsProblems(d.reports));
       default: return true;
     }
@@ -672,7 +688,8 @@ const clean = (v: string) => v.replace(/\s+/g, ' ').trim();
 
 /** The form as the API takes it: required parts always, the rest only when filled in. */
 export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => SetupRequest['subscription']): SetupRequest {
-  const base = buildOnboardRequest(d.factory, d.shifts, d.admins);
+  // An empty admin row is never sent (it only passes the checks when the company's admins cover it).
+  const base = buildOnboardRequest(d.factory, d.shifts, d.admins.filter((a) => !isBlankAdmin(a)));
   const req: SetupRequest = {
     company: d.company.mode === 'existing' ? { company_id: d.company.company_id } : { name: tidyName(d.company.name) },
     factory: {

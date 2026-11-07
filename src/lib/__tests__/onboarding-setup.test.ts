@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  SETUP_STEPS, boardProblems, buildSetupRequest, bulkMachines, emailList, emptySetupDraft, lineProblems, lookProblems,
+  SETUP_STEPS, adminRows, boardProblems, buildSetupRequest, bulkMachines, companyAdminsOf, companyProblems, emailList, emptySetupDraft, emptyAdmin, isBlankAdmin, lineProblems, lookProblems,
   machineProblems, newBoard, newContact, newLine, newMachine, newWifi, newWorker, reportsProblems, setAdminEmail,
   setupStepsOk, stepOfSection, wifiProblems, workerProblems, type SetupDraft,
 } from '@/lib/onboarding';
 import { draftBody, draftProblems } from '@/lib/subscriptions';
 
-/** A draft with just what is required: the factory and one admin. */
+/** A draft with just what is required: the company, the factory and one admin. */
 function minimal(): SetupDraft {
   const d = emptySetupDraft('2026-11-03');
+  d.company = { mode: 'new', company_id: '', name: 'Shree Group' };
   d.factory = { factory_id: 'shree-mills', name: 'Shree Mills', location: 'Surat', referred_by: '' };
   d.admins = [{ ...setAdminEmail(d.admins[0], 'owner@shree.in'), password: 'password1' }];
   return d;
@@ -17,19 +18,72 @@ function minimal(): SetupDraft {
 
 describe('the steps', () => {
   it('in order, and server problems map to their step', () => {
-    expect(SETUP_STEPS.map((s) => s.key)).toEqual(['factory', 'look', 'subscription', 'shifts', 'lines', 'wifi', 'boards', 'people', 'reports', 'review']);
-    expect(stepOfSection('lines')).toBe(4);
-    expect(stepOfSection('boards')).toBe(6);
-    expect(stepOfSection('people')).toBe(7);
+    expect(SETUP_STEPS.map((s) => s.key)).toEqual(['company', 'factory', 'look', 'subscription', 'shifts', 'lines', 'wifi', 'boards', 'people', 'reports', 'review']);
+    expect(stepOfSection('company')).toBe(0);
+    expect(stepOfSection('lines')).toBe(5);
+    expect(stepOfSection('boards')).toBe(7);
+    expect(stepOfSection('people')).toBe(8);
     expect(stepOfSection('unknown')).toBe(0);
   });
 
-  it('only the factory and an admin are required: every other step is fine left empty', () => {
+  it('only the company, the factory and an admin are required: every other step is fine left empty', () => {
     const ok = setupStepsOk(minimal(), [], draftProblems);
     expect(ok.every(Boolean)).toBe(true);
     const empty = emptySetupDraft('2026-11-03');
-    expect(setupStepsOk(empty, [], draftProblems)[0]).toBe(false);   // factory
-    expect(setupStepsOk(empty, [], draftProblems)[7]).toBe(false);   // people: one admin needed
+    const steps = setupStepsOk(empty, [], draftProblems);
+    expect(steps[stepOfSection('company')]).toBe(false);
+    expect(steps[stepOfSection('factory')]).toBe(false);
+    expect(steps[stepOfSection('people')]).toBe(false);   // one admin needed
+  });
+});
+
+describe('the company (the first step)', () => {
+  const companies = [
+    { company_id: 'shree-group', name: 'Shree Group', factories: [{ factory_id: 'shree-surat', name: 'Shree Surat' }] },
+    { company_id: 'patel', name: 'Patel Mills', factories: [] },
+  ];
+
+  it('a new one needs a name of its own (case and spacing aside), at most 120 characters', () => {
+    expect(companyProblems({ mode: 'new', company_id: '', name: 'New Mills' }, companies)).toEqual({});
+    expect(companyProblems({ mode: 'new', company_id: '', name: '   ' }, companies)).toEqual({ company: 'Enter the company name' });
+    expect(companyProblems({ mode: 'new', company_id: '', name: ' shree   group ' }, companies))
+      .toEqual({ company: 'Shree Group is already a company: pick it from the list' });
+    expect(companyProblems({ mode: 'new', company_id: '', name: 'x'.repeat(121) }, companies)).toEqual({ company: 'At most 120 characters' });
+  });
+
+  it('an existing one must be picked, and still be there (while the list loads, the server checks)', () => {
+    expect(companyProblems({ mode: 'existing', company_id: 'patel', name: 'Patel Mills' }, companies)).toEqual({});
+    expect(companyProblems({ mode: 'existing', company_id: '', name: '' }, companies)).toEqual({ company: 'Pick the company' });
+    expect(companyProblems({ mode: 'existing', company_id: 'gone', name: 'Gone' }, companies))
+      .toEqual({ company: 'That company no longer exists: pick another' });
+    expect(companyProblems({ mode: 'existing', company_id: 'gone', name: 'Gone' }, [])).toEqual({});
+  });
+
+  it('a factory of a company with admins: they cover it, a new admin is optional (an empty row is none)', () => {
+    const withAdmins = [{ ...companies[0], admins: [{ username: 'boss', email: 'boss@shree.in' }] }, companies[1]];
+    const d = minimal();
+    const blank = emptyAdmin('k2');
+    expect(isBlankAdmin(blank)).toBe(true);
+    expect(isBlankAdmin(d.admins[0])).toBe(false);
+    const existing = { ...d, company: { mode: 'existing' as const, company_id: 'shree-group', name: 'Shree Group' }, admins: [blank] };
+    expect(companyAdminsOf(existing.company, withAdmins)).toEqual([{ username: 'boss', email: 'boss@shree.in' }]);
+    expect(adminRows(existing, withAdmins)).toEqual([]);
+    expect(setupStepsOk(existing, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(true);
+    expect(buildSetupRequest(existing, draftBody).admins).toEqual([]);
+    // A company without admins, or a new one: the row is needed.
+    expect(setupStepsOk({ ...existing, company: { ...existing.company, company_id: 'patel' } }, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
+    expect(setupStepsOk({ ...existing, company: { mode: 'new', company_id: '', name: 'New Co' } }, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
+    // A row someone started is checked as before.
+    const started = { ...existing, admins: [{ ...blank, email: 'half@' }] };
+    expect(setupStepsOk(started, [], draftProblems, withAdmins)[stepOfSection('people')]).toBe(false);
+  });
+
+  it('the step follows it; to the API: the picked company\'s id, or the new name tidied', () => {
+    const d = minimal();
+    expect(setupStepsOk({ ...d, company: { mode: 'new', company_id: '', name: 'shree group' } }, [], draftProblems, companies)[0]).toBe(false);
+    expect(buildSetupRequest(d, draftBody).company).toEqual({ name: 'Shree Group' });
+    expect(buildSetupRequest({ ...d, company: { mode: 'new', company_id: '', name: '  New   Mills ' } }, draftBody).company).toEqual({ name: 'New Mills' });
+    expect(buildSetupRequest({ ...d, company: { mode: 'existing', company_id: 'patel', name: 'Patel Mills' } }, draftBody).company).toEqual({ company_id: 'patel' });
   });
 });
 
@@ -135,7 +189,7 @@ describe('boards', () => {
 describe('buildSetupRequest: what goes to the API', () => {
   it('just the required parts (and the alert defaults) when nothing else was filled in', () => {
     const req = buildSetupRequest(minimal(), draftBody);
-    expect(Object.keys(req).sort()).toEqual(['admins', 'alerts', 'factory', 'shifts']);
+    expect(Object.keys(req).sort()).toEqual(['admins', 'alerts', 'company', 'factory', 'shifts']);
     expect(req.factory).toEqual({ factory_id: 'shree-mills', name: 'Shree Mills', location: 'Surat' });
     expect(req.alerts).toEqual({ mobile_enabled: true, notify_owner_on_down: true, owner_contacts: [] });
   });

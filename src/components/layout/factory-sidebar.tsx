@@ -33,6 +33,7 @@ import { useAuth } from '@/lib/auth-context';
 import { sidebarGroups, tabsFor } from '@/lib/display';
 import { currentShiftWindow } from '@/lib/shifts';
 import { useT } from '@/lib/i18n/context';
+import { PlantSwitcher } from '@/components/layout/plant-switcher';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -110,10 +111,7 @@ export function FactorySidebar({
         ) : (
           <BrandMark className="h-10 w-10" />
         )}
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{factoryName}</p>
-          <p className="truncate text-xs text-slate-400">{location ?? factoryId}</p>
-        </div>
+        <PlantSwitcher factoryId={factoryId} factoryName={factoryName} subtitle={location ?? factoryId} tone="dark" />
       </div>
 
       {shifts.length > 0 && (

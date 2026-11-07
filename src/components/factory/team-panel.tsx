@@ -153,7 +153,11 @@ export function TeamPanel({
               <TBody>
                 {users.map((u) => (
                   <TR key={u.user_id}>
-                    <TD>{u.username}</TD>
+                    <TD>
+                      {u.username}
+                      {/* A company's admin: one account for every factory of the company. */}
+                      {u.company_id && <Badge className="ml-2 bg-indigo-50 text-indigo-700">{t('All factories')}</Badge>}
+                    </TD>
                     <TD>{t(u.role)}</TD>
                     <TD>{t(u.status)}</TD>
                   </TR>

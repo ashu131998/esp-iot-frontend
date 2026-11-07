@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { CardHeader } from '@/components/ui/card';
-import { SETUP_BOARD_SLOTS, SETUP_STEPS, emailList, shiftLabel, type SetupDraft, type SetupStepKey } from '@/lib/onboarding';
+import { SETUP_BOARD_SLOTS, SETUP_STEPS, emailList, isBlankAdmin, shiftLabel, type SetupDraft, type SetupStepKey } from '@/lib/onboarding';
 import { formatPeriod, isDayKey } from '@/lib/subscriptions';
 
 function Row({ label, step, onEdit, children }: { label: string; step: SetupStepKey; onEdit: (i: number) => void; children: ReactNode }) {
@@ -39,6 +39,12 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
     <>
       <CardHeader title="Review" description="Check everything, then create. It is created all at once, or not at all; the welcome emails go out straight after." />
       <dl>
+        <Row label="Company" step="company" onEdit={onEdit}>
+          <div>
+            <span className="font-medium">{d.company.name.replace(/\s+/g, ' ').trim()}</span>
+            <span className="text-muted">{d.company.mode === 'existing' ? ' · a plant added to it' : ' · new'}</span>
+          </div>
+        </Row>
         <Row label="Factory" step="factory" onEdit={onEdit}>
           <div><span className="font-medium">{f.name.trim()}</span>{f.location.trim() && <span className="text-muted"> · {f.location.trim()}</span>}</div>
           <div className="font-mono text-xs text-muted">{f.factory_id.trim()}</div>
@@ -96,7 +102,10 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
           })}
         </Row>
         <Row label="People" step="people" onEdit={onEdit}>
-          {d.admins.map((a) => <div key={a.key}>Admin: {a.email.trim().toLowerCase()}</div>)}
+          {d.admins.filter((a) => !isBlankAdmin(a)).map((a) => <div key={a.key}>Admin: {a.email.trim().toLowerCase()}</div>)}
+          {d.company.mode === 'existing' && (
+            <div className="text-muted">The admins of {d.company.name.trim()} sign in here too</div>
+          )}
           {d.workers.length > 0 && (
             <div className="text-muted">
               {d.workers.length} worker{d.workers.length === 1 ? '' : 's'}{appLogins > 0 ? `, ${appLogins} with the alert app` : ''}

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { ArrowRight, Building2, MapPin } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/app-shell';
 import { SubscriptionBadge } from '@/components/internal/subscription-badge';
@@ -33,6 +33,12 @@ export default async function FactoriesPage() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold">{f.name}</h3>
+                {f.company && (
+                  <p className="mt-1 flex items-center gap-1 text-sm text-muted">
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">{f.company.name}</span>
+                  </p>
+                )}
                 <p className="mt-1 flex items-center gap-1 text-sm text-muted">
                   <MapPin className="h-3.5 w-3.5" />
                   {f.location ?? 'Location not set'}

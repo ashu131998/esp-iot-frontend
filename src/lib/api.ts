@@ -816,6 +816,10 @@ export const api = {
   adminFactories: (options?: ApiRequestOptions) =>
     request<{ factories: Factory[] }>('/v1/admin/factories', options),
 
+  /** The companies, each with its factories (the onboarding form's first step). */
+  adminCompanies: (options?: ApiRequestOptions) =>
+    request<{ companies: import('./onboarding').CompanyOption[] }>('/v1/admin/companies', options),
+
   adminUsers: (
     params?: PaginationParams & { factory_id?: string; status?: string },
     options?: ApiRequestOptions,

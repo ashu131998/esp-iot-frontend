@@ -39,6 +39,12 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
     <>
       <CardHeader title="Review" description="Check everything, then create. It is created all at once, or not at all; the welcome emails go out straight after." />
       <dl>
+        <Row label="Company" step="company" onEdit={onEdit}>
+          <div>
+            <span className="font-medium">{d.company.name.replace(/\s+/g, ' ').trim()}</span>
+            <span className="text-muted">{d.company.mode === 'existing' ? ' · a plant added to it' : ' · new'}</span>
+          </div>
+        </Row>
         <Row label="Factory" step="factory" onEdit={onEdit}>
           <div><span className="font-medium">{f.name.trim()}</span>{f.location.trim() && <span className="text-muted"> · {f.location.trim()}</span>}</div>
           <div className="font-mono text-xs text-muted">{f.factory_id.trim()}</div>

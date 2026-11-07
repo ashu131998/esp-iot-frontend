@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { BoardsStep } from '@/components/internal/onboard/boards-step';
+import { CompanyStep } from '@/components/internal/onboard/company-step';
 import { FactoryIdHint } from '@/components/internal/onboard/factory-id-hint';
 import { LinesStep } from '@/components/internal/onboard/lines-step';
 import { LookStep } from '@/components/internal/onboard/look-step';
@@ -63,6 +64,7 @@ function reviveDraft(stored: unknown, fresh: SetupDraft): SetupDraft {
     ...fresh,
     step: typeof s.step === 'number' ? s.step : 0,
     idEdited: Boolean(s.idEdited),
+    company: { ...fresh.company, ...(s.company ?? {}) },
     factory: { ...fresh.factory, ...(s.factory ?? {}) },
     look: { ...fresh.look, ...(s.look ?? {}) },
     subscription: { ...fresh.subscription, ...(s.subscription ?? {}) },
@@ -127,8 +129,10 @@ export function OnboardPanel() {
 
   const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
   const takenIds = useMemo(() => (factoriesQuery.data?.factories ?? []).map((f) => f.factory_id), [factoriesQuery.data]);
+  const companiesQuery = useQuery({ queryKey: ['admin-companies'], queryFn: ({ signal }) => api.adminCompanies({ signal }) });
+  const companies = useMemo(() => companiesQuery.data?.companies ?? [], [companiesQuery.data]);
 
-  const ok = setupStepsOk(d, takenIds, draftProblems);
+  const ok = setupStepsOk(d, takenIds, draftProblems, companies);
   const bad = ok.map((x) => !x);
   const fProblems = factoryProblems(d.factory, takenIds);
   const sProblem = shiftProblem(d.shifts);
@@ -148,6 +152,7 @@ export function OnboardPanel() {
       stored.clear();
       setServerProblems([]);
       qc.invalidateQueries({ queryKey: ['admin-factories'] });
+      qc.invalidateQueries({ queryKey: ['admin-companies'] });
     },
     onError: (err) => {
       const problems = ((err as ApiError).body as { problems?: Problem[] } | null)?.problems ?? [];
@@ -159,6 +164,11 @@ export function OnboardPanel() {
   const next = () => {
     setTried(true);
     if (!ok[step]) return;
+    // A new customer's first factory is usually named like the company: start the name from it.
+    if (current === 'company' && d.company.mode === 'new' && !d.factory.name.trim()) {
+      const name = d.company.name.replace(/\s+/g, ' ').trim();
+      set((x) => ({ ...x, factory: { ...x.factory, name, factory_id: x.idEdited ? x.factory.factory_id : suggestFactoryId(name) } }));
+    }
     goTo(step + 1);
   };
   const create = () => {
@@ -209,9 +219,19 @@ export function OnboardPanel() {
             </div>
           )}
 
+          {current === 'company' && (
+            <CompanyStep
+              value={d.company}
+              onChange={(company) => patch({ company })}
+              companies={companies}
+              loading={companiesQuery.isLoading}
+              tried={tried}
+            />
+          )}
+
           {current === 'factory' && (
             <>
-              <CardHeader title="Factory" description="The customer's factory, as it will appear in the dashboard. The only required step, with one admin." />
+              <CardHeader title="Factory" description="This plant, as it will appear in its dashboard at its own address. Required, like the company and one admin." />
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Factory name">
                   <Input

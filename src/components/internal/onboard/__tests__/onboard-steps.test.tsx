@@ -27,6 +27,7 @@ const { BoardsStep } = await import('@/components/internal/onboard/boards-step')
 const { WorkersEditor } = await import('@/components/internal/onboard/workers-editor');
 const { ReportsStep } = await import('@/components/internal/onboard/reports-step');
 const { ReviewStep } = await import('@/components/internal/onboard/review-step');
+const { CompanyStep } = await import('@/components/internal/onboard/company-step');
 const { OnboardDone } = await import('@/components/internal/onboard/onboard-done');
 
 const noop = () => {};
@@ -40,6 +41,7 @@ function render(node: ReactNode, catalog?: DisplayPage[], boards?: Partial<Admin
 
 function filled(): SetupDraft {
   const d = emptySetupDraft('2026-11-03');
+  d.company = { mode: 'existing', company_id: 'shree-group', name: 'Shree Group' };
   d.factory = { factory_id: 'shree-mills', name: 'Shree Mills', location: 'Surat', referred_by: 'Patel Looms' };
   d.admins = [{ ...setAdminEmail(d.admins[0], 'owner@shree.in'), password: 'AdminPass123' }];
   const line = newLine('line-1', 'Weaving A');
@@ -141,8 +143,29 @@ describe('wizard steps', () => {
     expect(reports).toContain('Results figures');
   });
 
+  it('Company: a new one by name, or one of the companies with its factories', () => {
+    const companies = [
+      { company_id: 'shree-group', name: 'Shree Group', factories: [{ factory_id: 'shree-surat', name: 'Shree Surat' }, { factory_id: 'shree-pune', name: null }] },
+      { company_id: 'patel', name: 'Patel Mills', factories: [] },
+    ];
+    const fresh = render(<CompanyStep value={{ mode: 'new', company_id: '', name: '' }} onChange={noop} companies={companies} tried={false} />);
+    expect(fresh).toContain('Company name');
+    expect(fresh).toContain('Existing company (2)');
+    expect(fresh).not.toContain('Enter the company name');   // not before a Next
+    const taken = render(<CompanyStep value={{ mode: 'new', company_id: '', name: 'shree group' }} onChange={noop} companies={companies} tried={false} />);
+    expect(taken).toContain('Shree Group is already a company: pick it from the list');   // said at once
+    const pick = render(<CompanyStep value={{ mode: 'existing', company_id: 'patel', name: 'Patel Mills' }} onChange={noop} companies={companies} tried />);
+    expect(pick).toContain('2 factories: Shree Surat, shree-pune');
+    expect(pick).toContain('No factories yet');
+    expect(pick).toMatch(/aria-checked="true"[^>]*>(<[^>]+>)*Patel Mills/);
+    const none = render(<CompanyStep value={{ mode: 'new', company_id: '', name: '' }} onChange={noop} companies={[]} tried={false} />);
+    expect(none).toMatch(/<button[^>]*disabled=""[^>]*>Existing company \(0\)/);
+  });
+
   it('Review: every step summed up, no password anywhere', () => {
     const html = render(<ReviewStep d={filled()} onEdit={noop} />);
+    expect(html).toContain('Shree Group');
+    expect(html).toContain(' · a plant added to it');
     for (const text of ['Shree Mills', 'shree-mills', 'Patel Looms', '3 Nov 2026 – 2 Nov 2027', 'Weaving A', '2 machines', 'Shree-Office', '(open)', 'revb-311d80', 'I1 Machine #1, P1 Machine #1', 'owner@shree.in', '2 workers, 1 with the alert app', 'Mobile alerts on']) {
       expect(html).toContain(text);
     }
@@ -160,10 +183,11 @@ describe('wizard steps', () => {
         lines: 1, machines: 2, wifi: 2,
         workers: [{ worker_id: 'w1', name: 'Ravi', app_login: 'failed: AlertOps down' }, { worker_id: 'w2', name: 'Sita', app_login: 'none' }],
         dashboard_url: 'https://app.floorbeat.in/f/shree-mills',
-        request: { factory: { factory_id: 'shree-mills', name: 'Shree Mills', location: '' }, shifts: [], admins: [] },
+        request: { company: { name: 'Shree Group' }, factory: { factory_id: 'shree-mills', name: 'Shree Mills', location: '' }, shifts: [], admins: [] },
       }}
     />);
     expect(html).toContain('Shree Mills is set up');
+    expect(html).not.toContain('Company:');   // an older answer without one
     expect(html).toContain('Also created: 1 line, 2 machines, 2 WiFi networks, 2 workers.');
     expect(html).toContain('Ravi: failed: AlertOps down');
     expect(html).not.toContain('Sita: none');
@@ -177,6 +201,7 @@ describe('wizard steps', () => {
         factory: { factory_id: 'shree-mills', name: 'Shree Mills' } as never,
         admins: [],
         emails: [{ username: 'owner@shree.in', email: 'owner@shree.in', sent: true }],
+        company: { company_id: 'shree-group', name: 'Shree Group' },
         lines: 1, machines: 2, wifi: 0, workers: [],
         boards: [
           { board_id: 'revb-311d80', rescue: false, line_id: 'line-1', channels: 2, claim: 'claimed' },
@@ -184,10 +209,11 @@ describe('wizard steps', () => {
           { board_id: 'rescue-a1b2c3', rescue: true, line_id: 'rescue', channels: 0, claim: 'claimed' },
         ],
         dashboard_url: 'https://app.floorbeat.in/f/shree-mills',
-        request: { factory: { factory_id: 'shree-mills', name: 'Shree Mills', location: '' }, shifts: [], admins: [] },
+        request: { company: { name: 'Shree Group' }, factory: { factory_id: 'shree-mills', name: 'Shree Mills', location: '' }, shifts: [], admins: [] },
       }}
     />);
     expect(html).toContain('Also created: 1 line, 2 machines, 2 boards claimed.');
+    expect(html).toContain('Company: <span class="font-medium text-foreground">Shree Group</span>');
     expect(html).toContain('line-1 · 2 sensors matched');
     expect(html).toContain('Not claimed: EMQX 503');
     expect(html).toMatch(/rescue-a1b2c3<\/span><span[^>]*> · rescue box/);

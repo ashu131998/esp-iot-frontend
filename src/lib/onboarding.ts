@@ -20,6 +20,45 @@ export function isValidEmail(value: string): boolean {
   return value.length <= 254 && EMAIL_RE.test(value);
 }
 
+// ── Company ─────────────────────────────────────────────────────────────────
+
+/** A company a factory can belong to, with its factories (GET /v1/admin/companies). */
+export interface CompanyOption {
+  company_id: string;
+  name: string;
+  factories: { factory_id: string; name: string | null }[];
+}
+
+/**
+ * The form's first step: the company the factory belongs to. A group with several plants is one
+ * company; each plant is onboarded as a factory under it. `name` is the picked company's in 'existing'.
+ */
+export interface CompanyDraft {
+  mode: 'existing' | 'new';
+  company_id: string;
+  name: string;
+}
+
+export const MAX_COMPANY_NAME = 120;
+const tidyName = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+/** What is wrong with the company step (query-api companies.js checks the same). */
+export function companyProblems(c: CompanyDraft, companies: CompanyOption[] = []): { company?: string } {
+  if (c.mode === 'existing') {
+    if (!c.company_id) return { company: 'Pick the company' };
+    if (companies.length > 0 && !companies.some((x) => x.company_id === c.company_id)) {
+      return { company: 'That company no longer exists: pick another' };
+    }
+    return {};
+  }
+  const name = tidyName(c.name);
+  if (!name) return { company: 'Enter the company name' };
+  if (name.length > MAX_COMPANY_NAME) return { company: `At most ${MAX_COMPANY_NAME} characters` };
+  const same = companies.find((x) => x.name.toLowerCase() === name.toLowerCase());
+  if (same) return { company: `${same.name} is already a company: pick it from the list` };
+  return {};
+}
+
 // ── Factory ─────────────────────────────────────────────────────────────────
 
 export interface FactoryDraft {
@@ -270,6 +309,7 @@ export function signInDetailsText(
 
 
 export const SETUP_STEPS = [
+  { key: 'company', label: 'Company' },
   { key: 'factory', label: 'Factory' },
   { key: 'look', label: 'Look' },
   { key: 'subscription', label: 'Subscription' },
@@ -371,6 +411,7 @@ export interface ReportsDraft {
 
 export interface SetupDraft {
   step: number;
+  company: CompanyDraft;
   factory: FactoryDraft;
   idEdited: boolean;
   look: LookDraft;
@@ -390,6 +431,7 @@ const key = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? cry
 export function emptySetupDraft(today: string): SetupDraft {
   return {
     step: 0,
+    company: { mode: 'new', company_id: '', name: '' },
     factory: { factory_id: '', name: '', location: '', referred_by: '' },
     idEdited: false,
     look: { accent_color: '', logo: null, features: {} },
@@ -574,9 +616,12 @@ export function reportsProblems(r: ReportsDraft): ReportsProblems {
 }
 
 /** Whether each step is fine to leave (Review is always fine). */
-export function setupStepsOk(d: SetupDraft, takenIds: string[] = [], periodProblems: (p: PeriodDraft) => object = () => ({})): boolean[] {
+export function setupStepsOk(
+  d: SetupDraft, takenIds: string[] = [], periodProblems: (p: PeriodDraft) => object = () => ({}), companies: CompanyOption[] = [],
+): boolean[] {
   return SETUP_STEPS.map(({ key: step }) => {
     switch (step) {
+      case 'company': return !hasProblems(companyProblems(d.company, companies));
       case 'factory': return !hasProblems(factoryProblems(d.factory, takenIds));
       case 'look': return !hasProblems(lookProblems(d.look));
       case 'subscription': return !d.subscription.enabled || !hasProblems(periodProblems(d.subscription));
@@ -592,6 +637,8 @@ export function setupStepsOk(d: SetupDraft, takenIds: string[] = [], periodProbl
 }
 
 export interface SetupRequest {
+  /** The company picked, or a new one (query-api companies.js). */
+  company: { company_id: string } | { name: string };
   factory: { factory_id: string; name: string; location: string; referred_by?: string };
   shifts: ShiftDraft[];
   admins: { email: string; username: string; password: string }[];
@@ -608,6 +655,7 @@ export interface SetupRequest {
 }
 
 export interface SetupResponse {
+  company?: { company_id: string; name: string };
   factory: import('./types').Factory;
   admins: import('./auth-types').AuthUser[];
   emails: { username: string; email: string; sent: boolean; error?: string }[];
@@ -626,6 +674,7 @@ const clean = (v: string) => v.replace(/\s+/g, ' ').trim();
 export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => SetupRequest['subscription']): SetupRequest {
   const base = buildOnboardRequest(d.factory, d.shifts, d.admins);
   const req: SetupRequest = {
+    company: d.company.mode === 'existing' ? { company_id: d.company.company_id } : { name: tidyName(d.company.name) },
     factory: {
       factory_id: base.factory_id, name: base.name, location: base.location,
       ...(base.referred_by ? { referred_by: base.referred_by } : {}),

@@ -162,6 +162,12 @@ export function LoginForm({
       </Card>
       {/* A Hindi speaker switches before signing in; the choice is kept for the dashboard. */}
       <LanguageToggle />
+      {/* The privacy policy and terms are on the website, the same for every factory. */}
+      <p className="text-xs text-muted">
+        <a href="https://floorbeat.in/privacy" className="hover:text-primary hover:underline">{t('Privacy')}</a>
+        <span aria-hidden="true"> · </span>
+        <a href="https://floorbeat.in/terms" className="hover:text-primary hover:underline">{t('Terms')}</a>
+      </p>
     </div>
   );
 }

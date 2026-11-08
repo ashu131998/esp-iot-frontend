@@ -48,6 +48,8 @@ const CHECKS = [
   // The website
   { part: 'site', name: 'website home', url: `${SITE}/`, status: 200, contains: 'Machine Monitoring as a Service' },
   { part: 'site', name: 'website login', url: `${SITE}/login`, status: 200, contains: 'Log in to your factory' },
+  { part: 'site', name: 'privacy policy', url: `${SITE}/privacy`, status: 200, contains: 'Grievance Officer' },
+  { part: 'site', name: 'terms of service', url: `${SITE}/terms`, status: 200, contains: 'Terms of Service' },
   { part: 'site', name: 'www website login', url: `${WWW}/login`, status: 200, endsAt: `${SITE}/login` },
   { part: 'site', name: 'website login with the factory ID', url: `${SITE}/login?factory=${ID}`, firstHop: `${APP}/login`, status: 200 },
   { part: 'site', name: 'website login with the ID in capitals', url: `${SITE}/login?factory=${UPPER}`, firstHop: `${APP}/login`, status: 200 },

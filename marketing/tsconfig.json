@@ -11,5 +11,7 @@
     "allowJs": true,
     "checkJs": true
   },
-  "include": ["src", "public/roi-calc.js"]
+  "include": ["src", "public/roi-calc.js"],
+  // Reads the pages from disk with Node (vitest runs it); this config holds the Worker's types only.
+  "exclude": ["src/legal-pages.test.ts"]
 }

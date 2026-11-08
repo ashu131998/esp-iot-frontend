@@ -10,6 +10,8 @@ export const auth: Messages = {
   'Username or email': 'યુઝરનેમ કે ઇમેઇલ',
   'Password': 'પાસવર્ડ',
   'Forgot password?': 'પાસવર્ડ ભૂલી ગયા?',
+  Privacy: 'ગોપનીયતા',
+  Terms: 'શરતો',
   'Login failed': 'સાઇન ઇન થયું નહીં',
   'Factory not found': 'ફેક્ટરી મળી નહીં',
   'There is no factory with the ID “{id}”. Check the ID in your welcome email.': 'ID “{id}” વાળી કોઈ ફેક્ટરી નથી. તમારા સ્વાગત ઇમેઇલમાં ID જુઓ.',

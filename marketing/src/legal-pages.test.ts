@@ -23,10 +23,11 @@ function sourceFiles(dir: string): string[] {
 describe('the privacy policy and the terms', () => {
   it('every page links to both', () => {
     const pages = readdirSync(PUBLIC).filter((f) => f.endsWith('.html'));
-    expect(pages).toEqual(expect.arrayContaining(['index.html', 'login.html', 'privacy.html', 'terms.html']));
+    expect(pages).toEqual(expect.arrayContaining(['index.html', 'login.html', 'privacy.html', 'terms.html', 'security.html']));
     for (const name of pages) {
       expect(page(name), name).toContain('href="/privacy"');
       expect(page(name), name).toContain('href="/terms"');
+      expect(page(name), name).toContain('href="/security"');
     }
   });
 
@@ -48,15 +49,23 @@ describe('the privacy policy and the terms', () => {
     for (const name of names) expect(privacy, `cookie ${name}`).toContain(`<code>${name}</code>`);
   });
 
+  it('the security page says what is in place and what is not, and matches the policy', () => {
+    const security = text(page('security.html'));
+    for (const must of ['Germany', 'bcrypt', 'two devices', 'signed', 'What we do not have yet', 'Two-step sign-in', 'ISO 27001', 'Data Protection Board of India', '90 days']) {
+      expect(security, must).toContain(must);
+    }
+    expect(security).not.toMatch(/SOC 2 (certified|compliant)|ISO 27001 certified/);
+  });
+
   it('every table cell carries its column name, for the phone layout', () => {
-    for (const name of ['privacy.html', 'terms.html']) {
+    for (const name of ['privacy.html', 'terms.html', 'security.html']) {
       const html = page(name);
       expect(html.match(/<td>/g) ?? [], name).toEqual([]);
     }
   });
 
   it('nothing is left to fill in', () => {
-    for (const name of ['privacy.html', 'terms.html']) {
+    for (const name of ['privacy.html', 'terms.html', 'security.html']) {
       expect(page(name), name).not.toMatch(/class="todo"|\[[A-Z][^\]]*\]/);
     }
   });

@@ -1,0 +1,78 @@
+import type { Messages } from '../../translate';
+
+/** Hindi for the FloorBeat Alerts phone app (components/alerts-app). Key = the exact English text. */
+export const alerts_app: Messages = {
+  // the app, sign-in
+  'FloorBeat Alerts': 'FloorBeat Alerts',
+  'Sign in with your work email.': 'अपने काम के ईमेल से साइन इन करें।',
+  'Choose your factory': 'अपनी फ़ैक्टरी चुनें',
+  'This email signs in at more than one factory. Which one are you signing in to?': 'यह ईमेल एक से ज़्यादा फ़ैक्टरी में साइन इन करता है। आप किसमें साइन इन कर रहे हैं?',
+  'Forgot your password? Your factory admin can set a new one from the Team page of the dashboard.': 'पासवर्ड भूल गए? आपका फ़ैक्टरी एडमिन डैशबोर्ड के Team पेज से नया पासवर्ड बना सकता है।',
+  'Wrong email or password.': 'ईमेल या पासवर्ड गलत है।',
+  'Too many attempts. Wait a minute and try again.': 'बहुत ज़्यादा कोशिशें। एक मिनट रुककर फिर कोशिश करें।',
+  'Could not sign in. Check your connection and try again.': 'साइन इन नहीं हो सका। इंटरनेट देखें और फिर कोशिश करें।',
+  'Signing out…': 'साइन आउट हो रहा है…',
+
+  // the inbox
+  'Inbox': 'इनबॉक्स',
+  '{count} unread': '{count} बिना पढ़े',
+  'Unread': 'बिना पढ़ा',
+  '{count} new alert': '{count} नया अलर्ट',
+  '{count} new alerts': '{count} नए अलर्ट',
+  'Tap an alert to read it.': 'पढ़ने के लिए अलर्ट पर टैप करें।',
+  'All caught up': 'सब देख लिया',
+  'New alerts show here and ring your phone.': 'नए अलर्ट यहाँ दिखेंगे और आपका फ़ोन बजेगा।',
+  'Mark all as read': 'सभी को पढ़ा हुआ करें',
+  'No alerts yet': 'अभी कोई अलर्ट नहीं',
+  'When a machine stops or a shift starts, you will see it here.': 'जब कोई मशीन रुकेगी या शिफ्ट शुरू होगी, आपको यहाँ दिखेगा।',
+  'Needs your answer': 'आपके जवाब का इंतज़ार',
+  'Could not load your alerts.': 'आपके अलर्ट लोड नहीं हो सके।',
+
+  // one alert
+  'Alert': 'अलर्ट',
+  'Test alert': 'टेस्ट अलर्ट',
+  'Back to inbox': 'इनबॉक्स पर वापस',
+  'Your answer': 'आपका जवाब',
+  'Answered: {answer}': 'जवाब दिया: {answer}',
+  'Someone already answered this one.': 'इसका जवाब कोई पहले ही दे चुका है।',
+  'Could not send your answer. Try again.': 'आपका जवाब नहीं भेजा जा सका। फिर कोशिश करें।',
+  'This alert is not here any more.': 'यह अलर्ट अब यहाँ नहीं है।',
+
+  // settings, notifications
+  'Notifications': 'नोटिफ़िकेशन',
+  'Checking…': 'जाँच रहे हैं…',
+  'Notifications are on for this phone.': 'इस फ़ोन पर नोटिफ़िकेशन चालू हैं।',
+  'Notifications are off. Turn them on so your phone rings when a machine stops.': 'नोटिफ़िकेशन बंद हैं। इन्हें चालू करें ताकि मशीन रुकने पर आपका फ़ोन बजे।',
+  "Notifications are blocked for this app. Allow them in your phone's settings.": 'इस ऐप के नोटिफ़िकेशन ब्लॉक हैं। फ़ोन की सेटिंग में उन्हें अनुमति दें।',
+  'Install the app on your Home Screen first, then turn notifications on from here.': 'पहले ऐप को होम स्क्रीन पर इंस्टॉल करें, फिर यहाँ से नोटिफ़िकेशन चालू करें।',
+  'This browser cannot show notifications. On Android use Chrome; on iPhone add the app to your Home Screen.': 'यह ब्राउज़र नोटिफ़िकेशन नहीं दिखा सकता। Android पर Chrome इस्तेमाल करें; iPhone पर ऐप को होम स्क्रीन पर जोड़ें।',
+  'Notifications are not set up on the server yet.': 'सर्वर पर नोटिफ़िकेशन अभी सेट नहीं हैं।',
+  'Turn on notifications': 'नोटिफ़िकेशन चालू करें',
+  'Turning on…': 'चालू हो रहा है…',
+  'Could not turn on notifications. Try again.': 'नोटिफ़िकेशन चालू नहीं हो सके। फिर कोशिश करें।',
+  'Send a test': 'टेस्ट भेजें',
+  'Test sent. It should ring in a few seconds.': 'टेस्ट भेज दिया। कुछ सेकंड में बजना चाहिए।',
+  'The test could not be sent.': 'टेस्ट नहीं भेजा जा सका।',
+  'Turn off on this phone': 'इस फ़ोन पर बंद करें',
+  'Account': 'खाता',
+  'Alerts not arriving?': 'अलर्ट नहीं आ रहे?',
+  'Keep the app on your Home Screen and notifications turned on.': 'ऐप को होम स्क्रीन पर रखें और नोटिफ़िकेशन चालू रखें।',
+  'Do not swipe the app away from the recent apps list; let it stay.': 'ऐप को हाल के ऐप्स की सूची से स्वाइप करके बंद न करें; उसे रहने दें।',
+  'Battery saver can delay alerts: allow FloorBeat Alerts to run in the background.': 'बैटरी सेवर अलर्ट में देरी कर सकता है: FloorBeat Alerts को बैकग्राउंड में चलने दें।',
+  'Install on this phone': 'इस फ़ोन पर इंस्टॉल करें',
+
+  // installing
+  'Install FloorBeat Alerts': 'FloorBeat Alerts इंस्टॉल करें',
+  'Put the app on your Home Screen so alerts ring like a call, even when the app is closed.': 'ऐप को होम स्क्रीन पर रखें ताकि अलर्ट कॉल की तरह बजें, ऐप बंद होने पर भी।',
+  'Installed. Open it from your Home Screen.': 'इंस्टॉल हो गया। इसे होम स्क्रीन से खोलें।',
+  'On iPhone': 'iPhone पर',
+  'On Android': 'Android पर',
+  'Open this page in Safari to install.': 'इंस्टॉल करने के लिए यह पेज Safari में खोलें।',
+  'Tap the Share button at the bottom of Safari.': 'Safari में नीचे Share बटन पर टैप करें।',
+  'Choose “Add to Home Screen”, then “Add”.': '“Add to Home Screen” चुनें, फिर “Add”।',
+  'Open FloorBeat Alerts from your Home Screen, sign in and turn notifications on.': 'होम स्क्रीन से FloorBeat Alerts खोलें, साइन इन करें और नोटिफ़िकेशन चालू करें।',
+  'Install': 'इंस्टॉल करें',
+  'Tap “Install”, or open the Chrome menu (⋮) and choose “Add to Home screen”.': '“Install” पर टैप करें, या Chrome मेनू (⋮) खोलकर “Add to Home screen” चुनें।',
+  'Open FloorBeat Alerts from your Home Screen and turn notifications on.': 'होम स्क्रीन से FloorBeat Alerts खोलें और नोटिफ़िकेशन चालू करें।',
+  'Open the app': 'ऐप खोलें',
+};

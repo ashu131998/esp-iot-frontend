@@ -46,6 +46,21 @@ export function WorkerRoster({
     password: '',
   };
   const [form, setForm] = useState<CreateWorkerInput>(emptyForm);
+  // The app login of one worker on the roster: an account made now (email + password), or a new password.
+  const [loginFor, setLoginFor] = useState<Worker | null>(null);
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const openLogin = (w: Worker) => {
+    setLoginFor(w);
+    setLoginForm({ email: w.email ?? '', password: '' });
+  };
+  const loginMutation = useMutation({
+    mutationFn: (w: Worker) => api.updateWorker(factoryId, w.worker_id, w.user_id ? { password: loginForm.password } : { email: loginForm.email.trim(), password: loginForm.password }),
+    onSuccess: () => {
+      router.refresh();
+      setLoginFor(null);
+    },
+  });
+  const loginValid = loginForm.password.length >= 8 && (Boolean(loginFor?.user_id) || loginForm.email.trim().includes('@'));
 
   const createMutation = useMutation({
     mutationFn: () => api.createWorker(factoryId, form),
@@ -130,14 +145,19 @@ export function WorkerRoster({
             header: '',
             enableSorting: false,
             cell: ({ row }: { row: { original: Worker } }) => (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600"
-                onClick={() => deleteMutation.mutate(row.original.worker_id)}
-              >
-                {t('Delete')}
-              </Button>
+              <span className="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="sm" onClick={() => openLogin(row.original)}>
+                  {row.original.user_id ? t('New password') : t('App login')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600"
+                  onClick={() => deleteMutation.mutate(row.original.worker_id)}
+                >
+                  {t('Delete')}
+                </Button>
+              </span>
             ),
           } satisfies ColumnDef<Worker, unknown>,
         ]),
@@ -225,6 +245,45 @@ export function WorkerRoster({
             </Button>
             {createMutation.isError && (
               <p className="self-center text-sm text-red-600">{createMutation.error.message}</p>
+            )}
+          </div>
+        </Sheet>
+      )}
+
+      {loginFor && (
+        <Sheet title={loginFor.user_id ? t('New password') : t('App login')} onClose={() => setLoginFor(null)}>
+          <p className="text-sm text-muted">
+            {loginFor.user_id
+              ? t('Set a new password for {name}. Every phone signed in as them will have to sign in again.', { name: loginFor.name })
+              : t('Give {name} a login for the FloorBeat Alerts app (alerts.floorbeat.in): their work email and a password.', { name: loginFor.name })}
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {!loginFor.user_id && (
+              <Field label={t('App Login Email')}>
+                <Input
+                  type="email"
+                  placeholder="worker@factory.com"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                />
+              </Field>
+            )}
+            <Field label={t('App Login Password')}>
+              <Input
+                type="password"
+                placeholder={t('min 8 characters')}
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => loginMutation.mutate(loginFor)} disabled={loginMutation.isPending || !loginValid}>
+              {loginMutation.isPending ? t('Saving…') : loginFor.user_id ? t('Set password') : t('Save login')}
+            </Button>
+            <Button variant="ghost" onClick={() => setLoginFor(null)}>{t('Cancel')}</Button>
+            {loginMutation.isError && (
+              <p className="self-center text-sm text-red-600">{loginMutation.error.message}</p>
             )}
           </div>
         </Sheet>

@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TONE_DOT } from '@/components/ui/simple';
 import { AlertsApiError, alertsApi } from '@/lib/alerts-app/api';
-import { ALERTS_QUERY_KEY, alertQueryKey, asksQuestion, optionsOf, severityTone, titleOf, typeLabel } from '@/lib/alerts-app/model';
+import { ALERTS_QUERY_KEY, alertQueryKey, asksQuestion, optionsOf, severityTone, typeLabel } from '@/lib/alerts-app/model';
+import { alertWords, reasonWords } from '@/lib/alerts-app/view';
 import { useAppHref } from '@/lib/alerts-app/queries';
 import type { AlertOption, MyAlert } from '@/lib/alerts-app/types';
 import { formatFullDateTime } from '@/lib/format';
@@ -18,7 +19,8 @@ import { cn } from '@/lib/utils';
 
 /** One alert: what happened, where and when, and the answers it asks for; marked read on opening. */
 export function AlertDetail({ id }: { id: string }) {
-  const { t } = useT();
+  const tr = useT();
+  const { t } = tr;
   const href = useAppHref();
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -79,6 +81,8 @@ export function AlertDetail({ id }: { id: string }) {
   const answered = answer?.label ?? alert.resolution;
   const open = asksQuestion(alert) && !answer;
   const replyError = reply.error instanceof AlertsApiError ? reply.error : null;
+  const words = alertWords(alert, tr);
+  const isReason = alert.payload?.kind === 'downtime_reason';
 
   return (
     <div className="space-y-4">
@@ -89,18 +93,18 @@ export function AlertDetail({ id }: { id: string }) {
           <span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[severityTone(alert)])} />
           <KindLabel alert={alert} />
         </p>
-        <h1 className="mt-2 text-xl font-semibold leading-snug text-foreground">{titleOf(alert)}</h1>
+        <h1 className="mt-2 text-xl font-semibold leading-snug text-foreground">{words.title}</h1>
         {(alert.machine_name || alert.factory_name) && (
           <p className="mt-1 text-sm text-muted">{[alert.machine_name, alert.factory_name].filter(Boolean).join(' · ')}</p>
         )}
         <p className="mt-0.5 text-sm text-muted">{formatFullDateTime(alert.created_at, 'en')}</p>
-        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">{alert.message}</p>
+        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">{words.body ?? alert.message}</p>
       </article>
 
       {(open || answered) && (
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
           <h2 className="text-sm font-semibold text-foreground">{t('Your answer')}</h2>
-          {open && alert.payload?.prompt && <p className="mt-1 text-sm text-muted">{String(alert.payload.prompt)}</p>}
+          {open && !words.body && alert.payload?.prompt && <p className="mt-1 text-sm text-muted">{String(alert.payload.prompt)}</p>}
           {open ? (
             <div className="mt-3 grid gap-2">
               {options.map((option) => (
@@ -111,14 +115,14 @@ export function AlertDetail({ id }: { id: string }) {
                   disabled={reply.isPending}
                   onClick={() => reply.mutate(option)}
                 >
-                  {option.label}
+                  {isReason ? reasonWords(option.label, t) : option.label}
                 </Button>
               ))}
             </div>
           ) : (
             <p className="mt-2 flex items-center gap-2 text-emerald-700">
               <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>{t('Answered: {answer}', { answer: answered })}</span>
+              <span>{t('Answered: {answer}', { answer: isReason && answered ? reasonWords(answered, t) : answered })}</span>
             </p>
           )}
           {answer?.ack && <p className="mt-2 text-sm text-muted">{answer.ack}</p>}

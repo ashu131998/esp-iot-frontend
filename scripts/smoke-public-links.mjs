@@ -19,6 +19,8 @@ const SUFFIX = process.env.FACTORY_HOST_SUFFIX ?? '.floorbeat.in';
 /** The factory's own address: its sign-in and everything else. */
 const APP = `https://${ID}${SUFFIX}`;
 const OLD_APP = (process.env.OLD_APP_ORIGIN ?? 'https://app.floorbeat.in').replace(/\/$/, '');
+/** The FloorBeat Alerts app (the phone app): alerts.<suffix>. */
+const ALERTS = (process.env.ALERTS_ORIGIN ?? `https://alerts${SUFFIX}`).replace(/\/$/, '');
 const STAFF = (process.env.STAFF_ORIGIN ?? 'https://ops.floorbeat.in').replace(/\/$/, '');
 const WWW = SITE.replace('://', '://www.');
 const UPPER = ID.toUpperCase();
@@ -69,6 +71,14 @@ const CHECKS = [
   { part: 'app', name: 'old app sign-in link (old emails)', url: `${OLD_APP}/f/${ID}/login`, firstHop: `${APP}/login`, status: 200 },
   { part: 'app', name: 'old app factory link (old emails)', url: `${OLD_APP}/f/${ID}`, firstHop: `${APP}/`, status: 200, endsAt: `${APP}/login` },
   { part: 'app', name: 'old app dashboard link (old emails)', url: `${OLD_APP}/factories/${ID}/results`, firstHop: `${APP}/results`, status: 200, endsAt: `${APP}/login?next=%2Fresults` },
+  // The FloorBeat Alerts app: its sign-in, its inbox while signed out, what a phone installs from
+  { part: 'app', name: 'alerts app sign-in', url: `${ALERTS}/login`, status: 200, contains: 'FloorBeat Alerts' },
+  { part: 'app', name: 'alerts app inbox while signed out', url: `${ALERTS}/`, status: 200, endsAt: `${ALERTS}/login` },
+  { part: 'app', name: 'alerts app manifest', url: `${ALERTS}/alerts-app.webmanifest`, status: 200, contains: '"FloorBeat Alerts"' },
+  { part: 'app', name: 'alerts app service worker', url: `${ALERTS}/alerts-sw.js`, status: 200, contains: 'showNotification' },
+  { part: 'app', name: 'Android asset link', url: `${ALERTS}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.alerts' },
+  { part: 'app', name: 'the staff console is not the app', url: `${ALERTS}/internal/login`, status: 404 },
+  { part: 'site', name: 'app download page', url: `${SITE}/app`, status: 200, contains: 'Download for Android' },
 ];
 
 function verdict(check, got) {

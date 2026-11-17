@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ListGroup, SummaryCard, TONE_DOT } from '@/components/ui/simple';
 import { alertsApi } from '@/lib/alerts-app/api';
-import { ALERTS_QUERY_KEY, asksQuestion, dayLabel, factoriesIn, groupAlerts, severityTone, titleOf, whereLabel } from '@/lib/alerts-app/model';
+import { ALERTS_QUERY_KEY, asksQuestion, dayLabel, factoriesIn, groupAlerts, severityTone, whereLabel } from '@/lib/alerts-app/model';
+import { alertWords } from '@/lib/alerts-app/view';
 import { useAppHref, useMyAlerts } from '@/lib/alerts-app/queries';
 import type { MyAlert } from '@/lib/alerts-app/types';
 import { dayKeyToDate, formatDayMonth, formatTime } from '@/lib/format';
@@ -91,9 +92,11 @@ export function AlertsInbox() {
 
 /** One alert: its colour, its title (bold while unread), where it is from, when; a question mark while it waits for an answer. */
 function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string; many: boolean; locale: Locale }) {
-  const { t } = useT();
+  const tr = useT();
+  const { t } = tr;
   const unread = !alert.read_at;
   const where = whereLabel(alert, many);
+  const { title } = alertWords(alert, tr);
   return (
     <Link
       href={href}
@@ -104,7 +107,7 @@ function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string;
         {/* The whole title, on two lines if it needs them: a phone must never cut "Loom 3 is DOWN" short. */}
         <p className={cn('line-clamp-2 leading-snug text-foreground', unread ? 'font-semibold' : 'font-medium')}>
           {unread && <span className="sr-only">{t('Unread')}: </span>}
-          {titleOf(alert)}
+          {title}
         </p>
         <p className="mt-0.5 truncate text-sm text-muted">
           <span className="tabular-nums">{formatTime(alert.created_at, locale)}</span>

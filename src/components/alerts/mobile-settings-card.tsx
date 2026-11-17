@@ -160,6 +160,10 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   return (
     <div className="space-y-6">
       <SummaryCard tone={tone} title={statusTitle} subtitle={statusSub} />
+      <p className="px-1 text-sm text-muted">
+        {t('Workers get these in the FloorBeat Alerts app: give each a login on the Team page, and install the app from floorbeat.in/app.')}{' '}
+        <a href="https://floorbeat.in/app" className="font-medium text-primary hover:underline" target="_blank" rel="noreferrer">floorbeat.in/app →</a>
+      </p>
 
       <div className="space-y-2 px-1 text-sm text-muted">
         <p>

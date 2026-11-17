@@ -51,7 +51,7 @@ describe('the privacy policy and the terms', () => {
 
   it('the security page says what is in place and what is not, and matches the policy', () => {
     const security = text(page('security.html'));
-    for (const must of ['Germany', 'bcrypt', 'two devices', 'signed', 'What we do not have yet', 'Two-step sign-in', 'ISO 27001', 'Data Protection Board of India', '90 days']) {
+    for (const must of ['Germany', 'bcrypt', 'three devices', 'signed', 'What we do not have yet', 'Two-step sign-in', 'ISO 27001', 'Data Protection Board of India', '90 days']) {
       expect(security, must).toContain(must);
     }
     expect(security).not.toMatch(/SOC 2 (certified|compliant)|ISO 27001 certified/);

@@ -101,7 +101,7 @@
             <ul>
               <li>Hosted in Germany (Hetzner), with a standby copy of the database and encrypted backups in Cloudflare R2; restores are tested.</li>
               <li>Everything travels encrypted: browsers over HTTPS, boards over TLS with our certificate pinned, software updates signed.</li>
-              <li>Passwords hashed with bcrypt, short-lived sign-in tokens, at most two devices per account, sign-in rate limiting.</li>
+              <li>Passwords hashed with bcrypt, short-lived sign-in tokens, at most three devices per account, sign-in rate limiting.</li>
               <li>Each factory at its own address and in its own data; staff actions logged.</li>
               <li>We hold little personal data, and say exactly what in our <a href="/privacy">Privacy Policy</a>.</li>
               <li>Not yet: two-step sign-in, a certification such as ISO 27001. Both are on our list, and we say so rather than pretend.</li>
@@ -128,7 +128,7 @@
           <ul class="legal-list">
             <li>Passwords are stored as bcrypt hashes, never readable by anyone at FloorBeat. At least 8 characters.</li>
             <li>A sign-in gives a short-lived access token (15 minutes) and a renewal token (7 days, replaced at every use). Both live in httpOnly, secure cookies; forms carry a CSRF token.</li>
-            <li>At most two devices per account at a time: a third sign-in ends the one used longest ago.</li>
+            <li>At most three devices per account at a time (a computer, a phone's browser, the FloorBeat Alerts app): a fourth sign-in ends the one used longest ago.</li>
             <li>Sign-in attempts are rate-limited; a forgotten password is reset through an emailed link that works once and expires in 30 minutes.</li>
             <li>A password change or an account's removal signs it out everywhere.</li>
           </ul>

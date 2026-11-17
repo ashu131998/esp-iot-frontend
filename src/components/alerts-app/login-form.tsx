@@ -102,12 +102,14 @@ export function AppLoginForm() {
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <Field label={t('Email')}>
+              {/* An email keyboard, but any login is accepted: stage's test logins are usernames. */}
               <Input
                 id="email"
-                type="email"
+                type="text"
                 inputMode="email"
                 autoComplete="username"
                 autoCapitalize="none"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

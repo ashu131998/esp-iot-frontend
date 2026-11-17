@@ -32,7 +32,10 @@ function boot(windows: Array<Record<string, unknown>> = []) {
     },
   };
   const fetchMock = vi.fn(async () => new Response('{}', { status: 201 }));
-  vm.runInNewContext(code, { self, fetch: fetchMock, Response, Date, JSON, String, Boolean, Promise, console });
+  // the Cache API, as far as the worker uses it: one store of responses by path
+  const stored = new Map<string, Response>();
+  const caches = { open: async () => ({ put: async (k: string, r: Response) => { stored.set(k, r); }, match: async (k: string) => stored.get(k)?.clone() ?? undefined }) };
+  vm.runInNewContext(code, { self, fetch: fetchMock, Response, Date, JSON, String, Boolean, Number, Promise, Intl, console, caches });
   const fire = async (name: string, event: Record<string, unknown>) => {
     const waits: unknown[] = [];
     await listeners.get(name)!({ ...event, waitUntil: (p: unknown) => waits.push(p), respondWith: (p: unknown) => waits.push(p) });
@@ -83,6 +86,46 @@ describe('a push', () => {
     expect(targetUrl({ url: 'https://evil.example/x' })).toBe('/');
     expect(targetUrl({ url: '/\\evil' })).toBe('/');
     expect(targetUrl(undefined)).toBe('/');
+  });
+});
+
+describe('the person\'s language', () => {
+  const facts = { notification_id: 'ntf-1', severity: 'HIGH', url: '/alerts/ntf-1', asks: true, view: { kind: 'machine_down', machine: 'Loom 3', at: '2026-11-17T04:32:00.000Z' } };
+
+  it('a push with the facts rings in English until the page says otherwise', async () => {
+    const { shown, fire } = boot();
+    await fire('push', { data: payload(facts) });
+    expect(shown[0].title).toBe('Loom 3 stopped');
+    expect(shown[0].options.body).toBe('Loom 3 stopped at 10:02 am. Why is it down? Tap an answer.');
+  });
+
+  it('once the page said Hindi or Gujarati, in that language; the words survive a worker restart', async () => {
+    const { shown, fire } = boot();
+    await fire('message', { data: { type: 'locale', locale: 'hi' } });
+    await fire('push', { data: payload(facts) });
+    expect(shown[0].title).toBe('Loom 3 रुक गई');
+    expect(shown[0].options.body).toContain('रुक गई।');
+    await fire('message', { data: { type: 'locale', locale: 'gu' } });
+    await fire('push', { data: payload({ ...facts, view: { kind: 'machine_up', machine: 'Loom 3', at: '2026-11-17T04:32:00.000Z', down_for_min: 72 }, asks: false }) });
+    expect(shown[1].title).toBe('Loom 3 ફરી ચાલે છે');
+    expect(shown[1].options.body).toContain('1 ક 12 મિ');
+  });
+
+  it('a push without the facts, or of a kind it does not know, shows what it was sent', async () => {
+    const { shown, fire } = boot();
+    await fire('message', { data: { type: 'locale', locale: 'hi' } });
+    await fire('push', { data: payload({ notification_id: 'ntf-2', severity: 'LOW', url: '/alerts/ntf-2' }) });
+    await fire('push', { data: payload({ notification_id: 'ntf-3', view: { kind: 'later_kind', machine: 'x' } }) });
+    expect(shown.map((n) => n.title)).toEqual(['🔴 Loom 3 is DOWN', '🔴 Loom 3 is DOWN']);
+  });
+
+  it('shift reminders and what an owner hears', () => {
+    const { self } = boot();
+    const { wordsFor } = (self as unknown as { __floorbeatAlerts: { wordsFor: (v: unknown, l: string, a: boolean) => { title: string; body: string } | null } }).__floorbeatAlerts;
+    expect(wordsFor({ kind: 'shift_reminder', shift: 'Day Shift', start: '2026-11-17T00:30:00.000Z', task: 'Weaving', machines: ['Loom 3'] }, 'en', false)).toEqual({ title: 'Day Shift starts at 6:00 am', body: 'Task: Weaving · Machines: Loom 3' });
+    expect(wordsFor({ kind: 'owner_down', machine: 'Loom 3', at: '2026-11-17T04:32:00.000Z', operators: ['Ravi'] }, 'en', false)?.body).toBe('Loom 3 stopped at 10:02 am. Ravi has been asked for the reason in the app.');
+    expect(wordsFor({ kind: 'owner_up', machine: 'Loom 3', at: '2026-11-17T04:32:00.000Z', down_for_min: 30 }, 'hi', false)?.title).toBe('Loom 3 फिर चल रही है');
+    expect(wordsFor(null, 'en', false)).toBeNull();
   });
 });
 

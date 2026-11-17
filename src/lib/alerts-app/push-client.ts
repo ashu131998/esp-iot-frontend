@@ -114,6 +114,17 @@ export function listenForPushes(onAlert: (message: { type: string; url?: string 
   return () => navigator.serviceWorker.removeEventListener('message', handler);
 }
 
+/** Tells the service worker the person's language (it keeps it for the pushes it shows). */
+export async function tellWorkerLocale(locale: string): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    (reg.active ?? navigator.serviceWorker.controller)?.postMessage({ type: 'locale', locale });
+  } catch {
+    // no worker here
+  }
+}
+
 /** The number on the app's icon (Android, desktop): the unread count; nothing when it is 0. */
 export function setBadge(unread: number): void {
   if (typeof navigator === 'undefined') return;

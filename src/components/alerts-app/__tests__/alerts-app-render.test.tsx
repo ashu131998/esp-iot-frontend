@@ -36,7 +36,7 @@ const { AlertsSettings } = await import('@/components/alerts-app/settings');
 const { AppLoginForm } = await import('@/components/alerts-app/login-form');
 const { InstallGuide } = await import('@/components/alerts-app/install-guide');
 
-const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }] };
+const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
 const now = new Date().toISOString();
 const alert = (over: Partial<MyAlert> = {}): MyAlert => ({
   notification_id: 'ntf-1', factory_id: 'mill', factory_name: 'Shree Mills', type: 'machine_down', title: '🔴 Loom 3 is DOWN', severity: 'HIGH',
@@ -117,6 +117,17 @@ describe('the inbox', () => {
     expect(html).toContain('1 नया अलर्ट');
     expect(html).toContain('आपके जवाब का इंतज़ार');
     expect(html).toContain('>आज<');
+  });
+
+  it('an alert with its facts is said in the person\'s language; one without keeps its English title', () => {
+    const facts = alert({ notification_id: 'ntf-v', payload: { ...QUESTION, view: { kind: 'machine_down', machine: 'Loom 3', at: now } } });
+    const html = render(<AlertsInbox />, seedInbox([facts, SHIFT]), hi);
+    expect(html).toContain('Loom 3 रुक गई');
+    expect(html).toContain('Day Shift starts in 30 minutes');
+    const detail = render(<AlertDetail id="ntf-v" />, (c) => c.setQueryData(alertQueryKey('ntf-v'), facts), hi);
+    expect(detail).toContain('यह क्यों रुकी? नीचे एक जवाब पर टैप करें।');
+    expect(detail).toContain('>धागा टूटना<');   // the reason, translated
+    expect(detail).not.toContain('Why is it down?');
   });
 });
 

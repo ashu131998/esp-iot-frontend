@@ -44,9 +44,30 @@ describe('the roster', () => {
     expect(gita).not.toContain('>app<');
   });
 
+  it('offers an app login to a worker without one, and a new password to one who has it', () => {
+    const html = render([
+      worker({ worker_id: 'w1', name: 'Ravi', email: 'ravi@mill.in', user_id: 'u-ravi' }),
+      worker({ worker_id: 'w3', name: 'Gita', email: null }),
+    ]);
+    expect(html.match(/>New password</g)?.length).toBe(1);
+    expect(html.match(/>App login</g)?.length).toBe(1);
+    expect(html).toContain('>Delete<');
+  });
+
+  it('a viewer sees no actions', () => {
+    const html = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider locale="en" messages={null}><WorkerRoster factoryId="mill" workers={[worker({ email: 'g@mill.in' })]} readOnly /></LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(html).not.toContain('>App login<');
+    expect(html).not.toContain('>Delete<');
+  });
+
   it('in Hindi', () => {
     const html = render([worker({ email: 'ravi@mill.in', user_id: 'u-ravi' })], hi);
     expect(html).toContain('FloorBeat Alerts ऐप का लॉगिन है');
     expect(html).toContain('कारीगर');
+    expect(html).toContain('>नया पासवर्ड<');
   });
 });

@@ -4,6 +4,7 @@
  *    on the customer Worker);
  *  - superadmin.floorbeat.in: the staff console for the super admin; admin.floorbeat.in: the staff
  *    console for FloorBeat's staff (STAFF_HOST_ROLES on the staff Worker);
+ *  - alerts.floorbeat.in: the FloorBeat Alerts phone app (any account; ALERTS_APP_HOST for a local run);
  *  - app, ops, www, api and every stage- / dev- address: FloorBeat's own, never a factory.
  * The backend keeps the same reserved list (query-api/src/factory-host.js) for new factory IDs.
  */
@@ -86,4 +87,27 @@ export function staffRoleAllowedOnHost(hostname: string, role: string, rules: Ma
 export function staffHostForRole(role: string, rules: Map<string, string[]>): string | null {
   for (const [host, roles] of rules) if (roles.includes(role)) return host;
   return null;
+}
+
+/** The FloorBeat Alerts app (the phone app) lives at alerts.<suffix>: alerts.floorbeat.in, alerts.stage.floorbeat.in. */
+export const ALERTS_APP_LABEL = 'alerts';
+
+/** The app's address for a factory-address suffix: "alerts.floorbeat.in"; null without one (a local run). */
+export function alertsAppHost(suffix: string | null | undefined): string | null {
+  const s = (suffix ?? '').trim().toLowerCase();
+  if (!s) return null;
+  return `${ALERTS_APP_LABEL}${s.startsWith('.') ? s : `.${s}`}`;
+}
+
+/**
+ * Whether this address is the alerts app's: alerts.<suffix>, or the address named in ALERTS_APP_HOST
+ * (a local run: alerts.localhost). A port does not matter.
+ */
+export function isAlertsAppHost(hostname: string | null | undefined, suffix: string | null | undefined, explicit?: string | null): boolean {
+  if (!hostname) return false;
+  const host = bare(hostname);
+  const named = bare(explicit ?? '');
+  if (named && host === named) return true;
+  const derived = alertsAppHost(suffix);
+  return derived !== null && host === derived;
 }

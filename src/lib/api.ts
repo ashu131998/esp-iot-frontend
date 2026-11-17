@@ -807,6 +807,35 @@ export const api = {
       options,
     ),
 
+  /** A factory's admins manage its team: add an account (an admin of a company's factory becomes the company's). */
+  factoryCreateUser: (
+    factoryId: string,
+    body: { username: string; password: string; email?: string | null; role: 'admin' | 'employee' },
+    options?: ApiRequestOptions,
+  ) =>
+    request<import('./auth-types').AuthUser & { welcome_email: { sent: boolean; error?: string } | null }>(
+      `/v1/factories/${factoryId}/users`,
+      { method: 'POST', body: JSON.stringify(body), ...options },
+    ),
+
+  factoryUpdateUser: (
+    factoryId: string,
+    userId: string,
+    body: { status?: 'active' | 'disabled'; role?: 'admin' | 'employee' },
+    options?: ApiRequestOptions,
+  ) =>
+    request<import('./auth-types').AuthUser>(`/v1/factories/${factoryId}/users/${userId}`, {
+      method: 'PATCH', body: JSON.stringify(body), ...options,
+    }),
+
+  factorySetUserPassword: (factoryId: string, userId: string, password: string, options?: ApiRequestOptions) =>
+    request<import('./auth-types').AuthUser>(`/v1/factories/${factoryId}/users/${userId}/password`, {
+      method: 'POST', body: JSON.stringify({ password }), ...options,
+    }),
+
+  factoryDeleteUser: (factoryId: string, userId: string, options?: ApiRequestOptions) =>
+    request<{ ok: true }>(`/v1/factories/${factoryId}/users/${userId}`, { method: 'DELETE', ...options }),
+
   approveUser: (factoryId: string, userId: string, options?: ApiRequestOptions) =>
     request<import('./auth-types').AuthUser>(
       `/v1/factories/${factoryId}/users/${userId}/approve`,
@@ -872,6 +901,17 @@ export const api = {
     ),
 
   /** Set or clear the partner (machine dealer, electrician) who referred a factory. Staff only. */
+  /** The company a factory belongs to (staff): an existing one, a new one by name, or none. */
+  adminSetFactoryCompany: (
+    factoryId: string,
+    body: { company_id: string | null } | { name: string },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; company: { company_id: string; name: string } | null; admins: string[] }>(
+      `/v1/admin/factories/${factoryId}/company`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
+
   adminSetFactoryReferral: (factoryId: string, referredBy: string | null, options?: ApiRequestOptions) =>
     request<{ factory_id: string; referred_by: string | null }>(
       `/v1/admin/factories/${factoryId}/referral`,

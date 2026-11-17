@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
+import { isAlertsAppHost } from '@/lib/hosts';
 import {
   CSRF_COOKIE,
   REFRESH_COOKIE,
@@ -12,6 +13,12 @@ import {
 function loginFallback(req: NextRequest, next: string | null): URL {
   const base = req.nextUrl.origin;
   const path = next ?? '/';
+  // The alerts app (alerts.floorbeat.in) signs in at its own /login.
+  if (isAlertsAppHost(req.headers.get('host') ?? req.nextUrl.hostname, process.env.FACTORY_HOST_SUFFIX, process.env.ALERTS_APP_HOST)) {
+    const url = new URL('/login', base);
+    if (path !== '/' && safeNextPath(path)) url.searchParams.set('next', path);
+    return url;
+  }
   const factoryMatch = path.match(/^\/factories\/([^/?#]+)/);
   if (factoryMatch) {
     const [pathname, ...rest] = path.split('?');

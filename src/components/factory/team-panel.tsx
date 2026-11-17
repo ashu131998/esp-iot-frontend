@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
+import { AddPersonButton, ManagePersonSheet } from '@/components/factory/team-accounts';
 import { WorkerRoster } from '@/components/factory/worker-roster';
 import { fetchAllPages } from '@/lib/fetch-all-pages';
 import { useInfiniteList, type ListPage } from '@/lib/use-infinite-list';
@@ -34,8 +36,9 @@ export function TeamPanel({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { canWriteFactory } = useAuth();
+  const { canWriteFactory, user: me } = useAuth();
   const { t } = useT();
+  const [managing, setManaging] = useState<AuthUser | null>(null);
   const { items: users, total, hasMore, more, loading } = useInfiniteList<AuthUser>({
     queryKey: ['factory-users-list', factoryId],
     first: firstUsers,
@@ -129,13 +132,17 @@ export function TeamPanel({
       <Card className="p-6">
         <CardHeader
           title={t('All factory users')}
+          description={canWriteFactory ? t('Admins can change everything on the dashboard; employees can only look. Accounts made at another factory of your company are managed there.') : undefined}
           action={
+            <span className="flex flex-wrap items-center gap-2">
+            {canWriteFactory && <AddPersonButton factoryId={factoryId} />}
             <ExportCsvButton
               filename="factory-users"
               headers={[t('Username'), t('Role'), t('Status')]}
               fetchRows={fetchAllUserRows}
               rowCount={total}
             />
+            </span>
           }
         />
         {users.length === 0 ? (
@@ -148,6 +155,7 @@ export function TeamPanel({
                   <TH>{t('Username')}</TH>
                   <TH>{t('Role')}</TH>
                   <TH>{t('Status')}</TH>
+                  {canWriteFactory && <TH />}
                 </TR>
               </THead>
               <TBody>
@@ -160,6 +168,17 @@ export function TeamPanel({
                     </TD>
                     <TD>{t(u.role)}</TD>
                     <TD>{t(u.status)}</TD>
+                    {canWriteFactory && (
+                      <TD className="text-right">
+                        {u.factory_id !== factoryId ? (
+                          <span className="text-xs text-muted">{t('Managed at its own factory')}</span>
+                        ) : u.user_id === me?.user_id ? (
+                          <span className="text-xs text-muted">{t('You')}</span>
+                        ) : (
+                          <Button type="button" size="sm" variant="secondary" onClick={() => setManaging(u)}>{t('Manage')}</Button>
+                        )}
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>
@@ -168,6 +187,7 @@ export function TeamPanel({
           </>
         )}
       </Card>
+      {managing && <ManagePersonSheet factoryId={factoryId} user={managing} onClose={() => setManaging(null)} />}
     </div>
   );
 }

@@ -128,7 +128,7 @@
               <tbody>
                 <tr><td data-label="What">Accounts</td><td data-label="Details">Name or username (sometimes a phone number), email address, role, the factory the account belongs to, when it last signed in.</td><td data-label="Where it comes from">The factory's administrator, or FloorBeat staff setting up a factory.</td></tr>
                 <tr><td data-label="What">Passwords</td><td data-label="Details">Kept only as a one-way hash. Nobody at FloorBeat can read them.</td><td data-label="Where it comes from">The account holder.</td></tr>
-                <tr><td data-label="What">Sign-in sessions</td><td data-label="Details">The devices an account is signed in on (at most two at a time), and IP addresses, used to block password guessing and to look into misuse.</td><td data-label="Where it comes from">Your browser, automatically.</td></tr>
+                <tr><td data-label="What">Sign-in sessions</td><td data-label="Details">The devices an account is signed in on (at most three at a time), and IP addresses, used to block password guessing and to look into misuse.</td><td data-label="Where it comes from">Your browser, automatically.</td></tr>
                 <tr><td data-label="What">A factory's people</td><td data-label="Details">Names and phone numbers of workers, their shift and machine assignments, the people who receive machine alerts, the email addresses that receive shift reports, and the name of whoever records why a machine stopped.</td><td data-label="Where it comes from">The factory.</td></tr>
                 <tr><td data-label="What">Machine data</td><td data-label="Details">Electric current, running, idle and off time, counts, temperature and vibration of machines, and the health of each board (Wi-Fi network and signal, power supply, software version). This is about machines; it can relate to a person when the factory assigns workers to machines or shifts.</td><td data-label="Where it comes from">FloorBeat boards fitted on the machines.</td></tr>
                 <tr><td data-label="What">Factory Wi-Fi details</td><td data-label="Details">The network names and passwords a factory gives us so its boards can connect. Only FloorBeat's super administrator can read them, and they are sent only to that factory's boards.</td><td data-label="Where it comes from">The factory.</td></tr>
@@ -142,7 +142,7 @@
           <h2 id="use">4. Why we use it</h2>
           <ul class="legal-list">
             <li><strong>To run the service:</strong> show each machine's status, send alerts, shift reports and the monthly Results email, and keep the boards connected and up to date.</li>
-            <li><strong>To keep accounts safe:</strong> sign-in, password resets, limiting each account to two devices at a time, blocking password guessing, and recording what FloorBeat staff change.</li>
+            <li><strong>To keep accounts safe:</strong> sign-in, password resets, limiting each account to three devices at a time, blocking password guessing, and recording what FloorBeat staff change.</li>
             <li><strong>To help you:</strong> answer questions, look into faults, and fix and improve the service.</li>
             <li><strong>To work with you as a customer:</strong> subscriptions, renewal reminders and invoices.</li>
             <li><strong>To meet the law:</strong> tax records, and requests from authorities that the law requires us to answer.</li>
@@ -199,7 +199,7 @@
           <h2 id="security">9. How we protect it</h2>
           <ul class="legal-list">
             <li>Every connection is encrypted. Boards connect to our servers over encrypted links that check our certificate.</li>
-            <li>Passwords are kept as one-way hashes, sign-in tokens are short-lived, and an account can be signed in on at most two devices at a time.</li>
+            <li>Passwords are kept as one-way hashes, sign-in tokens are short-lived, and an account can be signed in on at most three devices at a time.</li>
             <li>Each factory sees only its own data, at its own address, and each person sees only what their role allows.</li>
             <li>Boards install only software updates signed by FloorBeat: each board checks the signature first.</li>
             <li>Only authorised FloorBeat staff can reach our servers, and what staff change in a factory's settings is recorded.</li>
@@ -277,6 +277,7 @@
           <a href="mailto:support@floorbeat.in">Contact</a>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
+          <a href="/security">Security</a>
         </div>
         <div class="footer-col">
           <h4>Account</h4>

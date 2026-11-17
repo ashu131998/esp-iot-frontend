@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
-import { factoryFromHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
+import { factoryFromHost, isAlertsAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
 
@@ -84,8 +84,10 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // The factory whose own address this is (<factory>.floorbeat.in), if any.
   const hostFactory = factoryFromHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX);
+  // The FloorBeat Alerts phone app's address (alerts.floorbeat.in).
+  const alertsApp = isAlertsAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.ALERTS_APP_HOST);
 
-  const legacyTarget = hostFactory ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
+  const legacyTarget = hostFactory || alertsApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
     if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
       return internalHostBlockResponse();
@@ -105,6 +107,7 @@ export async function middleware(req: NextRequest) {
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
+    `worker-src 'self'`,   // the alerts app's service worker (public/alerts-sw.js)
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
@@ -179,6 +182,32 @@ export async function middleware(req: NextRequest) {
   };
 
   let identity = await getIdentity(req);
+
+  // FloorBeat Alerts, the phone app (alerts.floorbeat.in): its pages at plain addresses — /login to
+  // sign in, / the inbox, /alerts/<id> one alert, /settings, /install — served from the app's
+  // /alerts-app/… inside. Any account signs in here; the staff console is not served.
+  if (alertsApp) {
+    const inner = pathname.match(/^\/alerts-app(\/.*)?$/);
+    if (inner) return redirectTo(inner[1] ?? '/');
+    if (pathname === '/internal' || pathname.startsWith('/internal/')) return internalHostBlockResponse();
+    if (/^\/(f|factories)(\/|$)/.test(pathname)) return redirectTo('/');
+    if (/^\/install\/?$/.test(pathname)) return securedRewrite('/alerts-app/install');
+    if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
+    if (/^\/login\/?$/.test(pathname)) {
+      if (identity) return redirectTo('/');
+      return securedRewrite('/alerts-app/login');
+    }
+    if (!identity) {
+      if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+      const next = pathname === '/' ? null : safeNextPath(`${pathname}${req.nextUrl.search}`);
+      const url = req.nextUrl.clone();
+      url.pathname = '/login';
+      url.search = next ? `?next=${encodeURIComponent(next)}` : '';
+      return NextResponse.redirect(url);
+    }
+    const page = pathname === '/' || /^\/alerts\/?$/.test(pathname) ? '' : pathname;   // /alerts is the inbox too
+    return securedRewrite(`/alerts-app${page}`);
+  }
 
   // A factory's own address (<factory>.floorbeat.in): that factory alone, at plain addresses —
   // /login to sign in, / its dashboard, /energy, /machines/… its pages (served from the app's

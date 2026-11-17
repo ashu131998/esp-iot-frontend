@@ -1,3 +1,4 @@
+import { CompanyCard } from '@/components/internal/company-card';
 import { FactorySetupPanel } from '@/components/internal/factory-setup-panel';
 import { ReferralCard } from '@/components/internal/referral-card';
 import { SubscriptionCard } from '@/components/internal/subscription-card';
@@ -30,7 +31,8 @@ export default async function InternalFactorySetupPage({
         <SubscriptionCard factoryId={factoryId} />
       </section>
       {listed && (
-        <section className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+        <section className="grid gap-4 px-4 pb-4 sm:px-6 sm:pb-6 lg:grid-cols-2 lg:px-8 lg:pb-8">
+          <CompanyCard factoryId={factoryId} initial={listed.company ?? null} />
           <ReferralCard factoryId={factoryId} initial={listed.referred_by ?? null} />
         </section>
       )}

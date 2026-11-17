@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security — FloorBeat</title>
+  <meta name="description" content="How FloorBeat protects your factory's data: hosting in Germany, encryption, sign-in, backups, monitoring, and what we do not have yet.">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:title" content="Security — FloorBeat">
+  <meta property="og:description" content="How FloorBeat protects your factory's data: hosting in Germany, encryption, sign-in, backups, monitoring, and what we do not have yet.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://floorbeat.in/security">
+  <link rel="canonical" href="https://floorbeat.in/security">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/site.js"></script>
+</head>
+<body>
+  <div class="announce">
+    <div class="wrap">
+      <span class="announce-long">Machine Monitoring as a Service: every machine live in the first week.</span>
+      <span class="announce-short">Every machine live in the first week.</span>
+      <a href="/roi">Work out what stops cost you</a>
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="brand" href="/" aria-label="FloorBeat home">
+        <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32">
+        <span>FloorBeat</span>
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="/#service">The service</a>
+        <a href="/#how">How it works</a>
+        <a href="/#rollout">First week</a>
+        <a href="/#results">Results</a>
+        <a href="/partners">Partners</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="nav-login" href="/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Log in</span></a>
+        <a class="btn btn-outline btn-sm nav-roi" href="/roi">ROI calculator</a>
+        <a class="btn btn-primary btn-sm nav-cta" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a pilot<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+        <details class="menu">
+          <summary aria-label="Menu"><svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></summary>
+          <div class="menu-panel">
+            <a class="menu-link" href="/#service">The service<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#how">How it works<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#rollout">First week<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#results">Results<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/#features">Features<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/roi">ROI calculator<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <a class="menu-link" href="/partners">Partners<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+            <div class="menu-buttons">
+              <a class="btn btn-primary btn-block" href="mailto:support@floorbeat.in?subject=FloorBeat%20pilot">Book a free pilot</a>
+              <a class="btn btn-outline btn-block" href="/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Log in</a>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </header>
+
+      <main class="legal-page">
+    <section class="page-head">
+      <span class="blob blob-1" aria-hidden="true"></span>
+      <span class="blob blob-2" aria-hidden="true"></span>
+      <div class="wrap narrow center">
+        <p class="eyebrow">Security</p>
+        <h1 class="page-title">Security at FloorBeat</h1>
+        <p class="lead">How we protect your factory's data: where it lives, how it travels, who can reach it, and what we do when something goes wrong. Written for purchasing and IT teams.</p>
+        <p class="legal-date">Last updated: 17 November 2026</p>
+      </div>
+    </section>
+
+    <section class="legal">
+      <div class="wrap legal-grid">
+        <nav class="legal-toc" aria-label="On this page">
+          <p>On this page</p>
+          <ol>
+            <li><a href="#summary">At a glance</a></li>
+            <li><a href="#hosting">Hosting and backups</a></li>
+            <li><a href="#transit">Encryption</a></li>
+            <li><a href="#accounts">Accounts and sign-in</a></li>
+            <li><a href="#isolation">Keeping customers apart</a></li>
+            <li><a href="#devices">The boards</a></li>
+            <li><a href="#staff">Our staff's access</a></li>
+            <li><a href="#monitoring">Monitoring and availability</a></li>
+            <li><a href="#data">Personal data</a></li>
+            <li><a href="#providers">Companies that help us</a></li>
+            <li><a href="#incidents">Incidents and reporting a weakness</a></li>
+            <li><a href="#not-yet">What we do not have yet</a></li>
+          </ol>
+        </nav>
+
+        <article class="legal-body">
+          <div class="legal-summary">
+            <h2>At a glance</h2>
+            <ul>
+              <li>Hosted in Germany (Hetzner), with a standby copy of the database and encrypted backups in Cloudflare R2; restores are tested.</li>
+              <li>Everything travels encrypted: browsers over HTTPS, boards over TLS with our certificate pinned, software updates signed.</li>
+              <li>Passwords hashed with bcrypt, short-lived sign-in tokens, at most three devices per account, sign-in rate limiting.</li>
+              <li>Each factory at its own address and in its own data; staff actions logged.</li>
+              <li>We hold little personal data, and say exactly what in our <a href="/privacy">Privacy Policy</a>.</li>
+              <li>Not yet: two-step sign-in, a certification such as ISO 27001. Both are on our list, and we say so rather than pretend.</li>
+            </ul>
+          </div>
+
+          <h2 id="hosting">1. Hosting and backups</h2>
+          <ul class="legal-list">
+            <li><strong>Where:</strong> a dedicated server at Hetzner Online GmbH in Falkenstein, Germany, running our services in containers. Public pages and dashboards are delivered through Cloudflare.</li>
+            <li><strong>Database:</strong> PostgreSQL, with a continuously updated standby copy on the same server.</li>
+            <li><strong>Backups:</strong> a full dump every hour (the newest 24 kept) and continuous archiving for point-in-time recovery, both stored in Cloudflare R2, which encrypts them at rest. Failover to the standby and restores from backup are tested.</li>
+            <li><strong>Telemetry:</strong> readings from the boards wait in a message queue on the server until written to the database, so a database restart loses nothing.</li>
+          </ul>
+
+          <h2 id="transit">2. Encryption</h2>
+          <ul class="legal-list">
+            <li><strong>Browsers:</strong> HTTPS only (TLS 1.2 and above, through Cloudflare).</li>
+            <li><strong>Boards:</strong> each board connects outwards to our broker over TLS and checks our certificate authority (pinned in its software), so it talks to us alone. Nothing connects in to a board: it opens no ports.</li>
+            <li><strong>Software updates:</strong> a board installs only an update signed with FloorBeat's key (ECDSA P-256), and goes back to the previous version by itself if the new one does not come up.</li>
+            <li><strong>Backups:</strong> encrypted at rest in Cloudflare R2.</li>
+          </ul>
+
+          <h2 id="accounts">3. Accounts and sign-in</h2>
+          <ul class="legal-list">
+            <li>Passwords are stored as bcrypt hashes, never readable by anyone at FloorBeat. At least 8 characters.</li>
+            <li>A sign-in gives a short-lived access token (15 minutes) and a renewal token (7 days, replaced at every use). Both live in httpOnly, secure cookies; forms carry a CSRF token.</li>
+            <li>At most three devices per account at a time (a computer, a phone's browser, the FloorBeat Alerts app): a fourth sign-in ends the one used longest ago.</li>
+            <li>Sign-in attempts are rate-limited; a forgotten password is reset through an emailed link that works once and expires in 30 minutes.</li>
+            <li>A password change or an account's removal signs it out everywhere.</li>
+          </ul>
+
+          <h2 id="isolation">4. Keeping customers apart</h2>
+          <ul class="legal-list">
+            <li>Each factory has its own address (<code>factory.floorbeat.in</code>) and its own sign-in; a session is valid at that factory only.</li>
+            <li>Every query is scoped to the factory of the session; the dashboard cannot ask for another customer's data.</li>
+            <li>Roles: a factory's admins change its settings and manage its team, employees only look. A company with several plants has one admin account across them; workers belong to one plant.</li>
+            <li>Customers see and export their own data (CSV) at any time, and own it (<a href="/terms">Terms of Service</a>).</li>
+          </ul>
+
+          <h2 id="devices">5. The boards</h2>
+          <ul class="legal-list">
+            <li>The boards measure machines; they never control them.</li>
+            <li>They reach the internet over the factory's Wi-Fi or a 4G modem, outwards only, over TLS, with their own login to our broker each.</li>
+            <li>When the connection is down, readings are kept in the board's flash (about a month's worth) and sent when it is back, so nothing is lost and nothing is sent anywhere else.</li>
+            <li>The Wi-Fi details a factory gives us are stored so that only FloorBeat's super administrator can read them, and are sent only to that factory's boards.</li>
+          </ul>
+
+          <h2 id="staff">6. Our staff's access</h2>
+          <ul class="legal-list">
+            <li>Staff use a separate console with its own roles; a super administrator alone can claim boards, change their settings or read Wi-Fi details.</li>
+            <li>What staff change in a factory's setup is written to an audit log that is kept as long as the factory exists.</li>
+            <li>The server is reached by SSH key only. Code reaches production through our deployment pipeline, after its automated tests pass.</li>
+          </ul>
+
+          <h2 id="monitoring">7. Monitoring and availability</h2>
+          <ul class="legal-list">
+            <li>An external service checks the API and the dashboards around the clock, and also that readings are flowing end to end, and alerts our staff.</li>
+            <li>Every service restarts by itself if it stops; the boards keep readings meanwhile.</li>
+            <li>We do not promise an uptime percentage, and say so in the Terms. Planned maintenance is done outside production hours where possible.</li>
+          </ul>
+
+          <h2 id="data">8. Personal data</h2>
+          <p>FloorBeat monitors machines, not people. What personal data we hold (accounts, the names and phone numbers a factory enters for its workers and alert recipients), why, for how long, and your rights under the Digital Personal Data Protection Act, 2023, are in our <a href="/privacy">Privacy Policy</a>. A factory's data is deleted 90 days after its subscription ends, with notice to its admins 30 and 7 days before.</p>
+
+          <h2 id="providers">9. Companies that help us</h2>
+          <p>Hetzner (servers), Cloudflare (delivery, protection, backup storage), Upstash (sign-in sessions and rate limiting), Resend (email), Zoho (our support mailbox), and the push services of Google and Apple for alerts. Each handles data only on our instructions. The full list, with what each sees, is in the Privacy Policy.</p>
+
+          <h2 id="incidents">10. Incidents and reporting a weakness</h2>
+          <ul class="legal-list">
+            <li>If a breach affects personal data, we tell the affected customers and people, and the Data Protection Board of India, as the law requires.</li>
+            <li>Found a weakness? Write to <a href="mailto:support@floorbeat.in?subject=Security">support@floorbeat.in</a>. We answer within two working days and do not take action against good-faith reports.</li>
+          </ul>
+
+          <h2 id="not-yet">11. What we do not have yet</h2>
+          <ul class="legal-list">
+            <li>Two-step sign-in (an extra code at sign-in). Planned.</li>
+            <li>A certification such as ISO 27001 or SOC 2. We follow the practices above; we have not been audited against a standard.</li>
+            <li>A second server in another location. Backups and the tested restore cover loss of the server; a short outage would be visible until it is rebuilt.</li>
+          </ul>
+          <p>Questions from a security questionnaire we have not covered here: send them to <a href="mailto:support@floorbeat.in?subject=Security%20questionnaire">support@floorbeat.in</a> and we answer in writing.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-about">
+          <a class="brand" href="/">
+            <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32">
+            <span>FloorBeat</span>
+          </a>
+          <p>Machine Monitoring as a Service for factories: every machine live in the first week, and a monthly report of the hours won back.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="/#service">The service</a>
+          <a href="/#how">How it works</a>
+          <a href="/#rollout">First week</a>
+          <a href="/#features">Features</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="/roi">ROI calculator</a>
+          <a href="/partners">Partners</a>
+          <a href="mailto:support@floorbeat.in">Contact</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/security">Security</a>
+        </div>
+        <div class="footer-col">
+          <h4>Account</h4>
+          <a href="/login">Log in</a>
+          <a href="/login/staff">Staff sign in</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 FloorBeat. Made in India.</span>
+        <a href="mailto:support@floorbeat.in">support@floorbeat.in</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

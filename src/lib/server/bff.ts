@@ -15,7 +15,7 @@ export const CSRF_HEADER = 'x-csrf-token';
 // Token lifetimes (cookie maxAge). The backend remains authoritative on actual
 // JWT expiry; these just bound how long the browser retains the cookies.
 const ACCESS_MAX_AGE = 60 * 15; // 15 minutes
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 30; // 30 days (REFRESH_TOKEN_TTL on the API): the alerts app must not sign itself out
 
 export interface TokenPair {
   access: string;

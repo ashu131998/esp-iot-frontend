@@ -57,7 +57,7 @@ export function WorkerRoster({
   });
 
   // Email + password are required: they become the worker's login for the
-  // AlertOps mobile app, where they receive their machine & shift alerts.
+  // FloorBeat Alerts app, where they receive their machine & shift alerts.
   const passwordValid = (form.password ?? '').length >= 8;
   const canSubmit = Boolean(form.name && form.email && passwordValid);
 
@@ -105,8 +105,10 @@ export function WorkerRoster({
       cell: ({ row }) => (
         <span className="text-muted">
           {row.original.email ?? '—'}
-          {row.original.alertops_user_id && (
-            <Badge className="ml-1 bg-emerald-50 text-emerald-700">{t('app')}</Badge>
+          {(row.original.user_id || row.original.alertops_user_id) && (
+            <span title={t('Has a login for the FloorBeat Alerts app')}>
+              <Badge className="ml-1 bg-emerald-50 text-emerald-700">{t('app')}</Badge>
+            </span>
           )}
         </span>
       ),
@@ -209,7 +211,7 @@ export function WorkerRoster({
             </Field>
           </div>
           <p className="mt-2 text-xs text-muted">
-            {t("Email & password create the worker's login for the AlertOps mobile app, where they receive their machine and shift alerts.")}
+            {t("Email & password create the worker's login for the FloorBeat Alerts app (alerts.floorbeat.in), where they receive their machine and shift alerts.")}
           </p>
           <div className="mt-4 flex gap-2">
             <Button

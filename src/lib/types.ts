@@ -425,6 +425,8 @@ export interface Worker {
   phone: string | null;
   email: string | null;
   alertops_user_id: string | null;
+  /** The worker's own FloorBeat account (the alerts app's login), once made from the email + password. */
+  user_id?: string | null;
   status: string;
   created_at: string;
   updated_at: string;

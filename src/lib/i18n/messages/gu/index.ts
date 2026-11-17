@@ -1,6 +1,7 @@
 import type { Messages } from '../../translate';
 
 import { alerts } from './alerts';
+import { alerts_app } from './alerts-app';
 import { auth } from './auth';
 import { calibration } from './calibration';
 import { common } from './common';
@@ -21,6 +22,7 @@ export const GU_NAMESPACES: Record<string, Messages> = {
   factory_metrics,
   factory_admin,
   alerts,
+  alerts_app,
   sensors,
   maintenance,
   auth,

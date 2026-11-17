@@ -101,9 +101,10 @@ export function factoryLoginUrl(factory: string | null, origins: Origins): strin
 /**
  * Pages a signed-in visitor still sees instead of being sent to their dashboard: the ROI
  * calculator and the partners page are shared with prospects, and staff open them signed in;
- * the privacy policy and the terms are linked from the dashboard's sign-in page.
+ * the privacy policy and the terms are linked from the dashboard's sign-in page; the app page is
+ * where a signed-in admin sends their workers.
  */
-const ALWAYS_SHOWN = new Set(['/roi', '/partners', '/privacy', '/terms', '/security']);
+const ALWAYS_SHOWN = new Set(['/roi', '/partners', '/privacy', '/terms', '/security', '/app']);
 
 export function alwaysShown(pathname: string): boolean {
   const path = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';

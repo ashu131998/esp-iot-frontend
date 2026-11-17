@@ -79,6 +79,7 @@ const CHECKS = [
   { part: 'app', name: 'Android asset link', url: `${ALERTS}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.alerts' },
   { part: 'app', name: 'the staff console is not the app', url: `${ALERTS}/internal/login`, status: 404 },
   { part: 'site', name: 'app download page', url: `${SITE}/app`, status: 200, contains: 'Download for Android' },
+  { part: 'site', name: 'Android APK download', url: `${SITE}/downloads/floorbeat-alerts.apk`, status: 200 },
 ];
 
 function verdict(check, got) {

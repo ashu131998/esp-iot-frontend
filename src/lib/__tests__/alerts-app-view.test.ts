@@ -102,3 +102,20 @@ describe('words', () => {
     expect(reasonWords('Plain weave', hindi.t)).toBe('Plain weave');
   });
 });
+
+describe('a stop nobody answered', () => {
+  const waiting = alert({ title: '🔴 Loom 3 still DOWN — no reason yet', payload: { kind: 'downtime_reason', options: OPTIONS, view: { kind: 'machine_down_waiting', machine: 'Loom 3', at: AT, waiting_min: 12 } } });
+
+  it('the supervisor gets the question with how long it has been', () => {
+    expect(alertWords(waiting, en)).toEqual({ title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 12 m. Nobody has said why yet.\nWhy is it down? Tap an answer below.' });
+    expect(alertWords(waiting, hindi).title).toBe('Loom 3 अब भी रुकी है');
+    expect(alertWords(waiting, gujarati).body).toContain('12 મિ થી બંધ છે');
+  });
+
+  it('the owner is told, with nothing to answer; without the minutes it still reads', () => {
+    const owner = alert({ type: 'owner_machine_down_unanswered', payload: { view: { kind: 'owner_unanswered', machine: 'Loom 3', at: AT, waiting_min: 75 } } });
+    expect(alertWords(owner, en)).toEqual({ title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 1 h 15 m. Nobody has said why yet.' });
+    const bare = alert({ payload: { view: { kind: 'owner_unanswered', machine: 'Loom 3' } } });
+    expect(alertWords(bare, en).body).toBe('Loom 3 is still stopped. Nobody has said why yet.');
+  });
+});

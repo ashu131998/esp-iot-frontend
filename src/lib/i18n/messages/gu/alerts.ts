@@ -141,4 +141,13 @@ export const alerts: Messages = {
   'Factory': 'ફેક્ટરી',
   'All factories': 'બધી ફેક્ટરીઓ',
   'Select factory first': 'પહેલાં ફેક્ટરી પસંદ કરો',
+
+  // a stop nobody answers, and testing the alerts app from the dashboard
+  'Admins get these in the alerts app': 'એડમિનને આ એલર્ટ ઍપમાં મળે છે',
+  'Ask a supervisor when nobody answers': 'કોઈ જવાબ ન આપે તો સુપરવાઇઝરને પૂછો',
+  'Minutes after the stop (0 = never). The operators are rung again; Shift Supervisors with an app login are asked.': 'મશીન બંધ થયા પછી આટલી મિનિટે (0 = ક્યારેય નહીં). ઑપરેટરોનો ફોન ફરી વાગે છે; ઍપ લૉગિનવાળા શિફ્ટ સુપરવાઇઝરને પૂછાય છે.',
+  'Tell the owners when nobody answers': 'કોઈ જવાબ ન આપે તો માલિકોને જણાવો',
+  'Minutes after the stop (0 = never)': 'મશીન બંધ થયા પછી આટલી મિનિટે (0 = ક્યારેય નહીં)',
+  'Test alerts need the alerts app set up on the server.': 'ટેસ્ટ એલર્ટ માટે સર્વર પર એલર્ટ ઍપ સેટ હોવી જોઈએ.',
+  'No worker has an app login yet. Give one on the Team page.': 'હજી કોઈ કારીગર પાસે ઍપ લૉગિન નથી. Team પેજ પર આપો.',
 };

@@ -35,6 +35,7 @@ const { AlertDetail } = await import('@/components/alerts-app/alert-detail');
 const { AlertsSettings } = await import('@/components/alerts-app/settings');
 const { AppLoginForm } = await import('@/components/alerts-app/login-form');
 const { InstallGuide } = await import('@/components/alerts-app/install-guide');
+const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
 const now = new Date().toISOString();
@@ -220,5 +221,46 @@ describe('installing', () => {
     const html = render(<InstallGuide platform="ios" />, () => {}, hi);
     expect(html).toContain('FloorBeat Alerts इंस्टॉल करें');
     expect(html).toContain('iPhone पर');
+  });
+});
+
+describe('the phone will not ring yet', () => {
+  const prompt = (state: Parameters<typeof PushPrompt>[0]['state'], extra = {}) => render(<PushPrompt state={state} onEnable={() => {}} installHref="/install" {...extra} />);
+
+  it('notifications off: says so, with the one button that fixes it', () => {
+    const html = prompt('off');
+    expect(html).toContain('Your phone will not ring yet');
+    expect(html).toContain('Turn on notifications so your phone rings the moment a machine stops.');
+    expect(html).toContain('>Turn on notifications<');
+    expect(prompt('off', { busy: true })).toContain('>Turning on…<');
+    expect(prompt('off', { failed: true })).toContain('Could not turn on notifications. Try again.');
+  });
+
+  it('an iPhone before the app is on the Home Screen: install first', () => {
+    const html = prompt('needs-install');
+    expect(html).toContain('Install the app on your Home Screen first');
+    expect(html).toContain('href="/install"');
+    expect(html).not.toContain('>Turn on notifications<');
+  });
+
+  it('blocked by the phone, or a browser that cannot: what to do, no button', () => {
+    expect(prompt('blocked')).toContain('Notifications are blocked for this app.');
+    expect(prompt('unsupported')).toContain('This browser cannot show notifications.');
+    expect(prompt('blocked')).not.toContain('<button');
+  });
+
+  it('nothing once they are on, while checking, or when the server has none', () => {
+    for (const state of ['on', 'checking', 'ok', 'server-off'] as const) expect(prompt(state)).toBe('');
+  });
+
+  it('in Hindi', () => {
+    const html = render(<PushPrompt state="off" onEnable={() => {}} installHref="/install" />, () => {}, hi);
+    expect(html).toContain('आपका फ़ोन अभी नहीं बजेगा');
+  });
+
+  it('the inbox says alerts ring only when they do', () => {
+    const html = render(<AlertsInbox />, seedInbox([]));
+    expect(html).toContain('New alerts show here.');            // not known to ring yet (still checking)
+    expect(html).not.toContain('and ring your phone');
   });
 });

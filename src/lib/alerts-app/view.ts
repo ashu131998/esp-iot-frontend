@@ -16,6 +16,8 @@ export interface AlertFacts {
   line?: string | null;
   at?: string | null;
   down_for_min?: number | null;
+  /** How long the machine had been stopped, with no reason given, when the alert went up. */
+  waiting_min?: number | null;
   shift?: string | null;
   start?: string | null;
   task?: string | null;
@@ -105,6 +107,15 @@ export function alertWords(alert: MyAlert, tr: Translator): AlertWords {
         title: t('{machine} is running again', { machine }),
         body: time ? t('{machine} came back at {time}{after}.', { machine, time, after }) : t('{machine} is running again.', { machine }),
       };
+    }
+    // Nobody answered: the supervisor gets the question, the owner is told.
+    case 'machine_down_waiting':
+    case 'owner_unanswered': {
+      const lines = [facts.waiting_min
+        ? t('{machine} has been stopped for {duration}. Nobody has said why yet.', { machine, duration: durationWords(facts.waiting_min, t) })
+        : t('{machine} is still stopped. Nobody has said why yet.', { machine })];
+      if (asks) lines.push(t('Why is it down? Tap an answer below.'));
+      return { title: t('{machine} is still stopped', { machine }), body: lines.join('\n') };
     }
     default:
       return { title: titleOf(alert), body: null };

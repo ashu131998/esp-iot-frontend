@@ -102,4 +102,12 @@ export const alerts_app: Messages = {
   'Operator break': 'ऑपरेटर का ब्रेक',
   'Quality stop': 'क्वालिटी के लिए रोका',
   'Workers get these in the FloorBeat Alerts app: give each a login on the Team page, and install the app from floorbeat.in/app.': 'कारीगरों को ये FloorBeat Alerts ऐप में मिलते हैं: Team पेज पर हर एक को लॉगिन दें, और ऐप floorbeat.in/app से इंस्टॉल करें।',
+
+  // the phone will not ring yet (the inbox's prompt), and a stop nobody answered
+  'Your phone will not ring yet': 'आपका फ़ोन अभी नहीं बजेगा',
+  'Turn on notifications so your phone rings the moment a machine stops.': 'नोटिफ़िकेशन चालू करें ताकि मशीन रुकते ही आपका फ़ोन बजे।',
+  'New alerts show here.': 'नए अलर्ट यहाँ दिखेंगे।',
+  '{machine} is still stopped': '{machine} अब भी रुकी है',
+  '{machine} has been stopped for {duration}. Nobody has said why yet.': '{machine} {duration} से रुकी है। अभी तक किसी ने कारण नहीं बताया।',
+  '{machine} is still stopped. Nobody has said why yet.': '{machine} अब भी रुकी है। अभी तक किसी ने कारण नहीं बताया।',
 };

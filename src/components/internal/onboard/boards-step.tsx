@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CardHeader } from '@/components/ui/card';
 import { Field, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
-import { firmware, isRescueBox, selfTest, type AdminBoard } from '@/lib/board-status';
+import { firmware, isCamera, isRescueBox, selfTest, type AdminBoard } from '@/lib/board-status';
 import {
   SETUP_BOARD_SLOTS, boardProblems, newBoard, slotSensor, type BoardDraft, type LineDraft, type MachineDraft,
 } from '@/lib/onboarding';
@@ -41,7 +41,8 @@ export function BoardsStep({ value, lines, machines, onChange, tried, canClaim }
     refetchInterval: 15_000,
     enabled: canClaim,
   });
-  const waiting = (boardsQuery.data?.boards ?? []).filter((b) => b.factory_id === UNCLAIMED);
+  // Cameras are claimed from the Boards page (the wizard maps sensor channels to machines; a camera has none).
+  const waiting = (boardsQuery.data?.boards ?? []).filter((b) => b.factory_id === UNCLAIMED && !isCamera(b));
   const waitingIds = new Set(waiting.map((b) => b.board_id));
   const picked = new Set(value.map((b) => b.board_id));
   const problems = boardProblems(value, lines, machines);

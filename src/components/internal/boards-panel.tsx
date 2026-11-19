@@ -19,7 +19,7 @@ import {
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
 import {
-  SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
+  SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isCamera, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
   selfTest, serviceName, supply, timeSource, wifi, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
@@ -213,6 +213,7 @@ function ClaimBoxDialog({ box, onClose }: { box: AdminBoard; onClose: () => void
 function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   const queryClient = useQueryClient();
   const unclaimed = board.factory_id === UNCLAIMED;
+  const camera = isCamera(board);
   const [factoryId, setFactoryId] = useState(unclaimed ? '' : (board.factory_id ?? ''));
   const [lineId, setLineId] = useState(unclaimed ? '' : (board.line_id ?? ''));
   const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
@@ -229,13 +230,15 @@ function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () =
       onClose();
     },
   });
-  const ready = Boolean(factoryId && lineId) && settingsProblems(draft).length === 0;
+  const ready = Boolean(factoryId && lineId) && (camera || settingsProblems(draft).length === 0);
   return (
     <Modal
       open
       onClose={onClose}
       title={`${unclaimed ? 'Claim' : 'Move'} · ${board.board_id}`}
-      description="The board gets its factory and line, these settings and a login of its own (firmware 2.1+), all at once."
+      description={camera
+        ? 'The camera gets its factory and line and a login of its own, all at once. Its bottles are drawn on the factory\'s Bottles page.'
+        : 'The board gets its factory and line, these settings and a login of its own (firmware 2.1+), all at once.'}
       className="max-w-3xl"
     >
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
@@ -256,13 +259,22 @@ function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () =
           </Select>
         </Field>
       </div>
-      {!board.settings && <DefaultsWarning />}
-      <SettingsFields draft={draft} setDraft={setDraft} />
+      {camera ? (
+        <p className="rounded-md bg-violet-50 p-3 text-xs text-violet-900">
+          A dye-bottle camera has no sensor channels to set. After the claim, switch the Bottles page on for the factory
+          (Pages &amp; branding) and draw its bottles there.
+        </p>
+      ) : (
+        <>
+          {!board.settings && <DefaultsWarning />}
+          <SettingsFields draft={draft} setDraft={setDraft} />
+        </>
+      )}
       {claim.isError && <p className="mt-3 text-xs text-red-700">{(claim.error as Error).message}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
         <Button disabled={!ready || claim.isPending} onClick={() => claim.mutate()}>
-          {claim.isPending ? 'Sending…' : unclaimed ? 'Claim board' : 'Move board'}
+          {claim.isPending ? 'Sending…' : `${unclaimed ? 'Claim' : 'Move'} ${camera ? 'camera' : 'board'}`}
         </Button>
       </div>
     </Modal>
@@ -509,7 +521,10 @@ export function BoardsPanel() {
             <TBody>
               {boards.map((b) => (
                 <TR key={b.board_id}>
-                  <TD className="font-mono text-xs">{b.board_id}</TD>
+                  <TD className="whitespace-nowrap font-mono text-xs">
+                    {b.board_id}
+                    {isCamera(b) && <Badge className="ml-2 bg-violet-50 font-sans text-violet-700">Camera</Badge>}
+                  </TD>
                   <TD className="text-xs">
                     {b.factory_id === UNCLAIMED
                       ? <Badge className="bg-blue-50 text-blue-700">New — not claimed</Badge>
@@ -542,7 +557,9 @@ export function BoardsPanel() {
                         <Button size="sm" variant={b.factory_id === UNCLAIMED ? 'primary' : 'secondary'} disabled={broker !== 'ok'} onClick={() => setClaiming(b)}>
                           {b.factory_id === UNCLAIMED ? 'Claim' : 'Move'}
                         </Button>
-                        <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>
+                        {isCamera(b)
+                          ? <span className="self-center px-1 text-xs text-muted" title="Its bottles are drawn on the factory's Bottles page">Bottles page</span>
+                          : <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>}
                         <Button
                           size="sm" variant="secondary" disabled={broker !== 'ok' || !b.settings}
                           title={b.settings ? undefined : 'Send its settings first'}

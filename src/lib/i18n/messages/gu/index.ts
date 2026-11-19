@@ -3,6 +3,7 @@ import type { Messages } from '../../translate';
 import { alerts } from './alerts';
 import { alerts_app } from './alerts-app';
 import { auth } from './auth';
+import { bottles } from './bottles';
 import { calibration } from './calibration';
 import { common } from './common';
 import { dates } from './dates';
@@ -29,6 +30,7 @@ export const GU_NAMESPACES: Record<string, Messages> = {
   calibration,
   pages,
   results,
+  bottles,
 };
 
 export const gu: Messages = Object.assign({}, ...Object.values(GU_NAMESPACES));

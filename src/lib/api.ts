@@ -60,6 +60,7 @@ import {
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
+import type { BottlesResponse, CamPicture, CamSettings, CamSettingsBody, LevelEvent, PictureKind } from '@/lib/bottles';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
 
 export type { ApiRequestOptions };
@@ -142,6 +143,7 @@ function qs(
       line_id?: string;
       action?: string;
       actor?: string;
+      kind?: string;
     },
 ): string {
   if (!params) return '';
@@ -1016,6 +1018,30 @@ export const api = {
     request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, {
       method: 'PUT', body: JSON.stringify({ networks }), ...options,
     }),
+
+  /** The factory's dye-bottle cameras, each with its bottles' levels and last picture (lib/bottles.ts). */
+  bottles: (factoryId: string, options?: ApiRequestOptions) =>
+    request<BottlesResponse>(`/v1/factories/${encodeURIComponent(factoryId)}/bottles`, options),
+  /** The boxes drawn on the picture and the camera's settings, sent to it; the machine its bottles are at. */
+  saveBottleSettings: (factoryId: string, boardId: string, body: CamSettingsBody) =>
+    request<{ settings: CamSettings; machine_id: string | null; cfg_version: number }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/bottles/${encodeURIComponent(boardId)}/settings`,
+      { method: 'PUT', body: JSON.stringify(body) },
+    ),
+  /** Ask a camera for a picture now: it uploads one within a few seconds. */
+  snapBottleCamera: (factoryId: string, boardId: string) =>
+    request<{ snap: number; cfg_version: number }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/bottles/${encodeURIComponent(boardId)}/snap`,
+      { method: 'POST' },
+    ),
+  bottleEvents: (factoryId: string, boardId: string, params?: { limit?: number }, options?: ApiRequestOptions) =>
+    request<{ events: LevelEvent[] }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/bottles/${encodeURIComponent(boardId)}/events${qs(params)}`, options,
+    ),
+  bottlePictures: (factoryId: string, boardId: string, params?: { limit?: number; kind?: PictureKind }, options?: ApiRequestOptions) =>
+    request<{ pictures: CamPicture[] }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/bottles/${encodeURIComponent(boardId)}/pictures${qs(params)}`, options,
+    ),
 
   /** Real boards with their state (staff); see AdminBoard. */
   adminBoards: (options?: ApiRequestOptions) =>

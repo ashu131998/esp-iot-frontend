@@ -78,6 +78,7 @@ describe('the Bottles page', () => {
     expect(html).toContain('width:12%');                                           // Blue's bar
     expect(html).toContain('Bottles &amp; settings');
     expect(html).toContain('Take a picture');
+    expect(html).toContain('Watch live');
   });
 
   it('the changes with their pictures, newest first', () => {
@@ -96,6 +97,7 @@ describe('the Bottles page', () => {
       expect(html).toContain('Dye camera at Loom 3');
       expect(html).not.toContain('Bottles &amp; settings');
       expect(html).not.toContain('Take a picture');
+      expect(html).toContain('Watch live');   // the live view is for everyone who sees the page
     } finally {
       auth.canWriteFactory = true;
     }

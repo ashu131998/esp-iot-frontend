@@ -101,4 +101,15 @@ export const bottles: Messages = {
   'Backlight threshold (0–255)': 'बैकलाइट की सीमा (0–255)',
   'Liquid shows darker than the dark threshold against a backlight brighter than the backlight threshold. Change these only when a full bottle reads wrong.': 'बैकलाइट की सीमा से ज़्यादा चमकीली बैकलाइट के सामने तरल गहरे रंग की सीमा से गहरा दिखता है। इन्हें तभी बदलें जब भरी बोतल गलत पढ़ी जाए।',
   'Send to camera': 'कैमरे को भेजें',
+  // the live view (2.9.5)
+  "Watch live": "लाइव देखें",
+  "Live view": "लाइव दृश्य",
+  "Starting the camera…": "कैमरा शुरू हो रहा है…",
+  "Update the camera to firmware 2.9.5 for the live view.": "लाइव दृश्य के लिए कैमरे का फ़र्मवेयर 2.9.5 पर अपडेट करें।",
+  "The camera is offline: the live view works once it is back.": "कैमरा ऑफ़लाइन है: इसके वापस आते ही लाइव दृश्य चलेगा।",
+  "Paused after {count} minutes to save the factory's internet.": "फ़ैक्टरी का इंटरनेट बचाने के लिए {count} मिनट बाद रोका गया।",
+  "Keep watching": "देखते रहें",
+  "Waiting for the camera…": "कैमरे का इंतज़ार…",
+  "Live · {fps} a second": "लाइव · {fps} प्रति सेकंड",
+  "It streams only while this is open, so the factory's internet is not used up.": "यह सिर्फ़ तब तक चलता है जब तक यह खुला है, ताकि फ़ैक्टरी का इंटरनेट खर्च न हो।",
 };

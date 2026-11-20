@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { Camera, Droplets, Settings2 } from 'lucide-react';
+import { Camera, Droplets, Settings2, Video } from 'lucide-react';
 import { useState } from 'react';
 
+import { LiveSheet } from '@/components/cam/live-view';
 import { BottleBoxEditor } from '@/components/factory/bottle-box-editor';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -99,6 +100,7 @@ function CameraCard({ factoryId, camera }: { factoryId: string; camera: BottleCa
   const lineName = useLineName();
   const { canWriteFactory } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [watching, setWatching] = useState(false);
   const snap = useBottleSnap(factoryId, camera);
   const status = camera.online
     ? t('Online')
@@ -112,18 +114,27 @@ function CameraCard({ factoryId, camera }: { factoryId: string; camera: BottleCa
       <CardHeader
         title={cameraTitle(camera, t)}
         description={`${lineName(camera.line_id)} · ${status}`}
-        action={canWriteFactory ? (
+        action={
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" disabled={!camera.online || snap.pending || snap.waiting} onClick={snap.take}>
-              <Camera className="mr-1.5 h-4 w-4" />
-              {snap.waiting ? t('Taking a picture…') : t('Take a picture')}
+            {/* Everyone who sees the page watches (2.9.5): it streams only while the view is open. */}
+            <Button size="sm" variant="secondary" disabled={!camera.online} onClick={() => setWatching(true)}>
+              <Video className="mr-1.5 h-4 w-4" />
+              {t('Watch live')}
             </Button>
-            <Button size="sm" onClick={() => setEditing(true)}>
-              <Settings2 className="mr-1.5 h-4 w-4" />
-              {t('Bottles & settings')}
-            </Button>
+            {canWriteFactory && (
+              <>
+                <Button size="sm" variant="secondary" disabled={!camera.online || snap.pending || snap.waiting} onClick={snap.take}>
+                  <Camera className="mr-1.5 h-4 w-4" />
+                  {snap.waiting ? t('Taking a picture…') : t('Take a picture')}
+                </Button>
+                <Button size="sm" onClick={() => setEditing(true)}>
+                  <Settings2 className="mr-1.5 h-4 w-4" />
+                  {t('Bottles & settings')}
+                </Button>
+              </>
+            )}
           </div>
-        ) : undefined}
+        }
       />
       {trouble && (
         <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -145,6 +156,9 @@ function CameraCard({ factoryId, camera }: { factoryId: string; camera: BottleCa
         </div>
       </div>
       {editing && <BottleBoxEditor factoryId={factoryId} camera={camera} onClose={() => setEditing(false)} />}
+      {watching && (
+        <LiveSheet scope={{ factoryId }} boardId={camera.board_id} title={cameraTitle(camera, t)} onClose={() => setWatching(false)} />
+      )}
     </Card>
   );
 }

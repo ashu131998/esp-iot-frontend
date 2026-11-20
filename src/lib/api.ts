@@ -60,6 +60,7 @@ import {
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
 import { boardWifiPath, type BoardWifi, type BoardWifiAction, type WifiScope } from '@/lib/board-wifi';
+import { livePath, type LiveScope, type LiveStart, type LiveStatus } from '@/lib/live';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
 import type { BottlesResponse, CamPicture, CamSettings, CamSettingsBody, LevelEvent, PictureKind } from '@/lib/bottles';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
@@ -1027,6 +1028,13 @@ export const api = {
   /** Scan, connect and retry (everyone of its factory); add and forget (its admins): sent to the board at once. */
   boardWifiAction: (scope: WifiScope, boardId: string, what: BoardWifiAction, body: Record<string, unknown> = {}) =>
     request<BoardWifi>(`${boardWifiPath(scope, boardId)}/${what}`, { method: 'POST', body: JSON.stringify(body) }),
+
+  /** A camera's live view (lib/live.ts): the camera told to start, and a link to its stream. */
+  startLive: (scope: LiveScope, boardId: string) =>
+    request<LiveStart>(livePath(scope, boardId), { method: 'POST', body: JSON.stringify({}) }),
+  /** How the live view is going: frames arriving, how many a second, who watches. */
+  liveStatus: (scope: LiveScope, boardId: string, options?: ApiRequestOptions) =>
+    request<LiveStatus>(livePath(scope, boardId), options),
 
   /** The factory's dye-bottle cameras, each with its bottles' levels and last picture (lib/bottles.ts). */
   bottles: (factoryId: string, options?: ApiRequestOptions) =>

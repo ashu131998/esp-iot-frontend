@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
+import { LiveSheet } from '@/components/cam/live-view';
 import { BoardWifiSheet } from '@/components/internal/board-wifi-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -467,6 +468,7 @@ export function BoardsPanel() {
   const [claiming, setClaiming] = useState<AdminBoard | null>(null);
   const [updating, setUpdating] = useState<AdminBoard | null>(null);
   const [wifiFor, setWifiFor] = useState<AdminBoard | null>(null);
+  const [liveFor, setLiveFor] = useState<AdminBoard | null>(null);
   const boardsQuery = useQuery({
     queryKey: BOARDS_KEY,
     queryFn: ({ signal }) => api.adminBoards({ signal }),
@@ -549,7 +551,15 @@ export function BoardsPanel() {
                           {b.factory_id === UNCLAIMED ? 'Claim' : 'Move'}
                         </Button>
                         {isCamera(b)
-                          ? <span className="self-center px-1 text-xs text-muted" title="Its bottles are drawn on the factory's Bottles page">Bottles page</span>
+                          ? (
+                            <Button
+                              size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED}
+                              title="Its live view (firmware 2.9.5); its bottles are drawn on the factory's Bottles page"
+                              onClick={() => setLiveFor(b)}
+                            >
+                              Live
+                            </Button>
+                          )
                           : <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>}
                         <Button
                           size="sm" variant="secondary" disabled={broker !== 'ok' || !b.settings}
@@ -587,6 +597,7 @@ export function BoardsPanel() {
       {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
       {wifiFor && <BoardWifiSheet board={wifiFor} onClose={() => setWifiFor(null)} />}
+      {liveFor && <LiveSheet scope={null} boardId={liveFor.board_id} title={`Live · ${liveFor.board_id}`} onClose={() => setLiveFor(null)} />}
     </div>
   );
 }

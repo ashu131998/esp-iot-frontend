@@ -31,6 +31,20 @@ describe('which boards take which releases', () => {
     expect(boardTargetOf({ board_id: 'loom-1', beat: null })).toBeNull();
     expect(boardTargetOf({ board_id: 'rescue-a1b2c3', beat: { hw: 'rescue' } })).toBe('rescue');
     expect(boardTargetOf({ board_id: 'rescue-a1b2c3', beat: null })).toBe('rescue');   // its name, before it said
+    // the IIoT base (2.8+) names itself revb- like REV B, but says what it is: its own releases, not REV B's
+    expect(boardTargetOf({ board_id: 'revb-372034', beat: { hw: 'base', fw: '2.9.0-base' } })).toBe('base');
+    expect(boardTargetOf({ board_id: 'cam-478998', beat: { hw: 'cam', fw: '2.9.0-cam' } })).toBe('cam');
+    expect(boardTargetOf({ board_id: 'cam-478998', beat: null })).toBe('cam');
+    expect(boardTargetOf({ board_id: 'x', beat: { hw: 'toaster' } })).toBeNull();   // a hardware name it does not know
+  });
+
+  it('a base or a camera is offered its own releases only', () => {
+    const rel = (target: string, version: string, uploaded_at: string) => ({ target, version, uploaded_at }) as FirmwareRelease;
+    const releases = [rel('rev-b', '2.9.1-uni', '2026-11-20'), rel('base', '2.9.1-base', '2026-11-20'), rel('cam', '2.9.1-cam', '2026-11-20')];
+    expect(versionsFor(releases, { board_id: 'revb-372034', beat: { hw: 'base', fw: '2.9.0-base' } }).map((r) => r.version)).toEqual(['2.9.1-base']);
+    expect(versionsFor(releases, { board_id: 'cam-478998', beat: { hw: 'cam', fw: '2.9.0-cam' } }).map((r) => r.version)).toEqual(['2.9.1-cam']);
+    expect(targetLabel('base')).toBe('IIoT base');
+    expect(targetLabel('cam')).toBe('Bottle camera');
   });
 
   it('the rescue box has a name of its own on the Firmware page', () => {

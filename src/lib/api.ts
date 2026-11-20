@@ -59,6 +59,7 @@ import {
   isAbortError,
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
+import type { BoardWifi } from '@/lib/board-wifi';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
 import type { BottlesResponse, CamPicture, CamSettings, CamSettingsBody, LevelEvent, PictureKind } from '@/lib/bottles';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
@@ -1016,6 +1017,16 @@ export const api = {
   /** Save a factory's WiFi networks: sent at once to every board placed in it. */
   saveFactoryWifi: (factoryId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
     request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, {
+      method: 'PUT', body: JSON.stringify({ networks }), ...options,
+    }),
+
+  /** Super admin: a board's own WiFi networks (on top of its factory's) and where it stands (lib/board-wifi.ts). */
+  adminBoardWifi: (boardId: string, options?: ApiRequestOptions) =>
+    request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, options),
+
+  /** Super admin: save a board's own WiFi networks: sent to it at once with its settings (retained). */
+  saveAdminBoardWifi: (boardId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
+    request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, {
       method: 'PUT', body: JSON.stringify({ networks }), ...options,
     }),
 

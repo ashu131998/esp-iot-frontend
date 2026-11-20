@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
+import { BoardWifiSheet } from '@/components/internal/board-wifi-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -465,6 +466,7 @@ export function BoardsPanel() {
   const [loginFor, setLoginFor] = useState<AdminBoard | null>(null);
   const [claiming, setClaiming] = useState<AdminBoard | null>(null);
   const [updating, setUpdating] = useState<AdminBoard | null>(null);
+  const [wifiFor, setWifiFor] = useState<AdminBoard | null>(null);
   const boardsQuery = useQuery({
     queryKey: BOARDS_KEY,
     queryFn: ({ signal }) => api.adminBoards({ signal }),
@@ -556,6 +558,13 @@ export function BoardsPanel() {
                         >
                           Own login
                         </Button>
+                        <Button
+                          size="sm" variant="secondary" disabled={b.factory_id === UNCLAIMED}
+                          title={b.factory_id === UNCLAIMED ? 'Claim it first' : 'Its own WiFi networks, on top of its factory\'s'}
+                          onClick={() => setWifiFor(b)}
+                        >
+                          WiFi
+                        </Button>
                         <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setUpdating(b)}>
                           Update
                         </Button>
@@ -577,6 +586,7 @@ export function BoardsPanel() {
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
       {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
+      {wifiFor && <BoardWifiSheet board={wifiFor} onClose={() => setWifiFor(null)} />}
     </div>
   );
 }

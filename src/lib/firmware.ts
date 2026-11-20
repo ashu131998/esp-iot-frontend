@@ -24,7 +24,9 @@ export interface ReleaseSignature {
   signature: string;
 }
 
-export const TARGET_LABEL: Record<string, string> = { 'rev-b': 'REV B', 'rev-a2': 'REV A2', rescue: 'Rescue box' };
+export const TARGET_LABEL: Record<string, string> = {
+  'rev-b': 'REV B', 'rev-a2': 'REV A2', rescue: 'Rescue box', base: 'IIoT base', cam: 'Bottle camera',
+};
 
 export function targetLabel(target: string): string {
   return TARGET_LABEL[target] ?? target;
@@ -50,9 +52,10 @@ export function parseReleaseSignature(text: string): ReleaseSignature {
 /** The hardware a board runs on: what it says (2.2+), else what its name says. */
 export function boardTargetOf(b: Pick<AdminBoard, 'board_id' | 'beat'>): string | null {
   const hw = b.beat?.hw;
-  if (hw === 'rev-b' || hw === 'rev-a2' || hw === 'rescue') return hw;
+  if (typeof hw === 'string' && hw in TARGET_LABEL) return hw;   // rev-b, rev-a2, rescue, base (2.8+), cam (2.9+)
   if (b.board_id.startsWith('rescue-')) return 'rescue';
-  return b.board_id.startsWith('revb-') ? 'rev-b' : null;
+  if (b.board_id.startsWith('cam-')) return 'cam';
+  return b.board_id.startsWith('revb-') ? 'rev-b' : null;   // the base also names itself revb-: it says "base" in its beats
 }
 
 /** Does the firmware it runs install updates from the dashboard (2.2.0 and later)? */

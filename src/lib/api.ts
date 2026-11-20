@@ -1024,10 +1024,13 @@ export const api = {
   adminBoardWifi: (boardId: string, options?: ApiRequestOptions) =>
     request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, options),
 
-  /** Super admin: save a board's own WiFi networks: sent to it at once with its settings (retained). */
-  saveAdminBoardWifi: (boardId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
+  /**
+   * Super admin: save a board's own WiFi networks and the one it should use (null: the strongest): sent
+   * to it at once with its settings (retained).
+   */
+  saveAdminBoardWifi: (boardId: string, networks: WifiNetwork[], preferred: string | null, options?: ApiRequestOptions) =>
     request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, {
-      method: 'PUT', body: JSON.stringify({ networks }), ...options,
+      method: 'PUT', body: JSON.stringify({ networks, preferred }), ...options,
     }),
 
   /** The factory's dye-bottle cameras, each with its bottles' levels and last picture (lib/bottles.ts). */

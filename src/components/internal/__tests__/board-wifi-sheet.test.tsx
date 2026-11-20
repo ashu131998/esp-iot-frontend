@@ -12,7 +12,7 @@ import type { BoardWifi } from '@/lib/board-wifi';
 
 const WIFI: BoardWifi = {
   board_id: 'revb-311d80', factory_id: 'factory-01', networks: [{ ssid: 'DyeRoom-Ext', pass: 'dye-room-1' }],
-  factory_networks: [{ ssid: 'Mill' }], max: 8, editable: true, reason: null, status: 'current', cfg_version: 5000,
+  factory_networks: [{ ssid: 'Mill' }], preferred: null, max: 8, editable: true, reason: null, status: 'current', cfg_version: 5000,
   online: true, ssid: 'Jio5G_EXT', rssi: -75,
 };
 
@@ -47,6 +47,17 @@ describe('BoardWifiForm', () => {
   it('older firmware: says that new settings restart its sensors until it is updated', () => {
     expect(render(WIFI, '2.9.0-uni')).toContain('It runs 2.9.0-uni: until it is updated to 2.9.1 (Update)');
     expect(render(WIFI, null)).toContain('It runs an unknown firmware');
+  });
+
+  it('the network to use: each of its own and its factory\'s, or the strongest; a note until it runs 2.9.2', () => {
+    const html = render({ ...WIFI, preferred: 'DyeRoom-Ext' }, '2.9.1-uni');
+    expect(html).toContain('Network to use');
+    expect(html).toContain('The strongest of them');
+    expect(html).toMatch(/<input type="radio" name="use" checked=""\/>DyeRoom-Ext|checked=""[^>]*\/><span>DyeRoom-Ext/);
+    expect(html).toContain('<span>Mill</span>');
+    expect(html).toContain('it moves to DyeRoom-Ext once it is updated to 2.9.2 (Update)');
+    expect(render({ ...WIFI, preferred: 'DyeRoom-Ext' }, '2.9.2-uni')).not.toContain('once it is updated to 2.9.2');
+    expect(render(WIFI, '2.9.1-uni')).not.toContain('once it is updated to 2.9.2');   // none chosen: nothing to wait for
   });
 
   it('none of its own yet, waiting for it to come back', () => {

@@ -11,7 +11,8 @@ import { Sheet } from '@/components/ui/sheet';
 import { api } from '@/lib/api';
 import type { AdminBoard } from '@/lib/board-status';
 import {
-  cleanOwn, currentNetwork, keepsMeasuring, ownChanged, ownProblems, roomLeft, sentStatus, type BoardWifi,
+  chosen, cleanOwn, currentNetwork, keepsMeasuring, ownProblems, roomLeft, sentStatus, switchesNetworks, networkChoices, wifiChanged,
+  type BoardWifi,
 } from '@/lib/board-wifi';
 import type { WifiNetwork } from '@/lib/wifi';
 
@@ -44,15 +45,18 @@ export function BoardWifiSheet({ board, onClose }: { board: AdminBoard; onClose:
 export function BoardWifiForm({ wifi, firmware, onClose }: { wifi: BoardWifi; firmware: string | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<WifiNetwork[]>(wifi.networks);
+  const [pick, setPick] = useState<string | null>(wifi.preferred);
   const [tried, setTried] = useState(false);
   const problems = ownProblems(draft, wifi.factory_networks, wifi.max);
   const hasProblem = problems.list !== null || problems.rows.some(Boolean);
-  const changed = ownChanged(wifi.networks, draft);
+  const preferred = chosen(pick, draft, wifi.factory_networks);   // a network removed above is no longer a choice
+  const choices = networkChoices(draft, wifi.factory_networks);
+  const changed = wifiChanged(wifi, draft, preferred);
   const room = roomLeft(draft, wifi.factory_networks, wifi.max);
   const now = currentNetwork(wifi, draft);
   const status = sentStatus(wifi);
   const save = useMutation({
-    mutationFn: () => api.saveAdminBoardWifi(wifi.board_id, cleanOwn(draft)),
+    mutationFn: () => api.saveAdminBoardWifi(wifi.board_id, cleanOwn(draft), preferred),
     onSuccess: (saved) => {
       queryClient.setQueryData(boardWifiKey(wifi.board_id), saved);
       queryClient.invalidateQueries({ queryKey: ['admin-boards'] });
@@ -108,6 +112,30 @@ export function BoardWifiForm({ wifi, firmware, onClose }: { wifi: BoardWifi; fi
       </section>
 
       <section>
+        <p className="font-medium">Network to use</p>
+        <p className="text-xs text-muted">
+          It moves to this one as soon as it is in range, and back to the others only when it is not.
+        </p>
+        <div className="mt-2 space-y-1" role="radiogroup" aria-label="Network to use">
+          {[null, ...choices].map((ssid) => (
+            <label key={ssid ?? '(strongest)'} className="flex items-center gap-2">
+              <input
+                type="radio" name="use" disabled={!wifi.editable}
+                checked={preferred === ssid} onChange={() => setPick(ssid)}
+              />
+              {ssid === null ? <span className="text-muted">The strongest of them</span> : <span>{ssid}</span>}
+            </label>
+          ))}
+        </div>
+        {wifi.editable && preferred !== null && !switchesNetworks(firmware) && (
+          <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+            It runs {firmware ?? 'an unknown firmware'}: it moves to {preferred} once it is updated to 2.9.2 (Update). Until
+            then it keeps the network it is on.
+          </p>
+        )}
+      </section>
+
+      <section>
         <p className="font-medium">Its factory&apos;s networks</p>
         <p className="text-xs text-muted">Every board of {wifi.factory_id ?? 'its factory'} has these: change them on the factory&apos;s WiFi page.</p>
         {wifi.factory_networks.length === 0
@@ -122,9 +150,10 @@ export function BoardWifiForm({ wifi, firmware, onClose }: { wifi: BoardWifi; fi
       {wifi.editable && (
         <section className="space-y-3 border-t pt-4">
           <p className="text-xs text-muted">
-            Saved, they go to the board at once: online, it takes them within seconds; off, as soon as it is back. It stays on
-            the network it is on; the new list counts the next time it joins one. Its readings wait in its memory whenever it
-            is offline, so none are lost.
+            Saved, they go to the board at once: online, it takes them within seconds; off, as soon as it is back. It moves
+            to the network to use (or, on one built into its firmware, to one of these) within a minute when it is in range,
+            and returns to a working one if the new one refuses it. Its readings wait in its memory while it changes networks,
+            so none are lost.
           </p>
           {!keepsMeasuring(firmware) && (
             <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-800">

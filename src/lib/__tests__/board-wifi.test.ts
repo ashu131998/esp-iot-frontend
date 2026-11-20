@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  cleanOwn, currentNetwork, keepsMeasuring, ownChanged, ownProblems, roomLeft, sentStatus, totalNetworks,
+  chosen, cleanOwn, currentNetwork, keepsMeasuring, networkChoices, ownChanged, ownProblems, roomLeft, sentStatus, switchesNetworks,
+  totalNetworks, wifiChanged,
 } from '@/lib/board-wifi';
 
 const factory = [{ ssid: 'Mill' }, { ssid: 'Office' }];
@@ -60,5 +61,36 @@ describe('a board\'s own WiFi networks', () => {
     expect(currentNetwork({ ...w, ssid: 'Jio5G_EXT', rssi: -86 }, [])).toEqual({ label: 'On Jio5G_EXT · Very weak (-86 dBm)', onList: false, tone: 'bad' });
     expect(currentNetwork({ ...w, rssi: null }, []).label).toBe('On Mill');
     expect(currentNetwork({ ...w, online: false }, [])).toEqual({ label: 'Not connected now', onList: null, tone: 'neutral' });
+  });
+});
+
+describe('the network a board should use', () => {
+  const own = [{ ssid: 'Jio5G', pass: 'jio-pass-1' }, { ssid: ' DyeRoom ', pass: 'dye-pass-1' }, { ssid: '', pass: '' }];
+
+  it('its own (as typed, named, once) then its factory\'s', () => {
+    expect(networkChoices(own, [{ ssid: 'Mill' }, { ssid: 'Jio5G' }])).toEqual(['Jio5G', 'DyeRoom', 'Mill']);
+    expect(networkChoices([], [])).toEqual([]);
+  });
+
+  it('a choice stands while that network is on the list', () => {
+    expect(chosen('Jio5G', own, [])).toBe('Jio5G');
+    expect(chosen('Mill', own, [{ ssid: 'Mill' }])).toBe('Mill');
+    expect(chosen('Jio5G', [], [{ ssid: 'Mill' }])).toBeNull();   // removed in the form
+    expect(chosen(null, own, [])).toBeNull();
+  });
+
+  it('something to save: its own networks or the choice changed', () => {
+    const saved = { networks: [{ ssid: 'Jio5G', pass: 'jio-pass-1' }], preferred: null };
+    expect(wifiChanged(saved, [{ ssid: 'Jio5G', pass: 'jio-pass-1' }], null)).toBe(false);
+    expect(wifiChanged(saved, [{ ssid: 'Jio5G', pass: 'jio-pass-1' }], 'Jio5G')).toBe(true);
+    expect(wifiChanged({ ...saved, preferred: 'Jio5G' }, [{ ssid: 'Jio5G', pass: 'jio-pass-1' }], null)).toBe(true);
+    expect(wifiChanged(saved, [], null)).toBe(true);
+  });
+
+  it('moves to it from firmware 2.9.2', () => {
+    expect(switchesNetworks('2.9.2-cam')).toBe(true);
+    expect(switchesNetworks('2.10.0-uni')).toBe(true);
+    expect(switchesNetworks('2.9.1-uni')).toBe(false);
+    expect(switchesNetworks(undefined)).toBe(false);
   });
 });

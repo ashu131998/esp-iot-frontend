@@ -13,6 +13,8 @@ export interface BoardWifi {
   networks: WifiNetwork[];
   /** Its factory's, by name only: shared by every board there, changed on the factory's WiFi page. */
   factory_networks: { ssid: string }[];
+  /** The one it should use (firmware 2.9.2 moves to it when it is in range); null: the strongest. */
+  preferred: string | null;
   /** The most a board keeps in all (its own and its factory's). */
   max: number;
   /** False: why, in `reason` (not claimed, no settings yet, a rescue box, no broker here). */
@@ -59,6 +61,28 @@ export function ownChanged(saved: WifiNetwork[], draft: WifiNetwork[]): boolean 
   return saved.length !== d.length || saved.some((n, i) => n.ssid !== d[i].ssid || n.pass !== d[i].pass);
 }
 
+/** The networks it can be told to use: its own (as typed, named, once each), then its factory's. */
+export function networkChoices(own: WifiNetwork[], factory: { ssid: string }[]): string[] {
+  const out: string[] = [];
+  for (const n of [...cleanOwn(own), ...factory]) if (n.ssid && !out.includes(n.ssid)) out.push(n.ssid);
+  return out;
+}
+
+/** The choice as it stands: null once that network is gone from the list (removed in the form). */
+export function chosen(preferred: string | null, own: WifiNetwork[], factory: { ssid: string }[]): string | null {
+  return preferred !== null && networkChoices(own, factory).includes(preferred) ? preferred : null;
+}
+
+/** Anything to save: its own networks, or the one to use. */
+export function wifiChanged(saved: Pick<BoardWifi, 'networks' | 'preferred'>, draft: WifiNetwork[], preferred: string | null): boolean {
+  return ownChanged(saved.networks, draft) || saved.preferred !== preferred;
+}
+
+/** Does its firmware move to the network it is told to use (2.9.2 and later)? */
+export function switchesNetworks(fw: string | null | undefined): boolean {
+  return versionAtLeast(fw, [2, 9, 2]);
+}
+
 /** Whether it has what was last sent, in words. */
 export function sentStatus(w: Pick<BoardWifi, 'status' | 'online'>): { label: string; detail: string; tone: Tone } {
   switch (w.status) {
@@ -80,10 +104,13 @@ export function sentStatus(w: Pick<BoardWifi, 'status' | 'online'>): { label: st
  * (2.9.1 and later)? Older ones restart the sensors with every settings message.
  */
 export function keepsMeasuring(fw: string | null | undefined): boolean {
+  return versionAtLeast(fw, [2, 9, 1]);
+}
+
+function versionAtLeast(fw: string | null | undefined, from: [number, number, number]): boolean {
   const m = /^(\d+)\.(\d+)\.(\d+)/.exec(fw ?? '');
   if (!m) return false;
   const v = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const from = [2, 9, 1];
   for (let i = 0; i < 3; i++) if (v[i] !== from[i]) return v[i] > from[i];
   return true;
 }

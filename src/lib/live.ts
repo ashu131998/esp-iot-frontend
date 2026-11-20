@@ -23,12 +23,12 @@ export interface LiveStart extends LiveStatus {
   session_s: number;
 }
 
-/** Where the requests go: a factory's Bottles page, or ops (null: our super admin, the Boards page). */
+/** Where the requests go: a factory's Cameras page, or ops (null: our super admin, the Boards page). */
 export type LiveScope = { factoryId: string } | null;
 
 export function livePath(scope: LiveScope, boardId: string): string {
   const board = encodeURIComponent(boardId);
-  return scope ? `/v1/factories/${encodeURIComponent(scope.factoryId)}/bottles/${board}/live` : `/v1/admin/boards/${board}/live`;
+  return scope ? `/v1/factories/${encodeURIComponent(scope.factoryId)}/cameras/${board}/live` : `/v1/admin/boards/${board}/live`;
 }
 
 /** Why it would not start: its firmware has no live view, it is offline, or something else (the message says). */

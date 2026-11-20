@@ -135,7 +135,7 @@ describe('sidebarGroups: what people read (Monitor), then what they set up (Mana
     const groups = sidebarGroups(FACTORY_PAGES);
     expect(groups.map((g) => g.key)).toEqual(['monitor', 'manage']);
     expect(groups[0].tabs.map((p) => p.slug)).toEqual([
-      'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'bottles', 'performance', 'production', 'quality',
+      'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'cameras', 'performance', 'production', 'quality',
     ]);
     expect(groups[1].tabs.map((p) => p.slug)).toEqual([
       'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',

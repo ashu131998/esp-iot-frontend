@@ -24,6 +24,8 @@ export interface AlertFacts {
   machines?: string[] | null;
   profile?: string | null;
   operators?: string[] | null;
+  /** A camera's id: something in front of it (camera_blocked). */
+  camera?: string | null;
 }
 
 export interface AlertWords {
@@ -116,6 +118,17 @@ export function alertWords(alert: MyAlert, tr: Translator): AlertWords {
         : t('{machine} is still stopped. Nobody has said why yet.', { machine })];
       if (asks) lines.push(t('Why is it down? Tap an answer below.'));
       return { title: t('{machine} is still stopped', { machine }), body: lines.join('\n') };
+    }
+    // Something in front of a camera (firmware 2.9.6): a hand on the lens, a cover.
+    case 'camera_blocked': {
+      const camera = facts.camera || t('A camera');
+      const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      return {
+        title: t('Something is in front of {camera}', { camera: where }),
+        body: time
+          ? t('Since {time}: a hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.', { time })
+          : t('A hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.'),
+      };
     }
     default:
       return { title: titleOf(alert), body: null };

@@ -44,7 +44,7 @@ describe('which boards take which releases', () => {
     expect(versionsFor(releases, { board_id: 'revb-372034', beat: { hw: 'base', fw: '2.9.0-base' } }).map((r) => r.version)).toEqual(['2.9.1-base']);
     expect(versionsFor(releases, { board_id: 'cam-478998', beat: { hw: 'cam', fw: '2.9.0-cam' } }).map((r) => r.version)).toEqual(['2.9.1-cam']);
     expect(targetLabel('base')).toBe('IIoT base');
-    expect(targetLabel('cam')).toBe('Bottle camera');
+    expect(targetLabel('cam')).toBe('Camera');
   });
 
   it('the rescue box has a name of its own on the Firmware page', () => {

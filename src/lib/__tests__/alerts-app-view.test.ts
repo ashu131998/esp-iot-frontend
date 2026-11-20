@@ -82,6 +82,20 @@ describe('what an owner hears', () => {
     expect(alertWords(up, gujarati).title).toBe('Loom 3 ફરી ચાલે છે');
   });
 
+  it('something in front of a camera: which one, at which machine, since when; in Hindi too', () => {
+    const blocked = alert({ type: 'camera_blocked', payload: { view: { kind: 'camera_blocked', camera: 'cam-478998', machine: 'Loom 3', at: AT } } });
+    expect(alertWords(blocked, en)).toEqual({
+      title: 'Something is in front of cam-478998 at Loom 3',
+      body: 'Since 10:02 am: a hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.',
+    });
+    const nowhere = alert({ type: 'camera_blocked', payload: { view: { kind: 'camera_blocked', camera: null, machine: null, at: null } } });
+    expect(alertWords(nowhere, en)).toEqual({
+      title: 'Something is in front of A camera',
+      body: 'A hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.',
+    });
+    expect(alertWords(blocked, hindi).title).toBe('Loom 3 पर cam-478998 के सामने कुछ है');
+  });
+
   it('a kind it does not know: the English title', () => {
     expect(alertWords(alert({ payload: { view: { kind: 'something_new' } } }), en)).toEqual({ title: '🔴 Loom 3 is DOWN', body: null });
   });

@@ -51,7 +51,7 @@ export function isShown(display: Display | null | undefined, key: string): boole
 
 // Before the backend sent `display`, only these pages could be switched (via `features`); pages added
 // since are off until the backend says so.
-const LEGACY_DEFAULTS: Display = { compliance: false, bottles: false };
+const LEGACY_DEFAULTS: Display = { compliance: false, cameras: false };
 
 /** A factory's display map, falling back to the older `features` flags. */
 export function displayOf(
@@ -70,7 +70,7 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'alerts', label: 'Alerts' },
   { slug: 'energy', label: 'Energy' },
   { slug: 'maintenance', label: 'Maintenance' },
-  { slug: 'bottles', label: 'Bottles' },
+  { slug: 'cameras', label: 'Cameras' },
   { slug: 'performance', label: 'Performance' },
   { slug: 'production', label: 'Production' },
   { slug: 'quality', label: 'Quality' },

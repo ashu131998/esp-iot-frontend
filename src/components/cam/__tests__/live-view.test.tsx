@@ -1,6 +1,6 @@
 /**
  * The live view rendered (server render): starting, the stream with whether frames arrive, the note on the factory's
- * internet; and the Bottles page's Watch live button, for everyone who sees the page.
+ * internet.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';

@@ -6,8 +6,8 @@ import { liveImageOrigin, livePath, liveRefusal } from '@/lib/live';
 import { middleware } from '@/middleware';
 
 describe('a camera\'s live view', () => {
-  it('asks its factory\'s Bottles page, or ops for our super admin', () => {
-    expect(livePath({ factoryId: 'mill' }, 'cam-a1')).toBe('/v1/factories/mill/bottles/cam-a1/live');
+  it('asks its factory\'s Cameras page, or ops for our super admin', () => {
+    expect(livePath({ factoryId: 'mill' }, 'cam-a1')).toBe('/v1/factories/mill/cameras/cam-a1/live');
     expect(livePath(null, 'cam a1')).toBe('/v1/admin/boards/cam%20a1/live');
   });
 
@@ -34,7 +34,7 @@ describe('the page\'s image policy lets the live view play', () => {
   const cspOf = async () => {
     const token = await new SignJWT({ typ: 'access', role: 'employee', factory_id: 'mill', username: 'u' })
       .setProtectedHeader({ alg: 'HS256' }).setSubject('u1').setExpirationTime('1h').sign(new TextEncoder().encode(SECRET));
-    const res = await middleware(new NextRequest(new URL('https://mill.floorbeat.in/bottles'), { headers: { cookie: `esp_access=${token}` } }));
+    const res = await middleware(new NextRequest(new URL('https://mill.floorbeat.in/cameras'), { headers: { cookie: `esp_access=${token}` } }));
     return res.headers.get('content-security-policy') ?? '';
   };
 

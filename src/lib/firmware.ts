@@ -25,7 +25,7 @@ export interface ReleaseSignature {
 }
 
 export const TARGET_LABEL: Record<string, string> = {
-  'rev-b': 'REV B', 'rev-a2': 'REV A2', rescue: 'Rescue box', base: 'IIoT base', cam: 'Bottle camera',
+  'rev-b': 'REV B', 'rev-a2': 'REV A2', rescue: 'Rescue box', base: 'IIoT base', cam: 'Camera',
 };
 
 export function targetLabel(target: string): string {

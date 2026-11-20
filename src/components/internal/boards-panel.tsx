@@ -236,7 +236,7 @@ function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () =
       onClose={onClose}
       title={`${unclaimed ? 'Claim' : 'Move'} · ${board.board_id}`}
       description={camera
-        ? 'The camera gets its factory and a login of its own, all at once. Its bottles are drawn on the factory\'s Bottles page.'
+        ? 'The camera gets its factory and a login of its own, all at once. It shows on the factory\'s Cameras page.'
         : 'The board gets its factory, these settings and a login of its own (firmware 2.1+), all at once.'}
       className="max-w-3xl"
     >
@@ -252,8 +252,8 @@ function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () =
       </div>
       {camera ? (
         <p className="rounded-md bg-violet-50 p-3 text-xs text-violet-900">
-          A dye-bottle camera has no sensor channels to set. After the claim, switch the Bottles page on for the factory
-          (Pages &amp; branding) and draw its bottles there.
+          A camera has no sensor channels to set. After the claim, switch the Cameras page on for the factory (Pages &amp;
+          branding): its live view, pictures and alerts are there.
         </p>
       ) : (
         <>
@@ -554,7 +554,7 @@ export function BoardsPanel() {
                           ? (
                             <Button
                               size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED}
-                              title="Its live view (firmware 2.9.5); its bottles are drawn on the factory's Bottles page"
+                              title="Its live view (firmware 2.9.5); its pictures and alerts are on the factory's Cameras page"
                               onClick={() => setLiveFor(b)}
                             >
                               Live

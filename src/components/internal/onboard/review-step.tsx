@@ -29,10 +29,6 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
   const appLogins = d.workers.filter((w) => w.email.trim() && w.password).length;
   const reportEmails = emailList(d.reports.emails);
   const machinesOn = (key: string) => d.machines.filter((m) => m.line_key === key).length;
-  const lineName = (key: string) => {
-    const l = d.lines.find((x) => x.key === key);
-    return l ? l.name.trim() || l.line_id.trim() : '—';
-  };
   const machineName = new Map(d.machines.map((m) => [m.key, m.name.trim()]));
 
   return (
@@ -95,7 +91,7 @@ export function ReviewStep({ d, onEdit }: { d: SetupDraft; onEdit: (i: number) =
                 <span className="text-muted">
                   {b.rescue
                     ? ' · rescue box'
-                    : ` · ${lineName(b.line_key)} · ${mapped.length === 0 ? 'no sensors matched yet' : mapped.map((slot) => `${slot} ${machineName.get(b.channels[slot])}`).join(', ')}`}
+                    : ` · ${mapped.length === 0 ? 'no sensors matched yet' : mapped.map((slot) => `${slot} ${machineName.get(b.channels[slot])}`).join(', ')}`}
                 </span>
               </div>
             );

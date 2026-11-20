@@ -159,7 +159,10 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
   );
 }
 
-/** Claim a new board (or move one): factory, line and settings; it gets its own login with them. */
+/**
+ * Claim a new board (or move one): its factory and settings; it gets its own login with them. Nobody
+ * picks its line: the server puts it on the line its machines are on (else the factory's first).
+ */
 function ClaimDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   if (isRescueBox(board)) return <ClaimBoxDialog box={board} onClose={onClose} />;
   return <ClaimBoardDialog board={board} onClose={onClose} />;
@@ -215,46 +218,32 @@ function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () =
   const unclaimed = board.factory_id === UNCLAIMED;
   const camera = isCamera(board);
   const [factoryId, setFactoryId] = useState(unclaimed ? '' : (board.factory_id ?? ''));
-  const [lineId, setLineId] = useState(unclaimed ? '' : (board.line_id ?? ''));
   const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
   const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
-  const linesQuery = useQuery({
-    queryKey: ['lines', factoryId],
-    queryFn: ({ signal }) => api.lines(factoryId, { limit: 200, offset: 0 }, { signal }),
-    enabled: Boolean(factoryId),
-  });
   const claim = useMutation({
-    mutationFn: () => api.adminBoardClaim(board.board_id, { factory_id: factoryId, line_id: lineId, settings: draft }),
+    mutationFn: () => api.adminBoardClaim(board.board_id, { factory_id: factoryId, settings: draft }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
       onClose();
     },
   });
-  const ready = Boolean(factoryId && lineId) && (camera || settingsProblems(draft).length === 0);
+  const ready = Boolean(factoryId) && (camera || settingsProblems(draft).length === 0);
   return (
     <Modal
       open
       onClose={onClose}
       title={`${unclaimed ? 'Claim' : 'Move'} · ${board.board_id}`}
       description={camera
-        ? 'The camera gets its factory and line and a login of its own, all at once. Its bottles are drawn on the factory\'s Bottles page.'
-        : 'The board gets its factory and line, these settings and a login of its own (firmware 2.1+), all at once.'}
+        ? 'The camera gets its factory and a login of its own, all at once. Its bottles are drawn on the factory\'s Bottles page.'
+        : 'The board gets its factory, these settings and a login of its own (firmware 2.1+), all at once.'}
       className="max-w-3xl"
     >
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+      <div className="mb-4 max-w-sm">
         <Field label="Factory">
-          <Select value={factoryId} onChange={(e) => { setFactoryId(e.target.value); setLineId(''); }}>
+          <Select value={factoryId} onChange={(e) => setFactoryId(e.target.value)}>
             <option value="">Choose…</option>
             {(factoriesQuery.data?.factories ?? []).map((f) => (
               <option key={f.factory_id} value={f.factory_id}>{f.name ?? f.factory_id}</option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Line">
-          <Select value={lineId} disabled={!factoryId} onChange={(e) => setLineId(e.target.value)}>
-            <option value="">Choose…</option>
-            {(linesQuery.data?.lines ?? []).map((l) => (
-              <option key={l.line_id} value={l.line_id}>{l.name ?? l.line_id}</option>
             ))}
           </Select>
         </Field>

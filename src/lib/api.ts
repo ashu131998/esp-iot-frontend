@@ -1080,12 +1080,13 @@ export const api = {
     }),
 
   /**
-   * Super admin: claim a new board, or move one — factory, line, settings and its own login at once.
+   * Super admin: claim a new board, or move one — factory, settings and its own login at once; the
+   * server picks its line (the one its machines are on, else the factory's first).
    * A rescue box: its factory alone (it gets the factory's signed WiFi list and a PIN).
    */
   adminBoardClaim: (
     boardId: string,
-    body: { factory_id: string; line_id?: string; settings?: BoardSettings },
+    body: { factory_id: string; settings?: BoardSettings },
     options?: ApiRequestOptions,
   ) =>
     request<{ ok: boolean; cfg_version: number; factory_id: string; line_id: string }>(

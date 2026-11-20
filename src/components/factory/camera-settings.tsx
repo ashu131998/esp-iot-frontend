@@ -12,8 +12,8 @@ import { useFactoryRefs } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 
 /**
- * A camera's settings (the factory's admins): the machine it is at (alerts name it), whether something in front of
- * it raises an alert, how it is mounted, how often it sends a picture. Saved to the camera in one go.
+ * A camera's settings (the factory's admins): the machine it is at (alerts name it), whether a truck or a hand it sees
+ * raises an alert, how it is mounted, how often it sends a picture. Saved to the camera in one go.
  */
 export function CameraSettingsSheet({ factoryId, camera, onClose }: { factoryId: string; camera: Camera; onClose: () => void }) {
   const { t } = useT();
@@ -52,9 +52,9 @@ export function CameraSettingsForm({ factoryId, camera, onClose }: { factoryId: 
       <label className="flex items-start gap-3">
         <input type="checkbox" className="mt-1" checked={viewAlert} onChange={(e) => setViewAlert(e.target.checked)} />
         <span>
-          <span className="font-medium">{t('Alert when something is in front of the camera')}</span>
+          <span className="font-medium">{t('Alert when it sees a truck or a hand')}</span>
           <span className="block text-xs text-muted">
-            {t('A hand on the lens, a cover, anything big right in front of it: the factory\'s admins get it in the app and by email, with the picture.')}
+            {t('AI models look at its pictures of whatever moves: a truck at the gate, a hand in front of the camera. The factory\'s admins get it in the app and by email, with the picture.')}
           </span>
         </span>
       </label>

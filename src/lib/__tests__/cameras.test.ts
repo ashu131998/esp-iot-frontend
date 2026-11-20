@@ -17,9 +17,18 @@ describe('the Cameras page words', () => {
     expect(cameraTitle(cam({ machine_name: 'Loom 3' }), t)).toBe('Camera at Loom 3');
     expect(cameraTitle(cam(), t)).toBe('Camera cam-a1');
     expect(pictureUrl('mill 1', 'cam-a1', 42)).toBe('/api/v1/factories/mill%201/cameras/cam-a1/pictures/42');
-    expect(['alert', 'snap', 'periodic'].map((k) => pictureKindWord(k as never, t))).toEqual(['Something in front of it', 'Picture on request', 'Routine picture']);
+    expect(['alert', 'snap', 'periodic', 'motion'].map((kind) => pictureKindWord({ kind: kind as never, state: null }, t)))
+      .toEqual(['Something in front of it', 'Picture on request', 'Routine picture', 'Movement']);
     expect([eventWords({ state: 'blocked' }, t), eventWords({ state: 'ok' }, t)]).toEqual(['Something in front of the camera', 'The view is clear again']);
     expect([EVENT_TONE({ state: 'blocked' }), EVENT_TONE({ state: 'ok' })]).toEqual(['bad', 'good']);
+  });
+
+  it('what the AI models saw: a truck (amber), a hand (red); an event picture says which', () => {
+    expect([eventWords({ state: 'truck' }, t), eventWords({ state: 'hand' }, t)]).toEqual(['A truck', 'A hand in front of the camera']);
+    expect([EVENT_TONE({ state: 'truck' }), EVENT_TONE({ state: 'hand' })]).toEqual(['warn', 'bad']);
+    expect(pictureKindWord({ kind: 'alert', state: 'truck' }, t)).toBe('A truck');
+    expect(pictureKindWord({ kind: 'alert', state: 'hand' }, t)).toBe('A hand in front of the camera');
+    expect(pictureKindWord({ kind: 'alert', state: 'blocked' }, t)).toBe('Something in front of it');
   });
 
   it('how often a picture, in words', () => {

@@ -96,6 +96,18 @@ describe('what an owner hears', () => {
     expect(alertWords(blocked, hindi).title).toBe('Loom 3 पर cam-478998 के सामने कुछ है');
   });
 
+  it('a truck or a hand the camera\'s AI models saw: which camera, where, when; in Hindi and Gujarati too', () => {
+    const truck = alert({ type: 'camera_truck', payload: { view: { kind: 'camera_truck', camera: 'cam-478998', machine: 'Gate 1', at: AT } } });
+    expect(alertWords(truck, en)).toEqual({
+      title: 'A truck at cam-478998 at Gate 1',
+      body: 'Seen at 10:02 am. Its picture and live view are on the Cameras page.',
+    });
+    const hand = alert({ type: 'camera_hand', payload: { view: { kind: 'camera_hand', camera: 'cam-478998', machine: null, at: null } } });
+    expect(alertWords(hand, en)).toEqual({ title: 'A hand in front of cam-478998', body: 'Its picture and live view are on the Cameras page.' });
+    expect(alertWords(truck, hindi).title).toBe('Gate 1 पर cam-478998 पर एक ट्रक');
+    expect(alertWords(hand, gujarati).title).toBe('cam-478998ની સામે એક હાથ');
+  });
+
   it('a kind it does not know: the English title', () => {
     expect(alertWords(alert({ payload: { view: { kind: 'something_new' } } }), en)).toEqual({ title: '🔴 Loom 3 is DOWN', body: null });
   });

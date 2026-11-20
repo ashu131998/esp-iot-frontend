@@ -885,7 +885,8 @@ export const api = {
     features: Record<string, boolean>,
     options?: ApiRequestOptions,
   ) =>
-    request<{ factory_id: string; features: Record<string, boolean> }>(
+    // `display`: the switches resolved with what the factory has (a camera turns the Cameras page on).
+    request<{ factory_id: string; features: Record<string, boolean>; display?: Record<string, boolean> }>(
       `/v1/admin/factories/${factoryId}/features`,
       { method: 'PATCH', body: JSON.stringify(features), ...options },
     ),

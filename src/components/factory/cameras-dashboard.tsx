@@ -28,7 +28,7 @@ const REFRESH_MS = 15_000;
 
 /**
  * Cameras: the factory's cameras — the sentence to read first, then each camera with its last picture, its live view
- * and (for admins) a picture now and its settings, then what each saw (something in front of it) with the pictures.
+ * and (for admins) a picture now and its settings, then what each saw (a truck, a hand) with the pictures.
  */
 export function CamerasDashboard({ factoryId }: { factoryId: string }) {
   return (
@@ -117,7 +117,7 @@ function CameraCard({ factoryId, camera }: { factoryId: string; camera: Camera }
       {snap.error && <p className="mb-3 text-sm text-red-600">{snap.error.message}</p>}
       <LastPicture factoryId={factoryId} camera={camera} />
       {!camera.view_alert && canWriteFactory && (
-        <p className="mt-2 text-xs text-muted">{t('Its alert is switched off: something in front of it is only listed below.')}</p>
+        <p className="mt-2 text-xs text-muted">{t('Its alert is switched off: what it sees is only listed below.')}</p>
       )}
       {editing && <CameraSettingsSheet factoryId={factoryId} camera={camera} onClose={() => setEditing(false)} />}
       {watching && (
@@ -152,13 +152,13 @@ export function LastPicture({ factoryId, camera }: { factoryId: string; camera: 
         />
       </div>
       <figcaption className="mt-1 text-xs text-muted">
-        {pictureKindWord(picture.kind, t)} · {formatDateTime(picture.taken_at, locale)}
+        {pictureKindWord(picture, t)} · {formatDateTime(picture.taken_at, locale)}
       </figcaption>
     </figure>
   );
 }
 
-/** What a camera saw, newest first: something in front of it (with its picture), clear again. */
+/** What a camera saw, newest first: a truck, a hand (2.9.6: something in front of it, clear again), with its picture. */
 function CameraEvents({ factoryId, camera }: { factoryId: string; camera: Camera }) {
   const { t } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
@@ -176,7 +176,7 @@ function CameraEvents({ factoryId, camera }: { factoryId: string; camera: Camera
       hint={t('Pictures are kept 30 days')}
     >
       {events.length === 0
-        ? <ListEmpty>{data ? t('Nothing yet: nothing has been in front of it.') : t('Loading…')}</ListEmpty>
+        ? <ListEmpty>{data ? t('Nothing yet: it has not seen a truck or a hand.') : t('Loading…')}</ListEmpty>
         : events.map((e) => <EventRow key={e.id} factoryId={factoryId} boardId={camera.board_id} event={e} />)}
     </ListGroup>
   );

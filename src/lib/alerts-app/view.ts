@@ -24,7 +24,7 @@ export interface AlertFacts {
   machines?: string[] | null;
   profile?: string | null;
   operators?: string[] | null;
-  /** A camera's id: something in front of it (camera_blocked). */
+  /** A camera's id: something in front of it (camera_blocked), a truck or a hand its models saw (camera_truck / _hand). */
   camera?: string | null;
 }
 
@@ -128,6 +128,18 @@ export function alertWords(alert: MyAlert, tr: Translator): AlertWords {
         body: time
           ? t('Since {time}: a hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.', { time })
           : t('A hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.'),
+      };
+    }
+    // What the AI models saw in a camera's picture (firmware 2.9.8): a truck at the gate, a hand in front of it.
+    case 'camera_truck':
+    case 'camera_hand': {
+      const camera = facts.camera || t('A camera');
+      const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      return {
+        title: facts.kind === 'camera_truck' ? t('A truck at {camera}', { camera: where }) : t('A hand in front of {camera}', { camera: where }),
+        body: time
+          ? t('Seen at {time}. Its picture and live view are on the Cameras page.', { time })
+          : t('Its picture and live view are on the Cameras page.'),
       };
     }
     default:

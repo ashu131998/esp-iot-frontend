@@ -1,15 +1,16 @@
 /**
  * A factory's cameras (the Cameras page; query-api src/cam-routes.js; firmware target "cam"): each one's last picture,
- * its live view (lib/live.ts), whether something is in front of it, and its events with their pictures. Something in
- * front of a camera (a hand on the lens, a cover) alerts the factory's admins unless switched off for that camera.
- * The dye bottles the cameras began with were dropped (2026-11).
+ * its live view (lib/live.ts), and what it saw with the pictures. Since firmware 2.9.8 a camera is a gate camera: it
+ * sends a picture of whatever moves in front of it, and pretrained AI models on the server tell a truck or a hand in
+ * it (query-api src/vision), which alerts the factory's admins unless switched off for that camera. Firmware 2.9.6
+ * told "something in front of the camera" itself. The dye bottles the cameras began with were dropped (2026-11).
  *
  * Pure, so tested: the words of the page.
  */
 import type { Tone } from '@/components/ui/simple';
 import type { Translate, TranslatePlural } from '@/lib/i18n/translate';
 
-export type PictureKind = 'alert' | 'snap' | 'periodic';
+export type PictureKind = 'alert' | 'snap' | 'periodic' | 'motion';
 
 /** The camera's own settings (the firmware's "cam" object), as the server keeps them. */
 export interface CamSettings {
@@ -44,12 +45,12 @@ export interface Camera {
   last_beat_at: string | null;
   /** The camera module's own word in its heartbeats ("ok", or what failed). */
   camera: string | null;
-  /** Something is in front of it now. */
+  /** Something is in front of it now (firmware 2.9.6; a gate camera's movement is not shown). */
   view: 'blocked' | 'clear';
   fw: string | null;
   cfg_version: number;
   settings: CamSettings;
-  /** Something in front of it alerts the factory's admins. */
+  /** A truck or a hand it sees (2.9.6: something in front of it) alerts the factory's admins. */
   view_alert: boolean;
   last_picture: CamPicture | null;
 }
@@ -58,9 +59,12 @@ export interface CamerasResponse {
   cameras: Camera[];
 }
 
-/** Something came in front of the camera (blocked), or the view is clear again (ok); with its picture when one arrived. */
+/**
+ * What a camera saw, with its picture when one arrived: a truck or a hand the models found (state "truck" / "hand",
+ * id "s<n>"), or, from firmware 2.9.6, something in front of it (blocked) and the view clear again (ok).
+ */
 export interface CameraEvent {
-  id: number;
+  id: string | number;
   slot: string;
   state: string;
   prev: string | null;
@@ -69,7 +73,7 @@ export interface CameraEvent {
   picture_id: number | null;
 }
 
-/** What the settings pop-up sends: the camera's settings, the machine it is at, whether something in front alerts. */
+/** What the settings pop-up sends: the camera's settings, the machine it is at, whether what it sees alerts. */
 export interface CamSettingsBody {
   cam: Pick<CamSettings, 'flip' | 'mirror' | 'pic_every_s' | 'exposure' | 'gain'>;
   machine_id: string | null;
@@ -88,19 +92,33 @@ export function cameraTitle(c: Pick<Camera, 'board_id' | 'machine_name'>, t: Tra
   return c.machine_name ? t('Camera at {machine}', { machine: c.machine_name }) : t('Camera {id}', { id: c.board_id });
 }
 
-export function pictureKindWord(kind: PictureKind, t: Translate): string {
-  switch (kind) {
-    case 'alert': return t('Something in front of it');
+/** What a picture is: what was seen in it (an event's), a movement, one asked for, the routine one. */
+export function pictureKindWord(p: Pick<CamPicture, 'kind' | 'state'>, t: Translate): string {
+  switch (p.kind) {
+    case 'alert': return p.state === 'truck' || p.state === 'hand' ? eventWords(p, t) : t('Something in front of it');
+    case 'motion': return t('Movement');
     case 'snap': return t('Picture on request');
     default: return t('Routine picture');
   }
 }
 
-export function eventWords(e: Pick<CameraEvent, 'state'>, t: Translate): string {
-  return e.state === 'blocked' ? t('Something in front of the camera') : t('The view is clear again');
+export function eventWords(e: { state: string | null }, t: Translate): string {
+  switch (e.state) {
+    case 'truck': return t('A truck');
+    case 'hand': return t('A hand in front of the camera');
+    case 'blocked': return t('Something in front of the camera');
+    default: return t('The view is clear again');
+  }
 }
 
-export const EVENT_TONE = (e: Pick<CameraEvent, 'state'>): Tone => (e.state === 'blocked' ? 'bad' : 'good');
+export const EVENT_TONE = (e: Pick<CameraEvent, 'state'>): Tone => {
+  switch (e.state) {
+    case 'truck': return 'warn';
+    case 'hand':
+    case 'blocked': return 'bad';
+    default: return 'good';
+  }
+};
 
 /** How often a camera sends a picture: the choices offered (seconds; 0 = only on events and requests). */
 export const PICTURE_EVERY = [0, 300, 600, 1800, 3600] as const;

@@ -5,7 +5,7 @@ import { factoryPage } from '@/lib/server/factory-page';
 export const dynamic = 'force-dynamic';
 
 /**
- * Cameras: the factory's cameras — each one's last picture and live view, and what it saw (something in front of it)
+ * Cameras: the factory's cameras — each one's last picture and live view, and what it saw (a truck, a hand)
  * with the pictures. Admins ask for a picture and set each camera up here. No dates: it is about now.
  */
 async function CamerasPage({ params }: { params: Promise<{ factoryId: string }> }) {

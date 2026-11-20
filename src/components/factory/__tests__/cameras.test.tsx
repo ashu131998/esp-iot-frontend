@@ -28,6 +28,8 @@ const camera: Camera = {
   last_picture: { id: 42, kind: 'periodic', slot: null, state: null, ev: null, taken_at: '2026-11-20T09:58:00.000Z', width: 640, height: 480, bytes: 41000 },
 };
 const events: CameraEvent[] = [
+  { id: 's12', slot: 'V', state: 'truck', prev: null, ev: 90, occurred_at: '2026-11-20T09:59:00.000Z', picture_id: 44 },
+  { id: 's11', slot: 'V', state: 'hand', prev: null, ev: 89, occurred_at: '2026-11-20T09:58:30.000Z', picture_id: 43 },
   { id: 9, slot: 'V', state: 'ok', prev: 'blocked', ev: null, occurred_at: '2026-11-20T09:57:10.000Z', picture_id: null },
   { id: 8, slot: 'V', state: 'blocked', prev: 'ok', ev: 77, occurred_at: '2026-11-20T09:57:00.000Z', picture_id: 41 },
 ];
@@ -63,8 +65,13 @@ describe('the Cameras page', () => {
     expect(html).not.toMatch(/[Bb]ottle/);
   });
 
-  it('what it saw: something in front of it with its picture, clear again', () => {
+  it('what it saw: a truck and a hand the models found, with their pictures; firmware 2.9.6\'s something in front of it, clear again', () => {
     const html = render(<CamerasOverview factoryId={F} />, seed());
+    expect(html).toContain('A truck');
+    expect(html).toContain('A hand in front of the camera');
+    expect(html).toContain(`/cameras/${CAM}/pictures/44`);
+    expect(html).toContain(`/cameras/${CAM}/pictures/43`);
+    expect(html.indexOf('A truck')).toBeLessThan(html.indexOf('A hand in front of the camera'));   // newest first
     expect(html).toContain('Something in front of the camera');
     expect(html).toContain('The view is clear again');
     expect(html).toContain(`/cameras/${CAM}/pictures/41`);
@@ -87,7 +94,7 @@ describe('the Cameras page', () => {
     expect(html).toContain('Something is in front of 1 camera');
     expect(html).toContain('Camera at Loom 3: check that nobody is blocking it.');
     expect(html).toContain('Something is in front of the camera right now.');
-    expect(html).toContain('Its alert is switched off');
+    expect(html).toContain('Its alert is switched off: what it sees is only listed below.');
   });
 
   it('no camera yet; an offline camera with no picture; a camera module fault', () => {
@@ -110,7 +117,8 @@ describe('a camera\'s settings', () => {
   it('the alert switch (on), the machine it is at, how often a picture, how it is mounted', () => {
     const html = render(<CameraSettingsForm factoryId={F} camera={camera} onClose={() => {}} />);
     expect(html).toMatch(/<input type="checkbox" class="mt-1" checked=""\/>/);   // the alert, on
-    expect(html).toContain('Alert when something is in front of the camera');
+    expect(html).toContain('Alert when it sees a truck or a hand');
+    expect(html).toContain('a truck at the gate, a hand in front of the camera');
     expect(html).toMatch(/<option value="m1" selected="">Loom 3<\/option>/);
     expect(html).toContain('Loom 10');
     expect(html).toMatch(/<option value="600" selected="">Every 10 minutes<\/option>/);

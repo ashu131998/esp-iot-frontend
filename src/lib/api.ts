@@ -59,7 +59,7 @@ import {
   isAbortError,
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
-import type { BoardWifi } from '@/lib/board-wifi';
+import { boardWifiPath, type BoardWifi, type BoardWifiAction, type WifiScope } from '@/lib/board-wifi';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
 import type { BottlesResponse, CamPicture, CamSettings, CamSettingsBody, LevelEvent, PictureKind } from '@/lib/bottles';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
@@ -1020,18 +1020,13 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ networks }), ...options,
     }),
 
-  /** Super admin: a board's own WiFi networks (on top of its factory's) and where it stands (lib/board-wifi.ts). */
-  adminBoardWifi: (boardId: string, options?: ApiRequestOptions) =>
-    request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, options),
+  /** A board's WiFi as on a phone (lib/board-wifi.ts): from ops (scope null: our super admin) or its factory's WiFi page. */
+  boardWifi: (scope: WifiScope, boardId: string, options?: ApiRequestOptions) =>
+    request<BoardWifi>(boardWifiPath(scope, boardId), options),
 
-  /**
-   * Super admin: save a board's own WiFi networks and the one it should use (null: the strongest): sent
-   * to it at once with its settings (retained).
-   */
-  saveAdminBoardWifi: (boardId: string, networks: WifiNetwork[], preferred: string | null, options?: ApiRequestOptions) =>
-    request<BoardWifi>(`/v1/admin/boards/${encodeURIComponent(boardId)}/wifi`, {
-      method: 'PUT', body: JSON.stringify({ networks, preferred }), ...options,
-    }),
+  /** Scan, connect and retry (everyone of its factory); add and forget (its admins): sent to the board at once. */
+  boardWifiAction: (scope: WifiScope, boardId: string, what: BoardWifiAction, body: Record<string, unknown> = {}) =>
+    request<BoardWifi>(`${boardWifiPath(scope, boardId)}/${what}`, { method: 'POST', body: JSON.stringify(body) }),
 
   /** The factory's dye-bottle cameras, each with its bottles' levels and last picture (lib/bottles.ts). */
   bottles: (factoryId: string, options?: ApiRequestOptions) =>

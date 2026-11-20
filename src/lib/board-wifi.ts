@@ -1,130 +1,180 @@
 /**
- * A board's own WiFi networks (Boards page, super admin): sent on top of its factory's list, for a
- * board whose spot needs a network the others do not. The server checks the same rules on save
- * (query-api normalizeBoardWifi); these give the same answers before it is asked.
+ * A board's WiFi as on a phone (firmware 2.9.4): the networks it sees, the one it is on, Connect and Retry,
+ * and the networks it keeps. One panel serves ops (our super admin, any board) and a factory's WiFi page
+ * (everyone of the factory connects a board; its admins also add and forget networks). The server checks
+ * every rule (query-api boards.js connectPlan / addPlan / forgetPlan); these shape what the panel shows.
  */
-import type { Tone } from '@/lib/board-status';
-import { networkProblem, signal, type ListStatus, type WifiNetwork } from '@/lib/wifi';
+import type { ListStatus } from '@/lib/wifi';
+
+/** A network the board keeps, by name: its own (this board only) or its factory's (every board there). */
+export interface SavedNetwork {
+  ssid: string;
+  own: boolean;
+  open: boolean;
+}
+
+/** A network in its last scan: the strongest access point of that name. */
+export interface SeenNetwork {
+  ssid: string;
+  rssi: number;
+  open: boolean;
+}
+
+/** The connect last asked for and how it went (from its heartbeats). */
+export interface WifiAttempt {
+  ssid: string;
+  state: 'trying' | 'connected' | 'failed';
+  /** Why it failed: the board's code (lib/board-wifi wifiProblem). */
+  reason: number | null;
+}
 
 export interface BoardWifi {
   board_id: string;
   factory_id: string | null;
-  /** Its own networks, with their passwords. */
-  networks: WifiNetwork[];
-  /** Its factory's, by name only: shared by every board there, changed on the factory's WiFi page. */
+  /** The machines it measures, by name: how the factory's people know a board. */
+  machines: string[];
+  camera: boolean;
+  /** Its factory's networks, by name. */
   factory_networks: { ssid: string }[];
-  /** The one it should use (firmware 2.9.2 moves to it when it is in range); null: the strongest. */
+  /** Every network it keeps, its own first. */
+  saved: SavedNetwork[];
+  /** The one it should use (a connect sets it); null: the strongest. */
   preferred: string | null;
-  /** The most a board keeps in all (its own and its factory's). */
   max: number;
+  room: number;
   /** False: why, in `reason` (not claimed, no settings yet, a rescue box, no broker here). */
   editable: boolean;
   reason: string | null;
-  /** Where it stands with the settings last sent (they carry the list). */
+  /** What this person may do: connect (everyone of the factory), manage (its admins: add, forget). */
+  can: { connect: boolean; manage: boolean };
+  /** Whether it has the settings last sent (they carry its WiFi). */
   status: ListStatus;
   cfg_version: number;
   online: boolean;
-  /** The network it is on now (from its heartbeats), and the signal. */
+  /** The network it is on (or was last on) and the signal. */
   ssid: string | null;
   rssi: number | null;
+  /** Its firmware scans and connects when asked (2.9.4+). */
+  scans: boolean;
+  seen: SeenNetwork[];
+  seen_at: string | null;
+  scan_asked: number;
+  scan_done: number;
+  attempt: WifiAttempt | null;
 }
 
-/** How many networks it has in all: its own, and its factory's under other names. */
-export function totalNetworks(own: WifiNetwork[], factory: { ssid: string }[]): number {
-  const names = new Set(own.map((n) => n.ssid.trim()));
-  return own.length + factory.filter((n) => !names.has(n.ssid)).length;
+/** Where the panel's requests go: a factory's WiFi page (its people), or ops (null: our super admin). */
+export type WifiScope = { factoryId: string } | null;
+
+export type BoardWifiAction = 'scan' | 'connect' | 'retry' | 'add' | 'forget';
+
+export function boardWifiPath(scope: WifiScope, boardId: string): string {
+  const board = encodeURIComponent(boardId);
+  return scope
+    ? `/v1/factories/${encodeURIComponent(scope.factoryId)}/boards/${board}/wifi`
+    : `/v1/admin/boards/${board}/wifi`;
 }
 
-/** How many more of its own it can have. */
-export function roomLeft(own: WifiNetwork[], factory: { ssid: string }[], max: number): number {
-  return Math.max(0, max - totalNetworks(own, factory));
+/** Signal bars as a phone draws them: 4 strong … 1 very weak; 0 none. */
+export function bars(rssi: number | null | undefined): 0 | 1 | 2 | 3 | 4 {
+  if (rssi === null || rssi === undefined || rssi >= 0) return 0;
+  if (rssi >= -60) return 4;
+  if (rssi >= -70) return 3;
+  if (rssi >= -80) return 2;
+  return 1;
 }
 
-/** Each of its own networks' problem (null: fine), and the list's as a whole (too many). */
-export function ownProblems(own: WifiNetwork[], factory: { ssid: string }[], max: number): { rows: (string | null)[]; list: string | null } {
-  const rows = own.map((n, i) => networkProblem(n, own.slice(0, i)));
-  const total = totalNetworks(own, factory);
-  const list = total > max
-    ? `At most ${max} networks in all: its factory has ${factory.length}, so at most ${Math.max(0, max - factory.length)} of its own`
-    : null;
-  return { rows, list };
+export interface NetworkRow {
+  ssid: string;
+  rssi: number | null;
+  open: boolean;
+  /** It is on this one now. */
+  connected: boolean;
+  saved: SavedNetwork | null;
 }
 
-/** Its own networks as typed, trimmed the way the server keeps them. */
-export function cleanOwn(own: WifiNetwork[]): WifiNetwork[] {
-  return own.map((n) => ({ ssid: n.ssid.trim(), pass: n.pass }));
-}
-
-/** Changed from what it has (order counts: the server keeps it). */
-export function ownChanged(saved: WifiNetwork[], draft: WifiNetwork[]): boolean {
-  const d = cleanOwn(draft);
-  return saved.length !== d.length || saved.some((n, i) => n.ssid !== d[i].ssid || n.pass !== d[i].pass);
-}
-
-/** The networks it can be told to use: its own (as typed, named, once each), then its factory's. */
-export function networkChoices(own: WifiNetwork[], factory: { ssid: string }[]): string[] {
-  const out: string[] = [];
-  for (const n of [...cleanOwn(own), ...factory]) if (n.ssid && !out.includes(n.ssid)) out.push(n.ssid);
-  return out;
-}
-
-/** The choice as it stands: null once that network is gone from the list (removed in the form). */
-export function chosen(preferred: string | null, own: WifiNetwork[], factory: { ssid: string }[]): string | null {
-  return preferred !== null && networkChoices(own, factory).includes(preferred) ? preferred : null;
-}
-
-/** Anything to save: its own networks, or the one to use. */
-export function wifiChanged(saved: Pick<BoardWifi, 'networks' | 'preferred'>, draft: WifiNetwork[], preferred: string | null): boolean {
-  return ownChanged(saved.networks, draft) || saved.preferred !== preferred;
-}
-
-/** Does its firmware move to the network it is told to use (2.9.2 and later)? */
-export function switchesNetworks(fw: string | null | undefined): boolean {
-  return versionAtLeast(fw, [2, 9, 2]);
-}
-
-/** Whether it has what was last sent, in words. */
-export function sentStatus(w: Pick<BoardWifi, 'status' | 'online'>): { label: string; detail: string; tone: Tone } {
-  switch (w.status) {
-    case 'current':
-      return { label: 'Has its list', detail: 'It applied the last settings sent, with this WiFi list.', tone: 'good' };
-    case 'waiting':
-      return w.online
-        ? { label: 'Receiving it…', detail: 'Sent: it applies it within seconds.', tone: 'warn' }
-        : { label: 'Gets it when back online', detail: 'Kept for it on the server: it takes it as soon as it connects.', tone: 'warn' };
-    case 'update-firmware':
-      return { label: 'Needs firmware 2.5', detail: 'Its firmware ignores WiFi lists: update it on the Firmware page.', tone: 'bad' };
-    default:
-      return { label: 'Not set up yet', detail: 'It gets its WiFi list with its settings.', tone: 'neutral' };
+/** The phone-style list: the one it is on first, then the others by signal; each network once. */
+export function networkRows(w: Pick<BoardWifi, 'seen' | 'saved' | 'online' | 'ssid' | 'rssi'>): NetworkRow[] {
+  const on = w.online ? w.ssid : null;
+  const savedOf = (ssid: string) => w.saved.find((n) => n.ssid === ssid) ?? null;
+  const rows: NetworkRow[] = [];
+  for (const n of w.seen) {
+    if (rows.some((r) => r.ssid === n.ssid)) continue;
+    rows.push({ ssid: n.ssid, rssi: n.rssi, open: n.open, connected: n.ssid === on, saved: savedOf(n.ssid) });
   }
+  if (on && !rows.some((r) => r.ssid === on)) {   // on it, but not in the last scan (an older list)
+    const saved = savedOf(on);
+    rows.push({ ssid: on, rssi: w.rssi, open: saved?.open ?? false, connected: true, saved });
+  }
+  return rows.sort((a, b) => Number(b.connected) - Number(a.connected) || (b.rssi ?? -999) - (a.rssi ?? -999));
 }
 
-/**
- * Does its firmware keep measuring when it applies new settings that leave its sensors as they are
- * (2.9.1 and later)? Older ones restart the sensors with every settings message.
- */
-export function keepsMeasuring(fw: string | null | undefined): boolean {
-  return versionAtLeast(fw, [2, 9, 1]);
+/** What a tap on a network asks for: nothing (it is on it), Connect at once (saved, or open), or its password. */
+export function connectNeeds(row: Pick<NetworkRow, 'connected' | 'saved' | 'open'>): 'none' | 'connect' | 'password' {
+  if (row.connected) return 'none';
+  if (row.saved || row.open) return 'connect';
+  return 'password';
 }
 
-function versionAtLeast(fw: string | null | undefined, from: [number, number, number]): boolean {
-  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(fw ?? '');
-  if (!m) return false;
-  const v = [Number(m[1]), Number(m[2]), Number(m[3])];
-  for (let i = 0; i < 3; i++) if (v[i] !== from[i]) return v[i] > from[i];
-  return true;
+/** A password the board can use: 8–63 plain characters. */
+export function passwordOk(pass: string): boolean {
+  return pass.length >= 8 && pass.length <= 63 && /^[\x20-\x7e]+$/.test(pass);
 }
 
-/**
- * The network it is on now, and whether the list it will have still holds it. A network that is not
- * on it may be one built into its firmware: it stays on it now, and it is a fallback after.
- */
-export function currentNetwork(
-  w: Pick<BoardWifi, 'online' | 'ssid' | 'rssi' | 'factory_networks'>,
-  own: WifiNetwork[],
-): { label: string; onList: boolean | null; tone: Tone } {
-  if (!w.online || !w.ssid) return { label: 'Not connected now', onList: null, tone: 'neutral' };
-  const s = signal(w.rssi);
-  const onList = own.some((n) => n.ssid.trim() === w.ssid) || w.factory_networks.some((n) => n.ssid === w.ssid);
-  return { label: `On ${w.ssid}${s.label === '—' ? '' : ` · ${s.label}`}`, onList, tone: s.tone };
+/** Where its scan stands: its firmware cannot, under way, waiting for it to be back, or done. */
+export function scanState(w: Pick<BoardWifi, 'scans' | 'scan_asked' | 'scan_done' | 'online'>): 'unsupported' | 'scanning' | 'waiting' | 'idle' {
+  if (!w.scans) return 'unsupported';
+  if (w.scan_asked > w.scan_done) return w.online ? 'scanning' : 'waiting';
+  return 'idle';
+}
+
+/** Why a connect did not work (ESP-IDF reasons; 250: joined, but no server through it), translated where shown. */
+export type WifiProblem = 'password' | 'not-found' | 'refused' | 'signal' | 'no-internet' | 'other';
+
+export function wifiProblem(code: number | null | undefined): WifiProblem | null {
+  if (code === null || code === undefined || code === 0) return null;
+  if (code === 15 || code === 202 || code === 204) return 'password';
+  if (code === 201) return 'not-found';
+  if (code === 203 || code === 205) return 'refused';
+  if (code === 200 || code === 4 || code === 34) return 'signal';
+  if (code === 250) return 'no-internet';
+  return 'other';
+}
+
+export interface AttemptView {
+  /** trying: under way; waiting: it is off, it tries when back; failed: it went back to a working network. */
+  state: 'trying' | 'waiting' | 'failed';
+  ssid: string;
+  problem: WifiProblem | null;
+  /** A new password may fix it: a wrong one for a network of its own (or a new one); the factory's are fixed by its admins. */
+  newPassword: boolean;
+}
+
+/** The connect asked for, while there is something to say about it (connected: the header says so). */
+export function attemptView(w: Pick<BoardWifi, 'attempt' | 'online' | 'saved'>): AttemptView | null {
+  const a = w.attempt;
+  if (!a || a.state === 'connected') return null;
+  if (a.state === 'trying') return { state: w.online ? 'trying' : 'waiting', ssid: a.ssid, problem: null, newPassword: false };
+  const problem = wifiProblem(a.reason) ?? 'other';
+  const saved = w.saved.find((n) => n.ssid === a.ssid);
+  return { state: 'failed', ssid: a.ssid, problem, newPassword: problem === 'password' && (!saved || saved.own) };
+}
+
+/** How often to look again: every 2 s while it is busy (a scan, a connect) and online; else every 10 s. */
+export function pollMs(w: Pick<BoardWifi, 'online' | 'scans' | 'scan_asked' | 'scan_done' | 'attempt' | 'status'>): number {
+  const busy = scanState(w) === 'scanning' || w.attempt?.state === 'trying' || w.status === 'waiting';
+  return busy && w.online ? 2_000 : 10_000;
+}
+
+/** Whole minutes since `iso` (null: unknown). */
+export function minutesAgo(iso: string | null | undefined, nowMs: number): number | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.floor((nowMs - t) / 60_000));
+}
+
+/** A board as its factory's people know it: by the machines it measures, else by its ID. */
+export function boardName(b: { machines?: string[] | null; board_id: string }): string {
+  return b.machines && b.machines.length > 0 ? b.machines.join(', ') : b.board_id;
 }

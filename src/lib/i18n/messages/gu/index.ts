@@ -14,6 +14,7 @@ import { pages } from './pages';
 import { results } from './results';
 import { maintenance } from './maintenance';
 import { sensors } from './sensors';
+import { wifi } from './wifi';
 
 /** Every Gujarati message, by its English text. Loaded on the server only (lib/i18n/server.ts). */
 export const GU_NAMESPACES: Record<string, Messages> = {
@@ -31,6 +32,7 @@ export const GU_NAMESPACES: Record<string, Messages> = {
   pages,
   results,
   bottles,
+  wifi,
 };
 
 export const gu: Messages = Object.assign({}, ...Object.values(GU_NAMESPACES));

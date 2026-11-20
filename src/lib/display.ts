@@ -84,8 +84,11 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'compliance', label: 'Compliance' },
 ];
 
-/** Pages only for people who can change the factory (its admins and our super admin): WiFi shows the passwords. */
-const ADMIN_PAGES: readonly string[] = ['wifi'];
+/**
+ * Pages only for people who can change the factory (its admins and our super admin). None since 2026-11: the
+ * WiFi page is for everyone of the factory (workers connect boards; the passwords stay with its admins).
+ */
+const ADMIN_PAGES: readonly string[] = [];
 
 /** The menu as this person sees it: admin-only pages left out for everyone else. */
 export function tabsFor<T extends { slug: string }>(tabs: readonly T[], canWrite: boolean): T[] {

@@ -71,11 +71,11 @@ describe('factoryTabs', () => {
     expect(slugs).toContain('team');
   });
 
-  it('shows WiFi (it has the passwords) only to people who can change the factory', () => {
+  it('shows WiFi to everyone of the factory: workers connect boards there (the passwords stay with its admins)', () => {
     const tabs = factoryTabs('f1', {});
     expect(tabsFor(tabs, true).map((t) => t.slug)).toContain('wifi');
-    expect(tabsFor(tabs, false).map((t) => t.slug)).not.toContain('wifi');
-    expect(tabsFor(tabs, false)).toHaveLength(tabs.length - 1);
+    expect(tabsFor(tabs, false).map((t) => t.slug)).toContain('wifi');
+    expect(tabsFor(tabs, false)).toHaveLength(tabs.length);
   });
 
   it('links Overview to the factory root and other pages below it', () => {

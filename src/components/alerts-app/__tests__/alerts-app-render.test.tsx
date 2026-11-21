@@ -35,6 +35,7 @@ const { AlertDetail } = await import('@/components/alerts-app/alert-detail');
 const { AlertsSettings } = await import('@/components/alerts-app/settings');
 const { AppLoginForm } = await import('@/components/alerts-app/login-form');
 const { InstallGuide } = await import('@/components/alerts-app/install-guide');
+const { AppGate } = await import('@/components/alerts-app/app-gate');
 const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
@@ -176,7 +177,7 @@ describe('the settings', () => {
     expect(html).toContain('Shree Mills');
     expect(html).toContain('Sign out');
     expect(html).toContain('Alerts not arriving?');
-    expect(html).toContain('href="/install"');
+    expect(html).not.toContain('href="/install"');   // the settings open only inside the installed app
   });
 
   it('in Hindi', () => {
@@ -201,26 +202,67 @@ describe('signing in', () => {
   });
 });
 
-describe('installing', () => {
-  it('the iPhone steps, the Android steps, or both', () => {
-    const ios = render(<InstallGuide platform="ios" />);
-    expect(ios).toContain('Install FloorBeat Alerts');
-    expect(ios).toContain('On iPhone');
-    expect(ios).toContain('Add to Home Screen');
-    expect(ios).not.toContain('On Android');
-    const android = render(<InstallGuide platform="android" />);
-    expect(android).toContain('On Android');
-    expect(android).toContain('Add to Home screen');
-    expect(android).not.toContain('On iPhone');
-    const other = render(<InstallGuide platform="other" />);
-    expect(other).toContain('On iPhone');
-    expect(other).toContain('On Android');
+describe('installing (what the app\'s address shows where the app does not open)', () => {
+  it('Safari on an iPhone: the steps to the Home Screen, nothing else', () => {
+    const html = render(<InstallGuide access="add-to-home" />);
+    expect(html).toContain('Install FloorBeat Alerts');
+    expect(html).toContain('On iPhone');
+    expect(html).toContain('Tap the Share button at the bottom of Safari.');
+    expect(html).toContain('Add to Home Screen');
+    expect(html).toContain('Open this page in the Safari app.');   // an app's own Safari view has no Add to Home Screen
+    expect(html).not.toContain('Open this page in Safari to install.');
+    expect(html).not.toContain('On Android');
+    expect(html).not.toContain('Open the app');
+  });
+
+  it('another browser on an iPhone: Safari first, with the address to copy', () => {
+    const html = render(<InstallGuide access="use-safari" />);
+    expect(html).toContain('Open this page in Safari to install.');
+    expect(html).toContain('>alerts.floorbeat.in<');
+    expect(html).toContain('Copy link');
+    expect(html).toContain('Copy the link, open Safari and paste it in the address bar.');
+    expect(html).toContain('Add to Home Screen');
+  });
+
+  it('a browser on Android: the APK to download, never a Home Screen copy', () => {
+    const html = render(<InstallGuide access="get-android-app" />);
+    expect(html).toContain('Get the FloorBeat Alerts app');
+    expect(html).toContain('On Android, alerts come in the FloorBeat Alerts app, not in the browser.');
+    expect(html).toContain('href="https://floorbeat.in/downloads/floorbeat-alerts.apk"');
+    expect(html).toContain('Already installed? Open FloorBeat Alerts from your apps.');
+    expect(html).toContain('href="https://floorbeat.in/app#android"');
+    expect(html).not.toContain('Home Screen');
+    expect(html).not.toContain('On iPhone');
+  });
+
+  it('a computer: how to get it on either phone', () => {
+    const html = render(<InstallGuide access="phone-only" />);
+    expect(html).toContain('FloorBeat Alerts is a phone app');
+    expect(html).toContain('On your iPhone, open alerts.floorbeat.in in Safari, then tap Share and “Add to Home Screen”.');
+    expect(html).toContain('On your Android phone, open floorbeat.in/app and download the app.');
+    expect(html).not.toContain('Copy link');
+  });
+
+  it('inside the app (its /install page): installed, and where notifications are turned on', () => {
+    const html = render(<InstallGuide access="open" />);
+    expect(html).toContain('Installed. Open it from your Home Screen.');
+    expect(html).toContain('href="/settings"');
+    expect(html).toContain('Open the app');
+    expect(html).not.toContain('Download for Android');
   });
 
   it('in Hindi', () => {
-    const html = render(<InstallGuide platform="ios" />, () => {}, hi);
-    expect(html).toContain('FloorBeat Alerts इंस्टॉल करें');
-    expect(html).toContain('iPhone पर');
+    expect(render(<InstallGuide access="add-to-home" />, () => {}, hi)).toContain('FloorBeat Alerts इंस्टॉल करें');
+    expect(render(<InstallGuide access="get-android-app" />, () => {}, hi)).toContain('Android के लिए डाउनलोड करें');
+    expect(render(<InstallGuide access="phone-only" />, () => {}, hi)).toContain('FloorBeat Alerts फ़ोन का ऐप है');
+  });
+});
+
+describe('the gate', () => {
+  it('sends nothing of the app before the phone has said what it is (the server\'s page)', () => {
+    const html = render(<AppGate><p>the inbox</p></AppGate>);
+    expect(html).not.toContain('the inbox');
+    expect(html).toContain('aria-busy="true"');
   });
 });
 

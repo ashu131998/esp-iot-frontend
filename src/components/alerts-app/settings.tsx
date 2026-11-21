@@ -1,8 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, LogOut } from 'lucide-react';
-import Link from 'next/link';
+import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 import { NotificationsCard } from '@/components/alerts-app/notifications-card';
@@ -65,10 +64,6 @@ export function AlertsSettings() {
           <li>{t('Do not swipe the app away from the recent apps list; let it stay.')}</li>
           <li>{t('Battery saver can delay alerts: allow FloorBeat Alerts to run in the background.')}</li>
         </ul>
-        <Link href={href('/install')} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-          {t('Install on this phone')}
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
       </section>
     </div>
   );

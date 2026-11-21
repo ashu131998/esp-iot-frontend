@@ -14,22 +14,17 @@ import { ListEmpty, ListGroup, SummaryCard, TONE_DOT } from '@/components/ui/sim
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import {
-  EVENT_TONE, cameraEventsQueryKey, cameraTitle, camerasQueryKey, eventWords, isVisit, pictureKindWord, pictureUrl, summaryWords,
-  truckNowWords, visitWords, type Camera, type CameraEvent, type CamerasResponse,
+  EVENT_TONE, cameraEventsQueryKey, cameraTitle, camerasQueryKey, eventWords, pictureKindWord, pictureUrl, summaryWords,
+  type Camera, type CameraEvent,
 } from '@/lib/cameras';
 import { useLineName } from '@/lib/factory-refs-context';
-import { formatDateTime, formatTimeWithSeconds } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { useCameraSnap } from '@/lib/use-camera-snap';
 import { cn } from '@/lib/utils';
 
 const REFRESH_MS = 15_000;
-/** While a truck is there (its visit open): the page follows it this closely. */
-const TRUCK_REFRESH_MS = 3_000;
-
-/** A truck at one of these cameras now (online): the page refreshes every TRUCK_REFRESH_MS. */
-export const truckThere = (data: CamerasResponse | undefined): boolean => Boolean(data?.cameras.some((c) => c.online && c.truck));
 
 /**
  * Cameras: the factory's cameras — the sentence to read first, then each camera with its last picture, its live view
@@ -45,14 +40,11 @@ export function CamerasDashboard({ factoryId }: { factoryId: string }) {
 
 export function CamerasOverview({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
-  const every = useRefetchInterval(REFRESH_MS);
+  const refetchInterval = useRefetchInterval(REFRESH_MS);
   const { data, dataUpdatedAt } = useSuspenseQuery({
     queryKey: camerasQueryKey(factoryId),
     queryFn: ({ signal }) => api.cameras(factoryId, { signal }),
-    refetchInterval: (query) => {
-      const base = every();
-      return base === false ? false : truckThere(query.state.data) ? TRUCK_REFRESH_MS : base;
-    },
+    refetchInterval,
     staleTime: 0,
   });
   useSetRefreshInfo(dataUpdatedAt, REFRESH_MS / 1000);
@@ -98,7 +90,7 @@ export function refreshCameras(qc: QueryClient, factoryId: string) {
 
 /** One camera: where it is and whether it is on, its last picture, Watch live; for admins a picture now and its settings. */
 function CameraCard({ factoryId, camera }: { factoryId: string; camera: Camera }) {
-  const { t, tn, locale } = useT();
+  const { t, locale } = useT();
   const lineName = useLineName();
   const { canWriteFactory } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -137,11 +129,6 @@ function CameraCard({ factoryId, camera }: { factoryId: string; camera: Camera }
           </div>
         }
       />
-      {camera.online && camera.truck && (
-        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-          {truckNowWords(camera.truck, formatTimeWithSeconds(camera.truck.since, locale), tn)}
-        </p>
-      )}
       {camera.online && camera.view === 'blocked' && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{t('Something is in front of the camera right now.')}</p>
       )}
@@ -197,15 +184,11 @@ export function LastPicture({ factoryId, camera }: { factoryId: string; camera: 
 /** What a camera saw, newest first: a truck, a hand (2.9.6: something in front of it, clear again), with its picture. */
 function CameraEvents({ factoryId, camera }: { factoryId: string; camera: Camera }) {
   const { t } = useT();
-  const every = useRefetchInterval(REFRESH_MS);
-  const fast = Boolean(camera.online && camera.truck);   // a truck there: its visit followed closely
+  const refetchInterval = useRefetchInterval(REFRESH_MS);
   const { data } = useQuery({
     queryKey: cameraEventsQueryKey(factoryId, camera.board_id),
     queryFn: ({ signal }) => api.cameraEvents(factoryId, camera.board_id, { limit: 30 }, { signal }),
-    refetchInterval: () => {
-      const base = every();
-      return base === false ? false : fast ? TRUCK_REFRESH_MS : base;
-    },
+    refetchInterval,
     staleTime: 0,
   });
   const events = data?.events ?? [];
@@ -229,7 +212,7 @@ function EventRow({ factoryId, boardId, event }: { factoryId: string; boardId: s
     <div className="flex items-center gap-3 px-4 py-3">
       <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', TONE_DOT[EVENT_TONE(event)])} />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-foreground">{isVisit(event) ? visitWords(event, t) : eventWords(event, t)}</p>
+        <p className="truncate font-medium text-foreground">{eventWords(event, t)}</p>
         <p className="text-sm text-muted">{formatDateTime(event.occurred_at, locale)}</p>
       </div>
       {href && (

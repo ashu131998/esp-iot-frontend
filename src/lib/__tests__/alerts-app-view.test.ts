@@ -108,16 +108,6 @@ describe('what an owner hears', () => {
     expect(alertWords(hand, gujarati).title).toBe('cam-478998ની સામે એક હાથ');
   });
 
-  it('trucks: how many came; the truck left, when and how long it was there; in Hindi too', () => {
-    const two = alert({ type: 'camera_truck', payload: { view: { kind: 'camera_truck', camera: 'cam-478998', machine: 'Gate 1', at: AT, count: 2 } } });
-    expect(alertWords(two, en).title).toBe('2 trucks at cam-478998 at Gate 1');
-    const left = alert({ type: 'camera_truck_left', payload: { view: { kind: 'camera_truck_left', camera: 'cam-478998', machine: 'Gate 1', at: AT, stay_s: 130, count: 1 } } });
-    expect(alertWords(left, en)).toEqual({ title: 'The truck left cam-478998 at Gate 1', body: 'Left at 10:02 am; it was there 2 m 10 s.' });
-    const both = alert({ type: 'camera_truck_left', payload: { view: { kind: 'camera_truck_left', camera: 'cam-478998', machine: null, at: null, stay_s: null, count: 3 } } });
-    expect(alertWords(both, en)).toEqual({ title: '3 trucks left cam-478998', body: null });
-    expect(alertWords(left, hindi).title).toBe('ट्रक Gate 1 पर cam-478998 से चला गया');
-  });
-
   it('a kind it does not know: the English title', () => {
     expect(alertWords(alert({ payload: { view: { kind: 'something_new' } } }), en)).toEqual({ title: '🔴 Loom 3 is DOWN', body: null });
   });

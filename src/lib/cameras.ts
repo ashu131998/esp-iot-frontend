@@ -35,12 +35,6 @@ export interface CamPicture {
   bytes: number;
 }
 
-/** A truck there now (its visit open, firmware 2.9.9): since when, how many at most. */
-export interface TruckNow {
-  since: string;
-  count: number;
-}
-
 export interface Camera {
   board_id: string;
   line_id: string;
@@ -53,8 +47,6 @@ export interface Camera {
   camera: string | null;
   /** Something is in front of it now (firmware 2.9.6; a gate camera's movement is not shown). */
   view: 'blocked' | 'clear';
-  /** A truck there now; null when none (or the server is older). */
-  truck?: TruckNow | null;
   fw: string | null;
   cfg_version: number;
   settings: CamSettings;
@@ -79,35 +71,6 @@ export interface CameraEvent {
   ev: number | null;
   occurred_at: string;
   picture_id: number | null;
-  /** A truck's visit (id "v<n>"): when it left (null while it is there), how many at most. */
-  ended_at?: string | null;
-  count?: number | null;
-}
-
-/** A truck's visit (its arrival to its departure), not a single sighting. */
-export const isVisit = (e: Pick<CameraEvent, 'id'>): boolean => typeof e.id === 'string' && e.id.startsWith('v');
-
-/** How long a truck stayed: "40 s", "2 m 10 s", "1 h 5 m". */
-export function stayWords(seconds: number, t: Translate): string {
-  const s = Math.max(0, Math.round(seconds));
-  if (s < 60) return t('{s} s', { s });
-  const m = Math.floor(s / 60);
-  if (m < 60) return s % 60 ? t('{m} m {s} s', { m, s: s % 60 }) : t('{m} m', { m });
-  const h = Math.floor(m / 60);
-  return m % 60 ? t('{h} h {m} m', { h, m: m % 60 }) : t('{h} h', { h });
-}
-
-/** A visit in the events list: "A truck · there 2 m 10 s", "2 trucks · still here". */
-export function visitWords(e: Pick<CameraEvent, 'occurred_at' | 'ended_at' | 'count'>, t: Translate): string {
-  const n = Math.max(1, Number(e.count ?? 1));
-  const who = n > 1 ? t('{count} trucks', { count: n }) : t('A truck');
-  if (!e.ended_at) return t('{who} · still here', { who });
-  return t('{who} · there {stay}', { who, stay: stayWords((Date.parse(e.ended_at) - Date.parse(e.occurred_at)) / 1000, t) });
-}
-
-/** The line on a camera with a truck there now. */
-export function truckNowWords(truck: TruckNow, time: string, tn: TranslatePlural): string {
-  return tn(truck.count, 'A truck is here now (since {time})', '{count} trucks are here now (since {time})', { count: truck.count, time });
 }
 
 /** What the settings pop-up sends: the camera's settings, the machine it is at, whether what it sees alerts. */
@@ -186,16 +149,6 @@ export function summaryWords(cameras: Camera[], t: Translate, tn: TranslatePlura
       badge: blocked.length,
       title: tn(blocked.length, 'Something is in front of {count} camera', 'Something is in front of {count} cameras', { count: blocked.length }),
       subtitle: t('{names}: check that nobody is blocking it.', { names: names(blocked) }),
-    };
-  }
-  const trucks = cameras.filter((c) => c.online && c.truck);
-  if (trucks.length > 0) {
-    const n = trucks.reduce((sum, c) => sum + Math.max(1, c.truck?.count ?? 1), 0);
-    return {
-      tone: 'warn',
-      badge: n,
-      title: tn(n, 'A truck is here now', '{count} trucks are here now', { count: n }),
-      subtitle: t('{names}: watch it live.', { names: names(trucks) }),
     };
   }
   const offline = cameras.filter((c) => !c.online);

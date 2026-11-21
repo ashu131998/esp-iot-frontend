@@ -16,7 +16,7 @@ import { hi } from '@/lib/i18n/messages/hi';
 const auth = { canWriteFactory: true, isInternalStaff: false };
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => auth }));
 
-const { CamerasOverview, refreshCameras, truckThere } = await import('@/components/factory/cameras-dashboard');
+const { CamerasOverview, refreshCameras } = await import('@/components/factory/cameras-dashboard');
 const { CameraSettingsForm } = await import('@/components/factory/camera-settings');
 
 const F = 'mill-01';
@@ -28,7 +28,6 @@ const camera: Camera = {
   last_picture: { id: 42, kind: 'periodic', slot: null, state: null, ev: null, taken_at: '2026-11-20T09:58:00.000Z', width: 640, height: 480, bytes: 41000 },
 };
 const events: CameraEvent[] = [
-  { id: 'v4', slot: 'V', state: 'truck', prev: null, ev: null, occurred_at: '2026-11-20T09:59:30.000Z', picture_id: 45, ended_at: '2026-11-20T10:01:40.000Z', count: 2 },
   { id: 's12', slot: 'V', state: 'truck', prev: null, ev: 90, occurred_at: '2026-11-20T09:59:00.000Z', picture_id: 44 },
   { id: 's11', slot: 'V', state: 'hand', prev: null, ev: 89, occurred_at: '2026-11-20T09:58:30.000Z', picture_id: 43 },
   { id: 9, slot: 'V', state: 'ok', prev: 'blocked', ev: null, occurred_at: '2026-11-20T09:57:10.000Z', picture_id: null },
@@ -112,19 +111,6 @@ describe('the Cameras page', () => {
     expect(html).toContain(hi['Watch live']);
     expect(html).toContain(hi['The camera is on']);
     expect(html).toContain(`aria-label="${hi.Refresh}"`);
-  });
-
-  it('a truck there now: said at the top and on its camera, since when; its visit in the list, how long and how many', () => {
-    const html = render(<CamerasOverview factoryId={F} />, seed([{ ...camera, truck: { since: '2026-11-20T10:02:05.000Z', count: 1 } }]));
-    expect(html).toContain('A truck is here now');
-    expect(html).toContain('Camera at Loom 3: watch it live.');
-    expect(html).toMatch(/A truck is here now \(since \d{1,2}:\d{2}:\d{2}/);
-    expect(html).toContain('2 trucks · there 2 m 10 s');
-    expect(html).toContain(`/cameras/${CAM}/pictures/45`);
-    expect(truckThere({ cameras: [{ ...camera, truck: { since: 'x', count: 1 } }] })).toBe(true);
-    expect(truckThere({ cameras: [{ ...camera, truck: { since: 'x', count: 1 }, online: false }] })).toBe(false);   // offline: no
-    expect(truckThere({ cameras: [camera] })).toBe(false);
-    expect(truckThere(undefined)).toBe(false);
   });
 
   it('a Refresh button beside the sentence (the page has no date bar, so no countdown); it fetches this factory\'s cameras and what each saw again', () => {

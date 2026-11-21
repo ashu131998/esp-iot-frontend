@@ -16,12 +16,16 @@ export interface AlertFacts {
   line?: string | null;
   at?: string | null;
   down_for_min?: number | null;
+  /** How long the machine had been stopped, with no reason given, when the alert went up. */
+  waiting_min?: number | null;
   shift?: string | null;
   start?: string | null;
   task?: string | null;
   machines?: string[] | null;
   profile?: string | null;
   operators?: string[] | null;
+  /** A camera's id: something in front of it (camera_blocked), a truck or a hand its models saw (camera_truck / _hand). */
+  camera?: string | null;
 }
 
 export interface AlertWords {
@@ -104,6 +108,38 @@ export function alertWords(alert: MyAlert, tr: Translator): AlertWords {
       return {
         title: t('{machine} is running again', { machine }),
         body: time ? t('{machine} came back at {time}{after}.', { machine, time, after }) : t('{machine} is running again.', { machine }),
+      };
+    }
+    // Nobody answered: the supervisor gets the question, the owner is told.
+    case 'machine_down_waiting':
+    case 'owner_unanswered': {
+      const lines = [facts.waiting_min
+        ? t('{machine} has been stopped for {duration}. Nobody has said why yet.', { machine, duration: durationWords(facts.waiting_min, t) })
+        : t('{machine} is still stopped. Nobody has said why yet.', { machine })];
+      if (asks) lines.push(t('Why is it down? Tap an answer below.'));
+      return { title: t('{machine} is still stopped', { machine }), body: lines.join('\n') };
+    }
+    // Something in front of a camera (firmware 2.9.6): a hand on the lens, a cover.
+    case 'camera_blocked': {
+      const camera = facts.camera || t('A camera');
+      const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      return {
+        title: t('Something is in front of {camera}', { camera: where }),
+        body: time
+          ? t('Since {time}: a hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.', { time })
+          : t('A hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.'),
+      };
+    }
+    // What the AI models saw in a camera's picture (firmware 2.9.8): a truck at the gate, a hand in front of it.
+    case 'camera_truck':
+    case 'camera_hand': {
+      const camera = facts.camera || t('A camera');
+      const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      return {
+        title: facts.kind === 'camera_truck' ? t('A truck at {camera}', { camera: where }) : t('A hand in front of {camera}', { camera: where }),
+        body: time
+          ? t('Seen at {time}. Its picture and live view are on the Cameras page.', { time })
+          : t('Its picture and live view are on the Cameras page.'),
       };
     }
     default:

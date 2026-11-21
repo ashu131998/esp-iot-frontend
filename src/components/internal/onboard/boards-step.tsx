@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CardHeader } from '@/components/ui/card';
 import { Field, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
-import { firmware, isRescueBox, selfTest, type AdminBoard } from '@/lib/board-status';
+import { firmware, isCamera, isRescueBox, selfTest, type AdminBoard } from '@/lib/board-status';
 import {
   SETUP_BOARD_SLOTS, boardProblems, newBoard, slotSensor, type BoardDraft, type LineDraft, type MachineDraft,
 } from '@/lib/onboarding';
@@ -15,7 +15,7 @@ import {
 /** Where a new board reports until it is claimed (query-api boards.js). */
 const UNCLAIMED = 'unclaimed';
 
-const DESCRIPTION = 'Optional. Boards switched on at the factory show here while they wait to be claimed. Pick this factory\'s, each one\'s line, and which machine each sensor measures. They are claimed right after the factory is created, with their usual settings; the Boards page changes those later.';
+const DESCRIPTION = 'Optional. Boards switched on at the factory show here while they wait to be claimed. Pick this factory\'s, and which machine each sensor measures. They are claimed right after the factory is created, with their usual settings, on the line their machines are on; the Boards page changes those later.';
 
 function online(b: AdminBoard) {
   if (b.online === true) return { label: 'Online', tone: 'good' as const, detail: 'Connected to the server now' };
@@ -23,16 +23,16 @@ function online(b: AdminBoard) {
 }
 
 /**
- * The boards waiting to be claimed (reporting as new), for this factory: each one's line and which
- * machine each of its sensors measures, set in the same go as the factory, then the boards claimed.
+ * The boards waiting to be claimed (reporting as new), for this factory: which machine each of its
+ * sensors measures, set in the same go as the factory, then the boards claimed (the server picks the line).
  * A super admin's: anyone else claims them later on the Boards page.
  */
-export function BoardsStep({ value, lines, machines, onChange, tried, canClaim }: {
+export function BoardsStep({ value, lines, machines, onChange, canClaim }: {
   value: BoardDraft[];
+  /** For grouping the machines by line in the sensor pickers. */
   lines: LineDraft[];
   machines: MachineDraft[];
   onChange: (next: BoardDraft[]) => void;
-  tried: boolean;
   canClaim: boolean;
 }) {
   const boardsQuery = useQuery({
@@ -41,18 +41,18 @@ export function BoardsStep({ value, lines, machines, onChange, tried, canClaim }
     refetchInterval: 15_000,
     enabled: canClaim,
   });
-  const waiting = (boardsQuery.data?.boards ?? []).filter((b) => b.factory_id === UNCLAIMED);
+  // Cameras are claimed from the Boards page (the wizard maps sensor channels to machines; a camera has none).
+  const waiting = (boardsQuery.data?.boards ?? []).filter((b) => b.factory_id === UNCLAIMED && !isCamera(b));
   const waitingIds = new Set(waiting.map((b) => b.board_id));
   const picked = new Set(value.map((b) => b.board_id));
-  const problems = boardProblems(value, lines, machines);
+  const problems = boardProblems(value, machines);
   const named = machines.filter((m) => m.name.trim());
   const set = (k: string, patch: Partial<BoardDraft>) => onChange(value.map((b) => (b.key === k ? { ...b, ...patch } : b)));
   const pickMachine = (b: BoardDraft, slot: string, machineKey: string) => {
     const channels = { ...b.channels };
     if (machineKey) channels[slot] = machineKey;
     else delete channels[slot];
-    // Its line: its first machine's, until one is picked.
-    set(b.key, { channels, line_key: b.line_key || machines.find((m) => m.key === machineKey)?.line_key || '' });
+    set(b.key, { channels });
   };
 
   if (!canClaim) {
@@ -103,16 +103,7 @@ export function BoardsStep({ value, lines, machines, onChange, tried, canClaim }
                   </p>
                 ) : (
                   <>
-                    <div className="max-w-xs">
-                      <Field label="Line">
-                        <Select aria-label={`Line of ${b.board_id}`} value={b.line_key} onChange={(e) => set(b.key, { line_key: e.target.value })}>
-                          <option value="">Pick a line</option>
-                          {lines.map((l) => <option key={l.key} value={l.key}>{l.name.trim() || l.line_id.trim()}</option>)}
-                        </Select>
-                        {(tried || lines.length === 0) && p.line_key && <p className="text-xs text-red-600">{p.line_key}</p>}
-                      </Field>
-                    </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {SETUP_BOARD_SLOTS.map((slot) => (
                         <Field key={slot} label={`${slot} · ${slotSensor(slot) === 'current' ? 'current (CT)' : 'proximity'}`}>
                           <Select aria-label={`${b.board_id} ${slot}`} value={b.channels[slot] ?? ''} onChange={(e) => pickMachine(b, slot, e.target.value)}>

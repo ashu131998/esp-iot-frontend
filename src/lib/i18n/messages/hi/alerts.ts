@@ -141,4 +141,13 @@ export const alerts: Messages = {
   'Factory': 'फ़ैक्टरी',
   'All factories': 'सभी फ़ैक्टरियाँ',
   'Select factory first': 'पहले फ़ैक्टरी चुनें',
+
+  // a stop nobody answers, and testing the alerts app from the dashboard
+  'Admins get these in the alerts app': 'एडमिन को ये अलर्ट ऐप में मिलते हैं',
+  'Ask a supervisor when nobody answers': 'कोई जवाब न दे तो सुपरवाइज़र से पूछें',
+  'Minutes after the stop (0 = never). The operators are rung again; Shift Supervisors with an app login are asked.': 'मशीन रुकने के इतने मिनट बाद (0 = कभी नहीं)। ऑपरेटरों का फ़ोन फिर बजता है; ऐप लॉगिन वाले शिफ्ट सुपरवाइज़र से पूछा जाता है।',
+  'Tell the owners when nobody answers': 'कोई जवाब न दे तो मालिकों को बताएँ',
+  'Minutes after the stop (0 = never)': 'मशीन रुकने के इतने मिनट बाद (0 = कभी नहीं)',
+  'Test alerts need the alerts app set up on the server.': 'टेस्ट अलर्ट के लिए सर्वर पर अलर्ट ऐप सेट होना चाहिए।',
+  'No worker has an app login yet. Give one on the Team page.': 'अभी किसी कारीगर के पास ऐप लॉगिन नहीं है। Team पेज पर दें।',
 };

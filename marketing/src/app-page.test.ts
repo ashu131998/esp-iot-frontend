@@ -17,6 +17,10 @@ describe('floorbeat.in/app', () => {
     expect(html).toContain('https://alerts.floorbeat.in/login');
   });
 
+  it('sends Android to the APK only: the app does not open in a browser tab', () => {
+    expect(html).not.toContain('in Chrome and choose');
+  });
+
   it('says what the app does and where to get help', () => {
     for (const must of ['Machine stopped', 'Shift reminders', 'Hindi and Gujarati', 'Send a test', 'support@floorbeat.in', 'Team page']) {
       expect(html, must).toContain(must);

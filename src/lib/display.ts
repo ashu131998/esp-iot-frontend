@@ -49,8 +49,9 @@ export function isShown(display: Display | null | undefined, key: string): boole
   return display?.[key] !== false;
 }
 
-// Before the backend sent `display`, only these pages could be switched (via `features`).
-const LEGACY_DEFAULTS: Display = { compliance: false };
+// Before the backend sent `display`, only these pages could be switched (via `features`); pages added
+// since are off until the backend says so.
+const LEGACY_DEFAULTS: Display = { compliance: false, cameras: false };
 
 /** A factory's display map, falling back to the older `features` flags. */
 export function displayOf(
@@ -69,6 +70,7 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'alerts', label: 'Alerts' },
   { slug: 'energy', label: 'Energy' },
   { slug: 'maintenance', label: 'Maintenance' },
+  { slug: 'cameras', label: 'Cameras' },
   { slug: 'performance', label: 'Performance' },
   { slug: 'production', label: 'Production' },
   { slug: 'quality', label: 'Quality' },
@@ -82,8 +84,11 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'compliance', label: 'Compliance' },
 ];
 
-/** Pages only for people who can change the factory (its admins and our super admin): WiFi shows the passwords. */
-const ADMIN_PAGES: readonly string[] = ['wifi'];
+/**
+ * Pages only for people who can change the factory (its admins and our super admin). None since 2026-11: the
+ * WiFi page is for everyone of the factory (workers connect boards; the passwords stay with its admins).
+ */
+const ADMIN_PAGES: readonly string[] = [];
 
 /** The menu as this person sees it: admin-only pages left out for everyone else. */
 export function tabsFor<T extends { slug: string }>(tabs: readonly T[], canWrite: boolean): T[] {

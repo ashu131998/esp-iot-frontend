@@ -1,71 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 
+import { useNotificationsRequired } from '@/components/alerts-app/notifications-gate';
+import { usePushSwitch, type SwitchState } from '@/components/alerts-app/use-push-switch';
 import { Button } from '@/components/ui/button';
 import { TONE_DOT, type Tone } from '@/components/ui/simple';
-import { alertsApi } from '@/lib/alerts-app/api';
-import type { PushState } from '@/lib/alerts-app/push';
-import { currentState, turnOff, turnOn } from '@/lib/alerts-app/push-client';
 import { useAppHref } from '@/lib/alerts-app/queries';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 /**
  * The notifications switch: on, off, blocked by the phone, or not possible here (an iPhone
- * before the app is on the Home Screen), with a test push once on.
+ * before the app is on the Home Screen), with a test push once on. On a phone there is no
+ * "turn off": the app opens only with notifications on (notifications-gate.tsx). `required`
+ * forces either (tests).
  */
-export function NotificationsCard() {
+export function NotificationsCard({ required: forced }: { required?: boolean } = {}) {
   const { t } = useT();
   const href = useAppHref();
-  const [state, setState] = useState<PushState | 'checking'>('checking');
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const { state, busy, note, enable, disable, test } = usePushSwitch();
+  const requiredHere = useNotificationsRequired();
+  const required = forced ?? requiredHere;
 
-  useEffect(() => {
-    let live = true;
-    currentState().then((s) => { if (live) setState(s); }, () => { if (live) setState('unsupported'); });
-    return () => { live = false; };
-  }, []);
-
-  async function enable() {
-    setBusy(true);
-    setNote(null);
-    try {
-      setState(await turnOn());
-    } catch {
-      setNote(t('Could not turn on notifications. Try again.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function disable() {
-    setBusy(true);
-    setNote(null);
-    try {
-      await turnOff();
-      setState('off');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function test() {
-    setBusy(true);
-    setNote(null);
-    try {
-      const result = await alertsApi.testPush();
-      setNote(result.sent > 0 ? t('Test sent. It should ring in a few seconds.') : t('The test could not be sent.'));
-    } catch {
-      setNote(t('The test could not be sent.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const lines: Record<PushState | 'checking', string> = {
+  const lines: Record<SwitchState, string> = {
     checking: t('Checking…'),
     on: t('Notifications are on for this phone.'),
     off: t('Notifications are off. Turn them on so your phone rings when a machine stops.'),
@@ -91,7 +49,7 @@ export function NotificationsCard() {
         {state === 'on' && (
           <>
             <Button variant="secondary" onClick={test} disabled={busy}>{t('Send a test')}</Button>
-            <Button variant="ghost" onClick={disable} disabled={busy}>{t('Turn off on this phone')}</Button>
+            {!required && <Button variant="ghost" onClick={disable} disabled={busy}>{t('Turn off on this phone')}</Button>}
           </>
         )}
         {state === 'needs-install' && (
@@ -100,7 +58,13 @@ export function NotificationsCard() {
           </Link>
         )}
       </div>
-      {note && <p className="mt-3 text-sm text-muted" role="status">{note}</p>}
+      {note && (
+        <p className="mt-3 text-sm text-muted" role="status">
+          {note === 'enable-failed' && t('Could not turn on notifications. Try again.')}
+          {note === 'test-sent' && t('Test sent. It should ring in a few seconds.')}
+          {note === 'test-failed' && t('The test could not be sent.')}
+        </p>
+      )}
     </section>
   );
 }

@@ -334,7 +334,6 @@ export function OnboardPanel() {
               lines={d.lines}
               machines={d.machines}
               onChange={(boards) => patch({ boards })}
-              tried={tried}
               canClaim={isSuperAdmin(user)}
             />
           )}

@@ -45,6 +45,7 @@ const WORDS = {
     which: 'Which configuration is it running? Tap one.', fixed: 'Did you get it running? Tap to answer.',
     shift: (s, t) => `${s} starts at ${t}`, shiftSoon: (s) => `${s} starts soon`, task: (x) => `Task: ${x}`, machines: (x) => `Machines: ${x}`,
     asked: (n) => `${n} has been asked for the reason in the app.`, nobody: 'No operator is assigned to this machine right now.', h: 'h', m: 'm',
+    still: (m) => `${m} is still stopped`, waiting: (m, d) => `${m} has been stopped for ${d}. Nobody has said why yet.`, stillNoTime: (m) => `${m} is still stopped. Nobody has said why yet.`,
   },
   hi: {
     stopped: (m) => `${m} रुक गई`, stoppedAt: (m, t) => `${m} ${t} पर रुक गई।`, why: 'यह क्यों रुकी? एक जवाब पर टैप करें।',
@@ -52,6 +53,7 @@ const WORDS = {
     which: 'यह कौन-सा कॉन्फ़िगरेशन चला रही है? एक पर टैप करें।', fixed: 'क्या आपने इसे चला दिया? जवाब के लिए टैप करें।',
     shift: (s, t) => `${s} ${t} पर शुरू होती है`, shiftSoon: (s) => `${s} जल्द शुरू होती है`, task: (x) => `काम: ${x}`, machines: (x) => `मशीनें: ${x}`,
     asked: (n) => `${n} से ऐप में कारण पूछा गया है।`, nobody: 'अभी इस मशीन पर कोई ऑपरेटर नहीं है।', h: 'घं', m: 'मि',
+    still: (m) => `${m} अब भी रुकी है`, waiting: (m, d) => `${m} ${d} से रुकी है। अभी तक किसी ने कारण नहीं बताया।`, stillNoTime: (m) => `${m} अब भी रुकी है। अभी तक किसी ने कारण नहीं बताया।`,
   },
   gu: {
     stopped: (m) => `${m} બંધ થઈ`, stoppedAt: (m, t) => `${m} ${t} વાગ્યે બંધ થઈ.`, why: 'તે કેમ બંધ છે? એક જવાબ પર ટૅપ કરો.',
@@ -59,6 +61,7 @@ const WORDS = {
     which: 'તે કયું કૉન્ફિગરેશન ચલાવે છે? એક પર ટૅપ કરો.', fixed: 'તમે તેને ચાલુ કરી? જવાબ માટે ટૅપ કરો.',
     shift: (s, t) => `${s} ${t} વાગ્યે શરૂ થાય છે`, shiftSoon: (s) => `${s} જલદી શરૂ થાય છે`, task: (x) => `કામ: ${x}`, machines: (x) => `મશીનો: ${x}`,
     asked: (n) => `${n} ને ઍપમાં કારણ પૂછાયું છે.`, nobody: 'અત્યારે આ મશીન પર કોઈ ઑપરેટર નથી.', h: 'ક', m: 'મિ',
+    still: (m) => `${m} હજી બંધ છે`, waiting: (m, d) => `${m} ${d} થી બંધ છે. હજી સુધી કોઈએ કારણ જણાવ્યું નથી.`, stillNoTime: (m) => `${m} હજી બંધ છે. હજી સુધી કોઈએ કારણ જણાવ્યું નથી.`,
   },
 };
 
@@ -104,6 +107,12 @@ function wordsFor(view, locale, asks) {
     }
     case 'owner_up':
       return { title: w.running(machine), body: time ? w.back(machine, time, after) : '' };
+    // Nobody answered: the supervisor gets the question, the owner is told.
+    case 'machine_down_waiting':
+    case 'owner_unanswered': {
+      const waited = view.waiting_min ? w.waiting(machine, durationIn(locale, view.waiting_min)) : w.stillNoTime(machine);
+      return { title: w.still(machine), body: [waited, asks ? w.why : ''].filter(Boolean).join(' ') };
+    }
     default:
       return null;
   }

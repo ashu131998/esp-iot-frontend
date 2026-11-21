@@ -207,3 +207,21 @@ describe('installing', () => {
     expect(self.clients.claim).toHaveBeenCalled();
   });
 });
+
+describe('a stop nobody answered, on the lock screen', () => {
+  it('says how long, and asks when there is a question; in the person\'s language', async () => {
+    const { self, shown, fire } = boot();
+    const { wordsFor } = (self as unknown as { __floorbeatAlerts: { wordsFor: (v: unknown, l: string, a: boolean) => { title: string; body: string } | null } }).__floorbeatAlerts;
+    expect(wordsFor({ kind: 'machine_down_waiting', machine: 'Loom 3', waiting_min: 12 }, 'en', true)).toEqual({
+      title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 12 m. Nobody has said why yet. Why is it down? Tap an answer.',
+    });
+    expect(wordsFor({ kind: 'owner_unanswered', machine: 'Loom 3', waiting_min: 75 }, 'en', false)).toEqual({
+      title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 1 h 15 m. Nobody has said why yet.',
+    });
+    expect(wordsFor({ kind: 'owner_unanswered', machine: 'Loom 3' }, 'en', false)?.body).toBe('Loom 3 is still stopped. Nobody has said why yet.');
+    await fire('message', { data: { type: 'locale', locale: 'hi' } });
+    await fire('push', { data: payload({ notification_id: 'ntf-9', severity: 'HIGH', url: '/alerts/ntf-9', asks: true, view: { kind: 'machine_down_waiting', machine: 'Loom 3', waiting_min: 12 } }) });
+    expect(shown[0].title).toBe('Loom 3 अब भी रुकी है');
+    expect(shown[0].options.body).toContain('12 मि से रुकी है');
+  });
+});

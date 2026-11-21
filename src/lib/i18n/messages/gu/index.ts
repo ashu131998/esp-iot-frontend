@@ -3,6 +3,7 @@ import type { Messages } from '../../translate';
 import { alerts } from './alerts';
 import { alerts_app } from './alerts-app';
 import { auth } from './auth';
+import { cameras } from './cameras';
 import { calibration } from './calibration';
 import { common } from './common';
 import { dates } from './dates';
@@ -13,6 +14,7 @@ import { pages } from './pages';
 import { results } from './results';
 import { maintenance } from './maintenance';
 import { sensors } from './sensors';
+import { wifi } from './wifi';
 
 /** Every Gujarati message, by its English text. Loaded on the server only (lib/i18n/server.ts). */
 export const GU_NAMESPACES: Record<string, Messages> = {
@@ -29,6 +31,8 @@ export const GU_NAMESPACES: Record<string, Messages> = {
   calibration,
   pages,
   results,
+  cameras,
+  wifi,
 };
 
 export const gu: Messages = Object.assign({}, ...Object.values(GU_NAMESPACES));

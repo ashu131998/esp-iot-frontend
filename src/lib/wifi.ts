@@ -36,6 +36,8 @@ export interface WifiBoard {
   list: ListStatus;
   /** null: it has not looked yet (older firmware, or just started). */
   rescue?: RescueHeard | null;
+  /** The machines it measures, by name: how the factory's people know it. */
+  machines?: string[];
 }
 
 export interface RescueBox {
@@ -54,16 +56,25 @@ export interface RescueBox {
   pin: string | null;
 }
 
+/** A network of the factory's list as its workers see it: by name, no password. */
+export interface NamedNetwork {
+  ssid: string;
+  open: boolean;
+}
+
 export interface WifiPage {
   factory_id: string;
-  networks: WifiNetwork[];
+  /** With their passwords for its admins (can_edit); by name only for everyone else. */
+  networks: WifiNetwork[] | NamedNetwork[];
   version?: number;
-  /** Its rescue boxes' WiFi: names start with ssid_prefix; the password a phone needs for a box's page. */
-  rescue?: { ssid_prefix: string; password: string };
+  /** Its rescue boxes' WiFi: names start with ssid_prefix; the password a phone needs for a box's page (admins only). */
+  rescue?: { ssid_prefix: string; password: string } | null;
   boards: WifiBoard[];
   boxes?: RescueBox[];
   /** False when this server cannot reach the boards (no broker access): nothing can be sent. */
   managed: boolean;
+  /** Its admins (and our super admin): they see the passwords and change the list. */
+  can_edit?: boolean;
   sent?: string[];
   skipped?: string[];
 }
@@ -182,4 +193,16 @@ export function boardsOn(boards: WifiBoard[], ssid: string): number {
 /** The list changed from what was saved (order counts: boards try the strongest anyway, but the page shows it). */
 export function listChanged(saved: WifiNetwork[], draft: WifiNetwork[]): boolean {
   return saved.length !== draft.length || saved.some((n, i) => n.ssid !== draft[i].ssid || n.pass !== draft[i].pass);
+}
+
+/** How many of its boards are online, and which are not (by name: their machines, else their ID). */
+export function onlineSummary(boards: WifiBoard[]): { total: number; online: number; offline: WifiBoard[] } {
+  const offline = boards.filter((b) => !b.online);
+  return { total: boards.length, online: boards.length - offline.length, offline };
+}
+
+/** The list with its passwords (its admins' page), or null for a page shown without them. */
+export function editableNetworks(page: Pick<WifiPage, 'networks' | 'can_edit'>): WifiNetwork[] | null {
+  if (page.can_edit === false) return null;
+  return (page.networks as WifiNetwork[]).every((n) => typeof n.pass === 'string') ? (page.networks as WifiNetwork[]) : null;
 }

@@ -96,3 +96,9 @@ export function rememberLocale(locale: Locale): void {
   if (typeof document === 'undefined') return;
   document.cookie = localeCookieString(locale);
 }
+
+/** Whether a language was ever chosen in this browser (the cookie is there): the alerts app asks once when not. */
+export function localeChosenHere(): boolean {
+  if (typeof document === 'undefined') return false;
+  return localeFromCookieString(document.cookie) !== null;
+}

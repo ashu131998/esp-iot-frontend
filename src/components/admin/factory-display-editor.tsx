@@ -61,7 +61,8 @@ export function FactoryDisplayEditor({
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const display = resolveDisplay(pages, factory.features);
+  // The server's own answer (it knows what the factory has: a camera turns the Cameras page on); else the catalog's.
+  const display = factory.display ?? resolveDisplay(pages, factory.features);
 
   const mutation = useMutation({
     mutationFn: ({ key, value }: { key: string; value: boolean }) =>
@@ -80,7 +81,7 @@ export function FactoryDisplayEditor({
               ...prev,
               factories: prev.factories.map((f) =>
                 f.factory_id === data.factory_id
-                  ? { ...f, features: data.features, display: resolveDisplay(pages, data.features) }
+                  ? { ...f, features: data.features, display: data.display ?? resolveDisplay(pages, data.features) }
                   : f,
               ),
             }

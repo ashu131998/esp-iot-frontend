@@ -42,12 +42,15 @@ export function SummaryCard({
   icon,
   title,
   subtitle,
+  action,
 }: {
   tone: Tone;
   badge?: string | number;
   icon?: React.ReactNode;
   title: string;
   subtitle?: string;
+  /** A control at the right end (a Refresh button). */
+  action?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-gray-100">
@@ -67,10 +70,11 @@ export function SummaryCard({
           {badge}
         </span>
       )}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-lg font-semibold text-foreground">{title}</p>
         {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
       </div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

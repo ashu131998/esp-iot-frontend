@@ -87,7 +87,7 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
                   <div className="min-w-0">
                     <span className="font-mono">{b.board_id}</span>
                     <span className="text-xs text-muted">
-                      {b.rescue ? ' · rescue box' : ` · ${b.line_id} · ${b.channels} sensor${b.channels === 1 ? '' : 's'} matched`}
+                      {b.rescue ? ' · rescue box' : ` · ${b.channels} sensor${b.channels === 1 ? '' : 's'} matched`}
                     </span>
                     {b.claim !== 'claimed' && <div className="text-xs text-red-600">Not claimed: {b.claim.replace(/^failed: /, '')}</div>}
                   </div>
@@ -99,7 +99,7 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
             </ul>
             {claimed < boards.length && (
               <p className="mt-1 text-xs text-muted">
-                Claim those on the Boards page, to this factory and the same line: their sensors are already matched to machines.
+                Claim those on the Boards page, to this factory: their sensors are already matched to machines.
               </p>
             )}
           </>

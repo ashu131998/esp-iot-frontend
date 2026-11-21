@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
+import { canTestAlerts, escalationMinutesInput, ESCALATE_OWNER_MINUTES, ESCALATE_SUPERVISOR_MINUTES, testableWorkers } from '@/lib/alert-settings';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
@@ -34,9 +35,10 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const { data: workersData } = useQuery({
     queryKey: ['workers', factoryId, 'alert-test'],
     queryFn: ({ signal }) => api.workers(factoryId, { limit: 200, status: 'active' }, { signal }),
-    enabled: Boolean(settings?.alertops_configured),
+    enabled: canTestAlerts(settings),
   });
-  const workers = workersData?.workers ?? [];
+  // With the alerts app, a test can only reach a worker who has a login for it.
+  const workers = testableWorkers(workersData?.workers ?? [], settings);
   const selectedWorker = workers.find((w) => w.worker_id === testWorkerId);
 
   useEffect(() => {
@@ -106,12 +108,23 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const update = (patch: Partial<AlertSettings>) => {
     const next = { ...draft, ...patch };
     setDraft(next);
+    // A wait that is not a whole number of minutes (the field left empty) is not sent: the saved one stays.
+    const supervisorWait = escalationMinutesInput(next.escalate_supervisor_minutes);
+    const ownerWait = escalationMinutesInput(next.escalate_owner_minutes);
     save.mutate({
       mobile_enabled: next.mobile_enabled,
       shift_reminder_minutes: next.shift_reminder_minutes,
       notify_owner_on_down: next.notify_owner_on_down,
       owner_contacts: next.owner_contacts,
+      ...(supervisorWait !== null && { escalate_supervisor_minutes: supervisorWait }),
+      ...(ownerWait !== null && { escalate_owner_minutes: ownerWait }),
     });
+  };
+
+  /** A wait field left with something that is not minutes goes back to what is saved; a good one is saved. */
+  const settleWait = (key: 'escalate_supervisor_minutes' | 'escalate_owner_minutes', fallback: number) => {
+    if (escalationMinutesInput(draft[key]) === null) setDraft({ ...draft, [key]: settings?.[key] ?? fallback });
+    else update({});
   };
 
   let tone: Tone = draft.mobile_enabled ? 'good' : 'idle';
@@ -206,7 +219,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         />
         <SettingRow
           label={t('Notify owners when a machine stops or starts')}
-          hint={t('Uses the phone numbers below')}
+          hint={t('Admins get these in the alerts app')}
           checked={draft.notify_owner_on_down}
           onChange={(v) => update({ notify_owner_on_down: v })}
         />
@@ -225,6 +238,20 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
             onBlur={() => update({})}
           />
         </div>
+        <WaitRow
+          label={t('Ask a supervisor when nobody answers')}
+          hint={t('Minutes after the stop (0 = never). The operators are rung again; Shift Supervisors with an app login are asked.')}
+          value={draft.escalate_supervisor_minutes ?? ESCALATE_SUPERVISOR_MINUTES}
+          onChange={(v) => setDraft({ ...draft, escalate_supervisor_minutes: v })}
+          onBlur={() => settleWait('escalate_supervisor_minutes', ESCALATE_SUPERVISOR_MINUTES)}
+        />
+        <WaitRow
+          label={t('Tell the owners when nobody answers')}
+          hint={t('Minutes after the stop (0 = never)')}
+          value={draft.escalate_owner_minutes ?? ESCALATE_OWNER_MINUTES}
+          onChange={(v) => setDraft({ ...draft, escalate_owner_minutes: v })}
+          onBlur={() => settleWait('escalate_owner_minutes', ESCALATE_OWNER_MINUTES)}
+        />
       </ListGroup>
 
       <ListGroup title={t('Owner phones')} count={draft.owner_contacts.length}>
@@ -265,10 +292,10 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
       <details className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-100">
         <summary className="cursor-pointer text-sm font-semibold text-foreground">{t('Test alerts')}</summary>
         <div className="mt-3 space-y-4 border-t border-gray-100 pt-3 text-sm">
-          {!draft.alertops_configured ? (
-            <p className="text-muted">{t('Test push needs the mobile app bridge on the server.')}</p>
+          {!canTestAlerts(draft) ? (
+            <p className="text-muted">{t('Test alerts need the alerts app set up on the server.')}</p>
           ) : workers.length === 0 ? (
-            <p className="text-muted">{t('Add workers on Team first.')}</p>
+            <p className="text-muted">{draft.app_configured ? t('No worker has an app login yet. Give one on the Team page.') : t('Add workers on Team first.')}</p>
           ) : (
             <div className="space-y-2">
               <p className="text-muted">{t('Send one test push to a worker.')}</p>
@@ -326,6 +353,40 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
           </div>
         </div>
       </details>
+    </div>
+  );
+}
+
+/** A wait in minutes: empty while being typed (NaN in the draft), a whole number once left. */
+function WaitRow({
+  label,
+  hint,
+  value,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  onChange: (next: number) => void;
+  onBlur: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-foreground">{label}</p>
+        <p className="text-sm text-muted">{hint}</p>
+      </div>
+      <Input
+        type="number"
+        min={0}
+        max={240}
+        inputMode="numeric"
+        className="w-20 text-center tabular-nums"
+        value={Number.isNaN(value) ? '' : value}
+        onChange={(e) => onChange(e.target.value === '' ? Number.NaN : Number(e.target.value))}
+        onBlur={onBlur}
+      />
     </div>
   );
 }

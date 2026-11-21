@@ -40,6 +40,35 @@ export function pushState(
   return 'off';
 }
 
+/**
+ * On a phone the signed-in app opens only once the phone rings (the user, 2026-11-21: "in iphone
+ * also, enabling notification in starting and pwa install is necessary to access the app"; "im
+ * hoping alerts.floorbeat.in and apk ui is same": the iPhone app and the Android app alike). What it
+ * shows until then (components/alerts-app/notifications-gate.tsx): the tap that turns them on, the
+ * way back when the phone blocked them, or a phone too old for them (update it).
+ */
+export type NotificationsStep = 'app' | 'checking' | 'turn-on' | 'blocked' | 'update';
+
+export function notificationsStep(state: PushState | 'checking'): NotificationsStep {
+  switch (state) {
+    case 'on':
+      return 'app';
+    // The server cannot send pushes yet: nothing this phone could do, so the app is not held back.
+    case 'server-off':
+      return 'app';
+    case 'off':
+      return 'turn-on';
+    case 'blocked':
+      return 'blocked';
+    // Inside the installed app, no Web Push at all: an iOS older than 16.4, or an old browser under the Android app.
+    case 'needs-install':
+    case 'unsupported':
+      return 'update';
+    default:   // still looking ('ok' is on its way to one of the above)
+      return 'checking';
+  }
+}
+
 /** A VAPID public key (base64url) as the bytes pushManager.subscribe takes. */
 export function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);

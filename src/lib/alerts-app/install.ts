@@ -45,6 +45,19 @@ export function isSafariBrowser(userAgent: string | null | undefined): boolean {
     && !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|Ddg\/|FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|Snapchat|YaBrowser/i.test(ua);
 }
 
+/**
+ * Whether the site offers itself as an installable web app (its manifest) here: only to an iPhone
+ * or an iPad (the user, 2026-11-21: "only on iphone"). Android has the APK: without the manifest,
+ * Chrome on Android cannot install the site as an app (its "Add to Home screen" makes a plain
+ * shortcut to a browser tab, which shows the download), and the APK does not need it. Computers get
+ * none either. Read on the server from the user agent: an iPad's Safari says it is a Mac, so Safari
+ * on a Mac counts (a Mac is still turned away by the page).
+ */
+export function webAppInstallable(userAgent: string | null | undefined): boolean {
+  const ua = userAgent ?? '';
+  return isIOS(ua) || (/Macintosh/i.test(ua) && isSafariBrowser(ua));
+}
+
 /** Safari itself on an iPhone (not Chrome or Firefox for iOS, which say CriOS / FxiOS). */
 export function isIOSSafari(userAgent: string | null | undefined): boolean {
   return isIOS(userAgent) && isSafariBrowser(userAgent);

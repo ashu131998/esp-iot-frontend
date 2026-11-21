@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isIOS, isIOSSafari, isStandalone, platformOf } from '@/lib/alerts-app/install';
 import {
-  appBase, appPath, asksQuestion, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
+  afterSignIn, appBase, appPath, asksQuestion, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
 } from '@/lib/alerts-app/model';
 import { notificationsStep, pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array } from '@/lib/alerts-app/push';
 import type { MyAlert } from '@/lib/alerts-app/types';
@@ -142,6 +142,24 @@ describe('the app\'s inner addresses', () => {
     expect(tabActive('inbox', '/settings')).toBe(false);
     expect(tabActive('settings', '/alerts-app/settings')).toBe(true);
     expect(tabActive('settings', '/')).toBe(false);
+  });
+});
+
+describe('where the app goes once signed in (the sign-in has no address of its own)', () => {
+  it('the page named in ?next=, else the page the sign-in was shown on, else the inbox', () => {
+    expect(afterSignIn('/settings', '/')).toBe('/settings');
+    expect(afterSignIn(null, '/alerts/ntf-1')).toBe('/alerts/ntf-1');
+    expect(afterSignIn(null, '/alerts/ntf-1?x=1')).toBe('/alerts/ntf-1?x=1');
+    expect(afterSignIn(null, '/')).toBe('/');
+    expect(afterSignIn(null, null)).toBe('/');
+  });
+
+  it('never the sign-in itself, never another site', () => {
+    expect(afterSignIn('/login', '/login')).toBe('/');
+    expect(afterSignIn('/login?next=%2Fsettings', null)).toBe('/');
+    expect(afterSignIn(null, '/alerts-app/login', '/alerts-app')).toBe('/alerts-app');   // the app's inner address: its own inbox
+    expect(afterSignIn('//evil.example', '/settings')).toBe('/settings');
+    expect(afterSignIn('https://evil.example/', null)).toBe('/');
   });
 });
 

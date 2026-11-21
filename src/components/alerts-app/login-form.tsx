@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -9,9 +9,9 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { AlertsApiError, appLogin } from '@/lib/alerts-app/api';
+import { afterSignIn } from '@/lib/alerts-app/model';
 import { useAppHref } from '@/lib/alerts-app/queries';
 import type { Plant } from '@/lib/alerts-app/types';
-import { useAuth } from '@/lib/auth-context';
 import { noteRestore, safeNextPath, shouldTryRestore } from '@/lib/auth-redirect';
 import { useT } from '@/lib/i18n/context';
 
@@ -25,12 +25,11 @@ function safeSessionStorage(): Storage | null {
 
 /**
  * Signing in to the app: a work email and a password, no factory to type. When the same email
- * and password sign in at several plants, the plants are listed to pick from.
+ * and password sign in at several plants, the plants are listed to pick from. It is shown at the
+ * address asked for (middleware.ts), and once signed in that page loads afresh (model.ts afterSignIn).
  */
 export function AppLoginForm() {
   const { t } = useT();
-  const { refresh } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const href = useAppHref();
   const next = safeNextPath(searchParams.get('next'));
@@ -58,7 +57,7 @@ export function AppLoginForm() {
       if (cancelled) return;
       if (ok) {
         noteRestore(storage);
-        window.location.replace(next ?? href('/'));
+        window.location.replace(afterSignIn(next, window.location.pathname + window.location.search, href('/')));
         return;
       }
       setRestoring(false);
@@ -72,6 +71,7 @@ export function AppLoginForm() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    let leaving = false;
     try {
       const result = await appLogin({ email: email.trim(), password, factory_id: factoryId });
       if (result.choose) {
@@ -79,16 +79,16 @@ export function AppLoginForm() {
         setFactoryId(result.choose[0]?.factory_id ?? null);
         return;
       }
-      await refresh();
-      router.replace(next ?? href('/'));
-      router.refresh();
+      // A fresh load of the page asked for: the server now serves it signed in.
+      leaving = true;
+      window.location.replace(afterSignIn(next, window.location.pathname + window.location.search, href('/')));
     } catch (err) {
       if (err instanceof AlertsApiError && err.status === 401) setError(t('Wrong email or password.'));
       else if (err instanceof AlertsApiError && err.status === 429) setError(t('Too many attempts. Wait a minute and try again.'));
       else if (err instanceof AlertsApiError) setError(err.message);
       else setError(t('Could not sign in. Check your connection and try again.'));
     } finally {
-      setLoading(false);
+      if (!leaving) setLoading(false);   // the button stays "Signing in…" while the page reloads
     }
   }
 

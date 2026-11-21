@@ -1,6 +1,7 @@
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { afterSignIn } from '@/lib/alerts-app/model';
 import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
@@ -151,6 +152,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   };
 
+  /** A redirect to a path that may carry its own query ("/alerts/ntf-1?x=1"). */
+  const redirectToPath = (target: string) => {
+    const url = req.nextUrl.clone();
+    const [path, ...query] = target.split('?');
+    url.pathname = path;
+    url.search = query.length ? `?${query.join('?')}` : '';
+    return NextResponse.redirect(url);
+  };
+
   /** Access JWT expired but refresh cookie may still be valid — renew without flashing the login page. */
   const redirectToSessionRestore = () => {
     const returnPath = `${pathname}${req.nextUrl.search}`;
@@ -186,9 +196,12 @@ export async function middleware(req: NextRequest) {
 
   let identity = await getIdentity(req);
 
-  // FloorBeat Alerts, the phone app (alerts.floorbeat.in): its pages at plain addresses — /login to
-  // sign in, / the inbox, /alerts/<id> one alert, /settings, /install — served from the app's
-  // /alerts-app/… inside. Any account signs in here; the staff console is not served.
+  // FloorBeat Alerts, the phone app (alerts.floorbeat.in): its pages at plain addresses — / the
+  // inbox, /alerts/<id> one alert, /settings, /install — served from the app's /alerts-app/… inside.
+  // Any account signs in here; the staff console is not served. The sign-in has no address of its
+  // own: signed out, the address asked for shows it in place, so an iPhone's Safari is never sent
+  // to a "login" page before the app is installed (the user, 2026-11-21), and the page is still
+  // the one asked for once signed in. An old /login link goes to the page it named, or to /.
   if (alertsApp) {
     const inner = pathname.match(/^\/alerts-app(\/.*)?$/);
     if (inner) return redirectTo(inner[1] ?? '/');
@@ -196,17 +209,10 @@ export async function middleware(req: NextRequest) {
     if (/^\/(f|factories)(\/|$)/.test(pathname)) return redirectTo('/');
     if (/^\/install\/?$/.test(pathname)) return securedRewrite('/alerts-app/install');
     if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
-    if (/^\/login\/?$/.test(pathname)) {
-      if (identity) return redirectTo('/');
-      return securedRewrite('/alerts-app/login');
-    }
+    if (/^\/login\/?$/.test(pathname)) return redirectToPath(afterSignIn(req.nextUrl.searchParams.get('next')));
     if (!identity) {
       if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
-      const next = pathname === '/' ? null : safeNextPath(`${pathname}${req.nextUrl.search}`);
-      const url = req.nextUrl.clone();
-      url.pathname = '/login';
-      url.search = next ? `?next=${encodeURIComponent(next)}` : '';
-      return NextResponse.redirect(url);
+      return securedRewrite('/alerts-app/login');
     }
     const page = pathname === '/' || /^\/alerts\/?$/.test(pathname) ? '' : pathname;   // /alerts is the inbox too
     return securedRewrite(`/alerts-app${page}`);

@@ -72,8 +72,9 @@ const CHECKS = [
   { part: 'app', name: 'old app factory link (old emails)', url: `${OLD_APP}/f/${ID}`, firstHop: `${APP}/`, status: 200, endsAt: `${APP}/login` },
   { part: 'app', name: 'old app dashboard link (old emails)', url: `${OLD_APP}/factories/${ID}/results`, firstHop: `${APP}/results`, status: 200, endsAt: `${APP}/login?next=%2Fresults` },
   // The FloorBeat Alerts app: its sign-in, its inbox while signed out, what a phone installs from
-  { part: 'app', name: 'alerts app sign-in', url: `${ALERTS}/login`, status: 200, contains: 'FloorBeat Alerts' },
-  { part: 'app', name: 'alerts app inbox while signed out', url: `${ALERTS}/`, status: 200, endsAt: `${ALERTS}/login` },
+  // The alerts app has no sign-in address: signed out, its own address shows the sign-in in place.
+  { part: 'app', name: 'alerts app while signed out', url: `${ALERTS}/`, status: 200, endsAt: `${ALERTS}/`, contains: 'FloorBeat Alerts' },
+  { part: 'app', name: 'alerts app old sign-in link', url: `${ALERTS}/login`, status: 200, firstHop: `${ALERTS}/`, endsAt: `${ALERTS}/` },
   { part: 'app', name: 'alerts app manifest', url: `${ALERTS}/alerts-app.webmanifest`, status: 200, contains: '"FloorBeat Alerts"' },
   { part: 'app', name: 'alerts app service worker', url: `${ALERTS}/alerts-sw.js`, status: 200, contains: 'showNotification' },
   { part: 'app', name: 'Android asset link', url: `${ALERTS}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.alerts' },

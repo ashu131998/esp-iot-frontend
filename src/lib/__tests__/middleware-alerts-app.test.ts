@@ -6,9 +6,10 @@ import { middleware } from '@/middleware';
 
 /**
  * The FloorBeat Alerts app's address (middleware.ts + lib/hosts.ts): alerts.floorbeat.in serves
- * the app at plain addresses — /login, / the inbox, /alerts/<id>, /settings, /install — from the
- * app's /alerts-app/… inside; anyone signed out goes to /login and comes back; the staff console
- * and factory pages are not served there.
+ * the app at plain addresses — / the inbox, /alerts/<id>, /settings, /install — from the app's
+ * /alerts-app/… inside; signed out, every address shows the sign-in in place (never a "login"
+ * address: an iPhone's Safari before the app is installed); the staff console and factory pages
+ * are not served there.
  */
 const SECRET = 'middleware-alerts-app-test-secret-32-chars';
 
@@ -44,19 +45,22 @@ const APP = 'https://alerts.floorbeat.in';
 const worker = { role: 'employee', factoryId: 'shree-mills' };
 
 describe('signed out', () => {
-  it('/ and every page go to /login, which comes back to the page asked for', async () => {
-    expect(await visit(`${APP}/`)).toMatchObject({ status: 307, to: '/login' });
-    expect((await visit(`${APP}/alerts/ntf-1`)).to).toBe('/login?next=%2Falerts%2Fntf-1');
-    expect((await visit(`${APP}/settings`)).to).toBe('/login?next=%2Fsettings');
+  it('every address shows the sign-in in place: no redirect, never a "login" address', async () => {
+    expect(await visit(`${APP}/`)).toMatchObject({ status: 200, to: null, served: '/alerts-app/login' });
+    expect(await visit(`${APP}/alerts/ntf-1`)).toMatchObject({ status: 200, to: null, served: '/alerts-app/login' });
+    expect((await visit(`${APP}/settings`)).served).toBe('/alerts-app/login');
   });
 
   it('a session that may still be renewed is renewed first (a notification tap after the 15 minutes)', async () => {
     expect((await visit(`${APP}/alerts/ntf-1`, { refresh: true })).to).toBe('/api/auth/session-restore?next=%2Falerts%2Fntf-1');
   });
 
-  it('/login is the app\'s own sign-in; /install and the reset page need no sign-in', async () => {
-    expect(await visit(`${APP}/login`)).toMatchObject({ status: 200, to: null, served: '/alerts-app/login' });
-    expect((await visit(`${APP}/login?next=%2Fsettings`)).served).toBe('/alerts-app/login?next=%2Fsettings');
+  it('an old /login link goes to the page it named, or to the app\'s address; /install and the reset page need no sign-in', async () => {
+    expect(await visit(`${APP}/login`)).toMatchObject({ status: 307, to: '/' });
+    expect((await visit(`${APP}/login?next=%2Fsettings`)).to).toBe('/settings');
+    expect((await visit(`${APP}/login?next=%2Falerts%2Fntf-1%3Fx%3D1`)).to).toBe('/alerts/ntf-1?x=1');
+    expect((await visit(`${APP}/login?next=%2F%2Fevil.example`)).to).toBe('/');
+    expect((await visit(`${APP}/login?next=%2Flogin`)).to).toBe('/');
     expect(await visit(`${APP}/install`)).toMatchObject({ status: 200, served: '/alerts-app/install' });
     expect(await visit(`${APP}/reset-password?token=t`)).toMatchObject({ status: 200, to: null, served: null });
   });
@@ -69,6 +73,7 @@ describe('signed in', () => {
     expect((await visit(`${APP}/alerts/ntf-1`, worker)).served).toBe('/alerts-app/alerts/ntf-1');
     expect((await visit(`${APP}/settings`, worker)).served).toBe('/alerts-app/settings');
     expect((await visit(`${APP}/login`, worker)).to).toBe('/');
+    expect((await visit(`${APP}/login?next=%2Fsettings`, worker)).to).toBe('/settings');
   });
 
   it('any account: a factory admin, a company admin, the super admin', async () => {
@@ -112,7 +117,7 @@ describe('the address', () => {
 
 describe('the service worker', () => {
   it('is allowed by the content security policy (worker-src) on every page', async () => {
-    expect((await visit(`${APP}/login`)).csp).toContain("worker-src 'self'");
+    expect((await visit(`${APP}/`)).csp).toContain("worker-src 'self'");
     expect((await visit('https://shree-mills.floorbeat.in/login')).csp).toContain("worker-src 'self'");
   });
 });

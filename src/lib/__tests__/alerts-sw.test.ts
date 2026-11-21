@@ -35,13 +35,20 @@ function boot(windows: Array<Record<string, unknown>> = []) {
   // the Cache API, as far as the worker uses it: one store of responses by path
   const stored = new Map<string, Response>();
   const caches = { open: async () => ({ put: async (k: string, r: Response) => { stored.set(k, r); }, match: async (k: string) => stored.get(k)?.clone() ?? undefined }) };
-  vm.runInNewContext(code, { self, fetch: fetchMock, Response, Date, JSON, String, Boolean, Number, Promise, Intl, console, caches });
+  // what the worker broadcasts to every page of the app (BroadcastChannel)
+  const broadcasts: Array<{ channel: string; message: unknown }> = [];
+  class BroadcastChannel {
+    constructor(private readonly name: string) {}
+    postMessage(message: unknown) { broadcasts.push({ channel: this.name, message }); }
+    close() {}
+  }
+  vm.runInNewContext(code, { self, fetch: fetchMock, Response, Date, JSON, String, Boolean, Number, Promise, Intl, console, caches, BroadcastChannel });
   const fire = async (name: string, event: Record<string, unknown>) => {
     const waits: unknown[] = [];
     await listeners.get(name)!({ ...event, waitUntil: (p: unknown) => waits.push(p), respondWith: (p: unknown) => waits.push(p) });
     return Promise.all(waits);
   };
-  return { self, listeners, shown, opened, subscribe, fetchMock, fire };
+  return { self, listeners, shown, opened, subscribe, fetchMock, fire, stored, broadcasts };
 }
 
 const payload = (data: Record<string, unknown>) => ({ json: () => ({ title: '🔴 Loom 3 is DOWN', body: 'Loom 3 stopped at 10:02', data }), text: () => '' });
@@ -59,6 +66,12 @@ describe('a push', () => {
       }),
     }]);
     expect(page.postMessage).toHaveBeenCalledWith({ type: 'alert', notification_id: 'ntf-1', url: '/alerts/ntf-1' });
+  });
+
+  it('also broadcasts it to every page of the app: a phone may not list the window, or not pass the message on', async () => {
+    const { broadcasts, fire } = boot();
+    await fire('push', { data: payload({ notification_id: 'ntf-1', url: '/alerts/ntf-1' }) });
+    expect(broadcasts).toEqual([{ channel: 'fb-alerts', message: { type: 'alert', notification_id: 'ntf-1', url: '/alerts/ntf-1' } }]);
   });
 
   it('a MEDIUM one may be swiped away; one without an id has no tag', async () => {
@@ -86,6 +99,16 @@ describe('a push', () => {
     expect(targetUrl({ url: 'https://evil.example/x' })).toBe('/');
     expect(targetUrl({ url: '/\\evil' })).toBe('/');
     expect(targetUrl(undefined)).toBe('/');
+  });
+
+  it('a tap handed over without its data still opens the alert its tag names', () => {
+    const { self } = boot();
+    const { targetUrl } = (self as unknown as { __floorbeatAlerts: { targetUrl: (d: unknown, tag?: unknown) => string } }).__floorbeatAlerts;
+    expect(targetUrl(null, 'alert:ntf-7')).toBe('/alerts/ntf-7');
+    expect(targetUrl({}, 'alert:9b2f-41aa')).toBe('/alerts/9b2f-41aa');
+    expect(targetUrl({ url: '/' }, 'alert:test-1')).toBe('/');   // the data says, when it is there
+    expect(targetUrl(null, 'alert:../x')).toBe('/');
+    expect(targetUrl(null, 'other')).toBe('/');
   });
 });
 
@@ -151,10 +174,62 @@ describe('a tap on the notification', () => {
 
   it('tells a window it cannot steer where to go', async () => {
     const page = { focus: vi.fn(async () => page), postMessage: vi.fn() };
-    const { fire } = boot([page]);
+    const { broadcasts, fire } = boot([page]);
     await fire('notificationclick', { notification: notification('/alerts/ntf-1') });
     expect(page.postMessage).toHaveBeenCalledWith({ type: 'open', url: '/alerts/ntf-1' });
+    expect(broadcasts.map((b) => b.message)).toEqual([{ type: 'open', url: '/alerts/ntf-1' }]);
     expect(page.focus).toHaveBeenCalled();
+  });
+
+  it('brings the window forward first, while the tap allows it, then steers it', async () => {
+    const order: string[] = [];
+    const page = {
+      focus: vi.fn(async () => { order.push('focus'); return page; }),
+      navigate: vi.fn(async () => { order.push('navigate'); return page; }),
+      postMessage: vi.fn(),
+    };
+    const { fire } = boot([page]);
+    await fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(order).toEqual(['focus', 'navigate']);
+    expect(page.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('a window the phone will not let it steer, or that it may not bring forward, still gets there: told to go itself', async () => {
+    const refused = { focus: vi.fn(async () => { throw new Error('not allowed'); }), navigate: vi.fn(async () => { throw new TypeError('not controlled'); }), postMessage: vi.fn() };
+    let s = boot([refused]);
+    await s.fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(refused.navigate).toHaveBeenCalledWith('/alerts/ntf-1');
+    expect(refused.postMessage).toHaveBeenCalledWith({ type: 'open', url: '/alerts/ntf-1' });
+    const nowhere = { focus: vi.fn(async () => nowhere), navigate: vi.fn(async () => null), postMessage: vi.fn() };
+    s = boot([nowhere]);
+    await s.fire('notificationclick', { notification: notification('/alerts/ntf-2') });
+    expect(nowhere.postMessage).toHaveBeenCalledWith({ type: 'open', url: '/alerts/ntf-2' });
+  });
+
+  it('steers the window in front when there are several', async () => {
+    const behind = { focus: vi.fn(async () => behind), navigate: vi.fn(async () => behind), postMessage: vi.fn(), visibilityState: 'hidden' };
+    const shown = { focus: vi.fn(async () => shown), navigate: vi.fn(async () => shown), postMessage: vi.fn(), visibilityState: 'visible' };
+    const { fire } = boot([behind, shown]);
+    await fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(shown.navigate).toHaveBeenCalledWith('/alerts/ntf-1');
+    expect(behind.navigate).not.toHaveBeenCalled();
+  });
+
+  it('notes the alert before anything else, for an app that opens at its start page (lib/alerts-app/open.ts)', async () => {
+    const { stored, opened, fire } = boot();
+    const before = Date.now();
+    await fire('notificationclick', { notification: { close: vi.fn(), data: null, tag: 'alert:ntf-5' } });
+    expect(opened).toEqual(['/alerts/ntf-5']);
+    const note = await stored.get('/__open')!.clone().json();
+    expect(note.url).toBe('/alerts/ntf-5');
+    expect(note.at).toBeGreaterThanOrEqual(before);
+  });
+
+  it('no window and none could be opened: the pages are told all the same', async () => {
+    const { self, broadcasts, fire } = boot();
+    (self.clients.openWindow as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+    await fire('notificationclick', { notification: notification('/alerts/ntf-3') });
+    expect(broadcasts.map((b) => b.message)).toEqual([{ type: 'open', url: '/alerts/ntf-3' }]);
   });
 });
 

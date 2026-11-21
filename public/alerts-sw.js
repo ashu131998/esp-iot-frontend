@@ -12,7 +12,10 @@ const ICON = '/alerts-icon-192.png';
 const BADGE = '/alerts-badge-96.png';
 const INBOX = '/';
 const APP_NAME = 'FloorBeat Alerts';
+// The same names as src/lib/alerts-app/open.ts: the page reads the note and hears the channel.
 const SETTINGS_CACHE = 'fb-alerts-settings';
+const OPEN_KEY = '/__open';
+const CHANNEL = 'fb-alerts';
 
 // ── the person's language ─────────────────────────────────────────────────────────────────────────
 // The page tells the worker the language (sw-boot.tsx); it is kept in the Cache API, which outlives
@@ -136,9 +139,15 @@ function parsePush(data) {
   }
 }
 
-/** Where a tap goes: a page of this app (a path), never another site; the inbox otherwise. */
-function targetUrl(data) {
-  const url = data && typeof data.url === 'string' ? data.url : INBOX;
+/**
+ * Where a tap goes: a page of this app (a path), never another site; the inbox otherwise. The
+ * notification's data says; when a phone hands the tap over without it, its tag ("alert:<id>") still
+ * names the alert.
+ */
+function targetUrl(data, tag) {
+  const fromData = data && typeof data.url === 'string' ? data.url : null;
+  const fromTag = typeof tag === 'string' && /^alert:[A-Za-z0-9_-]+$/.test(tag) ? `/alerts/${tag.slice('alert:'.length)}` : null;
+  const url = fromData || fromTag || INBOX;
   return /^\/(?![/\\])/.test(url) ? url : INBOX;
 }
 
@@ -162,7 +171,20 @@ function notificationFor(push, locale) {
   };
 }
 
+/**
+ * Tells the open pages of the app, two ways: a message to each window found, and a broadcast every
+ * page of the app hears (a phone may not list a window, or not pass the message on).
+ */
 async function tellPages(message) {
+  try {
+    if (typeof BroadcastChannel === 'function') {
+      const channel = new BroadcastChannel(CHANNEL);
+      channel.postMessage(message);
+      channel.close();
+    }
+  } catch {
+    // no channels here: the messages alone
+  }
   const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   for (const page of pages) page.postMessage(message);
 }
@@ -183,27 +205,55 @@ self.addEventListener('message', (event) => {
   if (data.type === 'locale') event.waitUntil(rememberLocale(data.locale));
 });
 
-/** An open window of the app goes to the alert and comes to the front; else one is opened. */
+/**
+ * The note of the alert a tap opens (src/lib/alerts-app/open.ts): the app reads it when it starts and
+ * when it comes to the front, so a phone that opens the app at its start page still lands on the alert.
+ */
+async function rememberOpen(url) {
+  try {
+    const cache = await caches.open(SETTINGS_CACHE);
+    await cache.put(OPEN_KEY, new Response(JSON.stringify({ url, at: Date.now() }), { headers: { 'Content-Type': 'application/json' } }));
+  } catch {
+    // no cache here: the window is steered alone
+  }
+}
+
+/**
+ * An open window of the app comes to the front (while the tap still allows it) and goes to the alert;
+ * one the phone will not let this steer is told to go there itself. With no window, one is opened.
+ */
 async function openAlert(url) {
   const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  const page = pages[0];
-  if (!page) return self.clients.openWindow(url);
-  if (typeof page.navigate === 'function') {
-    try {
-      await page.navigate(url);
-    } catch {
-      page.postMessage({ type: 'open', url });
-    }
-  } else {
-    page.postMessage({ type: 'open', url });
+  const page = pages.find((p) => p.focused) || pages.find((p) => p.visibilityState === 'visible') || pages[0];
+  if (!page) {
+    const opened = await self.clients.openWindow(url);
+    if (!opened) await tellPages({ type: 'open', url });
+    return opened;
   }
-  if (typeof page.focus === 'function') await page.focus();
-  return page;
+  let front = page;
+  if (typeof page.focus === 'function') {
+    try {
+      front = (await page.focus()) || page;
+    } catch {
+      // not allowed to bring it forward: steered all the same
+    }
+  }
+  if (typeof front.navigate === 'function') {
+    try {
+      const moved = await front.navigate(url);
+      if (moved) return moved;
+    } catch {
+      // not steerable (not this worker's yet, or the phone refuses): the page goes itself
+    }
+  }
+  await tellPages({ type: 'open', url });
+  return front;
 }
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(openAlert(targetUrl(event.notification.data)));
+  const url = targetUrl(event.notification.data, event.notification.tag);
+  event.waitUntil(rememberOpen(url).then(() => openAlert(url)));
 });
 
 /** The CSRF cookie the BFF wants on a write, where a worker can read cookies (Cookie Store API). */
@@ -252,4 +302,4 @@ self.addEventListener('fetch', (event) => {
 });
 
 // For the tests.
-self.__floorbeatAlerts = { parsePush, notificationFor, targetUrl, openAlert, wordsFor, readLocale };
+self.__floorbeatAlerts = { parsePush, notificationFor, targetUrl, openAlert, rememberOpen, wordsFor, readLocale };

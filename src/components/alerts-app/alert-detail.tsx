@@ -5,11 +5,12 @@ import { CheckCircle2, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { AlertCameraCard } from '@/components/alerts-app/alert-camera';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TONE_DOT } from '@/components/ui/simple';
 import { AlertsApiError, alertsApi } from '@/lib/alerts-app/api';
-import { ALERTS_QUERY_KEY, alertQueryKey, asksQuestion, optionsOf, severityTone, typeLabel } from '@/lib/alerts-app/model';
+import { ALERTS_QUERY_KEY, alertQueryKey, asksQuestion, cameraOf, optionsOf, severityTone, typeLabel } from '@/lib/alerts-app/model';
 import { alertWords, reasonWords } from '@/lib/alerts-app/view';
 import { useAppHref } from '@/lib/alerts-app/queries';
 import type { AlertOption, MyAlert } from '@/lib/alerts-app/types';
@@ -17,7 +18,10 @@ import { formatFullDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
-/** One alert: what happened, where and when, and the answers it asks for; marked read on opening. */
+/**
+ * One alert: what happened, where and when, and the answers it asks for; a camera's, its picture and
+ * the camera live; marked read on opening.
+ */
 export function AlertDetail({ id }: { id: string }) {
   const tr = useT();
   const { t } = tr;
@@ -83,6 +87,7 @@ export function AlertDetail({ id }: { id: string }) {
   const replyError = reply.error instanceof AlertsApiError ? reply.error : null;
   const words = alertWords(alert, tr);
   const isReason = alert.payload?.kind === 'downtime_reason';
+  const camera = cameraOf(alert);
 
   return (
     <div className="space-y-4">
@@ -100,6 +105,8 @@ export function AlertDetail({ id }: { id: string }) {
         <p className="mt-0.5 text-sm text-muted">{formatFullDateTime(alert.created_at, 'en')}</p>
         <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">{words.body ?? alert.message}</p>
       </article>
+
+      {camera && <AlertCameraCard alertId={alert.notification_id} camera={camera} />}
 
       {(open || answered) && (
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
@@ -145,6 +152,7 @@ function KindLabel({ alert }: { alert: Pick<MyAlert, 'type'> }) {
     case 'Machine stopped': return <span>{t('Machine stopped')}</span>;
     case 'Machine running again': return <span>{t('Machine running again')}</span>;
     case 'Shift reminder': return <span>{t('Shift reminder')}</span>;
+    case 'Camera': return <span>{t('Camera')}</span>;
     case 'Test alert': return <span>{t('Test alert')}</span>;
     default: return <span>{t('Alert')}</span>;
   }

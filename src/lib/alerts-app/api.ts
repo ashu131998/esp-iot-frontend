@@ -5,6 +5,7 @@
 import { getClientCsrf } from '@/lib/auth-context';
 import type { AuthUser } from '@/lib/auth-types';
 import { ensureCsrfToken } from '@/lib/csrf';
+import type { LiveStart, LiveStatus } from '@/lib/live';
 import { fetchWithSignal } from '@/lib/request-signal';
 
 import type { MyAlert, MyAlertsPage, Plant, PushKey, PushSubscriptionBody, ReplyResult, TestPushResult } from './types';
@@ -42,6 +43,9 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; si
 
 const ME = '/api/v1/me';
 
+/** The picture sent with a camera alert, for an <img> (a JPEG through the app's own address). */
+export const alertPictureUrl = (id: string) => `${ME}/alerts/${encodeURIComponent(id)}/picture`;
+
 export const alertsApi = {
   key: (signal?: AbortSignal | null) => call<PushKey>(`${ME}/push/key`, { signal }),
   subscribe: (body: PushSubscriptionBody) => call<{ subscription_id: string; devices: number }>(`${ME}/push/subscriptions`, { method: 'POST', body }),
@@ -59,6 +63,11 @@ export const alertsApi = {
   markRead: (id: string) => call<{ read_at: string }>(`${ME}/alerts/${encodeURIComponent(id)}/read`, { method: 'POST' }),
   markAllRead: () => call<{ read: number }>(`${ME}/alerts/read-all`, { method: 'POST' }),
   reply: (id: string, optionId: string) => call<ReplyResult>(`${ME}/alerts/${encodeURIComponent(id)}/reply`, { method: 'POST', body: { option_id: optionId } }),
+
+  /** A camera alert's camera, live (lib/live.ts): the camera told to start, and a link to its stream. */
+  startLive: (id: string) => call<LiveStart>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { method: 'POST', body: {} }),
+  /** How that live view is going: frames arriving, how many a second. */
+  liveStatus: (id: string, signal?: AbortSignal | null) => call<LiveStatus>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { signal }),
 
   /** The plants this account can be at, by name, and the one it is at (for the settings page). */
   plants: (signal?: AbortSignal | null) => call<{ plants: Plant[]; current: string | null }>('/api/v1/auth/plants', { signal }),

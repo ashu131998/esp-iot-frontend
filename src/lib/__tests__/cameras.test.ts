@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  EVENT_TONE, PICTURE_EVERY, cameraTitle, eventWords, pictureEveryWord, pictureKindWord, pictureUrl, summaryWords, type Camera,
+  EVENT_TONE, PICTURE_EVERY, cameraTitle, eventWords, isVisit, pictureEveryWord, pictureKindWord, pictureUrl, stayWords, summaryWords,
+  truckNowWords, visitWords, type Camera,
 } from '@/lib/cameras';
 import { englishTranslator } from '@/lib/i18n/translate';
 
@@ -29,6 +30,23 @@ describe('the Cameras page words', () => {
     expect(pictureKindWord({ kind: 'alert', state: 'truck' }, t)).toBe('A truck');
     expect(pictureKindWord({ kind: 'alert', state: 'hand' }, t)).toBe('A hand in front of the camera');
     expect(pictureKindWord({ kind: 'alert', state: 'blocked' }, t)).toBe('Something in front of it');
+  });
+
+  it('a truck\'s visit: how long it was there, still here, how many; a visit is told from a sighting by its id', () => {
+    expect([0, 40, 60, 130, 3600, 3900].map((s) => stayWords(s, t))).toEqual(['0 s', '40 s', '1 m', '2 m 10 s', '1 h', '1 h 5 m']);
+    const at = '2026-11-21T06:40:00.000Z';
+    expect(visitWords({ occurred_at: at, ended_at: '2026-11-21T06:42:10.000Z', count: 1 }, t)).toBe('A truck · there 2 m 10 s');
+    expect(visitWords({ occurred_at: at, ended_at: null, count: 2 }, t)).toBe('2 trucks · still here');
+    expect([isVisit({ id: 'v3' }), isVisit({ id: 's3' }), isVisit({ id: 3 })]).toEqual([true, false, false]);
+    expect(truckNowWords({ since: at, count: 1 }, '12:10:00 pm', tn)).toBe('A truck is here now (since 12:10:00 pm)');
+    expect(truckNowWords({ since: at, count: 3 }, '12:10:00 pm', tn)).toBe('3 trucks are here now (since 12:10:00 pm)');
+  });
+
+  it('a truck there now comes first after something in front; an offline camera\'s is not counted', () => {
+    const gate = cam({ machine_name: 'Gate 1', truck: { since: '2026-11-21T06:40:00.000Z', count: 2 } });
+    expect(summaryWords([gate, cam({ board_id: 'cam-b2', online: false })], t, tn))
+      .toEqual({ tone: 'warn', badge: 2, title: '2 trucks are here now', subtitle: 'Camera at Gate 1: watch it live.' });
+    expect(summaryWords([cam({ truck: { since: '2026-11-21T06:40:00.000Z', count: 1 }, online: false })], t, tn).title).toBe('1 camera is offline');
   });
 
   it('how often a picture, in words', () => {

@@ -4,6 +4,7 @@
  * when, how long it was down, the shift — so the app can say it in Hindi or Gujarati. An older
  * alert without them shows its English text. Pure: tested in lib/__tests__/alerts-app-view.test.ts.
  */
+import { stayWords } from '@/lib/cameras';
 import { formatTime } from '@/lib/format';
 import type { Translator } from '@/lib/i18n/translate';
 
@@ -26,6 +27,9 @@ export interface AlertFacts {
   operators?: string[] | null;
   /** A camera's id: something in front of it (camera_blocked), a truck or a hand its models saw (camera_truck / _hand). */
   camera?: string | null;
+  /** How many trucks (camera_truck, camera_truck_left); how long the truck stayed (camera_truck_left). */
+  count?: number | null;
+  stay_s?: number | null;
 }
 
 export interface AlertWords {
@@ -135,11 +139,25 @@ export function alertWords(alert: MyAlert, tr: Translator): AlertWords {
     case 'camera_hand': {
       const camera = facts.camera || t('A camera');
       const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      const n = Math.max(1, Number(facts.count ?? 1));
       return {
-        title: facts.kind === 'camera_truck' ? t('A truck at {camera}', { camera: where }) : t('A hand in front of {camera}', { camera: where }),
+        title: facts.kind === 'camera_truck'
+          ? (n > 1 ? t('{count} trucks at {camera}', { count: n, camera: where }) : t('A truck at {camera}', { camera: where }))
+          : t('A hand in front of {camera}', { camera: where }),
         body: time
           ? t('Seen at {time}. Its picture and live view are on the Cameras page.', { time })
           : t('Its picture and live view are on the Cameras page.'),
+      };
+    }
+    // The truck has gone (firmware 2.9.9: the camera's picture once still showed none).
+    case 'camera_truck_left': {
+      const camera = facts.camera || t('A camera');
+      const where = facts.machine ? t('{camera} at {machine}', { camera, machine: facts.machine }) : camera;
+      const n = Math.max(1, Number(facts.count ?? 1));
+      const stay = facts.stay_s != null ? stayWords(facts.stay_s, t) : null;
+      return {
+        title: n > 1 ? t('{count} trucks left {camera}', { count: n, camera: where }) : t('The truck left {camera}', { camera: where }),
+        body: time && stay ? t('Left at {time}; it was there {stay}.', { time, stay }) : time ? t('Left at {time}.', { time }) : null,
       };
     }
     default:

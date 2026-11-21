@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
+import { LiveSheet } from '@/components/cam/live-view';
+import { BoardWifiSheet } from '@/components/internal/board-wifi-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -19,7 +21,7 @@ import {
   type BoardChannel, type BoardSettings,
 } from '@/lib/board-settings';
 import {
-  SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
+  SHARED_CLIENT_KIND, batteryClock, boxWifi, firmware, isCamera, isRescueBox, loginStatus, onboarded, queue, restrictionPlan, serviceLoginStatus,
   selfTest, serviceName, supply, timeSource, wifi, type AdminBoard, type BrokerLogins,
 } from '@/lib/board-status';
 import { installsRemoteUpdates, targetLabel, boardTargetOf, updateStatus, versionsFor } from '@/lib/firmware';
@@ -159,7 +161,10 @@ function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => 
   );
 }
 
-/** Claim a new board (or move one): factory, line and settings; it gets its own login with them. */
+/**
+ * Claim a new board (or move one): its factory and settings; it gets its own login with them. Nobody
+ * picks its line: the server puts it on the line its machines are on (else the factory's first).
+ */
 function ClaimDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   if (isRescueBox(board)) return <ClaimBoxDialog box={board} onClose={onClose} />;
   return <ClaimBoardDialog board={board} onClose={onClose} />;
@@ -213,56 +218,54 @@ function ClaimBoxDialog({ box, onClose }: { box: AdminBoard; onClose: () => void
 function ClaimBoardDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
   const queryClient = useQueryClient();
   const unclaimed = board.factory_id === UNCLAIMED;
+  const camera = isCamera(board);
   const [factoryId, setFactoryId] = useState(unclaimed ? '' : (board.factory_id ?? ''));
-  const [lineId, setLineId] = useState(unclaimed ? '' : (board.line_id ?? ''));
   const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
   const factoriesQuery = useQuery({ queryKey: ['admin-factories'], queryFn: ({ signal }) => api.adminFactories({ signal }) });
-  const linesQuery = useQuery({
-    queryKey: ['lines', factoryId],
-    queryFn: ({ signal }) => api.lines(factoryId, { limit: 200, offset: 0 }, { signal }),
-    enabled: Boolean(factoryId),
-  });
   const claim = useMutation({
-    mutationFn: () => api.adminBoardClaim(board.board_id, { factory_id: factoryId, line_id: lineId, settings: draft }),
+    mutationFn: () => api.adminBoardClaim(board.board_id, { factory_id: factoryId, settings: draft }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
       onClose();
     },
   });
-  const ready = Boolean(factoryId && lineId) && settingsProblems(draft).length === 0;
+  const ready = Boolean(factoryId) && (camera || settingsProblems(draft).length === 0);
   return (
     <Modal
       open
       onClose={onClose}
       title={`${unclaimed ? 'Claim' : 'Move'} · ${board.board_id}`}
-      description="The board gets its factory and line, these settings and a login of its own (firmware 2.1+), all at once."
+      description={camera
+        ? 'The camera gets its factory and a login of its own, all at once. It shows on the factory\'s Cameras page.'
+        : 'The board gets its factory, these settings and a login of its own (firmware 2.1+), all at once.'}
       className="max-w-3xl"
     >
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+      <div className="mb-4 max-w-sm">
         <Field label="Factory">
-          <Select value={factoryId} onChange={(e) => { setFactoryId(e.target.value); setLineId(''); }}>
+          <Select value={factoryId} onChange={(e) => setFactoryId(e.target.value)}>
             <option value="">Choose…</option>
             {(factoriesQuery.data?.factories ?? []).map((f) => (
               <option key={f.factory_id} value={f.factory_id}>{f.name ?? f.factory_id}</option>
             ))}
           </Select>
         </Field>
-        <Field label="Line">
-          <Select value={lineId} disabled={!factoryId} onChange={(e) => setLineId(e.target.value)}>
-            <option value="">Choose…</option>
-            {(linesQuery.data?.lines ?? []).map((l) => (
-              <option key={l.line_id} value={l.line_id}>{l.name ?? l.line_id}</option>
-            ))}
-          </Select>
-        </Field>
       </div>
-      {!board.settings && <DefaultsWarning />}
-      <SettingsFields draft={draft} setDraft={setDraft} />
+      {camera ? (
+        <p className="rounded-md bg-violet-50 p-3 text-xs text-violet-900">
+          A camera has no sensor channels to set. After the claim, switch the Cameras page on for the factory (Pages &amp;
+          branding): its live view, pictures and alerts are there.
+        </p>
+      ) : (
+        <>
+          {!board.settings && <DefaultsWarning />}
+          <SettingsFields draft={draft} setDraft={setDraft} />
+        </>
+      )}
       {claim.isError && <p className="mt-3 text-xs text-red-700">{(claim.error as Error).message}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
         <Button disabled={!ready || claim.isPending} onClick={() => claim.mutate()}>
-          {claim.isPending ? 'Sending…' : unclaimed ? 'Claim board' : 'Move board'}
+          {claim.isPending ? 'Sending…' : `${unclaimed ? 'Claim' : 'Move'} ${camera ? 'camera' : 'board'}`}
         </Button>
       </div>
     </Modal>
@@ -464,6 +467,8 @@ export function BoardsPanel() {
   const [loginFor, setLoginFor] = useState<AdminBoard | null>(null);
   const [claiming, setClaiming] = useState<AdminBoard | null>(null);
   const [updating, setUpdating] = useState<AdminBoard | null>(null);
+  const [wifiFor, setWifiFor] = useState<AdminBoard | null>(null);
+  const [liveFor, setLiveFor] = useState<AdminBoard | null>(null);
   const boardsQuery = useQuery({
     queryKey: BOARDS_KEY,
     queryFn: ({ signal }) => api.adminBoards({ signal }),
@@ -509,7 +514,10 @@ export function BoardsPanel() {
             <TBody>
               {boards.map((b) => (
                 <TR key={b.board_id}>
-                  <TD className="font-mono text-xs">{b.board_id}</TD>
+                  <TD className="whitespace-nowrap font-mono text-xs">
+                    {b.board_id}
+                    {isCamera(b) && <Badge className="ml-2 bg-violet-50 font-sans text-violet-700">Camera</Badge>}
+                  </TD>
                   <TD className="text-xs">
                     {b.factory_id === UNCLAIMED
                       ? <Badge className="bg-blue-50 text-blue-700">New — not claimed</Badge>
@@ -542,13 +550,30 @@ export function BoardsPanel() {
                         <Button size="sm" variant={b.factory_id === UNCLAIMED ? 'primary' : 'secondary'} disabled={broker !== 'ok'} onClick={() => setClaiming(b)}>
                           {b.factory_id === UNCLAIMED ? 'Claim' : 'Move'}
                         </Button>
-                        <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>
+                        {isCamera(b)
+                          ? (
+                            <Button
+                              size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED}
+                              title="Its live view (firmware 2.9.5); its pictures and alerts are on the factory's Cameras page"
+                              onClick={() => setLiveFor(b)}
+                            >
+                              Live
+                            </Button>
+                          )
+                          : <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>}
                         <Button
                           size="sm" variant="secondary" disabled={broker !== 'ok' || !b.settings}
                           title={b.settings ? undefined : 'Send its settings first'}
                           onClick={() => setLoginFor(b)}
                         >
                           Own login
+                        </Button>
+                        <Button
+                          size="sm" variant="secondary" disabled={b.factory_id === UNCLAIMED}
+                          title={b.factory_id === UNCLAIMED ? 'Claim it first' : 'Its own WiFi networks, on top of its factory\'s'}
+                          onClick={() => setWifiFor(b)}
+                        >
+                          WiFi
                         </Button>
                         <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setUpdating(b)}>
                           Update
@@ -571,6 +596,8 @@ export function BoardsPanel() {
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
       {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}
+      {wifiFor && <BoardWifiSheet board={wifiFor} onClose={() => setWifiFor(null)} />}
+      {liveFor && <LiveSheet scope={null} boardId={liveFor.board_id} title={`Live · ${liveFor.board_id}`} onClose={() => setLiveFor(null)} />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { factoryFromHost, isAlertsAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
+import { liveImageOrigin } from '@/lib/live';
 
 /**
  * Edge middleware: route protection + RBAC redirects, per-request CSP nonce, and
@@ -99,12 +100,14 @@ export async function middleware(req: NextRequest) {
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV !== 'production';
+  const liveOrigin = liveImageOrigin({ API_PUBLIC_ORIGIN: process.env.API_PUBLIC_ORIGIN, API_INTERNAL_URL: process.env.API_INTERNAL_URL });
 
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob:`,
+    // A camera's live view plays straight from the API (lib/live.ts): its origin, set per environment.
+    `img-src 'self' data: blob:${liveOrigin ? ` ${liveOrigin}` : ''}`,
     `font-src 'self' data:`,
     `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
     `worker-src 'self'`,   // the alerts app's service worker (public/alerts-sw.js)

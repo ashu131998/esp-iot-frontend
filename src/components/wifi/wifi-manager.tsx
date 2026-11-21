@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, LifeBuoy, Plus, Trash2, Wifi } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, LifeBuoy, Lock, Plus, Trash2, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,12 +11,15 @@ import { Field, Input } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { SummaryCard, TONE_DOT, type Tone as DotTone } from '@/components/ui/simple';
 import { PHONE_HIDDEN, TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
+import { BoardWifiPanel, SignalIcon, signalText } from '@/components/wifi/board-wifi-panel';
 import { api } from '@/lib/api';
 import type { Tone } from '@/lib/board-status';
+import { boardName } from '@/lib/board-wifi';
+import { useT } from '@/lib/i18n/context';
 import { formatDate } from '@/lib/utils';
 import {
-  MAX_NETWORKS, boardsOn, dropReason, listChanged, listProblem, listStatus, networkProblem, readiness, rescueCoverage,
-  rescueHeard, signal, type RescueBox, type WifiBoard, type WifiNetwork, type WifiPage,
+  MAX_NETWORKS, boardsOn, editableNetworks, listChanged, listProblem, listStatus, networkProblem, onlineSummary, readiness,
+  rescueCoverage, signal, type NamedNetwork, type RescueBox, type WifiBoard, type WifiNetwork, type WifiPage,
 } from '@/lib/wifi';
 
 const dotTone = (t: Tone): DotTone => (t === 'neutral' ? 'idle' : t);
@@ -49,198 +52,198 @@ function Secret({ value, label }: { value: string; label: string }) {
 }
 
 /**
- * A factory's WiFi for its boards (firmware 2.5+), in the factory app and in ops: the networks,
- * whether every board has the latest list, the steps for changing WiFi without losing a board, and
- * its rescue boxes for when the router was changed first.
+ * A factory's WiFi page, kept simple (2026-11): whether its boards are online; each board, by the machines it
+ * measures, opening its WiFi as on a phone (the networks it sees, Connect, Retry); the networks every board
+ * of the factory keeps. Everyone of the factory sees it and connects boards; its admins (and our super
+ * admin) also see the passwords, change the list and find the router steps and the rescue boxes.
  */
 export function WifiManager({ factoryId }: { factoryId: string }) {
-  const qc = useQueryClient();
+  const { t, tn } = useT();
   const key = ['factory-wifi', factoryId];
   const query = useQuery({
     queryKey: key,
     queryFn: ({ signal }) => api.factoryWifi(factoryId, { signal }),
     refetchInterval: 10_000,
   });
+  const [open, setOpen] = useState<WifiBoard | null>(null);
+
+  if (query.isPending) {
+    return <Card><p className="text-sm text-muted">{t('Loading…')}</p></Card>;
+  }
+  if (query.isError) {
+    return <Card><p className="text-sm text-muted">{t('Could not load the WiFi. Try again in a moment.')}</p></Card>;
+  }
+
+  const page = query.data;
+  const admin = page.can_edit !== false;
+  const sum = onlineSummary(page.boards);
+
+  return (
+    <div className="space-y-6">
+      {sum.total === 0 ? (
+        <SummaryCard tone="idle" icon={<Wifi className="h-5 w-5" />} title={t('No boards in this factory yet')}
+          subtitle={t('Boards get these networks when they are set up.')} />
+      ) : sum.offline.length === 0 ? (
+        <SummaryCard tone="good" title={tn(sum.total, 'The board is online', 'All {count} boards are online')}
+          subtitle={t('Tap a board to see its WiFi.')} />
+      ) : (
+        <SummaryCard tone="warn" badge={sum.offline.length}
+          title={t('{online} of {total} boards online', { online: sum.online, total: sum.total })}
+          subtitle={t('Offline: {names}', { names: sum.offline.map(boardName).join(', ') })} />
+      )}
+
+      <Card>
+        <CardHeader title={t('Boards')} description={t('Tap a board to see the networks around it and connect it.')} />
+        {page.boards.length === 0 ? (
+          <p className="py-4 text-sm text-muted">{t('No boards in this factory yet.')}</p>
+        ) : (
+          <ul className="divide-y rounded-xl border">
+            {page.boards.map((b) => <BoardRow key={b.board_id} board={b} onOpen={() => setOpen(b)} />)}
+          </ul>
+        )}
+      </Card>
+
+      <SavedNetworks factoryId={factoryId} page={page} />
+
+      {admin && (
+        <Card>
+          <details>
+            <summary className="cursor-pointer text-base font-semibold tracking-tight">{t('Changing your router?')}</summary>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm">
+              <li>{t('Add the new network under Saved networks and press Save and send to boards. Keep the old one.')}</li>
+              <li>{t('Wait until every board has the list (Saved networks says so).')}</li>
+              <li>{t('Now change the router.')}</li>
+              <li>{t('The boards move to the new network by themselves within about a minute. Then remove the old one.')}</li>
+            </ol>
+            <p className="mt-3 text-xs text-muted">{t('Boards use 2.4 GHz WiFi only: they cannot see 5 GHz networks.')}</p>
+          </details>
+        </Card>
+      )}
+
+      {admin && <RescueCard page={page} />}
+
+      {open && (
+        <Sheet title={boardName(open)} onClose={() => setOpen(null)}>
+          <BoardWifiPanel scope={{ factoryId }} boardId={open.board_id} />
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+function BoardRow({ board: b, onOpen }: { board: WifiBoard; onOpen: () => void }) {
+  const { t } = useT();
+  return (
+    <li>
+      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-slate-50">
+        <SignalIcon rssi={b.online ? b.rssi : null} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{boardName(b)}</span>
+          <span className="block truncate text-xs text-muted">
+            {b.online && b.ssid
+              ? `${b.ssid} · ${signalText(t, b.rssi)}`
+              : b.ssid ? t('Offline · last on {network}', { network: b.ssid }) : t('Offline')}
+          </span>
+        </span>
+        {b.list === 'waiting' && <Badge className="bg-amber-50 text-amber-800">{t('Getting the new list')}</Badge>}
+        {b.list === 'update-firmware' && <Badge className="bg-red-50 text-red-700">{t('Needs a firmware update')}</Badge>}
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+      </button>
+    </li>
+  );
+}
+
+/** The networks every board of the factory keeps: its admins change them; everyone else sees their names. */
+function SavedNetworks({ factoryId, page }: { factoryId: string; page: WifiPage }) {
+  const { t, tn } = useT();
+  const qc = useQueryClient();
+  const saved = editableNetworks(page);
   const [draft, setDraft] = useState<WifiNetwork[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: (networks: WifiNetwork[]) => api.saveFactoryWifi(factoryId, networks),
-    onSuccess: (page: WifiPage) => {
-      qc.setQueryData(key, page);
+    onSuccess: (next: WifiPage) => {
+      qc.setQueryData(['factory-wifi', factoryId], next);
       setDraft(null);
-      const sent = page.sent?.length ?? 0;
-      const skipped = page.skipped?.length ?? 0;
-      setResult(
-        `Saved and sent to ${sent} board${sent === 1 ? '' : 's'}.` +
-          (skipped ? ` ${skipped} not set up yet will get it with their settings.` : ''),
-      );
+      setResult(tn(next.sent?.length ?? 0, 'Saved and sent to {count} board.', 'Saved and sent to {count} boards.'));
     },
   });
+  const r = readiness(page.boards);
+  const ready = r.ready || r.current + r.waiting + r.needsFirmware === 0;
 
-  if (query.isPending) {
-    return <Card><p className="text-sm text-muted">Loading the WiFi settings…</p></Card>;
-  }
-  if (query.isError) {
-    const forbidden = (query.error as { status?: number }).status === 403;
+  if (!saved) {
     return (
       <Card>
-        <p className="text-sm text-muted">
-          {forbidden
-            ? 'Only the factory’s admins and the FloorBeat super admin can see and change its WiFi, because it shows the passwords.'
-            : 'Could not load the WiFi settings. Try again in a moment.'}
-        </p>
+        <CardHeader title={t('Saved networks')} description={t('Every board in the factory can use these.')} />
+        <ul className="divide-y rounded-xl border">
+          {(page.networks as NamedNetwork[]).map((n) => (
+            <li key={n.ssid} className="flex items-center gap-2 px-3 py-3">
+              <span className="min-w-0 flex-1 truncate font-medium">{n.ssid}</span>
+              {!n.open && <Lock className="h-4 w-4 text-muted" aria-label={t('Needs a password')} />}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-xs text-muted">{t('Only the factory\'s admins can change these.')}</p>
       </Card>
     );
   }
 
-  const page = query.data;
-  const saved = page.networks;
   const list = draft ?? saved;
   const changed = draft !== null && listChanged(saved, draft);
   const problem = draft ? listProblem(draft) : null;
-  const r = readiness(page.boards);
-  const using = r.current + r.waiting + r.needsFirmware;
   const edit = (next: WifiNetwork[]) => {
     setDraft(next);
     setResult(null);
   };
-
   return (
-    <div className="space-y-6">
-      {page.boards.length === 0 ? (
-        <SummaryCard tone="idle" icon={<Wifi className="h-5 w-5" />} title="No boards in this factory yet"
-          subtitle="Boards get these networks when they are set up." />
-      ) : r.ready ? (
-        <SummaryCard tone="good" title={`All ${using} boards have the latest WiFi list`}
-          subtitle="It is safe to change the WiFi on your router." />
+    <Card>
+      <CardHeader
+        title={t('Saved networks')}
+        description={t('Every board in the factory can use these (up to {max}).', { max: MAX_NETWORKS })}
+        action={
+          <Button size="sm" onClick={() => setAdding(true)} disabled={list.length >= MAX_NETWORKS || !page.managed}>
+            <Plus className="mr-1 h-4 w-4" />
+            {t('Add network')}
+          </Button>
+        }
+      />
+      {list.length === 0 ? (
+        <p className="py-4 text-sm text-muted">{t('None yet: boards use only the WiFi built into their firmware.')}</p>
       ) : (
-        <SummaryCard
-          tone="warn"
-          badge={r.waiting + r.needsFirmware}
-          title={`${r.current} of ${using} boards have the latest WiFi list`}
-          subtitle={[
-            'Wait before changing the router.',
-            r.waiting ? `${r.waiting} still to receive it (a board that is off gets it when it is back).` : '',
-            r.needsFirmware ? `${r.needsFirmware} need firmware 2.5 first.` : '',
-          ].filter(Boolean).join(' ')}
-        />
-      )}
-
-      <Card>
-        <CardHeader title="How to change your WiFi without losing a board" />
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
-          <li>Add the new network below and press <strong>Save and send to boards</strong>. Keep the old one in the list.</li>
-          <li>Wait until the line at the top turns green: every board has the latest list.</li>
-          <li>Now change the WiFi on your router (or switch on the new router).</li>
-          <li>
-            The boards move to the new network by themselves, within about a minute. When every board below shows the
-            new network, remove the old one here and save again.
-          </li>
-        </ol>
-        <ul className="mt-4 space-y-1 text-xs text-muted">
-          <li>Boards use 2.4 GHz WiFi only: they cannot see 5 GHz networks.</li>
-          <li>With several networks, each board joins the strongest one it can hear.</li>
-          <li>Router already changed and boards offline? See <strong>Rescue boxes</strong> below.</li>
+        <ul className="divide-y rounded-xl border">
+          {list.map((n, i) => (
+            <NetworkRow
+              key={`${n.ssid}-${i}`} network={n} boardsOnIt={boardsOn(page.boards, n.ssid)} canEdit={page.managed}
+              onRemove={() => edit(list.filter((_, j) => j !== i))}
+            />
+          ))}
         </ul>
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="Networks"
-          description={`Boards join the strongest of these they can hear. Up to ${MAX_NETWORKS}.`}
-          action={
-            <Button size="sm" onClick={() => setAdding(true)} disabled={list.length >= MAX_NETWORKS || !page.managed}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add network
-            </Button>
-          }
-        />
-        {list.length === 0 ? (
-          <p className="py-4 text-sm text-muted">No networks yet: boards use only the WiFi built into their firmware.</p>
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {list.map((n, i) => (
-              <NetworkRow
-                key={`${n.ssid}-${i}`}
-                network={n}
-                boardsOnIt={boardsOn(page.boards, n.ssid)}
-                canEdit={page.managed}
-                onRemove={() => edit(list.filter((_, j) => j !== i))}
-              />
-            ))}
-          </ul>
-        )}
-
-        {!page.managed && (
-          <p className="mt-3 text-sm text-amber-700">This server cannot reach the boards right now, so changes cannot be sent.</p>
-        )}
-        {changed && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button onClick={() => save.mutate(list)} disabled={save.isPending || problem !== null}>
-              {save.isPending ? 'Sending…' : 'Save and send to boards'}
-            </Button>
-            <Button variant="ghost" onClick={() => setDraft(null)} disabled={save.isPending}>Undo changes</Button>
-            {problem && <p className="text-sm text-red-600">{problem}</p>}
-            {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
-          </div>
-        )}
-        {result && !changed && <p className="mt-3 text-sm text-emerald-700">{result}</p>}
-      </Card>
-
-      <Card>
-        <CardHeader title="Boards" description="Where every board stands. Updates every 10 seconds." />
-        {page.boards.length === 0 ? (
-          <p className="py-4 text-sm text-muted">No boards in this factory yet.</p>
-        ) : (
-          <Table>
-            <THead>
-              <TR>
-                <TH>Board</TH>
-                <TH className={PHONE_HIDDEN}>Line</TH>
-                <TH className={PHONE_HIDDEN}>Status</TH>
-                <TH>Network</TH>
-                <TH className={PHONE_HIDDEN}>Signal</TH>
-                <TH>WiFi list</TH>
-                <TH className={PHONE_HIDDEN}>Rescue box</TH>
-                <TH className={PHONE_HIDDEN}>Last problem</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {page.boards.map((b) => {
-                const sig = signal(b.online ? b.rssi : null);
-                const st = listStatus(b.list, b.online);
-                const box = rescueHeard(b.rescue);
-                return (
-                  <TR key={b.board_id}>
-                    <TD className="font-mono text-xs">{b.board_id}</TD>
-                    <TD className={PHONE_HIDDEN}>{b.line_id ?? '—'}</TD>
-                    <TD className={PHONE_HIDDEN}>
-                      <Badge
-                        className={b.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}
-                      >
-                        <span title={b.last_beat_at ? `Last heard ${formatDate(b.last_beat_at)}` : undefined}>
-                          {b.online ? 'Online' : 'Offline'}
-                        </span>
-                      </Badge>
-                    </TD>
-                    <TD className="text-sm">{b.ssid ?? '—'}{b.ssid && !b.online && <span className="text-muted"> (last)</span>}</TD>
-                    <TD className={PHONE_HIDDEN}><ToneText label={sig.label} tone={sig.tone} /></TD>
-                    <TD><ToneText label={st.label} tone={st.tone} /></TD>
-                    <TD className={PHONE_HIDDEN}><ToneText label={box.label} tone={box.tone} /></TD>
-                    <TD className={`text-sm text-muted ${PHONE_HIDDEN}`}>{dropReason(b.last_drop) ?? '—'}</TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        )}
-      </Card>
-
-      <RescueCard page={page} />
-
+      )}
+      {!changed && page.boards.length > 0 && (
+        <p className={`mt-3 text-xs ${ready ? 'text-emerald-700' : 'text-amber-800'}`}>
+          {ready
+            ? t('Every board has this list.')
+            : [
+              r.waiting ? tn(r.waiting, '{count} board still to receive it (one that is off gets it when back).', '{count} boards still to receive it (one that is off gets it when back).') : '',
+              r.needsFirmware ? tn(r.needsFirmware, '{count} board needs a firmware update first.', '{count} boards need a firmware update first.') : '',
+            ].filter(Boolean).join(' ')}
+        </p>
+      )}
+      {!page.managed && <p className="mt-3 text-sm text-amber-700">{t('This server cannot reach the boards right now, so changes cannot be sent.')}</p>}
+      {changed && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button onClick={() => save.mutate(list)} disabled={save.isPending || problem !== null}>
+            {save.isPending ? t('Sending…') : t('Save and send to boards')}
+          </Button>
+          <Button variant="ghost" onClick={() => setDraft(null)} disabled={save.isPending}>{t('Undo changes')}</Button>
+          {problem && <p className="text-sm text-red-600">{problem}</p>}
+          {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
+        </div>
+      )}
+      {result && !changed && <p className="mt-3 text-sm text-emerald-700">{result}</p>}
       {adding && <AddNetwork existing={list} onClose={() => setAdding(false)} onAdd={(n) => { edit([...list, n]); setAdding(false); }} />}
-    </div>
+    </Card>
   );
 }
 
@@ -249,14 +252,17 @@ export function WifiManager({ factoryId }: { factoryId: string }) {
  * the password a phone needs for a box's page, and the steps for when boards lost their WiFi.
  */
 function RescueCard({ page }: { page: WifiPage }) {
+  const { t } = useT();
   const boxes = page.boxes ?? [];
   const coverage = rescueCoverage(page.boards);
   return (
     <Card>
-      <CardHeader
-        title="Rescue boxes"
-        description="If the router is changed before the list above has the new network, boards cannot connect. A rescue box hands them the latest list, and they move to the new network by themselves. They keep everything they measure meanwhile."
-      />
+      <details>
+      <summary className="cursor-pointer text-base font-semibold tracking-tight">{t('Rescue boxes ({count})', { count: boxes.length })}</summary>
+      <p className="mb-4 mt-2 text-sm text-muted">
+        If the router is changed before the list above has the new network, boards cannot connect. A rescue box hands them
+        the latest list, and they move to the new network by themselves. They keep everything they measure meanwhile.
+      </p>
       {boxes.length === 0 ? (
         <SummaryCard tone="idle" icon={<LifeBuoy className="h-5 w-5" />} title="No rescue box in this factory yet"
           subtitle="Ask FloorBeat for one: a small box that keeps your boards reachable if the WiFi changes unexpectedly." />
@@ -288,6 +294,7 @@ function RescueCard({ page }: { page: WifiPage }) {
           </ol>
         </>
       )}
+      </details>
     </Card>
   );
 }
@@ -349,20 +356,21 @@ function NetworkRow({
   canEdit: boolean;
   onRemove: () => void;
 }) {
+  const { t, tn } = useT();
   const [show, setShow] = useState(false);
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-3">
       {/* Phones: the name on its own line, the password and Remove below it. */}
       <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
         <p className="break-all font-medium">{n.ssid}</p>
-        <p className="text-xs text-muted">{boardsOnIt} board{boardsOnIt === 1 ? '' : 's'} on it now</p>
+        <p className="text-xs text-muted">{tn(boardsOnIt, '{count} board on it now', '{count} boards on it now')}</p>
       </div>
       <span className="flex flex-1 items-center gap-1 font-mono text-sm sm:flex-none">
-        {n.pass === '' ? <span className="text-muted">Open network</span> : show ? n.pass : '••••••••'}
+        {n.pass === '' ? <span className="text-muted">{t('Open network')}</span> : show ? n.pass : '••••••••'}
         {n.pass !== '' && (
           <button
             type="button"
-            aria-label={show ? 'Hide password' : 'Show password'}
+            aria-label={show ? t('Hide password') : t('Show password')}
             className="rounded p-1 text-muted hover:text-foreground"
             onClick={() => setShow(!show)}
           >
@@ -372,7 +380,7 @@ function NetworkRow({
       </span>
       <Button variant="ghost" size="sm" className="text-red-600" disabled={!canEdit} onClick={onRemove}>
         <Trash2 className="mr-1 h-4 w-4" />
-        Remove
+        {t('Remove')}
       </Button>
     </li>
   );
@@ -387,6 +395,7 @@ function AddNetwork({
   onClose: () => void;
   onAdd: (n: WifiNetwork) => void;
 }) {
+  const { t } = useT();
   const [ssid, setSsid] = useState('');
   const [pass, setPass] = useState('');
   const [show, setShow] = useState(false);
@@ -394,19 +403,19 @@ function AddNetwork({
   const net = { ssid: ssid.trim(), pass };
   const problem = networkProblem(net, existing);
   return (
-    <Sheet title="Add a WiFi network" onClose={onClose}>
+    <Sheet title={t('Add a WiFi network')} onClose={onClose}>
       <div className="space-y-4">
-        <Field label="WiFi name">
-          <Input value={ssid} onChange={(e) => setSsid(e.target.value)} placeholder="Exactly as your phone shows it" autoFocus />
+        <Field label={t('WiFi name')}>
+          <Input value={ssid} onChange={(e) => setSsid(e.target.value)} placeholder={t('Exactly as a phone shows it')} autoFocus />
         </Field>
-        <Field label="Password">
+        <Field label={t('Password')}>
           <div className="flex items-center gap-2">
             <Input
               type={show ? 'text' : 'password'} value={pass} onChange={(e) => setPass(e.target.value)}
-              placeholder="Leave empty for an open network" autoComplete="new-password"
+              placeholder={t('Empty for an open network')} autoComplete="new-password"
             />
             <button
-              type="button" aria-label={show ? 'Hide password' : 'Show password'}
+              type="button" aria-label={show ? t('Hide password') : t('Show password')}
               className="rounded p-2 text-muted hover:text-foreground" onClick={() => setShow(!show)}
             >
               {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -414,13 +423,12 @@ function AddNetwork({
           </div>
         </Field>
         <p className="text-xs text-muted">
-          A 2.4 GHz network. Names and passwords are case-sensitive: copy them exactly. Nothing is sent until you press
-          Save and send to boards.
+          {t('A 2.4 GHz network. Names and passwords are case-sensitive: copy them exactly. Nothing is sent until you press Save and send to boards.')}
         </p>
         {tried && problem && <p className="text-sm text-red-600">{problem}</p>}
         <div className="flex gap-2">
-          <Button onClick={() => (problem ? setTried(true) : onAdd(net))}>Add to the list</Button>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => (problem ? setTried(true) : onAdd(net))}>{t('Add to the list')}</Button>
+          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
         </div>
       </div>
     </Sheet>

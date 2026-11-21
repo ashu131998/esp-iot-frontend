@@ -2,28 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import {
-  Activity,
-  AlertTriangle,
-  Cable,
-  CalendarClock,
-  ClipboardCheck,
-  Cog,
-  Factory,
-  FileText,
-  Gauge,
-  LayoutDashboard,
-  ShieldCheck,
-  Thermometer,
-  Wrench,
-  Timer,
-  TrendingUp,
-  Users,
-  Waves,
-  Wifi,
-  Workflow,
-  Zap,
-} from 'lucide-react';
+import { Activity, AlertTriangle, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -46,6 +25,7 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   alerts: AlertTriangle,
   energy: Zap,
   maintenance: Wrench,
+  cameras: Camera,
   vibration: Waves,
   temperature: Thermometer,
   performance: Gauge,

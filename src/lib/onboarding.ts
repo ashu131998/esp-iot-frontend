@@ -390,13 +390,15 @@ export const SETUP_BOARD_SLOTS = ['I1', 'I2', 'I3', 'I4', 'P1', 'P2'] as const;
 /** What a channel measures: a proximity sensor on P slots, a current transformer on the rest. */
 export const slotSensor = (slot: string): 'current' | 'proximity' => (slot.startsWith('P') ? 'proximity' : 'current');
 
-/** A board waiting to be claimed, for this factory. */
+/**
+ * A board waiting to be claimed, for this factory. Nobody picks its line: the server puts it on the
+ * line its machines are on (else the factory's first).
+ */
 export interface BoardDraft {
   key: string;
   board_id: string;
-  /** A rescue box: claimed into the factory alone (no line, no sensors). */
+  /** A rescue box: claimed into the factory alone (no sensors). */
   rescue: boolean;
-  line_key: string;
   /** Channel slot → the machine it measures (the machine's key); not there: not used. */
   channels: Record<string, string>;
 }
@@ -473,7 +475,7 @@ export const newMachine = (line_key: string, name = ''): MachineDraft => ({
   key: key(), line_key, name, machine_id: '', type: '', target_units_per_hour: '', target_cycle_time_sec: '', voltage_v: '', unit_label: '',
 });
 export const newWifi = (): WifiDraft => ({ key: key(), ssid: '', pass: '' });
-export const newBoard = (board_id: string, rescue = false): BoardDraft => ({ key: key(), board_id, rescue, line_key: '', channels: {} });
+export const newBoard = (board_id: string, rescue = false): BoardDraft => ({ key: key(), board_id, rescue, channels: {} });
 export const newWorker = (): WorkerDraft => ({ key: key(), name: '', role: WORKER_ROLES[0], employee_code: '', phone: '', email: '', password: '' });
 export const newContact = (): ContactDraft => ({ key: key(), name: '', phone: '' });
 
@@ -578,20 +580,18 @@ export function wifiProblems(list: WifiDraft[]): Partial<Record<'ssid' | 'pass',
   });
 }
 
-export type BoardProblems = Partial<Record<'line_key' | 'channels', string>>;
+export type BoardProblems = Partial<Record<'channels', string>>;
 
 /**
- * Each board on one of the form's lines (a rescue box needs none), its channels on machines that
- * are still in the form. A machine may have several sensors of a kind: the first current sensor
- * listed decides whether it runs, and every proximity sensor's pulses count towards it.
+ * Each board's channels on machines that are still in the form (a rescue box has none). A machine
+ * may have several sensors of a kind: the first current sensor listed decides whether it runs, and
+ * every proximity sensor's pulses count towards it.
  */
-export function boardProblems(boards: BoardDraft[], lines: LineDraft[], machines: MachineDraft[]): BoardProblems[] {
-  const lineKeys = new Set(lines.map((l) => l.key));
+export function boardProblems(boards: BoardDraft[], machines: MachineDraft[]): BoardProblems[] {
   const machineName = new Map(machines.map((m) => [m.key, m.name.trim()]));
   return boards.map((b) => {
     const out: BoardProblems = {};
     if (b.rescue) return out;
-    if (!lineKeys.has(b.line_key)) out.line_key = lines.length === 0 ? 'Add its line first, on Lines & machines' : 'Pick its line';
     for (const slot of SETUP_BOARD_SLOTS) {
       const machineKey = b.channels[slot];
       if (!machineKey) continue;
@@ -644,7 +644,7 @@ export function setupStepsOk(
       case 'shifts': return shiftProblem(d.shifts) === null;
       case 'lines': return !hasProblems(lineProblems(d.lines)) && !hasProblems(machineProblems(d.machines, d.lines));
       case 'wifi': return !hasProblems(wifiProblems(d.wifi));
-      case 'boards': return !hasProblems(boardProblems(d.boards, d.lines, d.machines));
+      case 'boards': return !hasProblems(boardProblems(d.boards, d.machines));
       case 'people': return !hasProblems(adminProblems(adminRows(d, companies))) && !hasProblems(workerProblems(d.workers));
       case 'reports': return !hasProblems(reportsProblems(d.reports));
       default: return true;
@@ -728,8 +728,8 @@ export function buildSetupRequest(d: SetupDraft, body: (p: PeriodDraft) => Setup
       const channels = SETUP_BOARD_SLOTS
         .filter((slot) => machineName.has(b.channels[slot] ?? ''))
         .map((slot) => ({ slot, machine: machineName.get(b.channels[slot]) ?? '' }));
-      const lineId = b.rescue ? '' : (lineIdOf.get(b.line_key) ?? '');
-      return { board_id: b.board_id, ...(lineId ? { line_id: lineId } : {}), ...(channels.length > 0 ? { channels } : {}) };
+      // No line: the server puts each board on the line its machines are on.
+      return { board_id: b.board_id, ...(channels.length > 0 ? { channels } : {}) };
     });
   }
   if (d.workers.length > 0) {

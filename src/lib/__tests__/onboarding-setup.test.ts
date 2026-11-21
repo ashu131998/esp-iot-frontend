@@ -151,35 +151,34 @@ describe('boards', () => {
     return { d, line, loom1: d.machines[0].key, loom2: d.machines[1].key };
   }
 
-  it('a board needs its line (a rescue box none); a machine may have several sensors of a kind', () => {
-    const { d, line, loom1, loom2 } = withMachines();
-    const ok = { ...newBoard('revb-311d80'), line_key: line.key, channels: { I1: loom1, P1: loom1, I2: loom2 } };
-    expect(boardProblems([ok, newBoard('rescue-a1b2c3', true)], d.lines, d.machines)).toEqual([{}, {}]);
-    expect(boardProblems([{ ...ok, line_key: '' }], d.lines, d.machines)[0].line_key).toBe('Pick its line');
-    expect(boardProblems([{ ...ok, line_key: '' }], [], d.machines)[0].line_key).toBe('Add its line first, on Lines & machines');
+  it('a board needs no line (the server picks it); a machine may have several sensors of a kind', () => {
+    const { d, loom1, loom2 } = withMachines();
+    const ok = { ...newBoard('revb-311d80'), channels: { I1: loom1, P1: loom1, I2: loom2 } };
+    expect(boardProblems([ok, newBoard('rescue-a1b2c3', true)], d.machines)).toEqual([{}, {}]);
+    expect(boardProblems([newBoard('revb-9f0e1d')], d.machines)).toEqual([{}]);   // nothing matched yet: fine too
     // Two motors on one machine, or two counting points: fine, on one board or across boards.
-    expect(boardProblems([{ ...ok, channels: { I1: loom1, I3: loom1 } }], d.lines, d.machines)).toEqual([{}]);
-    const other = { ...newBoard('revb-304ad0'), line_key: line.key, channels: { P2: loom1 } };
-    expect(boardProblems([ok, other], d.lines, d.machines)).toEqual([{}, {}]);
-    expect(boardProblems([{ ...ok, channels: { I4: 'removed-machine' } }], d.lines, d.machines)[0].channels).toBe('I4: its machine was removed; pick another');
-    const steps = setupStepsOk({ ...d, boards: [{ ...ok, line_key: '' }] }, [], draftProblems);
-    expect(steps[stepOfSection('boards')]).toBe(false);
+    expect(boardProblems([{ ...ok, channels: { I1: loom1, I3: loom1 } }], d.machines)).toEqual([{}]);
+    const other = { ...newBoard('revb-304ad0'), channels: { P2: loom1 } };
+    expect(boardProblems([ok, other], d.machines)).toEqual([{}, {}]);
+    const removed = { ...ok, channels: { I4: 'removed-machine' } };
+    expect(boardProblems([removed], d.machines)[0].channels).toBe('I4: its machine was removed; pick another');
+    expect(setupStepsOk({ ...d, boards: [ok] }, [], draftProblems)[stepOfSection('boards')]).toBe(true);
+    expect(setupStepsOk({ ...d, boards: [removed] }, [], draftProblems)[stepOfSection('boards')]).toBe(false);
   });
 
-  it('to the API: machines by name, the line\'s ID, slots in order; a rescue box alone', () => {
-    const { d, line, loom1, loom2 } = withMachines();
+  it('to the API: machines by name, slots in order, no line (the server puts it on its machines\' line); a rescue box alone', () => {
+    const { d, loom1, loom2 } = withMachines();
     d.boards = [
-      { ...newBoard('revb-311d80'), line_key: line.key, channels: { I2: loom2, I1: loom1, P1: loom1 } },
-      { ...newBoard('revb-304ad0'), line_key: line.key },
-      { ...newBoard('rescue-a1b2c3', true), line_key: line.key },
+      { ...newBoard('revb-311d80'), channels: { I2: loom2, I1: loom1, P1: loom1 } },
+      newBoard('revb-304ad0'),
+      newBoard('rescue-a1b2c3', true),
     ];
     expect(buildSetupRequest(d, draftBody).boards).toEqual([
       {
         board_id: 'revb-311d80',
-        line_id: 'line-1',
         channels: [{ slot: 'I1', machine: 'Loom #1' }, { slot: 'I2', machine: 'Loom #2' }, { slot: 'P1', machine: 'Loom #1' }],
       },
-      { board_id: 'revb-304ad0', line_id: 'line-1' },
+      { board_id: 'revb-304ad0' },
       { board_id: 'rescue-a1b2c3' },
     ]);
     expect(buildSetupRequest(minimal(), draftBody).boards).toBeUndefined();

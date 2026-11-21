@@ -9,7 +9,7 @@ import { isIOS, isIOSSafari, isStandalone, platformOf } from '@/lib/alerts-app/i
 import {
   appBase, appPath, asksQuestion, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
 } from '@/lib/alerts-app/model';
-import { pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array } from '@/lib/alerts-app/push';
+import { notificationsStep, pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array } from '@/lib/alerts-app/push';
 import type { MyAlert } from '@/lib/alerts-app/types';
 import { alertsAppHost, isAlertsAppHost, isFactorySubdomain } from '@/lib/hosts';
 
@@ -166,6 +166,17 @@ describe('whether this phone can receive pushes', () => {
     expect(pushState('ok', 'granted', true, false)).toBe('server-off');
     expect(pushState('needs-install', 'default', false, true)).toBe('needs-install');
     expect(pushState('unsupported', null, false, true)).toBe('unsupported');
+  });
+
+  it('a phone\'s app opens once notifications are on; until then the step that gets them on', () => {
+    expect(notificationsStep('on')).toBe('app');
+    expect(notificationsStep('off')).toBe('turn-on');
+    expect(notificationsStep('blocked')).toBe('blocked');
+    expect(notificationsStep('unsupported')).toBe('update');
+    expect(notificationsStep('needs-install')).toBe('update');   // inside the installed app: an iOS before 16.4
+    expect(notificationsStep('server-off')).toBe('app');             // the server cannot send: the phone is not held back
+    expect(notificationsStep('checking')).toBe('checking');
+    expect(notificationsStep('ok')).toBe('checking');
   });
 
   it('the server\'s key as bytes (base64url, unpadded)', () => {

@@ -48,7 +48,7 @@ function filled(): SetupDraft {
   d.lines = [line];
   d.machines = [newMachine(line.key, 'Machine #1'), newMachine(line.key, 'Machine #2')];
   d.wifi = [{ ...newWifi(), ssid: 'Shree-Office', pass: 'WifiSecret99' }, { ...newWifi(), ssid: 'Shree-Floor', pass: '' }];
-  d.boards = [{ ...newBoard('revb-311d80'), line_key: line.key, channels: { I1: d.machines[0].key, P1: d.machines[0].key } }, newBoard('rescue-a1b2c3', true)];
+  d.boards = [{ ...newBoard('revb-311d80'), channels: { I1: d.machines[0].key, P1: d.machines[0].key } }, newBoard('rescue-a1b2c3', true)];
   d.workers = [{ ...newWorker(), name: 'Ravi', email: 'ravi@shree.in', password: 'WorkerPass1' }, { ...newWorker(), name: 'Sita' }];
   d.subscription = { ...d.subscription, enabled: true, ends_on: '2027-11-02', plan: 'Standard', machines: '40', monthly_amount: '24000' };
   d.reports = { ...d.reports, emails: 'owner@shree.in', owner_contacts: [{ ...newContact(), name: 'Mr Shah', phone: '+919876543210' }], value_per_loom_hour: '350' };
@@ -106,7 +106,7 @@ describe('wizard steps', () => {
     expect(html).toContain('Up to 8');
   });
 
-  it('Boards: the ones waiting, and each picked one with its line and what its sensors measure', () => {
+  it('Boards: the ones waiting, and each picked one with what its sensors measure (no line to pick)', () => {
     const d = filled();
     const waiting: Partial<AdminBoard>[] = [
       { board_id: 'revb-311d80', factory_id: 'unclaimed', line_id: 'new', online: true, beat: { fw: '2.7.0', st: 'pass' } },
@@ -114,7 +114,7 @@ describe('wizard steps', () => {
       { board_id: 'rescue-a1b2c3', factory_id: 'unclaimed', line_id: 'new', online: true, kind: 'rescue', beat: { hw: 'rescue' } },
       { board_id: 'revb-304ad0', factory_id: 'demo-mill', line_id: 'line-1', online: true, beat: null },
     ];
-    const html = render(<BoardsStep value={d.boards} lines={d.lines} machines={d.machines} onChange={noop} tried={false} canClaim />, undefined, waiting);
+    const html = render(<BoardsStep value={d.boards} lines={d.lines} machines={d.machines} onChange={noop} canClaim />, undefined, waiting);
     expect(html).toContain('Waiting to be claimed');
     for (const text of ['revb-9f0e1d', 'Online', 'Not connected', 'fw 2.7.0', 'Pass', 'Rescue box', 'Weaving A', 'I1 · current (CT)', 'P2 · proximity', 'Not used', 'Machine #2']) {
       expect(html).toContain(text);
@@ -122,13 +122,15 @@ describe('wizard steps', () => {
     expect(html).not.toContain('revb-304ad0');   // in a factory already
     expect(html.match(/>Added</g)).toHaveLength(2);
     expect(html).toContain('Goes to the factory alone');
-    const none = render(<BoardsStep value={[]} lines={d.lines} machines={d.machines} onChange={noop} tried={false} canClaim />, undefined, []);
+    expect(html).not.toContain('Pick a line');   // the server puts each board on its machines' line
+    expect(html).not.toContain('aria-label="Line of');
+    const none = render(<BoardsStep value={[]} lines={d.lines} machines={d.machines} onChange={noop} canClaim />, undefined, []);
     expect(none).toContain('None waiting');
   });
 
   it('Boards: anyone but a super admin is pointed to the Boards page', () => {
     const d = filled();
-    const html = render(<BoardsStep value={[]} lines={d.lines} machines={d.machines} onChange={noop} tried={false} canClaim={false} />);
+    const html = render(<BoardsStep value={[]} lines={d.lines} machines={d.machines} onChange={noop} canClaim={false} />);
     expect(html).toContain('Only a super admin can claim boards');
     expect(html).not.toContain('Waiting to be claimed');
   });
@@ -230,7 +232,8 @@ describe('wizard steps', () => {
     />);
     expect(html).toContain('Also created: 1 line, 2 machines, 2 boards claimed.');
     expect(html).toContain('Company: <span class="font-medium text-foreground">Shree Group</span>');
-    expect(html).toContain('line-1 · 2 sensors matched');
+    expect(html).toMatch(/revb-311d80<\/span><span[^>]*> · 2 sensors matched/);   // no line shown: nobody picked one
+    expect(html).toContain('Claim those on the Boards page, to this factory:');
     expect(html).toContain('Not claimed: EMQX 503');
     expect(html).toMatch(/rescue-a1b2c3<\/span><span[^>]*> · rescue box/);
     expect(html).toContain('Claim those on the Boards page');

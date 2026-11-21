@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BellOff, ChevronRight, CircleHelp } from 'lucide-react';
 import Link from 'next/link';
 
+import { PushPrompt } from '@/components/alerts-app/push-prompt';
+import { usePushSwitch } from '@/components/alerts-app/use-push-switch';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ListGroup, SummaryCard, TONE_DOT } from '@/components/ui/simple';
@@ -23,6 +25,7 @@ export function AlertsInbox() {
   const href = useAppHref();
   const queryClient = useQueryClient();
   const alerts = useMyAlerts();
+  const push = usePushSwitch();
   const readAll = useMutation({
     mutationFn: () => alertsApi.markAllRead(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ALERTS_QUERY_KEY }),
@@ -45,10 +48,12 @@ export function AlertsInbox() {
 
   return (
     <div className="space-y-5">
+      <PushPrompt state={push.state} busy={push.busy} failed={push.note === 'enable-failed'} onEnable={push.enable} installHref={href('/install')} />
+
       {unread > 0 ? (
         <SummaryCard tone="bad" badge={unread} title={tn(unread, '{count} new alert', '{count} new alerts')} subtitle={t('Tap an alert to read it.')} />
       ) : (
-        <SummaryCard tone="good" title={t('All caught up')} subtitle={t('New alerts show here and ring your phone.')} />
+        <SummaryCard tone="good" title={t('All caught up')} subtitle={push.state === 'on' ? t('New alerts show here and ring your phone.') : t('New alerts show here.')} />
       )}
 
       {unread > 0 && (

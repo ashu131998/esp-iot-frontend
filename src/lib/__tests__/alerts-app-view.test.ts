@@ -82,6 +82,32 @@ describe('what an owner hears', () => {
     expect(alertWords(up, gujarati).title).toBe('Loom 3 ફરી ચાલે છે');
   });
 
+  it('something in front of a camera: which one, at which machine, since when; in Hindi too', () => {
+    const blocked = alert({ type: 'camera_blocked', payload: { view: { kind: 'camera_blocked', camera: 'cam-478998', machine: 'Loom 3', at: AT } } });
+    expect(alertWords(blocked, en)).toEqual({
+      title: 'Something is in front of cam-478998 at Loom 3',
+      body: 'Since 10:02 am: a hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.',
+    });
+    const nowhere = alert({ type: 'camera_blocked', payload: { view: { kind: 'camera_blocked', camera: null, machine: null, at: null } } });
+    expect(alertWords(nowhere, en)).toEqual({
+      title: 'Something is in front of A camera',
+      body: 'A hand on the lens, a cover, or something big right in front of it. Watch it live on the Cameras page.',
+    });
+    expect(alertWords(blocked, hindi).title).toBe('Loom 3 पर cam-478998 के सामने कुछ है');
+  });
+
+  it('a truck or a hand the camera\'s AI models saw: which camera, where, when; in Hindi and Gujarati too', () => {
+    const truck = alert({ type: 'camera_truck', payload: { view: { kind: 'camera_truck', camera: 'cam-478998', machine: 'Gate 1', at: AT } } });
+    expect(alertWords(truck, en)).toEqual({
+      title: 'A truck at cam-478998 at Gate 1',
+      body: 'Seen at 10:02 am. Its picture and live view are on the Cameras page.',
+    });
+    const hand = alert({ type: 'camera_hand', payload: { view: { kind: 'camera_hand', camera: 'cam-478998', machine: null, at: null } } });
+    expect(alertWords(hand, en)).toEqual({ title: 'A hand in front of cam-478998', body: 'Its picture and live view are on the Cameras page.' });
+    expect(alertWords(truck, hindi).title).toBe('Gate 1 पर cam-478998 पर एक ट्रक');
+    expect(alertWords(hand, gujarati).title).toBe('cam-478998ની સામે એક હાથ');
+  });
+
   it('a kind it does not know: the English title', () => {
     expect(alertWords(alert({ payload: { view: { kind: 'something_new' } } }), en)).toEqual({ title: '🔴 Loom 3 is DOWN', body: null });
   });
@@ -100,5 +126,22 @@ describe('words', () => {
     expect(reasonWords('Yarn breakage', hindi.t)).toBe(hi['Yarn breakage']);
     expect(reasonWords('Other', gujarati.t)).toBe(gu['Other']);
     expect(reasonWords('Plain weave', hindi.t)).toBe('Plain weave');
+  });
+});
+
+describe('a stop nobody answered', () => {
+  const waiting = alert({ title: '🔴 Loom 3 still DOWN — no reason yet', payload: { kind: 'downtime_reason', options: OPTIONS, view: { kind: 'machine_down_waiting', machine: 'Loom 3', at: AT, waiting_min: 12 } } });
+
+  it('the supervisor gets the question with how long it has been', () => {
+    expect(alertWords(waiting, en)).toEqual({ title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 12 m. Nobody has said why yet.\nWhy is it down? Tap an answer below.' });
+    expect(alertWords(waiting, hindi).title).toBe('Loom 3 अब भी रुकी है');
+    expect(alertWords(waiting, gujarati).body).toContain('12 મિ થી બંધ છે');
+  });
+
+  it('the owner is told, with nothing to answer; without the minutes it still reads', () => {
+    const owner = alert({ type: 'owner_machine_down_unanswered', payload: { view: { kind: 'owner_unanswered', machine: 'Loom 3', at: AT, waiting_min: 75 } } });
+    expect(alertWords(owner, en)).toEqual({ title: 'Loom 3 is still stopped', body: 'Loom 3 has been stopped for 1 h 15 m. Nobody has said why yet.' });
+    const bare = alert({ payload: { view: { kind: 'owner_unanswered', machine: 'Loom 3' } } });
+    expect(alertWords(bare, en).body).toBe('Loom 3 is still stopped. Nobody has said why yet.');
   });
 });

@@ -527,7 +527,12 @@ export interface AlertSettings {
   notify_owner_on_down: boolean;
   owner_contacts: OwnerContact[];
   updated_at: string | null;
+  /** A stop nobody answers: minutes until the shift's supervisors are asked, then the owners told (0 = never). */
+  escalate_supervisor_minutes?: number;
+  escalate_owner_minutes?: number;
   mobile_configured: boolean;
+  /** The FloorBeat Alerts app is set up on the server (alerts reach workers' and admins' phones). */
+  app_configured?: boolean;
   alertops_configured: boolean;
   board_email_configured?: boolean;
   board_email_from?: string;

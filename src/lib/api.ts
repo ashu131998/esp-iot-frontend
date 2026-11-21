@@ -59,7 +59,10 @@ import {
   isAbortError,
 } from './request-signal';
 import type { WifiNetwork, WifiPage } from '@/lib/wifi';
+import { boardWifiPath, type BoardWifi, type BoardWifiAction, type WifiScope } from '@/lib/board-wifi';
+import { livePath, type LiveScope, type LiveStart, type LiveStatus } from '@/lib/live';
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
+import type { CameraEvent, CamerasResponse, CamSettings, CamSettingsBody } from '@/lib/cameras';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
 
 export type { ApiRequestOptions };
@@ -142,6 +145,7 @@ function qs(
       line_id?: string;
       action?: string;
       actor?: string;
+      kind?: string;
     },
 ): string {
   if (!params) return '';
@@ -881,7 +885,8 @@ export const api = {
     features: Record<string, boolean>,
     options?: ApiRequestOptions,
   ) =>
-    request<{ factory_id: string; features: Record<string, boolean> }>(
+    // `display`: the switches resolved with what the factory has (a camera turns the Cameras page on).
+    request<{ factory_id: string; features: Record<string, boolean>; display?: Record<string, boolean> }>(
       `/v1/admin/factories/${factoryId}/features`,
       { method: 'PATCH', body: JSON.stringify(features), ...options },
     ),
@@ -1017,6 +1022,42 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ networks }), ...options,
     }),
 
+  /** A board's WiFi as on a phone (lib/board-wifi.ts): from ops (scope null: our super admin) or its factory's WiFi page. */
+  boardWifi: (scope: WifiScope, boardId: string, options?: ApiRequestOptions) =>
+    request<BoardWifi>(boardWifiPath(scope, boardId), options),
+
+  /** Scan, connect and retry (everyone of its factory); add and forget (its admins): sent to the board at once. */
+  boardWifiAction: (scope: WifiScope, boardId: string, what: BoardWifiAction, body: Record<string, unknown> = {}) =>
+    request<BoardWifi>(`${boardWifiPath(scope, boardId)}/${what}`, { method: 'POST', body: JSON.stringify(body) }),
+
+  /** A camera's live view (lib/live.ts): the camera told to start, and a link to its stream. */
+  startLive: (scope: LiveScope, boardId: string) =>
+    request<LiveStart>(livePath(scope, boardId), { method: 'POST', body: JSON.stringify({}) }),
+  /** How the live view is going: frames arriving, how many a second, who watches. */
+  liveStatus: (scope: LiveScope, boardId: string, options?: ApiRequestOptions) =>
+    request<LiveStatus>(livePath(scope, boardId), options),
+
+  /** The factory's cameras, each with its last picture and whether something is in front of it (lib/cameras.ts). */
+  cameras: (factoryId: string, options?: ApiRequestOptions) =>
+    request<CamerasResponse>(`/v1/factories/${encodeURIComponent(factoryId)}/cameras`, options),
+  /** A camera's settings, sent to it; the machine it is at and whether something in front of it alerts, kept. */
+  saveCameraSettings: (factoryId: string, boardId: string, body: CamSettingsBody) =>
+    request<{ settings: CamSettings; machine_id: string | null; view_alert: boolean; cfg_version: number }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/cameras/${encodeURIComponent(boardId)}/settings`,
+      { method: 'PUT', body: JSON.stringify(body) },
+    ),
+  /** Ask a camera for a picture now (it uploads one within seconds). */
+  snapCamera: (factoryId: string, boardId: string) =>
+    request<{ snap: number; cfg_version: number }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/cameras/${encodeURIComponent(boardId)}/snap`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+  /** A camera's events (something in front of it, clear again), newest first, with their pictures. */
+  cameraEvents: (factoryId: string, boardId: string, params?: { limit?: number }, options?: ApiRequestOptions) =>
+    request<{ events: CameraEvent[] }>(
+      `/v1/factories/${encodeURIComponent(factoryId)}/cameras/${encodeURIComponent(boardId)}/events${qs(params)}`, options,
+    ),
+
   /** Real boards with their state (staff); see AdminBoard. */
   adminBoards: (options?: ApiRequestOptions) =>
     request<{ broker: 'ok' | 'unreachable' | 'unavailable'; logins: BrokerLogins | null; boards: AdminBoard[] }>(
@@ -1054,12 +1095,13 @@ export const api = {
     }),
 
   /**
-   * Super admin: claim a new board, or move one — factory, line, settings and its own login at once.
+   * Super admin: claim a new board, or move one — factory, settings and its own login at once; the
+   * server picks its line (the one its machines are on, else the factory's first).
    * A rescue box: its factory alone (it gets the factory's signed WiFi list and a PIN).
    */
   adminBoardClaim: (
     boardId: string,
-    body: { factory_id: string; line_id?: string; settings?: BoardSettings },
+    body: { factory_id: string; settings?: BoardSettings },
     options?: ApiRequestOptions,
   ) =>
     request<{ ok: boolean; cfg_version: number; factory_id: string; line_id: string }>(

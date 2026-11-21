@@ -35,6 +35,10 @@ const { AlertDetail } = await import('@/components/alerts-app/alert-detail');
 const { AlertsSettings } = await import('@/components/alerts-app/settings');
 const { AppLoginForm } = await import('@/components/alerts-app/login-form');
 const { InstallGuide } = await import('@/components/alerts-app/install-guide');
+const { AppGate } = await import('@/components/alerts-app/app-gate');
+const { NotificationsGate, NotificationsStepScreen } = await import('@/components/alerts-app/notifications-gate');
+const { LanguageChoice } = await import('@/components/alerts-app/language-choice');
+const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
 const now = new Date().toISOString();
@@ -175,7 +179,7 @@ describe('the settings', () => {
     expect(html).toContain('Shree Mills');
     expect(html).toContain('Sign out');
     expect(html).toContain('Alerts not arriving?');
-    expect(html).toContain('href="/install"');
+    expect(html).not.toContain('href="/install"');   // the settings open only inside the installed app
   });
 
   it('in Hindi', () => {
@@ -200,25 +204,170 @@ describe('signing in', () => {
   });
 });
 
-describe('installing', () => {
-  it('the iPhone steps, the Android steps, or both', () => {
-    const ios = render(<InstallGuide platform="ios" />);
-    expect(ios).toContain('Install FloorBeat Alerts');
-    expect(ios).toContain('On iPhone');
-    expect(ios).toContain('Add to Home Screen');
-    expect(ios).not.toContain('On Android');
-    const android = render(<InstallGuide platform="android" />);
-    expect(android).toContain('On Android');
-    expect(android).toContain('Add to Home screen');
-    expect(android).not.toContain('On iPhone');
-    const other = render(<InstallGuide platform="other" />);
-    expect(other).toContain('On iPhone');
-    expect(other).toContain('On Android');
+describe('installing (what the app\'s address shows where the app does not open)', () => {
+  it('Safari on an iPhone: the steps to the Home Screen, nothing else', () => {
+    const html = render(<InstallGuide access="add-to-home" />);
+    expect(html).toContain('Install FloorBeat Alerts');
+    expect(html).toContain('On iPhone');
+    expect(html).toContain('Tap the Share button at the bottom of Safari.');
+    expect(html).toContain('Add to Home Screen');
+    expect(html).toContain('Open this page in the Safari app.');   // an app's own Safari view has no Add to Home Screen
+    expect(html).not.toContain('Open this page in Safari to install.');
+    expect(html).not.toContain('On Android');
+    expect(html).not.toContain('Open the app');
+  });
+
+  it('another browser on an iPhone: Safari first, with the address to copy', () => {
+    const html = render(<InstallGuide access="use-safari" />);
+    expect(html).toContain('Open this page in Safari to install.');
+    expect(html).toContain('>alerts.floorbeat.in<');
+    expect(html).toContain('Copy link');
+    expect(html).toContain('Copy the link, open Safari and paste it in the address bar.');
+    expect(html).toContain('Add to Home Screen');
+  });
+
+  it('a browser on Android: the APK to download, never a Home Screen copy', () => {
+    const html = render(<InstallGuide access="get-android-app" />);
+    expect(html).toContain('Get the FloorBeat Alerts app');
+    expect(html).toContain('On Android, alerts come in the FloorBeat Alerts app, not in the browser.');
+    expect(html).toContain('href="https://floorbeat.in/downloads/floorbeat-alerts.apk"');
+    expect(html).toContain('Already installed? Open FloorBeat Alerts from your apps.');
+    expect(html).toContain('href="https://floorbeat.in/app#android"');
+    expect(html).not.toContain('Home Screen');
+    expect(html).not.toContain('On iPhone');
+  });
+
+  it('a computer: how to get it on either phone', () => {
+    const html = render(<InstallGuide access="phone-only" />);
+    expect(html).toContain('FloorBeat Alerts is a phone app');
+    expect(html).toContain('On your iPhone, open alerts.floorbeat.in in Safari, then tap Share and “Add to Home Screen”.');
+    expect(html).toContain('On your Android phone, open floorbeat.in/app and download the app.');
+    expect(html).not.toContain('Copy link');
+  });
+
+  it('inside the app (its /install page): installed, and where notifications are turned on', () => {
+    const html = render(<InstallGuide access="open" />);
+    expect(html).toContain('Installed. Open it from your Home Screen.');
+    expect(html).toContain('href="/settings"');
+    expect(html).toContain('Open the app');
+    expect(html).not.toContain('Download for Android');
   });
 
   it('in Hindi', () => {
-    const html = render(<InstallGuide platform="ios" />, () => {}, hi);
-    expect(html).toContain('FloorBeat Alerts इंस्टॉल करें');
-    expect(html).toContain('iPhone पर');
+    expect(render(<InstallGuide access="add-to-home" />, () => {}, hi)).toContain('FloorBeat Alerts इंस्टॉल करें');
+    expect(render(<InstallGuide access="get-android-app" />, () => {}, hi)).toContain('Android के लिए डाउनलोड करें');
+    expect(render(<InstallGuide access="phone-only" />, () => {}, hi)).toContain('FloorBeat Alerts फ़ोन का ऐप है');
+  });
+});
+
+describe('the gate', () => {
+  it('sends nothing of the app before the phone has said what it is (the server\'s page)', () => {
+    const html = render(<AppGate><p>the inbox</p></AppGate>);
+    expect(html).not.toContain('the inbox');
+    expect(html).toContain('aria-busy="true"');
+  });
+});
+
+describe('the first question in the app: the language', () => {
+  it('asks in all three languages, with one big button for each', () => {
+    const html = render(<LanguageChoice onChosen={() => {}} />);
+    expect(html).toContain('Choose your language');
+    expect(html).toContain('अपनी भाषा चुनें');
+    expect(html).toContain('તમારી ભાષા પસંદ કરો');
+    for (const name of ['English', 'हिन्दी', 'ગુજરાતી']) expect(html).toMatch(new RegExp(`<button[^>]*>${name}</button>`));
+  });
+});
+
+describe('a phone: notifications on before the app (the iPhone app and the Android app alike)', () => {
+  type Step = Parameters<typeof NotificationsStepScreen>[0]['step'];
+  const screen = (step: Step, extra = {}, messages: Record<string, string> | null = null, phone: 'iphone' | 'android' = 'iphone') =>
+    render(<NotificationsStepScreen step={step} phone={phone} onEnable={() => {}} onCheck={() => {}} {...extra} />, () => {}, messages);
+
+  it('not on yet: why, the tap, "Allow", and the button', () => {
+    const html = screen('turn-on');
+    expect(html).toContain('FloorBeat Alerts works only with notifications on, so your phone rings the moment a machine stops.');
+    expect(html).toContain('Tap “Turn on notifications” below.');
+    expect(html).toContain('When your phone asks, tap “Allow”.');
+    expect(screen('turn-on', {}, null, 'android')).toBe(html);   // the same screen on Android
+    expect(html).toMatch(/<button[^>]*>Turn on notifications<\/button>/);
+    expect(screen('turn-on', { busy: true })).toMatch(/<button[^>]*disabled=""[^>]*>Turning on…<\/button>/);
+    expect(screen('turn-on', { failed: true })).toContain('Could not turn on notifications. Try again.');
+    expect(html).not.toContain('Check again');
+  });
+
+  it('blocked by the phone: the way through that phone\'s Settings, and a look again', () => {
+    const android = screen('blocked', {}, null, 'android');
+    expect(android).toContain('Open your phone’s Settings, then “Apps”, then “FloorBeat Alerts”.');
+    expect(android).toContain('Tap “Notifications” and turn them on.');
+    expect(android).not.toContain('iPhone');
+    const html = screen('blocked');
+    expect(html).toContain('Notifications are blocked');
+    expect(html).toContain('Open the Settings app on your iPhone.');
+    expect(html).toContain('Tap “Notifications”, then “FloorBeat Alerts”.');
+    expect(html).toContain('Turn on “Allow Notifications”.');
+    expect(html).toContain('Come back here and tap “Turn on notifications”.');
+    expect(html).toMatch(/<button[^>]*>Check again<\/button>/);
+  });
+
+  it('a phone too old for them: update it (the iPhone, or Chrome under the Android app)', () => {
+    const android = screen('update', {}, null, 'android');
+    expect(android).toContain('Update Chrome');
+    expect(android).toContain('Open the Play Store and update Chrome.');
+    const html = screen('update');
+    expect(html).toContain('Update your iPhone');
+    expect(html).toContain('iOS 16.4');
+    expect(html).toContain('Open Settings, then General, then Software Update, and install the update.');
+    expect(html).not.toContain('Check again');
+    expect(html).not.toMatch(/>Turn on notifications</);
+  });
+
+  it('in Hindi and Gujarati', () => {
+    expect(screen('turn-on', {}, hi)).toContain('जब फ़ोन पूछे, तो “Allow” पर टैप करें।');
+    expect(screen('blocked', {}, hi)).toContain('नोटिफ़िकेशन ब्लॉक हैं');
+  });
+
+  it('in the server\'s page (not yet known to be a phone), the app as it is', () => {
+    expect(render(<NotificationsGate><p>the inbox</p></NotificationsGate>)).toContain('the inbox');
+  });
+});
+
+describe('the phone will not ring yet', () => {
+  const prompt = (state: Parameters<typeof PushPrompt>[0]['state'], extra = {}) => render(<PushPrompt state={state} onEnable={() => {}} installHref="/install" {...extra} />);
+
+  it('notifications off: says so, with the one button that fixes it', () => {
+    const html = prompt('off');
+    expect(html).toContain('Your phone will not ring yet');
+    expect(html).toContain('Turn on notifications so your phone rings the moment a machine stops.');
+    expect(html).toContain('>Turn on notifications<');
+    expect(prompt('off', { busy: true })).toContain('>Turning on…<');
+    expect(prompt('off', { failed: true })).toContain('Could not turn on notifications. Try again.');
+  });
+
+  it('an iPhone before the app is on the Home Screen: install first', () => {
+    const html = prompt('needs-install');
+    expect(html).toContain('Install the app on your Home Screen first');
+    expect(html).toContain('href="/install"');
+    expect(html).not.toContain('>Turn on notifications<');
+  });
+
+  it('blocked by the phone, or a browser that cannot: what to do, no button', () => {
+    expect(prompt('blocked')).toContain('Notifications are blocked for this app.');
+    expect(prompt('unsupported')).toContain('This browser cannot show notifications.');
+    expect(prompt('blocked')).not.toContain('<button');
+  });
+
+  it('nothing once they are on, while checking, or when the server has none', () => {
+    for (const state of ['on', 'checking', 'ok', 'server-off'] as const) expect(prompt(state)).toBe('');
+  });
+
+  it('in Hindi', () => {
+    const html = render(<PushPrompt state="off" onEnable={() => {}} installHref="/install" />, () => {}, hi);
+    expect(html).toContain('आपका फ़ोन अभी नहीं बजेगा');
+  });
+
+  it('the inbox says alerts ring only when they do', () => {
+    const html = render(<AlertsInbox />, seedInbox([]));
+    expect(html).toContain('New alerts show here.');            // not known to ring yet (still checking)
+    expect(html).not.toContain('and ring your phone');
   });
 });

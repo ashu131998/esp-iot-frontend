@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { afterSignIn } from '@/lib/alerts-app/model';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { isAlertsAppHost } from '@/lib/hosts';
 import {
@@ -13,11 +14,10 @@ import {
 function loginFallback(req: NextRequest, next: string | null): URL {
   const base = req.nextUrl.origin;
   const path = next ?? '/';
-  // The alerts app (alerts.floorbeat.in) signs in at its own /login.
+  // The alerts app (alerts.floorbeat.in) shows its sign-in at the address asked for (middleware.ts):
+  // back there, signed out now (the cookies are cleared), never to a "login" address.
   if (isAlertsAppHost(req.headers.get('host') ?? req.nextUrl.hostname, process.env.FACTORY_HOST_SUFFIX, process.env.ALERTS_APP_HOST)) {
-    const url = new URL('/login', base);
-    if (path !== '/' && safeNextPath(path)) url.searchParams.set('next', path);
-    return url;
+    return new URL(afterSignIn(path), base);
   }
   const factoryMatch = path.match(/^\/factories\/([^/?#]+)/);
   if (factoryMatch) {

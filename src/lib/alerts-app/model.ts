@@ -2,6 +2,7 @@
  * The alerts app's pure rules: what an alert asks, how it is coloured, how the inbox is grouped,
  * and the app's own addresses. No React, no browser: tested in lib/__tests__/alerts-app.test.ts.
  */
+import { safeNextPath } from '@/lib/auth-redirect';
 import { APP_TZ } from '@/lib/shifts';
 
 import type { AlertOption, MyAlert } from './types';
@@ -120,6 +121,21 @@ export function appBase(pathname: string | null | undefined): '' | '/alerts-app'
 export function appPath(pathname: string | null | undefined): string {
   const p = (pathname ?? '/').replace(/^\/alerts-app(?=\/|$)/, '');
   return p === '' ? '/' : p;
+}
+
+/**
+ * Where the app goes once signed in, and where an old /login link leads. The sign-in has no address
+ * of its own: signed out, any of the app's addresses shows it in place (an iPhone's Safari is never
+ * sent to a "login" page before the app is installed; the user, 2026-11-21). So: the page named in
+ * ?next= (one of this site's, never the sign-in), else the page the sign-in was shown on, else
+ * `home` (the inbox: "/", or "/alerts-app" at the app's inner address).
+ */
+export function afterSignIn(next: string | null | undefined, here: string | null | undefined = null, home = '/'): string {
+  const usable = (path: string | null | undefined) => {
+    const safe = safeNextPath(path);
+    return safe && !/^(\/alerts-app)?\/login\/?([?#]|$)/.test(safe) ? safe : null;
+  };
+  return usable(next) ?? usable(here) ?? home;
 }
 
 /** Whether a bottom-bar tab is the current page: the inbox owns "/" and every alert. */

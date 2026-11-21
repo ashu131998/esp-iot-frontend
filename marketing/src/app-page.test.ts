@@ -14,7 +14,8 @@ describe('floorbeat.in/app', () => {
     expect(html).toContain('href="/downloads/floorbeat-alerts.apk"');
     expect(html).toContain('Add to Home Screen');
     expect(html).toContain('https://alerts.floorbeat.in/install');
-    expect(html).toContain('https://alerts.floorbeat.in/login');
+    expect(html).toContain('href="https://alerts.floorbeat.in/"');   // the app's address, never a "login" page (an iPhone not yet installed)
+    expect(html).not.toContain('alerts.floorbeat.in/login');
   });
 
   it('sends Android to the APK only: the app does not open in a browser tab', () => {

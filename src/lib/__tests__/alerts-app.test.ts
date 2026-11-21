@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isIOS, isIOSSafari, isStandalone, platformOf } from '@/lib/alerts-app/install';
 import {
-  afterSignIn, appBase, appPath, asksQuestion, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
+  afterSignIn, appBase, appPath, asksQuestion, cameraOf, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
 } from '@/lib/alerts-app/model';
 import { notificationsStep, pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array } from '@/lib/alerts-app/push';
 import type { MyAlert } from '@/lib/alerts-app/types';
@@ -79,8 +79,25 @@ describe('what an alert asks', () => {
     expect(typeLabel('machine_up_config')).toBe('Machine running again');
     expect(typeLabel('shift_reminder')).toBe('Shift reminder');
     expect(typeLabel('test')).toBe('Test alert');
+    expect(typeLabel('camera_truck')).toBe('Camera');
+    expect(typeLabel('camera_hand')).toBe('Camera');
+    expect(typeLabel('camera_blocked')).toBe('Camera');
     expect(typeLabel('something_else')).toBeNull();
     expect(typeLabel(null)).toBeNull();
+  });
+
+  it('a camera alert\'s camera, and whether a picture came with it (the alert\'s page shows both)', () => {
+    const view = (v: Record<string, unknown>) => alert({ type: String(v.kind), payload: { view: { camera: 'cam-478998', machine: 'Gate 1', at: '2026-11-21T11:12:00Z', ...v } } });
+    expect(cameraOf(view({ kind: 'camera_truck', picture_id: 42 }))).toEqual({ deviceId: 'cam-478998', picture: true });
+    expect(cameraOf(view({ kind: 'camera_hand', picture_id: '42' }))).toEqual({ deviceId: 'cam-478998', picture: true });
+    // its picture came after the alert: found by the camera's event
+    expect(cameraOf(view({ kind: 'camera_blocked', picture_id: null, ev: 777 }))).toEqual({ deviceId: 'cam-478998', picture: true });
+    // told before the alerts carried their picture: the camera live only
+    expect(cameraOf(view({ kind: 'camera_truck' }))).toEqual({ deviceId: 'cam-478998', picture: false });
+    expect(cameraOf(view({ kind: 'camera_truck', picture_id: 0 }))).toEqual({ deviceId: 'cam-478998', picture: false });
+    expect(cameraOf(view({ kind: 'camera_truck', camera: '' }))).toBeNull();
+    expect(cameraOf(view({ kind: 'machine_down', picture_id: 42 }))).toBeNull();
+    expect(cameraOf(alert({ payload: null }))).toBeNull();
   });
 });
 

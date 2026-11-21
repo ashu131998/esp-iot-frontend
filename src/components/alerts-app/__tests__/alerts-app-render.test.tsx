@@ -167,6 +167,38 @@ describe('one alert', () => {
     expect(html).toContain('आपका जवाब');
     expect(html).toContain('इनबॉक्स पर वापस');
   });
+
+  // The user, 2026-11-21: "in the camera alert i want image as well as check camera within the app".
+  const TRUCK = alert({
+    notification_id: 'ntf-cam', type: 'camera_truck', title: 'A truck at camera cam-478998 at Gate 1 (4:42 pm).', severity: 'MEDIUM',
+    message: 'A truck at camera cam-478998 at Gate 1 (4:42 pm).', machine_id: null, machine_name: null,
+    payload: { view: { kind: 'camera_truck', camera: 'cam-478998', machine: 'Gate 1', at: '2026-11-21T11:12:00.000Z', count: 1, picture_id: 42 } },
+  });
+
+  it('a camera alert: the picture sent with it, and the camera live a tap away, in the app', () => {
+    const html = render(<AlertDetail id="ntf-cam" />, (c) => c.setQueryData(alertQueryKey('ntf-cam'), TRUCK));
+    expect(html).toContain('>Camera<');
+    expect(html).toContain('A truck at cam-478998 at Gate 1');
+    expect(html).toContain('Seen at 04:42 pm.');
+    expect(html).toContain('src="/api/v1/me/alerts/ntf-cam/picture"');
+    expect(html).toContain('alt="The camera&#x27;s picture of this alert"');
+    expect(html).toContain('Loading the picture…');
+    expect(html).toContain('Check camera');
+    expect(html).not.toContain('Cameras page');
+    expect(html).not.toContain('Your answer');
+  });
+
+  it('a camera alert from before pictures came with them: the camera live only; in Hindi', () => {
+    const older = { ...TRUCK, payload: { view: { kind: 'camera_hand', camera: 'cam-478998', machine: null, at: '2026-11-21T11:12:00.000Z' } } };
+    const html = render(<AlertDetail id="ntf-cam" />, (c) => c.setQueryData(alertQueryKey('ntf-cam'), older), hi);
+    expect(html).not.toContain('/picture');
+    expect(html).toContain('कैमरा देखें');
+    expect(html).toContain('>कैमरा<');
+  });
+
+  it('any other alert has no camera', () => {
+    expect(render(<AlertDetail id="ntf-1" />, (c) => c.setQueryData(alertQueryKey('ntf-1'), DOWN))).not.toContain('Check camera');
+  });
 });
 
 describe('the settings', () => {

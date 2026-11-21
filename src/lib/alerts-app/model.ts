@@ -33,6 +33,23 @@ export function titleOf(alert: Pick<MyAlert, 'title' | 'message' | 'type'>): str
   return first || typeLabel(alert.type) || alert.type;
 }
 
+/** The camera behind a camera alert (a truck, a hand, something in front of it), from the facts the engine attached. */
+export interface AlertCamera {
+  deviceId: string;
+  /** A picture came with the alert (or may have just after it: found by the camera's event): the app shows it. */
+  picture: boolean;
+}
+
+/** The camera of a camera alert; null for any other alert. */
+export function cameraOf(alert: Pick<MyAlert, 'payload'>): AlertCamera | null {
+  const view = alert.payload?.view as { kind?: unknown; camera?: unknown; picture_id?: unknown; ev?: unknown } | null | undefined;
+  if (!view || typeof view !== 'object' || typeof view.kind !== 'string' || !view.kind.startsWith('camera_')) return null;
+  if (typeof view.camera !== 'string' || view.camera === '') return null;
+  const pictureId = Number(view.picture_id);
+  const picture = (view.picture_id != null && Number.isSafeInteger(pictureId) && pictureId > 0) || (view.ev != null && view.ev !== '');
+  return { deviceId: view.camera, picture };
+}
+
 /** Red for a HIGH alert still open, amber for a MEDIUM one, green once answered, grey otherwise. */
 export function severityTone(alert: Pick<MyAlert, 'severity' | 'resolved_at'>): AlertTone {
   if (alert.resolved_at) return 'good';
@@ -44,13 +61,14 @@ export function severityTone(alert: Pick<MyAlert, 'severity' | 'resolved_at'>): 
 
 /**
  * What kind of alert this is, in English (translated where shown): a machine that stopped, one
- * running again, a shift about to start, a test from the settings page; null for a kind with no
- * plain name (the title says it then).
+ * running again, a shift about to start, what a camera saw, a test from the settings page; null for
+ * a kind with no plain name (the title says it then).
  */
-export function typeLabel(type: string | null | undefined): 'Machine stopped' | 'Machine running again' | 'Shift reminder' | 'Test alert' | null {
+export function typeLabel(type: string | null | undefined): 'Machine stopped' | 'Machine running again' | 'Shift reminder' | 'Camera' | 'Test alert' | null {
   const t = (type ?? '').toLowerCase();
   if (!t) return null;
   if (t === 'test') return 'Test alert';
+  if (t.startsWith('camera_')) return 'Camera';
   if (t.includes('shift')) return 'Shift reminder';
   if (t.includes('down')) return 'Machine stopped';
   if (t.includes('up')) return 'Machine running again';

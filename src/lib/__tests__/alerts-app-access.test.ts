@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ANDROID_APP_SEEN_KEY, accessHere, androidAppSeen, phoneHere, rememberAndroidApp } from '@/lib/alerts-app/access-client';
-import { appAccess, fromAndroidApp, isAppleMobile, isSafariBrowser, type AccessEnv } from '@/lib/alerts-app/install';
+import { appAccess, fromAndroidApp, isAppleMobile, isSafariBrowser, webAppInstallable, type AccessEnv } from '@/lib/alerts-app/install';
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 const IPHONE_HOME_SCREEN = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
@@ -81,6 +81,19 @@ describe('a computer', () => {
     expect(access(DESKTOP_LINUX)).toBe('phone-only');
     expect(access('')).toBe('phone-only');
     expect(appAccess({ userAgent: null })).toBe('phone-only');
+  });
+});
+
+describe('who is offered the site as an installable app (its manifest): only an iPhone or an iPad', () => {
+  it('iPhone, in Safari, another browser or from the Home Screen; an iPad, whose Safari says Mac', () => {
+    for (const ua of [IPHONE_SAFARI, IPHONE_CHROME, IPHONE_HOME_SCREEN, MAC_SAFARI]) expect(webAppInstallable(ua), ua).toBe(true);
+  });
+
+  it('never Android (it has the APK) or a computer\'s Chrome', () => {
+    for (const ua of [ANDROID_CHROME, DESKTOP_LINUX, WINDOWS_CHROME, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36']) {
+      expect(webAppInstallable(ua), ua).toBe(false);
+    }
+    expect(webAppInstallable(null)).toBe(false);
   });
 });
 

@@ -16,7 +16,7 @@ import { hi } from '@/lib/i18n/messages/hi';
 const auth = { canWriteFactory: true, isInternalStaff: false };
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => auth }));
 
-const { CamerasOverview } = await import('@/components/factory/cameras-dashboard');
+const { CamerasOverview, refreshCameras } = await import('@/components/factory/cameras-dashboard');
 const { CameraSettingsForm } = await import('@/components/factory/camera-settings');
 
 const F = 'mill-01';
@@ -110,6 +110,20 @@ describe('the Cameras page', () => {
     const html = render(<CamerasOverview factoryId={F} />, seed(), hi);
     expect(html).toContain(hi['Watch live']);
     expect(html).toContain(hi['The camera is on']);
+    expect(html).toContain(`aria-label="${hi.Refresh}"`);
+  });
+
+  it('a Refresh button beside the sentence (the page has no date bar, so no countdown); it fetches this factory\'s cameras and what each saw again', () => {
+    const html = render(<CamerasOverview factoryId={F} />, seed());
+    expect(html).toMatch(/<button[^>]*aria-label="Refresh"[^>]*>/);
+    expect(html.indexOf('aria-label="Refresh"')).toBeLessThan(html.indexOf('Camera at Loom 3'));   // at the top
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    seed()(client);
+    client.setQueryData(camerasQueryKey('other-mill'), { cameras: [] });
+    refreshCameras(client, F);
+    expect(client.getQueryState(camerasQueryKey(F))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(cameraEventsQueryKey(F, CAM))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(camerasQueryKey('other-mill'))?.isInvalidated).toBe(false);
   });
 });
 

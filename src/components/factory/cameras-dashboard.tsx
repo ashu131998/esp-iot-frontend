@@ -1,7 +1,7 @@
 'use client';
 
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { Camera as CameraIcon, Settings2, Video } from 'lucide-react';
+import { type QueryClient, useIsFetching, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { Camera as CameraIcon, RefreshCw, Settings2, Video } from 'lucide-react';
 import { useState } from 'react';
 
 import { LiveSheet } from '@/components/cam/live-view';
@@ -58,11 +58,34 @@ export function CamerasOverview({ factoryId }: { factoryId: string }) {
         icon={words.badge === undefined && words.tone !== 'good' ? <CameraIcon className="h-5 w-5" /> : undefined}
         title={words.title}
         subtitle={words.subtitle}
+        action={<RefreshCameras factoryId={factoryId} />}
       />
       {data.cameras.map((camera) => <CameraCard key={camera.board_id} factoryId={factoryId} camera={camera} />)}
       {data.cameras.map((camera) => <CameraEvents key={camera.board_id} factoryId={factoryId} camera={camera} />)}
     </div>
   );
+}
+
+/**
+ * Refresh: the cameras (their last pictures, online or not) and what each saw, fetched again now; it turns while that
+ * runs. The page refreshes itself every REFRESH_MS too; this page has no date bar, so no countdown shows.
+ */
+function RefreshCameras({ factoryId }: { factoryId: string }) {
+  const { t } = useT();
+  const qc = useQueryClient();
+  const busy = useIsFetching({ queryKey: camerasQueryKey(factoryId) }) + useIsFetching({ queryKey: ['camera-events', factoryId] }) > 0;
+  return (
+    <Button size="sm" variant="secondary" onClick={() => refreshCameras(qc, factoryId)} disabled={busy} aria-label={t('Refresh')}>
+      <RefreshCw className={cn('h-4 w-4 sm:mr-1.5', busy && 'animate-spin')} />
+      <span className="hidden sm:inline">{t('Refresh')}</span>
+    </Button>
+  );
+}
+
+/** A factory's cameras and every camera's events, fetched again (those on screen at once). */
+export function refreshCameras(qc: QueryClient, factoryId: string) {
+  void qc.invalidateQueries({ queryKey: camerasQueryKey(factoryId) });
+  void qc.invalidateQueries({ queryKey: ['camera-events', factoryId] });
 }
 
 /** One camera: where it is and whether it is on, its last picture, Watch live; for admins a picture now and its settings. */

@@ -1,15 +1,40 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
   isLocale,
+  localeChosenHere,
   localeCookieString,
   localeFromCookieString,
   localeTag,
   pickLocale,
   preferredLanguages,
+  rememberLocale,
 } from '@/lib/i18n/locale';
+
+describe('a language chosen in this browser (the alerts app asks once when not)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('only when the cookie holds a language we have', () => {
+    vi.stubGlobal('document', { cookie: 'esp_csrf=abc' });
+    expect(localeChosenHere()).toBe(false);
+    vi.stubGlobal('document', { cookie: `esp_csrf=abc; ${LOCALE_COOKIE}=gu` });
+    expect(localeChosenHere()).toBe(true);
+    vi.stubGlobal('document', { cookie: `${LOCALE_COOKIE}=mr` });
+    expect(localeChosenHere()).toBe(false);
+  });
+
+  it('chosen once it is remembered; never on the server', () => {
+    const doc = { cookie: '' };
+    vi.stubGlobal('document', doc);
+    rememberLocale('hi');
+    expect(doc.cookie).toBe(localeCookieString('hi'));
+    expect(localeChosenHere()).toBe(true);
+    vi.unstubAllGlobals();
+    expect(localeChosenHere()).toBe(false);
+  });
+});
 
 describe('isLocale', () => {
   it('knows English, Hindi and Gujarati only', () => {

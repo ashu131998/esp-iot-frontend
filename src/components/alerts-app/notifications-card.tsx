@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 
+import { useNotificationsRequired } from '@/components/alerts-app/notifications-gate';
 import { usePushSwitch, type SwitchState } from '@/components/alerts-app/use-push-switch';
 import { Button } from '@/components/ui/button';
 import { TONE_DOT, type Tone } from '@/components/ui/simple';
@@ -11,12 +12,16 @@ import { cn } from '@/lib/utils';
 
 /**
  * The notifications switch: on, off, blocked by the phone, or not possible here (an iPhone
- * before the app is on the Home Screen), with a test push once on.
+ * before the app is on the Home Screen), with a test push once on. On a phone there is no
+ * "turn off": the app opens only with notifications on (notifications-gate.tsx). `required`
+ * forces either (tests).
  */
-export function NotificationsCard() {
+export function NotificationsCard({ required: forced }: { required?: boolean } = {}) {
   const { t } = useT();
   const href = useAppHref();
   const { state, busy, note, enable, disable, test } = usePushSwitch();
+  const requiredHere = useNotificationsRequired();
+  const required = forced ?? requiredHere;
 
   const lines: Record<SwitchState, string> = {
     checking: t('Checking…'),
@@ -44,7 +49,7 @@ export function NotificationsCard() {
         {state === 'on' && (
           <>
             <Button variant="secondary" onClick={test} disabled={busy}>{t('Send a test')}</Button>
-            <Button variant="ghost" onClick={disable} disabled={busy}>{t('Turn off on this phone')}</Button>
+            {!required && <Button variant="ghost" onClick={disable} disabled={busy}>{t('Turn off on this phone')}</Button>}
           </>
         )}
         {state === 'needs-install' && (

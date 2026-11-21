@@ -61,5 +61,10 @@ export function usePushSwitch() {
     }
   }, []);
 
-  return { state, busy, note, enable, disable, test };
+  /** Look again: back from the phone's settings, or after a tap on "Check again". */
+  const recheck = useCallback(() => {
+    currentState().then(setState, () => setState('unsupported'));
+  }, []);
+
+  return { state, busy, note, enable, disable, test, recheck };
 }

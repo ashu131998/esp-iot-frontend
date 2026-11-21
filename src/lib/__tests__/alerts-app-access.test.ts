@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ANDROID_APP_SEEN_KEY, accessHere, androidAppSeen, rememberAndroidApp } from '@/lib/alerts-app/access-client';
+import { ANDROID_APP_SEEN_KEY, accessHere, androidAppSeen, phoneHere, rememberAndroidApp } from '@/lib/alerts-app/access-client';
 import { appAccess, fromAndroidApp, isAppleMobile, isSafariBrowser, type AccessEnv } from '@/lib/alerts-app/install';
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
@@ -137,6 +137,23 @@ describe('what the browser says, read on the phone', () => {
     });
     return storage;
   }
+
+  it('which phone (its settings are pointed at; a phone needs notifications on): an iPad is an iPhone, the Android app whatever its browser says', () => {
+    browser({ ua: IPHONE_SAFARI });
+    expect(phoneHere()).toBe('iphone');
+    browser({ ua: MAC_SAFARI, touch: 5 });
+    expect(phoneHere()).toBe('iphone');
+    browser({ ua: ANDROID_CHROME, touch: 5 });
+    expect(phoneHere()).toBe('android');
+    browser({ ua: DESKTOP_LINUX, referrer: APP_REFERRER });
+    expect(phoneHere()).toBe('android');
+    browser({ ua: DESKTOP_LINUX, storage: new Map([[ANDROID_APP_SEEN_KEY, '1']]) });
+    expect(phoneHere()).toBe('android');
+    browser({ ua: MAC_SAFARI });
+    expect(phoneHere()).toBeNull();
+    browser({ ua: WINDOWS_CHROME });
+    expect(phoneHere()).toBeNull();
+  });
 
   it('the APK at launch: opens, and is remembered for the pages it opens later', () => {
     const storage = browser({ ua: ANDROID_CHROME, referrer: APP_REFERRER });

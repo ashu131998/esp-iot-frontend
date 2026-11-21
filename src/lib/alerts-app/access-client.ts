@@ -4,7 +4,20 @@
  * storage can be off (a private tab), matchMedia missing (an old browser).
  * Tested in lib/__tests__/alerts-app-access.test.ts.
  */
-import { appAccess, fromAndroidApp, type AppAccess } from './install';
+import { appAccess, fromAndroidApp, isAndroid, isAppleMobile, type AppAccess } from './install';
+
+export type Phone = 'iphone' | 'android';
+
+/**
+ * The phone the app runs on (an iPad counts as an iPhone; the Android app whatever its browser says),
+ * for which phone's settings to point at; null on a computer. On a phone the signed-in app opens
+ * only with notifications on (push.ts notificationsStep).
+ */
+export function phoneHere(): Phone | null {
+  if (isAppleMobile(navigator.userAgent, navigator.maxTouchPoints)) return 'iphone';
+  if (isAndroid(navigator.userAgent) || fromAndroidApp(document.referrer) || androidAppSeen()) return 'android';
+  return null;
+}
 
 /**
  * Kept in the browser's storage, which the Android app shares with its browser on the phone: the

@@ -36,6 +36,8 @@ const { AlertsSettings } = await import('@/components/alerts-app/settings');
 const { AppLoginForm } = await import('@/components/alerts-app/login-form');
 const { InstallGuide } = await import('@/components/alerts-app/install-guide');
 const { AppGate } = await import('@/components/alerts-app/app-gate');
+const { NotificationsGate, NotificationsStepScreen } = await import('@/components/alerts-app/notifications-gate');
+const { LanguageChoice } = await import('@/components/alerts-app/language-choice');
 const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
@@ -263,6 +265,69 @@ describe('the gate', () => {
     const html = render(<AppGate><p>the inbox</p></AppGate>);
     expect(html).not.toContain('the inbox');
     expect(html).toContain('aria-busy="true"');
+  });
+});
+
+describe('the first question in the app: the language', () => {
+  it('asks in all three languages, with one big button for each', () => {
+    const html = render(<LanguageChoice onChosen={() => {}} />);
+    expect(html).toContain('Choose your language');
+    expect(html).toContain('अपनी भाषा चुनें');
+    expect(html).toContain('તમારી ભાષા પસંદ કરો');
+    for (const name of ['English', 'हिन्दी', 'ગુજરાતી']) expect(html).toMatch(new RegExp(`<button[^>]*>${name}</button>`));
+  });
+});
+
+describe('a phone: notifications on before the app (the iPhone app and the Android app alike)', () => {
+  type Step = Parameters<typeof NotificationsStepScreen>[0]['step'];
+  const screen = (step: Step, extra = {}, messages: Record<string, string> | null = null, phone: 'iphone' | 'android' = 'iphone') =>
+    render(<NotificationsStepScreen step={step} phone={phone} onEnable={() => {}} onCheck={() => {}} {...extra} />, () => {}, messages);
+
+  it('not on yet: why, the tap, "Allow", and the button', () => {
+    const html = screen('turn-on');
+    expect(html).toContain('FloorBeat Alerts works only with notifications on, so your phone rings the moment a machine stops.');
+    expect(html).toContain('Tap “Turn on notifications” below.');
+    expect(html).toContain('When your phone asks, tap “Allow”.');
+    expect(screen('turn-on', {}, null, 'android')).toBe(html);   // the same screen on Android
+    expect(html).toMatch(/<button[^>]*>Turn on notifications<\/button>/);
+    expect(screen('turn-on', { busy: true })).toMatch(/<button[^>]*disabled=""[^>]*>Turning on…<\/button>/);
+    expect(screen('turn-on', { failed: true })).toContain('Could not turn on notifications. Try again.');
+    expect(html).not.toContain('Check again');
+  });
+
+  it('blocked by the phone: the way through that phone\'s Settings, and a look again', () => {
+    const android = screen('blocked', {}, null, 'android');
+    expect(android).toContain('Open your phone’s Settings, then “Apps”, then “FloorBeat Alerts”.');
+    expect(android).toContain('Tap “Notifications” and turn them on.');
+    expect(android).not.toContain('iPhone');
+    const html = screen('blocked');
+    expect(html).toContain('Notifications are blocked');
+    expect(html).toContain('Open the Settings app on your iPhone.');
+    expect(html).toContain('Tap “Notifications”, then “FloorBeat Alerts”.');
+    expect(html).toContain('Turn on “Allow Notifications”.');
+    expect(html).toContain('Come back here and tap “Turn on notifications”.');
+    expect(html).toMatch(/<button[^>]*>Check again<\/button>/);
+  });
+
+  it('a phone too old for them: update it (the iPhone, or Chrome under the Android app)', () => {
+    const android = screen('update', {}, null, 'android');
+    expect(android).toContain('Update Chrome');
+    expect(android).toContain('Open the Play Store and update Chrome.');
+    const html = screen('update');
+    expect(html).toContain('Update your iPhone');
+    expect(html).toContain('iOS 16.4');
+    expect(html).toContain('Open Settings, then General, then Software Update, and install the update.');
+    expect(html).not.toContain('Check again');
+    expect(html).not.toMatch(/>Turn on notifications</);
+  });
+
+  it('in Hindi and Gujarati', () => {
+    expect(screen('turn-on', {}, hi)).toContain('जब फ़ोन पूछे, तो “Allow” पर टैप करें।');
+    expect(screen('blocked', {}, hi)).toContain('नोटिफ़िकेशन ब्लॉक हैं');
+  });
+
+  it('in the server\'s page (not yet known to be a phone), the app as it is', () => {
+    expect(render(<NotificationsGate><p>the inbox</p></NotificationsGate>)).toContain('the inbox');
   });
 });
 

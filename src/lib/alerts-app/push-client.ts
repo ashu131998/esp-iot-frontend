@@ -5,8 +5,28 @@
 import { alertsApi } from './api';
 import { isIOS, isStandalone } from './install';
 import { pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array, type PushState, type PushSupport } from './push';
+import type { PushKey } from './types';
 
 export const SW_PATH = '/alerts-sw.js';
+
+/**
+ * The server's push key, kept once known, so a tap on "Turn on notifications" asks the phone at
+ * once: an iPhone shows its "Allow" prompt only right after a tap, and a wait for the server in
+ * between (a slow factory network) could make it refuse without asking.
+ */
+let knownKey: PushKey | null = null;
+
+async function serverKey(): Promise<PushKey> {
+  if (knownKey) return knownKey;
+  const key = await alertsApi.key();
+  if (key.enabled && key.public_key) knownKey = key;
+  return key;
+}
+
+/** Tests: start again without a known key. */
+export function forgetServerKey(): void {
+  knownKey = null;
+}
 
 /** Whether this phone can receive notifications at all (push.ts). */
 export function supportHere(): PushSupport {
@@ -49,7 +69,7 @@ async function readyWorker(): Promise<ServiceWorkerRegistration | null> {
 export async function currentState(): Promise<PushState> {
   const support = supportHere();
   if (support !== 'ok') return support;
-  const key = await alertsApi.key().catch(() => ({ enabled: false, public_key: null }));
+  const key = await serverKey().catch(() => ({ enabled: false, public_key: null }));
   const reg = await readyWorker();
   const sub = reg ? await reg.pushManager.getSubscription() : null;
   return pushState(support, Notification.permission, Boolean(sub), key.enabled);
@@ -59,7 +79,7 @@ export async function currentState(): Promise<PushState> {
 export async function turnOn(): Promise<PushState> {
   const support = supportHere();
   if (support !== 'ok') return support;
-  const key = await alertsApi.key();
+  const key = await serverKey();
   if (!key.enabled || !key.public_key) return 'server-off';
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return permission === 'denied' ? 'blocked' : 'off';
@@ -74,6 +94,20 @@ export async function turnOn(): Promise<PushState> {
   if (!body) throw new Error('The browser gave no subscription keys');
   await alertsApi.subscribe(body);
   return 'on';
+}
+
+/**
+ * This phone is set to ring (allowed and subscribed), from the phone alone: an app that needs it
+ * (an iPhone, components/alerts-app/notifications-gate.tsx) opens without waiting for the server.
+ */
+export async function subscribedHere(): Promise<boolean> {
+  try {
+    if (supportHere() !== 'ok' || Notification.permission !== 'granted') return false;
+    const reg = await readyWorker();
+    return Boolean(reg && (await reg.pushManager.getSubscription()));
+  } catch {
+    return false;
+  }
 }
 
 /** Unsubscribes this phone and removes the server's copy. */

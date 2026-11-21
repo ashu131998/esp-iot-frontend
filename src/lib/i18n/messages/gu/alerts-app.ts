@@ -143,4 +143,15 @@ export const alerts_app: Messages = {
   'FloorBeat Alerts needs notifications, and an iPhone gives them to Home Screen apps from iOS 16.4.': 'FloorBeat Alerts ને નોટિફિકેશન જોઈએ, અને iPhone હોમ સ્ક્રીન ઍપ્સને તે iOS 16.4 થી આપે છે.',
   'Open Settings, then General, then Software Update, and install the update.': 'Settings ખોલો, પછી General, પછી Software Update, અને અપડેટ ઇન્સ્ટૉલ કરો.',
   'Then open FloorBeat Alerts again from your Home Screen.': 'પછી હોમ સ્ક્રીન પરથી FloorBeat Alerts ફરી ખોલો.',
+
+  // a camera alert in the app: its picture and the camera live (components/alerts-app/alert-camera.tsx)
+  'Camera': 'કેમેરા',
+  'Check camera': 'કેમેરા જુઓ',
+  "The camera's picture of this alert": 'આ એલર્ટની કેમેરાની તસવીર',
+  'Loading the picture…': 'તસવીર લોડ થઈ રહી છે…',
+  'The picture of this alert is not available.': 'આ એલર્ટની તસવીર ઉપલબ્ધ નથી.',
+  'Seen at {time}.': '{time} વાગ્યે દેખાયું.',
+  'Seen by the camera.': 'કેમેરાએ જોયું.',
+  'Since {time}: a hand on the lens, a cover, or something big right in front of it.': '{time}થી: લેન્સ પર હાથ, કોઈ ઢાંકણ, અથવા સામે કોઈ મોટી વસ્તુ.',
+  'A hand on the lens, a cover, or something big right in front of it.': 'લેન્સ પર હાથ, કોઈ ઢાંકણ, અથવા સામે કોઈ મોટી વસ્તુ.',
 };

@@ -3,12 +3,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { BellRing, Settings as SettingsIcon } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { BrandMark } from '@/components/layout/brand-mark';
-import { ALERTS_QUERY_KEY, tabActive } from '@/lib/alerts-app/model';
-import { keepSubscriptionFresh, listenForPushes, setBadge } from '@/lib/alerts-app/push-client';
+import { ALERTS_QUERY_KEY, appPath, tabActive } from '@/lib/alerts-app/model';
+import { followAlerts, keepSubscriptionFresh, setBadge } from '@/lib/alerts-app/push-client';
 import { useAppHref, useMyAlerts } from '@/lib/alerts-app/queries';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
@@ -16,20 +16,28 @@ import { cn } from '@/lib/utils';
 /**
  * The signed-in app's frame: a slim top bar with the unread count, the page, and a bottom bar with
  * Inbox and Settings. It also keeps the inbox fresh (a push arriving while the app is open refreshes
- * it), keeps this phone's push subscription current, and puts the unread count on the app icon.
+ * it), opens the alert of a tapped notification, keeps this phone's push subscription current, and
+ * puts the unread count on the app icon.
  */
 export function AlertsAppShell({ children }: { children: React.ReactNode }) {
   const { t } = useT();
   const pathname = usePathname();
+  const router = useRouter();
   const href = useAppHref();
   const queryClient = useQueryClient();
   const alerts = useMyAlerts();
   const unread = alerts.data?.unread ?? 0;
 
-  useEffect(() => listenForPushes(() => {
-    void queryClient.invalidateQueries({ queryKey: ALERTS_QUERY_KEY });
-    void queryClient.invalidateQueries({ queryKey: ['me-alert'] });
-  }), [queryClient]);
+  // A push refreshes the inbox; a tapped notification opens its alert, whatever the phone did with
+  // the tap (lib/alerts-app/open.ts).
+  useEffect(() => followAlerts({
+    refresh: () => {
+      void queryClient.invalidateQueries({ queryKey: ALERTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['me-alert'] });
+    },
+    go: (url) => router.push(href(url)),
+    here: () => `${appPath(window.location.pathname)}${window.location.search}`,
+  }), [queryClient, router, href]);
 
   useEffect(() => {
     void keepSubscriptionFresh();

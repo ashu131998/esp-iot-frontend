@@ -4,6 +4,7 @@
  */
 import { alertsApi } from './api';
 import { isIOS, isStandalone } from './install';
+import { CHANNEL, OPEN_KEY, SETTINGS_CACHE, appPage, elsewhere, openTarget } from './open';
 import { pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array, type PushState, type PushSupport } from './push';
 import type { PushKey } from './types';
 
@@ -137,15 +138,111 @@ export async function keepSubscriptionFresh(): Promise<void> {
   }
 }
 
-/** Runs `onAlert` whenever the service worker reports a push (the page refreshes its inbox). Returns stop(). */
-export function listenForPushes(onAlert: (message: { type: string; url?: string }) => void): () => void {
-  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return () => {};
+export interface WorkerMessage {
+  /** 'alert': a push came; 'open': go to `url` (a tapped notification the worker could not steer a window to). */
+  type: 'alert' | 'open';
+  url?: string;
+}
+
+/**
+ * Runs `onMessage` whenever the service worker reports a push or a tap. It says so two ways (open.ts):
+ * a message to each window it finds and a broadcast every page hears, so either may be missing on a
+ * phone (both reaching the page only refreshes twice). Returns stop().
+ */
+export function listenForPushes(onMessage: (message: WorkerMessage) => void): () => void {
   const handler = (event: MessageEvent) => {
-    const data = event.data as { type?: string; url?: string } | null;
-    if (data && (data.type === 'alert' || data.type === 'open')) onAlert({ type: data.type, url: data.url });
+    const data = event.data as { type?: unknown; url?: unknown } | null;
+    if (!data || (data.type !== 'alert' && data.type !== 'open')) return;
+    onMessage({ type: data.type, url: typeof data.url === 'string' ? data.url : undefined });
   };
-  navigator.serviceWorker.addEventListener('message', handler);
-  return () => navigator.serviceWorker.removeEventListener('message', handler);
+  const stops: Array<() => void> = [];
+  const container = typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+  if (container) {
+    container.addEventListener('message', handler);
+    // Messages wait until the page says it listens; most browsers start them once the page has loaded.
+    container.startMessages?.();
+    stops.push(() => container.removeEventListener('message', handler));
+  }
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      const channel = new BroadcastChannel(CHANNEL);
+      channel.addEventListener('message', handler);
+      stops.push(() => channel.close());
+    } catch {
+      // no channels here: the worker's messages alone
+    }
+  }
+  return () => stops.forEach((stop) => stop());
+}
+
+/** The note of a tapped notification (open.ts), taken: the page it names, or null; gone afterwards either way. */
+export async function takeOpenNote(nowMs = Date.now()): Promise<string | null> {
+  try {
+    if (typeof caches === 'undefined') return null;
+    const cache = await caches.open(SETTINGS_CACHE);
+    const hit = await cache.match(OPEN_KEY);
+    if (!hit) return null;
+    await cache.delete(OPEN_KEY);
+    return openTarget(await hit.json().catch(() => null), nowMs);
+  } catch {
+    return null;
+  }
+}
+
+/** After a push, the inbox is asked again this much later too: an alert the first ask missed is in by then. */
+export const ASK_AGAIN_MS = 4_000;
+/** The worker notes a tap a moment after the phone brings the app to the front: looked for again then. */
+const LOOK_AGAIN_MS = 1_000;
+
+/**
+ * While the app is open: a push refreshes the inbox (`refresh`), and a tapped notification's alert is
+ * opened (`go`) unless the app is on it already (`here`): when the worker says so, and from the worker's
+ * note when the app starts and whenever it comes to the front. Browser only (an effect). Returns stop().
+ */
+export function followAlerts({ refresh, go, here }: {
+  refresh: () => void;
+  go: (url: string) => void;
+  here: () => string;
+}): () => void {
+  let stopped = false;
+  const timers = new Set<ReturnType<typeof setTimeout>>();
+  const later = (fn: () => void, ms: number) => {
+    const timer = setTimeout(() => {
+      timers.delete(timer);
+      fn();
+    }, ms);
+    timers.add(timer);
+  };
+  const goTo = (url: string | null) => {
+    if (!stopped && url && elsewhere(url, here())) go(url);
+  };
+  const followNote = () => {
+    void takeOpenNote().then(goTo);
+  };
+
+  const stopListening = listenForPushes((message) => {
+    refresh();
+    if (message.type === 'alert') later(refresh, ASK_AGAIN_MS);
+    if (message.type === 'open') {
+      void takeOpenNote();   // this tap's note: followed now, so it never moves the app later
+      goTo(appPage(message.url));
+    }
+  });
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    followNote();
+    later(followNote, LOOK_AGAIN_MS);
+  };
+  followNote();
+  document.addEventListener('visibilitychange', onVisible);
+
+  return () => {
+    stopped = true;
+    stopListening();
+    document.removeEventListener('visibilitychange', onVisible);
+    timers.forEach(clearTimeout);
+    timers.clear();
+  };
 }
 
 /** Tells the service worker the person's language (it keeps it for the pushes it shows). */

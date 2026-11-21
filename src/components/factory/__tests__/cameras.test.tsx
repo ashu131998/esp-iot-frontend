@@ -63,6 +63,7 @@ describe('the Cameras page', () => {
       expect(html).toContain(text);
     }
     expect(html).not.toMatch(/[Bb]ottle/);
+    expect(html).toContain('Alert pictures are kept 3 months');
   });
 
   it('what it saw: a truck and a hand the models found, with their pictures; firmware 2.9.6\'s something in front of it, clear again', () => {

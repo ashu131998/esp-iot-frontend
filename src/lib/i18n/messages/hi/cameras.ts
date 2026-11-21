@@ -50,7 +50,7 @@ export const cameras: Messages = {
   "All {count} cameras are on": "सभी {count} कैमरे चालू हैं",
   "Something is in front of the camera right now.": "अभी कैमरे के सामने कुछ है।",
   "What it saw · {camera}": "इसने क्या देखा · {camera}",
-  "Pictures are kept 30 days": "तस्वीरें 30 दिन रखी जाती हैं",
+  "Alert pictures are kept 3 months": "अलर्ट की तस्वीरें 3 महीने रखी जाती हैं",
   "Settings · {camera}": "सेटिंग · {camera}",
   "Machine it is at": "यह किस मशीन पर है",
   "No machine": "कोई मशीन नहीं",

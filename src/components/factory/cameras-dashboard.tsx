@@ -196,7 +196,7 @@ function CameraEvents({ factoryId, camera }: { factoryId: string; camera: Camera
     <ListGroup
       title={t('What it saw · {camera}', { camera: cameraTitle(camera, t) })}
       count={data ? events.length : undefined}
-      hint={t('Pictures are kept 30 days')}
+      hint={t('Alert pictures are kept 3 months')}
     >
       {events.length === 0
         ? <ListEmpty>{data ? t('Nothing yet: it has not seen a truck or a hand.') : t('Loading…')}</ListEmpty>

@@ -5,6 +5,7 @@ import { BatteryCharging, LogOut } from 'lucide-react';
 import { useState, useSyncExternalStore } from 'react';
 
 import { NotificationsCard } from '@/components/alerts-app/notifications-card';
+import { RingRulesCard } from '@/components/alerts-app/ring-rules-card';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { alertsApi } from '@/lib/alerts-app/api';
@@ -45,6 +46,7 @@ export function AlertsSettings() {
   return (
     <div className="space-y-5">
       <NotificationsCard />
+      <RingRulesCard />
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
         <h2 className="text-sm font-semibold text-foreground">{t('Language')}</h2>

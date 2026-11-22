@@ -172,4 +172,14 @@ export const alerts_app: Messages = {
   'Make sure FloorBeat Alerts is not in the “Sleeping apps” list.': 'देखें कि FloorBeat Alerts “Sleeping apps” सूची में न हो।',
   'In “App launch”, set FloorBeat Alerts to “Manage manually” and turn on all three switches.': '“App launch” में FloorBeat Alerts को “Manage manually” पर रखें और तीनों स्विच चालू करें।',
   'Open “Battery” and choose “Unrestricted” (or “Don’t optimise”).': '“Battery” खोलें और “Unrestricted” (या “Don’t optimise”) चुनें।',
+
+  // when an admin's phone rings (components/alerts-app/ring-rules-card.tsx)
+  'When my phone rings': 'मेरा फ़ोन कब बजे',
+  'Alerts that do not ring still come into your inbox.': 'जो अलर्ट नहीं बजते, वे भी आपके इनबॉक्स में आते हैं।',
+  'Only between these hours': 'सिर्फ़ इन घंटों के बीच',
+  'to': 'से',
+  'A stopped machine always rings': 'रुकी मशीन हमेशा बजे',
+  'What rings': 'क्या बजे',
+  'Shift reminders': 'शिफ़्ट की याद',
+  'Could not save. Try again.': 'सहेजा नहीं जा सका। फिर से कोशिश करें।',
 };

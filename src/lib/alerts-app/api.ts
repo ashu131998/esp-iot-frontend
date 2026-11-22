@@ -8,6 +8,7 @@ import { ensureCsrfToken } from '@/lib/csrf';
 import type { LiveStart, LiveStatus } from '@/lib/live';
 import { fetchWithSignal } from '@/lib/request-signal';
 
+import type { RingRules, RingRulesAnswer } from './ring-rules';
 import type { MyAlert, MyAlertsPage, Plant, PushKey, PushSubscriptionBody, ReplyResult, TestPushResult } from './types';
 
 export class AlertsApiError extends Error {
@@ -72,6 +73,10 @@ export const alertsApi = {
   startLive: (id: string) => call<LiveStart>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { method: 'POST', body: {} }),
   /** How that live view is going: frames arriving, how many a second. */
   liveStatus: (id: string, signal?: AbortSignal | null) => call<LiveStatus>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { signal }),
+
+  /** When this person's phone rings (ring-rules.ts): an admin's own rules, or "everything rings". */
+  ringRules: (signal?: AbortSignal | null) => call<RingRulesAnswer>(`${ME}/ring-rules`, { signal }),
+  saveRingRules: (rules: RingRules) => call<RingRulesAnswer>(`${ME}/ring-rules`, { method: 'PUT', body: rules }),
 
   /** The plants this account can be at, by name, and the one it is at (for the settings page). */
   plants: (signal?: AbortSignal | null) => call<{ plants: Plant[]; current: string | null }>('/api/v1/auth/plants', { signal }),

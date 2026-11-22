@@ -9,6 +9,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ALERTS_QUERY_KEY, PLANTS_QUERY_KEY, alertQueryKey } from '@/lib/alerts-app/model';
+import { RING_RULES_QUERY_KEY } from '@/lib/alerts-app/ring-rules';
 import type { MyAlert, MyAlertsPage } from '@/lib/alerts-app/types';
 import { LocaleProvider } from '@/lib/i18n/context';
 import { hi } from '@/lib/i18n/messages/hi';
@@ -40,6 +41,7 @@ const { NotificationsGate, NotificationsStepScreen } = await import('@/component
 const { LanguageChoice } = await import('@/components/alerts-app/language-choice');
 const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
 const { BatteryStep } = await import('@/components/alerts-app/battery-step');
+const { RingRulesCard } = await import('@/components/alerts-app/ring-rules-card');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
 const now = new Date().toISOString();
@@ -429,5 +431,31 @@ describe('the Android app', () => {
     expect(html).toContain('>Open settings<');
     expect(html).toContain('>Check again<');
     expect(render(<NotificationsStepScreen step="blocked" phone="android" onEnable={noop} onCheck={noop} />)).not.toContain('Open settings');
+  });
+});
+
+// When an admin's phone rings (lib/alerts-app/ring-rules.ts): their own rules in Settings.
+describe('when my phone rings', () => {
+  const RULES = { hours: { on: true, from: '08:00', to: '22:00' }, machine_always: true, kinds: { machine_stopped: true, machine_running: true, camera: false, shift: true } };
+  const seed = (allowed: boolean, rules = RULES) => (c: QueryClient) => c.setQueryData(RING_RULES_QUERY_KEY, { allowed, time_zone: 'Asia/Kolkata', rules });
+
+  it('an admin: the hours (with a stopped machine ringing outside them) and each kind, as switches', () => {
+    const html = render(<RingRulesCard />, seed(true));
+    expect(html).toContain('When my phone rings');
+    expect(html).toContain('Alerts that do not ring still come into your inbox.');
+    expect(html).toContain('Only between these hours');
+    expect(html).toContain('A stopped machine always rings');
+    expect(html).toContain('>8:00 am<');
+    expect(html).toContain('>10:00 pm<');
+    for (const label of ['Machine stopped', 'Machine running again', 'Cameras', 'Shift reminders']) expect(html).toContain(label);
+    expect(html.match(/role="switch"/g)).toHaveLength(6);
+    expect(html.match(/aria-checked="false"/g)).toHaveLength(1);   // cameras off
+  });
+
+  it('the hours off: no times shown; a worker (everything rings for them): no card; in Hindi', () => {
+    const off = render(<RingRulesCard />, seed(true, { ...RULES, hours: { ...RULES.hours, on: false } }));
+    expect(off).not.toContain('A stopped machine always rings');
+    expect(render(<RingRulesCard />, seed(false))).toBe('');
+    expect(render(<RingRulesCard />, seed(true), hi)).toContain('मेरा फ़ोन कब बजे');
   });
 });

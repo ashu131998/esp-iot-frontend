@@ -5,6 +5,7 @@
  * Tested in lib/__tests__/alerts-app-access.test.ts.
  */
 import { appAccess, fromAndroidApp, isAndroid, isAppleMobile, type AppAccess } from './install';
+import { inNativeApp } from './native';
 
 export type Phone = 'iphone' | 'android';
 
@@ -14,6 +15,7 @@ export type Phone = 'iphone' | 'android';
  * only with notifications on (push.ts notificationsStep).
  */
 export function phoneHere(): Phone | null {
+  if (inNativeApp()) return 'android';
   if (isAppleMobile(navigator.userAgent, navigator.maxTouchPoints)) return 'iphone';
   if (isAndroid(navigator.userAgent) || fromAndroidApp(document.referrer) || androidAppSeen()) return 'android';
   return null;
@@ -54,8 +56,9 @@ export function rememberAndroidApp(): boolean {
   return true;
 }
 
-/** Who may use the app in this browser, from what it says about itself. */
+/** Who may use the app in this browser, from what it says about itself; the Android app (2.0.0+, native.ts) is the app. */
 export function accessHere(): AppAccess {
+  if (inNativeApp()) return 'open';
   return appAccess({
     userAgent: navigator.userAgent,
     maxTouchPoints: navigator.maxTouchPoints,

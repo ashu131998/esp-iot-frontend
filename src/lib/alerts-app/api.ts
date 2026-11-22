@@ -8,6 +8,7 @@ import { ensureCsrfToken } from '@/lib/csrf';
 import type { LiveStart, LiveStatus } from '@/lib/live';
 import { fetchWithSignal } from '@/lib/request-signal';
 
+import type { RingRules, RingRulesAnswer } from './ring-rules';
 import type { MyAlert, MyAlertsPage, Plant, PushKey, PushSubscriptionBody, ReplyResult, TestPushResult } from './types';
 
 export class AlertsApiError extends Error {
@@ -51,6 +52,10 @@ export const alertsApi = {
   subscribe: (body: PushSubscriptionBody) => call<{ subscription_id: string; devices: number }>(`${ME}/push/subscriptions`, { method: 'POST', body }),
   unsubscribe: (endpoint: string) => call<{ removed: boolean }>(`${ME}/push/subscriptions`, { method: 'DELETE', body: { endpoint } }),
   testPush: () => call<TestPushResult>(`${ME}/push/test`, { method: 'POST' }),
+  /** The Android app's phone: its Firebase installation, where the server pushes this person's alerts. */
+  registerAndroid: (body: { fid: string; locale?: string; app_version?: string }) =>
+    call<{ registered: boolean; replaced: number; devices: number }>(`${ME}/push/android`, { method: 'POST', body }),
+  unregisterAndroid: (fid: string) => call<{ removed: boolean }>(`${ME}/push/android`, { method: 'DELETE', body: { fid } }),
 
   alerts: (params: { limit?: number; unread?: boolean } = {}, signal?: AbortSignal | null) => {
     const search = new URLSearchParams();
@@ -68,6 +73,10 @@ export const alertsApi = {
   startLive: (id: string) => call<LiveStart>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { method: 'POST', body: {} }),
   /** How that live view is going: frames arriving, how many a second. */
   liveStatus: (id: string, signal?: AbortSignal | null) => call<LiveStatus>(`${ME}/alerts/${encodeURIComponent(id)}/live`, { signal }),
+
+  /** When this person's phone rings (ring-rules.ts): an admin's own rules, or "everything rings". */
+  ringRules: (signal?: AbortSignal | null) => call<RingRulesAnswer>(`${ME}/ring-rules`, { signal }),
+  saveRingRules: (rules: RingRules) => call<RingRulesAnswer>(`${ME}/ring-rules`, { method: 'PUT', body: rules }),
 
   /** The plants this account can be at, by name, and the one it is at (for the settings page). */
   plants: (signal?: AbortSignal | null) => call<{ plants: Plant[]; current: string | null }>('/api/v1/auth/plants', { signal }),

@@ -8,6 +8,7 @@ import { LiveStream } from '@/components/cam/live-view';
 import { Button } from '@/components/ui/button';
 import { alertPictureUrl, alertsApi } from '@/lib/alerts-app/api';
 import type { AlertCamera } from '@/lib/alerts-app/model';
+import { holdBack } from '@/lib/alerts-app/native';
 import { useT } from '@/lib/i18n/context';
 import { liveRefusal } from '@/lib/live';
 
@@ -23,7 +24,10 @@ export function AlertCameraCard({ alertId, camera }: { alertId: string; camera: 
   // On a phone the live view opens below the picture: brought into sight, clear of the top and bottom bars.
   const liveCard = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (watching) liveCard.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    if (!watching) return;
+    liveCard.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    // The Android app's back button closes the live view first (native.ts holdBack).
+    return holdBack(() => setWatching(false));
   }, [watching]);
   return (
     <section className="space-y-3">

@@ -12,9 +12,15 @@ reaches both at once. What a good Android app does itself is native:
 - **Notifications through Firebase Cloud Messaging.** query-api sends each alert as a high-priority
   data message to the phone's Firebase Installation ID (FID; `notify/fcm.js` in the backend). The app
   words it in the person's language (`PushWords.kt`, the same words as the web app's service worker)
-  and rings one of two channels: **Machine stopped** (HIGH and CRITICAL alerts: its own siren at alarm
-  volume) or **Other alerts**. They arrive with the phone locked and the app closed. A tap opens that
-  alert.
+  and rings one of two channels, each with a FloorBeat sound built on the brand's heartbeat (a "beat"
+  is two quick pulses): **Machine stopped** (HIGH and CRITICAL alerts) plays three climbing double-beats,
+  twice, loud, in the 1.5–2.5 kHz band that carries over machine noise, at alarm volume
+  (`res/raw/machine_alarm.ogg`); **Other alerts** plays one soft double chime (`res/raw/alert_chime.ogg`).
+  Both are Opus in Ogg, made from scratch by `sounds/make_sounds.py` (run it to remake or tune them). Android keeps the sound a channel was made with,
+  so a new sound needs a new channel id (`strings.xml`; the old channel is deleted at start). They arrive
+  with the phone locked and the app closed. A tap opens that alert. An admin's ringing hours and the
+  kinds that ring are kept on the server (query-api `notify/ring-rules.js`), so held-back alerts are
+  never sent to the phone at all.
 - **The back button** (`AppUrls.back`): back through the app's pages; an alert opened straight from a
   notification goes back to the inbox; on the inbox the app goes to the background. An open live view
   closes first (the page holds the back button, `src/lib/alerts-app/native.ts holdBack`).

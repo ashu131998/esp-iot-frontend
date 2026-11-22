@@ -16,43 +16,59 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 /**
- * The app's notifications. Two channels (Android lets each be set in Settings): the alarm, for an
- * urgent alert (a machine that stopped, one nobody has answered for), with its own siren at the
- * alarm's volume; and the ordinary one, for the rest. A channel's sound cannot change once made: a new
- * sound needs a new channel id (strings.xml).
+ * The app's notifications. Two channels (Android lets each be set in Settings), each with a FloorBeat
+ * sound built on the brand's heartbeat (a "beat" is two quick pulses; res/raw, see README.md): the
+ * alarm, for an urgent alert (a machine that stopped, one nobody has answered for) — three climbing
+ * double-beats, twice, loud, at the alarm's volume; and the ordinary one, for the rest — one soft
+ * double chime. A channel keeps the sound it was made with: a new sound needs a new channel id
+ * (strings.xml), and the old channel is deleted (OLD_CHANNELS).
  */
 object Notifications {
     private const val BRAND_COLOR = 0xFFEA580C.toInt()
 
+    /** Channels of earlier builds, gone once the app starts (2.0.0's test builds had the first sounds). */
+    private val OLD_CHANNELS = listOf("machine_alarm_v1", "alerts_v1")
+
     fun alarmChannel(context: Context) = context.getString(R.string.channel_alarm_id)
     fun alertChannel(context: Context) = context.getString(R.string.channel_alerts_id)
+
+    private fun sound(context: Context, raw: Int) =
+        Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/$raw")
 
     /** Made at every start (cheap; names follow the phone's language). */
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val siren = Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.machine_alarm}")
         val alarm = NotificationChannel(alarmChannel(context), context.getString(R.string.channel_alarm_name), NotificationManager.IMPORTANCE_HIGH).apply {
             description = context.getString(R.string.channel_alarm_description)
             setSound(
-                siren,
+                sound(context, R.raw.machine_alarm),
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )
             enableVibration(true)
-            vibrationPattern = longArrayOf(0, 600, 300, 600, 300, 600)
+            vibrationPattern = longArrayOf(0, 120, 80, 180, 220, 120, 80, 180, 220, 120, 80, 180)   // the beats, felt
             enableLights(true)
             lightColor = BRAND_COLOR
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         val ordinary = NotificationChannel(alertChannel(context), context.getString(R.string.channel_alerts_name), NotificationManager.IMPORTANCE_HIGH).apply {
             description = context.getString(R.string.channel_alerts_description)
+            setSound(
+                sound(context, R.raw.alert_chime),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
             enableVibration(true)
+            vibrationPattern = longArrayOf(0, 90, 70, 140)
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannels(listOf(alarm, ordinary))
+        for (old in OLD_CHANNELS) manager.deleteNotificationChannel(old)
     }
 
     /** Whether this phone shows the app's notifications: allowed, and the alarm channel not switched off. */

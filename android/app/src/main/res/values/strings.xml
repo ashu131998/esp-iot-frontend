@@ -2,9 +2,10 @@
 <resources>
     <string name="app_name" translatable="false">FloorBeat Alerts</string>
 
-    <!-- Notification channels (Settings shows their names). A new sound needs a new id. -->
-    <string name="channel_alarm_id" translatable="false">machine_alarm_v1</string>
-    <string name="channel_alerts_id" translatable="false">alerts_v1</string>
+    <!-- Notification channels (Settings shows their names). A channel keeps the sound it was made with: a new sound
+         needs a new id (the old one is deleted at start, Notifications.OLD_CHANNELS). v2: the FloorBeat sounds. -->
+    <string name="channel_alarm_id" translatable="false">machine_alarm_v2</string>
+    <string name="channel_alerts_id" translatable="false">alerts_v2</string>
     <string name="channel_alarm_name">Machine stopped</string>
     <string name="channel_alarm_description">A machine stopped, or nobody has answered for one. Rings like an alarm.</string>
     <string name="channel_alerts_name">Other alerts</string>

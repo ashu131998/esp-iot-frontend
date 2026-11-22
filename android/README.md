@@ -1,51 +1,82 @@
 # FloorBeat Alerts for Android
 
-The Android app is a Trusted Web Activity: a thin, signed Android package that opens
-https://alerts.floorbeat.in full-screen, with notifications. The web app is the app; this package
-only gives Android users an install from floorbeat.in/app (and, later, the Play Store). Package
-`in.floorbeat.alerts`.
+A native Android app (Kotlin), package `in.floorbeat.alerts`, version 2.0.0. It replaces 1.0.0, a
+Trusted Web Activity that was Chrome showing the site. Same package and same signing key, so
+installing 2.0.0 updates 1.0.0 in place, and the home-screen icon is kept (the launcher entry keeps
+its old name, `in.floorbeat.alerts.LauncherActivity`, as an alias).
 
-- `twa-manifest.json` — the Bubblewrap manifest (what is built). Bump `appVersion` and
-  `appVersionCode` for every new build.
-- The signing key is **not in git**: `esp-intro/keys/android/floorbeat-alerts.keystore` (alias
-  `floorbeat-alerts`, password in the README beside it). Every build must be signed with it, or
-  phones refuse the update and the Play Store refuses the upload. Its certificate's SHA-256 is
-  published at `public/.well-known/assetlinks.json` (this repo), which is what lets the app open the
-  site without a browser bar.
-- Built packages: `marketing/public/downloads/floorbeat-alerts.apk` (the download on
-  floorbeat.in/app). Keep each version's `.apk` and `.aab` (the Play Store upload) with the key.
+The screens are alerts.floorbeat.in, shown in the phone's own web view (Android System WebView, no
+Chrome needed), so an iPhone (the Home Screen web app) and Android show the same app and every change
+reaches both at once. What a good Android app does itself is native:
 
-## Rebuilding
+- **Notifications through Firebase Cloud Messaging.** query-api sends each alert as a high-priority
+  data message to the phone's Firebase Installation ID (FID; `notify/fcm.js` in the backend). The app
+  words it in the person's language (`PushWords.kt`, the same words as the web app's service worker)
+  and rings one of two channels: **Machine stopped** (HIGH and CRITICAL alerts: its own siren at alarm
+  volume) or **Other alerts**. They arrive with the phone locked and the app closed. A tap opens that
+  alert.
+- **The back button** (`AppUrls.back`): back through the app's pages; an alert opened straight from a
+  notification goes back to the inbox; on the inbox the app goes to the background. An open live view
+  closes first (the page holds the back button, `src/lib/alerts-app/native.ts holdBack`).
+- **First start:** the language, sign-in, then the phone's own "Allow notifications" question, then a
+  one-time battery set-up with the maker's steps and a button to the right settings screen
+  (`PhoneMaker.kt`: Xiaomi, Vivo, Oppo, Realme, OnePlus, Samsung, Huawei stop apps in the background).
+- **Links** to alerts.floorbeat.in open in the app (App Links, verified by
+  `public/.well-known/assetlinks.json`); other sites open in the phone's browser. No network: the
+  app's own offline screen.
 
-Needs JDK 17 (Bubblewrap checks for exactly 17), the Android command-line tools and
-`@bubblewrap/cli`. None of this is kept in the repo; the steps below were last run 2026-11-17.
+The page talks to the app through `window.FloorBeatAndroid` (`Bridge.kt`), given only to the app's
+own origin. The web side is `src/lib/alerts-app/native.ts`; the notification switch
+(`push-client.ts`) asks the app instead of the browser when it runs inside it.
+
+## What is not in git
+
+All kept beside the signing key in `esp-intro/keys/`, and copied in for a build:
+
+- `keys/android/floorbeat-alerts.keystore`: the signing key (alias `floorbeat-alerts`, passwords in the
+  README beside it). Every release must be signed with it, or phones refuse the update and the Play
+  Store refuses the upload. Write `android/keystore.properties` for a build:
+  ```
+  storeFile=/Users/<you>/esp-intro/keys/android/floorbeat-alerts.keystore
+  storePassword=…
+  keyAlias=floorbeat-alerts
+  keyPassword=…
+  ```
+- `keys/firebase/google-services.json`: the Firebase project's Android config. Copy it to
+  `android/app/google-services.json`. Without it the app builds and runs, but without push.
+- The server's side, the Firebase service-account key, goes to the backend as the `FCM_SERVICE_ACCOUNT`
+  GitHub secret (base64 of the JSON); its deploy writes it into the server's `.env`.
+
+## Building
+
+Needs Android Studio's JDK and the Android SDK with platform 36.1 (Android Studio installs both):
 
 ```sh
-WORK=/tmp/fb-android && mkdir -p $WORK && cd $WORK
-# JDK 17 (Temurin, Apple Silicon) and the Android command-line tools
-curl -sSL -o jdk17.tar.gz 'https://api.adoptium.net/v3/binary/latest/17/ga/mac/aarch64/jdk/hotspot/normal/eclipse' && tar -xzf jdk17.tar.gz
-curl -sSL -o cmdline-tools.zip 'https://dl.google.com/android/repository/commandlinetools-mac-11076708_latest.zip'
-mkdir -p sdk/cmdline-tools && unzip -q cmdline-tools.zip -d sdk/cmdline-tools && mv sdk/cmdline-tools/cmdline-tools sdk/cmdline-tools/latest
-ln -s $WORK/sdk/cmdline-tools/latest $WORK/sdk/tools      # Bubblewrap wants <sdk>/tools to exist
-export JAVA_HOME=$(ls -d $WORK/jdk-17*/Contents/Home) PATH=$JAVA_HOME/bin:$PATH
-yes | sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$WORK/sdk --licenses >/dev/null
-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$WORK/sdk "platforms;android-36" "build-tools;36.0.0" "build-tools;35.0.0" "build-tools;34.0.0" "platform-tools"
-npm i @bubblewrap/cli
-printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$(ls -d $WORK/jdk-17*)" "$WORK/sdk" > ~/.bubblewrap/config.json
-# the project, from this repo's manifest
-mkdir app && cp <this repo>/android/twa-manifest.json app/ && cd app
-export BUBBLEWRAP_KEYSTORE_PASSWORD=… BUBBLEWRAP_KEY_PASSWORD=…        # from keys/android/README.md
-npx bubblewrap update --skipVersionUpgrade     # generates the Android project (fetches the icons from alerts.floorbeat.in)
-npx bubblewrap build --skipPwaValidation       # app-release-signed.apk + app-release-bundle.aab
+cd android
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties
+./gradlew testDebugUnitTest                       # the pure rules: AppUrls, PushWords, PushMessage, PhoneMaker
+./gradlew assembleRelease bundleRelease           # app-release.apk (the download) and app-release.aab (the Play Store)
 ```
 
-Check before publishing: `apksigner verify --print-certs app-release-signed.apk` shows the SHA-256
-in `assetlinks.json`; `aapt2 dump badging` shows `in.floorbeat.alerts` and the new version. Then copy
-the APK to `marketing/public/downloads/floorbeat-alerts.apk` and keep the `.aab` with the key.
-Deploying the website publishes the download; the deploy's link checks open it.
+A test build can be pointed at a server on the computer running the emulator:
+`./gradlew assembleDebug -PappUrl=http://10.0.2.2:3105`. Test builds also allow plain HTTP to that
+address, let a computer debug the web view, and take a push from adb, as Firebase would hand one over:
 
-Gotchas met: `androidSdkPath` must be the SDK root (Bubblewrap hands it to Gradle as ANDROID_HOME)
-with a `tools` link so Bubblewrap accepts it; the template compiles against platform 36 and Gradle
-also wants build-tools 35; minimum Android is 7.0 (API 24, what the browser helper library needs).
-An update of the web app needs no new package; only a change to this manifest (name, colours,
-icons, version) does.
+```sh
+adb shell am broadcast -a floorbeat.alerts.DEBUG_PUSH -p in.floorbeat.alerts \
+  --es notification_id ntf-1 --es title 'Loom 3 is DOWN' --es severity HIGH --es url /alerts/ntf-1 \
+  --es view '{"kind":"machine_down","machine":"Loom 3","at":"2026-11-21T10:00:00Z"}'
+```
+
+## Releasing
+
+1. Raise `versionCode` (by one) and `versionName` in `app/build.gradle.kts`.
+2. Build with the signing key and the Firebase config in place (above).
+3. Copy `app/build/outputs/apk/release/app-release.apk` to
+   `marketing/public/downloads/floorbeat-alerts.apk` (the download on floorbeat.in/app). Keep each
+   version's `.apk` and `.aab` with the key.
+
+Firebase Messaging 25.1 and later register a phone by its Firebase Installation ID (on in the manifest,
+`firebase_messaging_installation_id_enabled`); the older registration tokens are deprecated, so the app
+reports its FID through `onRegistered` and the server sends to `message.fid`.

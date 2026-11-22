@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">FloorBeat Alerts</string>
+
+    <!-- Notification channels (Settings shows their names). A new sound needs a new id. -->
+    <string name="channel_alarm_id" translatable="false">machine_alarm_v1</string>
+    <string name="channel_alerts_id" translatable="false">alerts_v1</string>
+    <string name="channel_alarm_name">Machine stopped</string>
+    <string name="channel_alarm_description">A machine stopped, or nobody has answered for one. Rings like an alarm.</string>
+    <string name="channel_alerts_name">Other alerts</string>
+    <string name="channel_alerts_description">A machine running again, shift reminders and cameras.</string>
+
+    <!-- No network: shown in all three languages at once (as the web app's offline page). -->
+    <string name="offline_title" translatable="false">You are offline</string>
+    <string name="offline_title_hi" translatable="false">आप ऑफ़लाइन हैं</string>
+    <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
+    <string name="offline_text">Your alerts will show once the phone is back on the network.</string>
+    <string name="offline_retry">Try again</string>
+</resources>

@@ -1,0 +1,11 @@
+# Gradle and Android Studio
+.gradle/
+build/
+app/build/
+.idea/
+*.iml
+local.properties
+.kotlin/
+# Kept beside the signing key in esp-intro/keys/, copied in for a build, never committed
+keystore.properties
+app/google-services.json

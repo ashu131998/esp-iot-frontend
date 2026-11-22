@@ -39,6 +39,7 @@ const { AppGate } = await import('@/components/alerts-app/app-gate');
 const { NotificationsGate, NotificationsStepScreen } = await import('@/components/alerts-app/notifications-gate');
 const { LanguageChoice } = await import('@/components/alerts-app/language-choice');
 const { PushPrompt } = await import('@/components/alerts-app/push-prompt');
+const { BatteryStep } = await import('@/components/alerts-app/battery-step');
 
 const QUESTION = { kind: 'downtime_reason', report_id: 'rep-1', prompt: 'Why is it down?', options: [{ id: 'dtr|rep-1|changeover', label: 'Changeover' }, { id: 'dtr|rep-1|thread', label: 'Thread break' }, { id: 'dtr|rep-1|yarn_breakage', label: 'Yarn breakage' }] };
 const now = new Date().toISOString();
@@ -401,5 +402,32 @@ describe('the phone will not ring yet', () => {
     const html = render(<AlertsInbox />, seedInbox([]));
     expect(html).toContain('New alerts show here.');            // not known to ring yet (still checking)
     expect(html).not.toContain('and ring your phone');
+  });
+});
+
+// The Android app (2.0.0, the repo's android/): its own screens around the same pages.
+describe('the Android app', () => {
+  const noop = () => {};
+
+  it('the battery set-up: the maker\'s own steps, a button to the phone\'s settings, and Done; in Hindi', () => {
+    const html = render(<BatteryStep maker="xiaomi" onOpen={noop} onDone={noop} />);
+    expect(html).toContain('Keep alerts on time');
+    expect(html).toContain('Tap “Open settings” below.');
+    expect(html).toContain('Turn on “Autostart” for FloorBeat Alerts.');
+    expect(html).toContain('>Open settings<');
+    expect(html).toContain('>Done<');
+    expect(render(<BatteryStep maker="samsung" onOpen={noop} onDone={noop} />)).toContain('“Sleeping apps”');
+    expect(render(<BatteryStep maker="realme" onOpen={noop} onDone={noop} />)).toContain('“Auto launch”');
+    expect(render(<BatteryStep maker="vivo" onOpen={noop} onDone={noop} />)).toContain('high background power use');
+    expect(render(<BatteryStep maker="huawei" onOpen={noop} onDone={noop} />)).toContain('“Manage manually”');
+    expect(render(<BatteryStep maker="other" onOpen={noop} onDone={noop} />)).toContain('“Don’t optimise”');
+    expect(render(<BatteryStep maker="oppo" onOpen={noop} onDone={noop} />, undefined, hi)).toContain('अलर्ट समय पर पाएँ');
+  });
+
+  it('notifications blocked in the app: a button straight to its notification settings, then Check again', () => {
+    const html = render(<NotificationsStepScreen step="blocked" phone="android" onEnable={noop} onCheck={noop} onOpenSettings={noop} />);
+    expect(html).toContain('>Open settings<');
+    expect(html).toContain('>Check again<');
+    expect(render(<NotificationsStepScreen step="blocked" phone="android" onEnable={noop} onCheck={noop} />)).not.toContain('Open settings');
   });
 });

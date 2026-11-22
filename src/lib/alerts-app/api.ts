@@ -51,6 +51,10 @@ export const alertsApi = {
   subscribe: (body: PushSubscriptionBody) => call<{ subscription_id: string; devices: number }>(`${ME}/push/subscriptions`, { method: 'POST', body }),
   unsubscribe: (endpoint: string) => call<{ removed: boolean }>(`${ME}/push/subscriptions`, { method: 'DELETE', body: { endpoint } }),
   testPush: () => call<TestPushResult>(`${ME}/push/test`, { method: 'POST' }),
+  /** The Android app's phone: its Firebase installation, where the server pushes this person's alerts. */
+  registerAndroid: (body: { fid: string; locale?: string; app_version?: string }) =>
+    call<{ registered: boolean; replaced: number; devices: number }>(`${ME}/push/android`, { method: 'POST', body }),
+  unregisterAndroid: (fid: string) => call<{ removed: boolean }>(`${ME}/push/android`, { method: 'DELETE', body: { fid } }),
 
   alerts: (params: { limit?: number; unread?: boolean } = {}, signal?: AbortSignal | null) => {
     const search = new URLSearchParams();

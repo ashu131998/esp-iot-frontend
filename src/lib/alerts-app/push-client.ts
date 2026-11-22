@@ -4,6 +4,7 @@
  */
 import { alertsApi } from './api';
 import { isIOS, isStandalone } from './install';
+import { callNative, inNativeApp, nativeAppVersion, onNativeEvent, type NativeHello } from './native';
 import { CHANNEL, OPEN_KEY, SETTINGS_CACHE, appPage, elsewhere, openTarget } from './open';
 import { pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array, type PushState, type PushSupport } from './push';
 import type { PushKey } from './types';
@@ -66,8 +67,47 @@ async function readyWorker(): Promise<ServiceWorkerRegistration | null> {
   return navigator.serviceWorker.ready;
 }
 
+// ── the Android app (native.ts): its own permission and Firebase registration instead of web push ──
+
+/** The page's language (the root layout sets <html lang> from the person's choice). */
+function pageLocale(): 'en' | 'hi' | 'gu' {
+  const lang = document.documentElement.lang;
+  return lang === 'hi' || lang === 'gu' ? lang : 'en';
+}
+
+/** The app's notifications as the switch's state: on only when allowed and the app can be pushed (its Firebase project). */
+async function nativeState(): Promise<PushState> {
+  const hello = await callNative<NativeHello>('hello');
+  if (!hello) return 'unsupported';
+  if (hello.notifications === 'blocked') return 'blocked';
+  if (hello.notifications !== 'on') return 'off';
+  return hello.push ? 'on' : 'server-off';
+}
+
+/** This phone's Firebase installation (its FID); null outside the app or before Firebase has one. */
+async function androidInstallation(): Promise<string | null> {
+  const answer = await callNative<{ fid?: string }>('installation', {}, 30_000);
+  return answer?.fid || null;
+}
+
+/** Tells the server where to push this phone's alerts (on every open, and when the app's registration changes). */
+async function registerAndroid(): Promise<boolean> {
+  const fid = await androidInstallation();
+  if (!fid) return false;
+  await alertsApi.registerAndroid({ fid, locale: pageLocale(), app_version: nativeAppVersion(navigator.userAgent) ?? undefined });
+  return true;
+}
+
+/** Signing out of the app: this phone stops getting that person's alerts. */
+export async function forgetThisPhone(): Promise<void> {
+  if (!inNativeApp()) return;
+  const fid = await androidInstallation();   // never rejects: null without an answer
+  if (fid) await alertsApi.unregisterAndroid(fid).catch(() => null);
+}
+
 /** The switch's state now: support, the server's key, the permission and whether this phone is subscribed. */
 export async function currentState(): Promise<PushState> {
+  if (inNativeApp()) return nativeState();
   const support = supportHere();
   if (support !== 'ok') return support;
   const key = await serverKey().catch(() => ({ enabled: false, public_key: null }));
@@ -78,6 +118,14 @@ export async function currentState(): Promise<PushState> {
 
 /** Asks for the permission, subscribes this phone and tells the server. The state afterwards. */
 export async function turnOn(): Promise<PushState> {
+  if (inNativeApp()) {
+    // The phone's own question ("Allow FloorBeat Alerts to send you notifications?"): no time limit, the person answers it.
+    const answer = await callNative<{ state?: string }>('askNotifications', {}, 0);
+    if (answer?.state !== 'on') return answer?.state === 'blocked' ? 'blocked' : answer ? 'off' : 'unsupported';
+    const state = await nativeState();
+    if (state === 'on') await registerAndroid();
+    return state;
+  }
   const support = supportHere();
   if (support !== 'ok') return support;
   const key = await serverKey();
@@ -103,6 +151,7 @@ export async function turnOn(): Promise<PushState> {
  */
 export async function subscribedHere(): Promise<boolean> {
   try {
+    if (inNativeApp()) return (await nativeState()) === 'on';
     if (supportHere() !== 'ok' || Notification.permission !== 'granted') return false;
     const reg = await readyWorker();
     return Boolean(reg && (await reg.pushManager.getSubscription()));
@@ -113,6 +162,7 @@ export async function subscribedHere(): Promise<boolean> {
 
 /** Unsubscribes this phone and removes the server's copy. */
 export async function turnOff(): Promise<void> {
+  if (inNativeApp()) return forgetThisPhone();
   const reg = await readyWorker();
   const sub = reg ? await reg.pushManager.getSubscription() : null;
   if (!sub) return;
@@ -128,6 +178,10 @@ export async function turnOff(): Promise<void> {
  */
 export async function keepSubscriptionFresh(): Promise<void> {
   try {
+    if (inNativeApp()) {
+      if ((await nativeState()) === 'on') await registerAndroid();
+      return;
+    }
     if (supportHere() !== 'ok' || Notification.permission !== 'granted') return;
     const reg = await readyWorker();
     const sub = reg ? await reg.pushManager.getSubscription() : null;
@@ -228,6 +282,15 @@ export function followAlerts({ refresh, go, here }: {
       goTo(appPage(message.url));
     }
   });
+  // The Android app receives its pushes itself (Firebase) and tells the page; its registration changing, the server is told.
+  const stopNative = onNativeEvent((event) => {
+    if (event === 'push') {
+      refresh();
+      later(refresh, ASK_AGAIN_MS);
+    } else if (event === 'installation') {
+      void keepSubscriptionFresh();
+    }
+  });
   const onVisible = () => {
     if (document.visibilityState !== 'visible') return;
     followNote();
@@ -239,6 +302,7 @@ export function followAlerts({ refresh, go, here }: {
   return () => {
     stopped = true;
     stopListening();
+    stopNative();
     document.removeEventListener('visibilitychange', onVisible);
     timers.forEach(clearTimeout);
     timers.clear();

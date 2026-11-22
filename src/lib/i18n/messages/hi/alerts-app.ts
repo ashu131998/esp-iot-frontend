@@ -154,4 +154,22 @@ export const alerts_app: Messages = {
   'Seen by the camera.': 'कैमरे ने देखा।',
   'Since {time}: a hand on the lens, a cover, or something big right in front of it.': '{time} से: लेंस पर हाथ, कोई ढक्कन, या सामने कोई बड़ी चीज़।',
   'A hand on the lens, a cover, or something big right in front of it.': 'लेंस पर हाथ, कोई ढक्कन, या सामने कोई बड़ी चीज़।',
+
+  // the Android app: battery set-up and phone settings (components/alerts-app/battery-step.tsx)
+  'Keep alerts on time': 'अलर्ट समय पर पाएँ',
+  'Some phones stop apps in the background to save battery, and then alerts come late. Let FloorBeat Alerts run in the background:': 'कुछ फ़ोन बैटरी बचाने के लिए बैकग्राउंड में ऐप बंद कर देते हैं, और तब अलर्ट देर से आते हैं। FloorBeat Alerts को बैकग्राउंड में चलने दें:',
+  'Battery': 'बैटरी',
+  'Open settings': 'सेटिंग्स खोलें',
+  'Open battery settings': 'बैटरी सेटिंग्स खोलें',
+  'Tap “Open settings” below.': 'नीचे “सेटिंग्स खोलें” पर टैप करें।',
+  'Turn on “Autostart” for FloorBeat Alerts.': 'FloorBeat Alerts के लिए “Autostart” चालू करें।',
+  'Then, in “Battery saver”, choose “No restrictions”.': 'फिर “Battery saver” में “No restrictions” चुनें।',
+  'Allow FloorBeat Alerts to start in the background.': 'FloorBeat Alerts को बैकग्राउंड में शुरू होने दें।',
+  'In “Battery”, allow FloorBeat Alerts high background power use.': '“Battery” में FloorBeat Alerts को बैकग्राउंड में ज़्यादा बिजली इस्तेमाल करने दें।',
+  'Turn on “Auto launch” for FloorBeat Alerts.': 'FloorBeat Alerts के लिए “Auto launch” चालू करें।',
+  'In “Battery usage”, turn on “Allow background activity”.': '“Battery usage” में “Allow background activity” चालू करें।',
+  'Open “Battery” and choose “Unrestricted”.': '“Battery” खोलें और “Unrestricted” चुनें।',
+  'Make sure FloorBeat Alerts is not in the “Sleeping apps” list.': 'देखें कि FloorBeat Alerts “Sleeping apps” सूची में न हो।',
+  'In “App launch”, set FloorBeat Alerts to “Manage manually” and turn on all three switches.': '“App launch” में FloorBeat Alerts को “Manage manually” पर रखें और तीनों स्विच चालू करें।',
+  'Open “Battery” and choose “Unrestricted” (or “Don’t optimise”).': '“Battery” खोलें और “Unrestricted” (या “Don’t optimise”) चुनें।',
 };

@@ -4,11 +4,13 @@ import { BellRing } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { AppSplash } from '@/components/alerts-app/app-gate';
+import { BatteryFirst } from '@/components/alerts-app/battery-step';
 import { usePushSwitch } from '@/components/alerts-app/use-push-switch';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { phoneHere, type Phone } from '@/lib/alerts-app/access-client';
+import { callNative, inNativeApp, onNativeEvent } from '@/lib/alerts-app/native';
 import { notificationsStep, type NotificationsStep } from '@/lib/alerts-app/push';
 import { subscribedHere } from '@/lib/alerts-app/push-client';
 import { useT } from '@/lib/i18n/context';
@@ -39,6 +41,7 @@ export function NotificationsGate({ children }: { children: ReactNode }) {
 function RingFirst({ phone, children }: { phone: Phone; children: ReactNode }) {
   const push = usePushSwitch();
   const { recheck } = push;
+  const native = useSyncExternalStore(noSubscription, inNativeApp, () => false);
   // The phone's own answer, without the server: a phone already set up opens at once.
   const [ringing, setRinging] = useState<boolean | null>(null);
 
@@ -48,17 +51,26 @@ function RingFirst({ phone, children }: { phone: Phone; children: ReactNode }) {
     };
     look();
     // Back from the phone's Settings (allowed there, or turned off): look again.
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
+    const again = () => {
       look();
       recheck();
     };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') again();
+    };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    // The Android app says so itself when notifications switch (its own question answered, Settings left).
+    const stopNative = onNativeEvent((event) => {
+      if (event === 'notifications') again();
+    });
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      stopNative();
+    };
   }, [recheck]);
 
   const step = notificationsStep(ringing ? 'on' : push.state);
-  if (step === 'app') return <>{children}</>;
+  if (step === 'app') return native ? <BatteryFirst>{children}</BatteryFirst> : <>{children}</>;
   if (step === 'checking') return <AppSplash />;
   return (
     <NotificationsStepScreen
@@ -71,6 +83,7 @@ function RingFirst({ phone, children }: { phone: Phone; children: ReactNode }) {
         void subscribedHere().then(setRinging);
         recheck();
       }}
+      onOpenSettings={native ? () => void callNative('openNotificationSettings') : undefined}
     />
   );
 }
@@ -83,6 +96,7 @@ export function NotificationsStepScreen({
   failed = false,
   onEnable,
   onCheck,
+  onOpenSettings,
 }: {
   step: Exclude<NotificationsStep, 'app' | 'checking'>;
   phone: Phone;
@@ -90,6 +104,8 @@ export function NotificationsStepScreen({
   failed?: boolean;
   onEnable: () => void;
   onCheck: () => void;
+  /** The Android app: straight to its notification settings. */
+  onOpenSettings?: () => void;
 }) {
   const { t } = useT();
   const iphone = phone === 'iphone';
@@ -154,8 +170,11 @@ export function NotificationsStepScreen({
             {busy ? t('Turning on…') : t('Turn on notifications')}
           </Button>
         )}
+        {step === 'blocked' && onOpenSettings && (
+          <Button className="mt-4 h-11 w-full text-base" onClick={onOpenSettings}>{t('Open settings')}</Button>
+        )}
         {step === 'blocked' && (
-          <Button variant="secondary" className="mt-4 h-11 w-full text-base" onClick={onCheck}>{t('Check again')}</Button>
+          <Button variant="secondary" className={onOpenSettings ? 'mt-2 h-11 w-full text-base' : 'mt-4 h-11 w-full text-base'} onClick={onCheck}>{t('Check again')}</Button>
         )}
         {failed && <p className="mt-2 text-sm text-red-700" role="alert">{t('Could not turn on notifications. Try again.')}</p>}
       </section>

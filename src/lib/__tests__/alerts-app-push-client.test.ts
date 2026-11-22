@@ -14,10 +14,10 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/alerts-app/api', () => ({ alertsApi: api }));
 
-const { currentState, forgetServerKey, subscribedHere, turnOn } = await import('@/lib/alerts-app/push-client');
+const { currentState, forgetServerKey, keepSubscriptionFresh, subscribedHere, turnOff, turnOn } = await import('@/lib/alerts-app/push-client');
 
 const IPHONE_HOME_SCREEN = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
-const SUBSCRIPTION = { endpoint: 'https://web.push.apple.com/abc', toJSON: () => ({ endpoint: 'https://web.push.apple.com/abc', keys: { p256dh: 'p', auth: 'a' } }) };
+const SUBSCRIPTION = { endpoint: 'https://web.push.apple.com/abc', unsubscribe: vi.fn(async () => true), toJSON: () => ({ endpoint: 'https://web.push.apple.com/abc', keys: { p256dh: 'p', auth: 'a' } }) };
 
 /** An iPhone's Home Screen app: its permission, its subscription (or none), and every call in order. */
 function iphone({ permission = 'default', subscribed = false, push = true, failing = false }: {
@@ -111,5 +111,17 @@ describe('turning notifications on', () => {
     expect(await turnOn()).toBe('on');
     expect(calls).toEqual(['server key', 'ask the phone', 'subscribe', 'tell the server']);
     expect(api.key).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('every open, and turning off (an iPhone: web push, not the Android app)', () => {
+  it('a phone set up sends its subscription again; turning off unsubscribes it and tells the server', async () => {
+    iphone({ permission: 'granted', subscribed: true });
+    api.unsubscribe.mockResolvedValue({ removed: true });
+    await keepSubscriptionFresh();
+    expect(api.subscribe).toHaveBeenCalledWith({ endpoint: 'https://web.push.apple.com/abc', keys: { p256dh: 'p', auth: 'a' } });
+    await turnOff();
+    expect(SUBSCRIPTION.unsubscribe).toHaveBeenCalled();
+    expect(api.unsubscribe).toHaveBeenCalledWith('https://web.push.apple.com/abc');
   });
 });

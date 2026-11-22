@@ -154,4 +154,32 @@ export const alerts_app: Messages = {
   'Seen by the camera.': 'કેમેરાએ જોયું.',
   'Since {time}: a hand on the lens, a cover, or something big right in front of it.': '{time}થી: લેન્સ પર હાથ, કોઈ ઢાંકણ, અથવા સામે કોઈ મોટી વસ્તુ.',
   'A hand on the lens, a cover, or something big right in front of it.': 'લેન્સ પર હાથ, કોઈ ઢાંકણ, અથવા સામે કોઈ મોટી વસ્તુ.',
+
+  // the Android app: battery set-up and phone settings (components/alerts-app/battery-step.tsx)
+  'Keep alerts on time': 'એલર્ટ સમયસર મેળવો',
+  'Some phones stop apps in the background to save battery, and then alerts come late. Let FloorBeat Alerts run in the background:': 'કેટલાક ફોન બૅટરી બચાવવા બૅકગ્રાઉન્ડમાં ઍપ બંધ કરી દે છે, અને પછી એલર્ટ મોડા આવે છે. FloorBeat Alerts ને બૅકગ્રાઉન્ડમાં ચાલવા દો:',
+  'Battery': 'બૅટરી',
+  'Open settings': 'સેટિંગ્સ ખોલો',
+  'Open battery settings': 'બૅટરી સેટિંગ્સ ખોલો',
+  'Tap “Open settings” below.': 'નીચે “સેટિંગ્સ ખોલો” પર ટૅપ કરો.',
+  'Turn on “Autostart” for FloorBeat Alerts.': 'FloorBeat Alerts માટે “Autostart” ચાલુ કરો.',
+  'Then, in “Battery saver”, choose “No restrictions”.': 'પછી “Battery saver” માં “No restrictions” પસંદ કરો.',
+  'Allow FloorBeat Alerts to start in the background.': 'FloorBeat Alerts ને બૅકગ્રાઉન્ડમાં શરૂ થવા દો.',
+  'In “Battery”, allow FloorBeat Alerts high background power use.': '“Battery” માં FloorBeat Alerts ને બૅકગ્રાઉન્ડમાં વધુ પાવર વાપરવા દો.',
+  'Turn on “Auto launch” for FloorBeat Alerts.': 'FloorBeat Alerts માટે “Auto launch” ચાલુ કરો.',
+  'In “Battery usage”, turn on “Allow background activity”.': '“Battery usage” માં “Allow background activity” ચાલુ કરો.',
+  'Open “Battery” and choose “Unrestricted”.': '“Battery” ખોલો અને “Unrestricted” પસંદ કરો.',
+  'Make sure FloorBeat Alerts is not in the “Sleeping apps” list.': 'ખાતરી કરો કે FloorBeat Alerts “Sleeping apps” યાદીમાં ન હોય.',
+  'In “App launch”, set FloorBeat Alerts to “Manage manually” and turn on all three switches.': '“App launch” માં FloorBeat Alerts ને “Manage manually” પર રાખો અને ત્રણેય સ્વિચ ચાલુ કરો.',
+  'Open “Battery” and choose “Unrestricted” (or “Don’t optimise”).': '“Battery” ખોલો અને “Unrestricted” (અથવા “Don’t optimise”) પસંદ કરો.',
+
+  // when an admin's phone rings (components/alerts-app/ring-rules-card.tsx)
+  'When my phone rings': 'મારો ફોન ક્યારે વાગે',
+  'Alerts that do not ring still come into your inbox.': 'જે એલર્ટ નથી વાગતા, તે પણ તમારા ઇનબૉક્સમાં આવે છે.',
+  'Only between these hours': 'ફક્ત આ કલાકો વચ્ચે',
+  'to': 'થી',
+  'A stopped machine always rings': 'બંધ થયેલી મશીન હંમેશા વાગે',
+  'What rings': 'શું વાગે',
+  'Shift reminders': 'શિફ્ટની યાદ',
+  'Could not save. Try again.': 'સાચવી શકાયું નહીં. ફરી પ્રયાસ કરો.',
 };

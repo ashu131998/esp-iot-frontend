@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test builds only: a push can be handed to the app from the computer (DebugPushReceiver), as Firebase would. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".DebugPushReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="floorbeat.alerts.DEBUG_PUSH" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

@@ -1,17 +1,22 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { BatteryCharging, LogOut } from 'lucide-react';
+import { useState, useSyncExternalStore } from 'react';
 
 import { NotificationsCard } from '@/components/alerts-app/notifications-card';
+import { RingRulesCard } from '@/components/alerts-app/ring-rules-card';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { alertsApi } from '@/lib/alerts-app/api';
 import { PLANTS_QUERY_KEY } from '@/lib/alerts-app/model';
+import { callNative, inNativeApp, type NativeHello } from '@/lib/alerts-app/native';
+import { forgetThisPhone } from '@/lib/alerts-app/push-client';
 import { useAppHref } from '@/lib/alerts-app/queries';
 import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n/context';
+
+const noSubscription = () => () => {};
 
 /** Settings: notifications, the language, the account and sign-out, and what to do when alerts do not arrive. */
 export function AlertsSettings() {
@@ -30,15 +35,18 @@ export function AlertsSettings() {
   async function signOut() {
     setSigningOut(true);
     try {
+      await forgetThisPhone();   // the Android app: this phone stops getting this person's alerts
       await logout();
     } finally {
       window.location.href = href('/login');
     }
   }
+  const native = useSyncExternalStore(noSubscription, inNativeApp, () => false);
 
   return (
     <div className="space-y-5">
       <NotificationsCard />
+      <RingRulesCard />
 
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
         <h2 className="text-sm font-semibold text-foreground">{t('Language')}</h2>
@@ -64,6 +72,18 @@ export function AlertsSettings() {
           <li>{t('Do not swipe the app away from the recent apps list; let it stay.')}</li>
           <li>{t('Battery saver can delay alerts: allow FloorBeat Alerts to run in the background.')}</li>
         </ul>
+        {native && (
+          <Button
+            variant="secondary"
+            className="mt-4 w-full gap-2"
+            onClick={() => {
+              void callNative<NativeHello>('hello').then((hello) => callNative(hello?.autostart ? 'openAutostartSettings' : 'openBatterySettings'));
+            }}
+          >
+            <BatteryCharging className="h-4 w-4" aria-hidden="true" />
+            {t('Open battery settings')}
+          </Button>
+        )}
       </section>
     </div>
   );

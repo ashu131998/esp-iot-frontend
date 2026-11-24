@@ -14,6 +14,7 @@ import { currentShiftWindow } from '@/lib/shifts';
 import { useT } from '@/lib/i18n/context';
 import { PlantSwitcher } from '@/components/layout/plant-switcher';
 import { useNavigate } from '@/lib/navigation-context';
+import { usePrefetchPage } from '@/lib/prefetch-pages';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
 
@@ -64,6 +65,7 @@ export function FactorySidebar({
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
+  const prefetch = usePrefetchPage();
   const { canWriteFactory, isInternalStaff } = useAuth();
   const { t } = useT();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -139,6 +141,13 @@ export function FactorySidebar({
                     <button
                       type="button"
                       aria-current={active ? 'page' : undefined}
+                      // Pointing at a page fetches it ahead of the click.
+                      onPointerEnter={() => {
+                        if (pathname !== tab.href) prefetch(tab.href);
+                      }}
+                      onFocus={() => {
+                        if (pathname !== tab.href) prefetch(tab.href);
+                      }}
                       onClick={() => {
                         if (pathname !== tab.href) {
                           setPendingHref(tab.href);

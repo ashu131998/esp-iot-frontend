@@ -76,6 +76,7 @@ export function AlertsAppShell({ children }: { children: React.ReactNode }) {
               <li key={key} className="min-w-0 flex-1">
                 <Link
                   href={to}
+                  prefetch   // the whole page fetched ahead: a tap on the tab shows it at once
                   aria-current={active ? 'page' : undefined}
                   className={cn('flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium', active ? 'text-primary' : 'text-muted')}
                 >

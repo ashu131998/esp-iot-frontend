@@ -35,7 +35,8 @@ export function DashboardLoginForm() {
         <DashboardAppMark className="mx-auto mb-4 h-14 w-14" />
         <CardHeader title="FloorBeat" description={t('Your factory\'s dashboard. Sign in with your work email.')} />
         {restoring ? (
-          <p className="mt-6 text-center text-sm text-muted" role="status">{t('Signing you in…')}</p>
+          // as tall as the form that may follow: nothing jumps when it shows
+          <p className="mt-6 flex min-h-[16.5rem] items-center justify-center text-sm text-muted" role="status">{t('Signing you in…')}</p>
         ) : (
           <SignInSteps
             onSignedIn={goOn}

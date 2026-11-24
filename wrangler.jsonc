@@ -7,8 +7,11 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   // Run near the API in Germany rather than near the visitor: every page is several API calls,
-  // so one longer hop beats four. (Lighthouse 2026-11-01: TTFB 0.5–1 s on phones.)
-  "placement": { "mode": "smart" },
+  // so one longer hop beats four. Named outright (Frankfurt, the nearest cloud region to the API's
+  // server): with "smart" Cloudflare kept the Worker at the visitor's edge (cf-placement: local-SIN,
+  // 2026-11-24), where each API call took 0.4–1.4 s against 0.16 s asked directly. Files (scripts,
+  // styles, icons) are still served from the edge nearest the visitor.
+  "placement": { "region": "aws:eu-central-1" },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

@@ -2,9 +2,11 @@ import { FactoryMobileNav } from '@/components/layout/factory-mobile-nav';
 import { PageHeader } from '@/components/layout/page-header';
 import { SubscriptionBar } from '@/components/layout/subscription-bar';
 import { FactorySidebar } from '@/components/layout/factory-sidebar';
+import { FactoryPageSkeleton } from '@/components/ui/page-skeletons';
 import { brandStyle, logoUrl, type FactoryBranding } from '@/lib/branding';
 import { FactoryLinksProvider } from '@/lib/factory-links-context';
 import { FactoryRefsProvider, type FactoryRefs } from '@/lib/factory-refs-context';
+import { PageSwap } from '@/lib/navigation-context';
 import { RefreshProvider } from '@/lib/refresh-context';
 import type { SubscriptionStatus } from '@/lib/subscriptions';
 import type { Shift } from '@/lib/types';
@@ -54,7 +56,7 @@ export function FactoryShell({
             tabs={tabs}
           />
         </aside>
-        <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-none lg:[scrollbar-gutter:stable] print:block print:overflow-visible">
+        <main data-page-scroll className="flex min-h-screen min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-none lg:[scrollbar-gutter:stable] print:block print:overflow-visible">
           <FactoryMobileNav
             factoryId={factoryId}
             factoryName={factoryName}
@@ -71,7 +73,10 @@ export function FactoryShell({
           {/* Phones: room under the content for the bottom bar. */}
           <div className="flex-1 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:pb-0">
             <FactoryRefsProvider value={refs}>
-              <RefreshProvider>{children}</RefreshProvider>
+              <RefreshProvider>
+                {/* A tab tapped: its skeleton at once, until the page is in (lib/navigation-context.tsx). */}
+                <PageSwap skeleton={<FactoryPageSkeleton />}>{children}</PageSwap>
+              </RefreshProvider>
             </FactoryRefsProvider>
           </div>
         </main>

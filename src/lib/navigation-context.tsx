@@ -1,10 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
+  useState,
   useTransition,
   type ReactNode,
 } from 'react';
@@ -16,11 +18,18 @@ interface NavContextValue {
   isNavigating: boolean;
   /** Push a new URL inside a React transition so the old UI stays visible. */
   navigate: (href: string) => void;
+  /**
+   * The page being moved to while it is on its way, when it is another page than the one shown (a tab
+   * tapped): the shell shows that page's skeleton at once (PageSwap). Null for a change of dates or
+   * filters on the same page, whose old numbers stay on screen, dimmed.
+   */
+  pendingPath: string | null;
 }
 
 const NavContext = createContext<NavContextValue>({
   isNavigating: false,
   navigate: () => {},
+  pendingPath: null,
 });
 
 /**
@@ -30,7 +39,12 @@ const NavContext = createContext<NavContextValue>({
  */
 export function RouterTransitionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isNavigating, startTransition] = useTransition();
+  // The page asked for and the page it was asked from. It counts only while that move is under way from
+  // that same page: arrived (the address changed), or ended without arriving, nothing is on its way.
+  const [asked, setAsked] = useState<{ to: string; from: string } | null>(null);
+  const pendingPath = asked && isNavigating && asked.from === pathname ? asked.to : null;
   const navigate = useCallback(
     (href: string) => {
       const target = href.startsWith('http')
@@ -38,6 +52,9 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
         : href;
       const current = window.location.pathname + window.location.search;
       if (target === current) return;
+      // Another page: said at once (outside the transition), so its skeleton shows on this very frame.
+      const targetPath = target.split(/[?#]/)[0] ?? target;
+      if (targetPath !== window.location.pathname) setAsked({ to: targetPath, from: window.location.pathname });
 
       // Drive the whole navigation through router.push/replace inside a transition: it
       // updates the URL, refetches the server components for the new params, and
@@ -59,7 +76,7 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
   );
 
   return (
-    <NavContext.Provider value={{ isNavigating, navigate }}>
+    <NavContext.Provider value={{ isNavigating, navigate, pendingPath }}>
       {children}
     </NavContext.Provider>
   );
@@ -67,6 +84,38 @@ export function RouterTransitionProvider({ children }: { children: ReactNode }) 
 
 export function useNavigate() {
   return useContext(NavContext).navigate;
+}
+
+/** The other page being moved to (a tab tapped), until it is here; null otherwise. */
+export function usePendingPath(): string | null {
+  return useContext(NavContext).pendingPath;
+}
+
+/**
+ * Around a shell's pages: the moment another page is asked for (a tab tapped), `skeleton` takes the
+ * place of the page that is leaving, from the top, and stays until the new page is in. A tap is
+ * answered on its own frame, whatever the network does. The leaving page stays mounted underneath
+ * (hidden), so nothing it was doing is cut short.
+ */
+export function PageSwap({ skeleton, children }: { skeleton: ReactNode; children: ReactNode }) {
+  const pending = usePendingPath() !== null;
+  useLayoutEffect(() => {
+    if (!pending) return;
+    // The new page starts at its top: the window on phones, the shell's own scrolling column from lg up.
+    window.scrollTo(0, 0);
+    document.querySelector('[data-page-scroll]')?.scrollTo(0, 0);
+  }, [pending]);
+  return <PageSwapView pending={pending} skeleton={skeleton}>{children}</PageSwapView>;
+}
+
+/** What PageSwap shows: the skeleton over the hidden page while another page is on its way. */
+export function PageSwapView({ pending, skeleton, children }: { pending: boolean; skeleton: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      {pending && <div data-page-skeleton aria-busy="true">{skeleton}</div>}
+      <div hidden={pending}>{children}</div>
+    </>
+  );
 }
 
 export function useIsNavigating() {

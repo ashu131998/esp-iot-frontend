@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const api = vi.hoisted(() => ({ key: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn(), testPush: vi.fn(), registerAndroid: vi.fn(), unregisterAndroid: vi.fn() }));
 vi.mock('@/lib/alerts-app/api', () => ({ alertsApi: api }));
 
-const { BATTERY_DONE_KEY, batteryStepNeeded, callNative, holdBack, inNativeApp, nativeAppVersion, onNativeEvent } = await import('@/lib/alerts-app/native');
+const { BATTERY_DONE_KEY, batteryStepNeeded, callNative, holdBack, holdBackOnce, inNativeApp, nativeAppVersion, onNativeEvent } = await import('@/lib/alerts-app/native');
 const { currentState, followAlerts, forgetThisPhone, keepSubscriptionFresh, subscribedHere, turnOff, turnOn } = await import('@/lib/alerts-app/push-client');
 const { accessHere, phoneHere } = await import('@/lib/alerts-app/access-client');
 
@@ -121,6 +121,27 @@ describe('asking the app', () => {
     releaseLive();
     releaseLive();   // released twice: nothing more
     expect(back()).toBe(false);
+  });
+
+  it('a sheet or a menu holds it once: a second press straight after is not taken by what has just closed', () => {
+    app();
+    const closeLive = vi.fn();
+    const closeSheet = vi.fn();
+    holdBack(closeLive);
+    const releaseSheet = holdBackOnce(closeSheet);
+    const back = (window as unknown as { floorbeatBack: () => boolean }).floorbeatBack;
+    expect(back()).toBe(true);
+    expect(closeSheet).toHaveBeenCalledTimes(1);
+    expect(back()).toBe(true);                       // the next press goes to what is under it
+    expect(closeSheet).toHaveBeenCalledTimes(1);
+    expect(closeLive).toHaveBeenCalledTimes(1);
+    releaseSheet();   // its own release (the sheet gone from the page) after it was used: nothing more
+    expect(back()).toBe(true);
+    expect(closeLive).toHaveBeenCalledTimes(2);
+    const releaseMenu = holdBackOnce(closeSheet);   // closed another way (its X): released, never used
+    releaseMenu();
+    expect(back()).toBe(true);
+    expect(closeSheet).toHaveBeenCalledTimes(1);
   });
 });
 

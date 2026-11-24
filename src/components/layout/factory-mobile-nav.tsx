@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
 import { useT } from '@/lib/i18n/context';
 import { PlantSwitcher } from '@/components/layout/plant-switcher';
+import { holdBackOnce } from '@/lib/alerts-app/native';
 import type { Display } from '@/lib/display';
 import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
@@ -65,7 +66,12 @@ export function FactoryMobileNav({
       if (e.key === 'Escape') setSheetOn(null);
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Inside the Android app the phone's back button closes the menu before it leaves the page.
+    const release = holdBackOnce(() => setSheetOn(null));
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      release();
+    };
   }, [menuOpen]);
 
   const current = pending?.on === pathname ? pending.href : pathname;

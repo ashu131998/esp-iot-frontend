@@ -21,6 +21,8 @@ const APP = `https://${ID}${SUFFIX}`;
 const OLD_APP = (process.env.OLD_APP_ORIGIN ?? 'https://app.floorbeat.in').replace(/\/$/, '');
 /** The FloorBeat Alerts app (the phone app): alerts.<suffix>. */
 const ALERTS = (process.env.ALERTS_ORIGIN ?? `https://alerts${SUFFIX}`).replace(/\/$/, '');
+/** The FloorBeat app (the dashboard on a phone): dashboard.<suffix>. */
+const DASHBOARD = (process.env.DASHBOARD_ORIGIN ?? `https://dashboard${SUFFIX}`).replace(/\/$/, '');
 const STAFF = (process.env.STAFF_ORIGIN ?? 'https://ops.floorbeat.in').replace(/\/$/, '');
 const WWW = SITE.replace('://', '://www.');
 const UPPER = ID.toUpperCase();
@@ -79,8 +81,15 @@ const CHECKS = [
   { part: 'app', name: 'alerts app service worker', url: `${ALERTS}/alerts-sw.js`, status: 200, contains: 'showNotification' },
   { part: 'app', name: 'Android asset link', url: `${ALERTS}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.alerts' },
   { part: 'app', name: 'the staff console is not the app', url: `${ALERTS}/internal/login`, status: 404 },
+  // The FloorBeat app (the dashboard on a phone): signed out, the address asked for shows its sign-in in place.
+  { part: 'app', name: 'dashboard app while signed out', url: `${DASHBOARD}/`, status: 200, endsAt: `${DASHBOARD}/`, contains: 'Sign in with your work email' },
+  { part: 'app', name: 'dashboard app, a page asked for while signed out', url: `${DASHBOARD}/alerts`, status: 200, endsAt: `${DASHBOARD}/alerts`, contains: 'Sign in with your work email' },
+  { part: 'app', name: 'dashboard app old sign-in link', url: `${DASHBOARD}/login`, status: 200, firstHop: `${DASHBOARD}/`, endsAt: `${DASHBOARD}/` },
+  { part: 'app', name: 'dashboard app manifest', url: `${DASHBOARD}/dashboard-app.webmanifest`, status: 200, contains: '"FloorBeat"' },
+  { part: 'app', name: 'dashboard app Android asset link', url: `${DASHBOARD}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.dashboard' },
   { part: 'site', name: 'app download page', url: `${SITE}/app`, status: 200, contains: 'Download for Android' },
   { part: 'site', name: 'Android APK download', url: `${SITE}/downloads/floorbeat-alerts.apk`, status: 200 },
+  { part: 'site', name: 'dashboard app APK download', url: `${SITE}/downloads/floorbeat-dashboard.apk`, status: 200 },
 ];
 
 function verdict(check, got) {

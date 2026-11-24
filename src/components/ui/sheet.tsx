@@ -4,13 +4,14 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
+import { holdBackOnce } from '@/lib/alerts-app/native';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 /**
  * Where adding and editing happen: a sheet from the bottom of the screen on phones, a
  * centred window from sm up, over the page either way. Closes on its X, a tap outside it,
- * or Escape. Rendered into the factory shell ([data-sheet-root]) so the factory's brand
+ * Escape, or the back button inside the Android apps. Rendered into the factory shell ([data-sheet-root]) so the factory's brand
  * colours apply, else into the body.
  */
 export function Sheet({
@@ -38,6 +39,8 @@ export function Sheet({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  // Inside the Android apps the phone's back button closes the sheet before it leaves the page.
+  useEffect(() => holdBackOnce(() => close.current()), []);
 
   if (typeof document === 'undefined') return null;
   return createPortal(

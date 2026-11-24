@@ -21,6 +21,7 @@ export function FactoryShell({
   refs,
   subscription,
   plainLinks = false,
+  sharedAddress = false,
   children,
 }: {
   factoryId: string;
@@ -36,10 +37,12 @@ export function FactoryShell({
   subscription?: SubscriptionStatus | null;
   /** At the factory's own address: links to its pages are plain (lib/factory-links.ts). */
   plainLinks?: boolean;
+  /** In the FloorBeat app (dashboard.floorbeat.in): another factory opens at this same address. */
+  sharedAddress?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <FactoryLinksProvider plain={plainLinks}>
+    <FactoryLinksProvider plain={plainLinks} shared={sharedAddress}>
       <div className="min-h-screen lg:flex lg:h-screen lg:overflow-hidden print:block print:h-auto print:overflow-visible" style={brandStyle(branding)} data-sheet-root>
         <aside className="hidden h-screen w-64 shrink-0 lg:block print:hidden">
           <FactorySidebar
@@ -59,6 +62,7 @@ export function FactoryShell({
             location={location}
             shifts={shifts}
             tabs={tabs}
+            display={refs.display}
           />
           <div className="hidden lg:block print:block">
             <PageHeader title={factoryName} description={description} />

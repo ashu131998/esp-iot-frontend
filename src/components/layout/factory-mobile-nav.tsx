@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth-context';
 import { tabsFor } from '@/lib/display';
 import { useT } from '@/lib/i18n/context';
 import { PlantSwitcher } from '@/components/layout/plant-switcher';
+import type { Display } from '@/lib/display';
 import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export function FactoryMobileNav({
   location,
   shifts,
   tabs: allTabs,
+  display,
 }: {
   factoryId: string;
   factoryName: string;
@@ -41,6 +43,8 @@ export function FactoryMobileNav({
   location?: string | null;
   shifts: Shift[];
   tabs: Tab[];
+  /** The factory's switches: which pages our staff put on the bottom bar (lib/mobile-nav.ts). */
+  display?: Display | null;
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
@@ -72,7 +76,8 @@ export function FactoryMobileNav({
       navigate(href);
     }
   };
-  const bar = bottomBarTabs(tabs);
+  const bar = bottomBarTabs(tabs, display);
+  const more = moreTabs(tabs, display);
   const onBar = bar.some((t) => t.href === current);
 
   return (
@@ -112,11 +117,13 @@ export function FactoryMobileNav({
               </li>
             );
           })}
-          <li className="min-w-0 flex-1">
-            <BarButton active={!onBar} onClick={() => openSheet('pages')} label={t('More')} popup>
-              <MoreHorizontal className="h-5 w-5" />
-            </BarButton>
-          </li>
+          {more.length > 0 && (
+            <li className="min-w-0 flex-1">
+              <BarButton active={!onBar} onClick={() => openSheet('pages')} label={t('More')} popup>
+                <MoreHorizontal className="h-5 w-5" />
+              </BarButton>
+            </li>
+          )}
         </ul>
       </nav>
 
@@ -143,7 +150,7 @@ export function FactoryMobileNav({
 
             {sheet === 'pages' && (
             <ul className="grid grid-cols-3 gap-2 p-3">
-              {moreTabs(tabs).map((tab) => {
+              {more.map((tab) => {
                 const Icon = tabIcon(tab.slug);
                 const active = current === tab.href;
                 return (

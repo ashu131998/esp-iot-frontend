@@ -5,6 +5,8 @@
  *  - superadmin.floorbeat.in: the staff console for the super admin; admin.floorbeat.in: the staff
  *    console for FloorBeat's staff (STAFF_HOST_ROLES on the staff Worker);
  *  - alerts.floorbeat.in: the FloorBeat Alerts phone app (any account; ALERTS_APP_HOST for a local run);
+ *  - dashboard.floorbeat.in: the FloorBeat app, the dashboard on a phone: one address for every factory,
+ *    the person's own factory once signed in (DASHBOARD_APP_HOST for a local run);
  *  - app, ops, www, api and every stage- / dev- address: FloorBeat's own, never a factory.
  * The backend keeps the same reserved list (query-api/src/factory-host.js) for new factory IDs.
  */
@@ -109,5 +111,28 @@ export function isAlertsAppHost(hostname: string | null | undefined, suffix: str
   const named = bare(explicit ?? '');
   if (named && host === named) return true;
   const derived = alertsAppHost(suffix);
+  return derived !== null && host === derived;
+}
+
+/** The FloorBeat app (the dashboard as a phone app) lives at dashboard.<suffix>: dashboard.floorbeat.in. */
+export const DASHBOARD_APP_LABEL = 'dashboard';
+
+/** The dashboard app's address for a factory-address suffix: "dashboard.floorbeat.in"; null without one. */
+export function dashboardAppHost(suffix: string | null | undefined): string | null {
+  const s = (suffix ?? '').trim().toLowerCase();
+  if (!s) return null;
+  return `${DASHBOARD_APP_LABEL}${s.startsWith('.') ? s : `.${s}`}`;
+}
+
+/**
+ * Whether this address is the dashboard app's: dashboard.<suffix>, or the address named in
+ * DASHBOARD_APP_HOST (a local run: dashboard.localhost). A port does not matter.
+ */
+export function isDashboardAppHost(hostname: string | null | undefined, suffix: string | null | undefined, explicit?: string | null): boolean {
+  if (!hostname) return false;
+  const host = bare(hostname);
+  const named = bare(explicit ?? '');
+  if (named && host === named) return true;
+  const derived = dashboardAppHost(suffix);
   return derived !== null && host === derived;
 }

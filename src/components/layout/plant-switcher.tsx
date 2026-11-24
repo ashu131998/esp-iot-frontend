@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useSharedAddress } from '@/lib/factory-links-context';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +50,7 @@ export function PlantSwitcher({
 }) {
   const { user } = useAuth();
   const { t } = useT();
+  const shared = useSharedAddress();
   const s = TONES[tone];
   const companyAdmin = Boolean(user?.company_id);
   const plantsQuery = useQuery({
@@ -96,7 +98,8 @@ export function PlantSwitcher({
     setError(null);
     try {
       const { url } = await api.authSwitch(id);
-      window.location.assign(url);
+      // The pass is traded at that factory's own address; in the FloorBeat app every factory is at this one.
+      window.location.assign(shared ? `/api/auth/handoff${new URL(url).search}` : url);
     } catch {
       setGoing(null);
       setError(t('Could not open that factory'));

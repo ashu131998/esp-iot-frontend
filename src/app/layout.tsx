@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { headers } from 'next/headers';
 
+import { webAppInstallable } from '@/lib/alerts-app/install';
+import { DASHBOARD_APP_NAME } from '@/lib/dashboard-app';
+import { isDashboardAppHost } from '@/lib/hosts';
 import { getLocale, getMessages } from '@/lib/i18n/server';
 
 import { Providers } from './providers';
@@ -16,10 +20,32 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
+const METADATA: Metadata = {
   title: 'FloorBeat',
   description: 'Industrial IoT monitoring and analytics for multi-factory operations',
+  // public/: a file here in app/ would take the place of the FloorBeat app's own icon below.
+  icons: { apple: '/apple-touch-icon.png' },
 };
+
+/**
+ * At the FloorBeat app's address (dashboard.floorbeat.in, lib/dashboard-app.ts) every page is the app:
+ * its own Home Screen icon and name, and its manifest (public/dashboard-app.webmanifest), offered to
+ * iPhones and iPads only, as the alerts app's is: Android has the APK.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  if (!isDashboardAppHost(h.get('host'), process.env.FACTORY_HOST_SUFFIX, process.env.DASHBOARD_APP_HOST)) return METADATA;
+  return {
+    ...METADATA,
+    description: 'Your factory\'s dashboard on your phone: which machines are running, what stopped and for how long.',
+    appleWebApp: { capable: true, title: DASHBOARD_APP_NAME, statusBarStyle: 'default' },
+    // Next writes the standard mobile-web-app-capable; older iPhones still read Apple's own name.
+    other: { 'apple-mobile-web-app-capable': 'yes' },
+    formatDetection: { telephone: false },
+    icons: { apple: '/dashboard-apple-icon.png' },
+    ...(webAppInstallable(h.get('user-agent')) ? { manifest: '/dashboard-app.webmanifest' } : {}),
+  };
+}
 
 export const viewport = {
   width: 'device-width',

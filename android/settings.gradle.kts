@@ -19,5 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
+// Two apps: FloorBeat Alerts (app/) and FloorBeat, the dashboard (dashboard/). README.md.
 rootProject.name = "FloorBeat Alerts"
 include(":app")
+include(":dashboard")

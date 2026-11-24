@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">FloorBeat</string>
+
+    <!-- No network: shown in all three languages at once (the page's language is not known without it). -->
+    <string name="offline_title" translatable="false">You are offline</string>
+    <string name="offline_title_hi" translatable="false">आप ऑफ़लाइन हैं</string>
+    <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
+    <string name="offline_text">Your dashboard will show once the phone is back on the network.</string>
+    <string name="offline_retry">Try again</string>
+</resources>

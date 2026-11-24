@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="offline_text">फ़ोन के नेटवर्क पर वापस आते ही आपका डैशबोर्ड दिखेगा।</string>
+    <string name="offline_retry">फिर से कोशिश करें</string>
+</resources>

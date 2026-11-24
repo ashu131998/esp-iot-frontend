@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FACTORY_PAGES,
+  HELP_PAGES,
   MANAGE_PAGES,
   displayOf,
   factoryTabs,
@@ -58,17 +59,24 @@ describe('displayOf', () => {
 });
 
 describe('factoryTabs', () => {
-  it('lists every page in menu order when nothing is switched off, Team before Compliance', () => {
+  it('lists every page in menu order when nothing is switched off, Team before Compliance, Support last', () => {
     const slugs = factoryTabs('f1', {}).map((t) => t.slug);
     expect(slugs).toEqual(FACTORY_PAGES.map((p) => p.slug));
-    expect(slugs.slice(-2)).toEqual(['team', 'compliance']);
+    expect(slugs.slice(-3)).toEqual(['team', 'compliance', 'support']);
   });
 
-  it('leaves out switched-off pages but always keeps Team', () => {
-    const slugs = factoryTabs('f1', { energy: false, compliance: false, team: false }).map((t) => t.slug);
+  it('leaves out switched-off pages but always keeps Team and Support', () => {
+    const slugs = factoryTabs('f1', { energy: false, compliance: false, team: false, support: false }).map((t) => t.slug);
     expect(slugs).not.toContain('energy');
     expect(slugs).not.toContain('compliance');
     expect(slugs).toContain('team');
+    expect(slugs).toContain('support');
+  });
+
+  it('Support is for everyone of the factory', () => {
+    const tabs = factoryTabs('f1', {});
+    expect(tabsFor(tabs, false).map((t) => t.slug)).toContain('support');
+    expect(tabs.at(-1)).toEqual({ slug: 'support', label: 'Support', href: '/factories/f1/support' });
   });
 
   it('shows WiFi to everyone of the factory: workers connect boards there (the passwords stay with its admins)', () => {
@@ -133,24 +141,26 @@ describe('switched-off module stand-ins', () => {
 describe('sidebarGroups: what people read (Monitor), then what they set up (Manage)', () => {
   it('every factory page lands in exactly one group, in menu order', () => {
     const groups = sidebarGroups(FACTORY_PAGES);
-    expect(groups.map((g) => g.key)).toEqual(['monitor', 'manage']);
+    expect(groups.map((g) => g.key)).toEqual(['monitor', 'manage', 'help']);
     expect(groups[0].tabs.map((p) => p.slug)).toEqual([
       'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'cameras', 'performance', 'production', 'quality',
     ]);
     expect(groups[1].tabs.map((p) => p.slug)).toEqual([
       'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
     ]);
+    expect(groups[2].tabs.map((p) => p.slug)).toEqual(['support']);
     expect(groups.flatMap((g) => g.tabs)).toHaveLength(FACTORY_PAGES.length);
   });
 
   it('names only pages that exist', () => {
     const slugs = FACTORY_PAGES.map((p) => p.slug);
-    for (const slug of MANAGE_PAGES) expect(slugs).toContain(slug);
+    for (const slug of [...MANAGE_PAGES, ...HELP_PAGES]) expect(slugs).toContain(slug);
   });
 
   it('a group with nothing in it is left out', () => {
     expect(sidebarGroups([{ slug: 'overview' }, { slug: 'energy' }]).map((g) => g.key)).toEqual(['monitor']);
     expect(sidebarGroups([{ slug: 'team' }]).map((g) => g.key)).toEqual(['manage']);
+    expect(sidebarGroups([{ slug: 'overview' }, { slug: 'support' }]).map((g) => g.key)).toEqual(['monitor', 'help']);
     expect(sidebarGroups([])).toEqual([]);
   });
 });

@@ -5,7 +5,10 @@ import { afterSignIn } from '@/lib/alerts-app/model';
 import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from '@/lib/auth-types';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
-import { factoryFromHost, isAlertsAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost } from '@/lib/hosts';
+import { PLAIN_LINKS_HEADER } from '@/lib/factory-links';
+import {
+  factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
+} from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
 import { liveImageOrigin } from '@/lib/live';
@@ -88,8 +91,10 @@ export async function middleware(req: NextRequest) {
   const hostFactory = factoryFromHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX);
   // The FloorBeat Alerts phone app's address (alerts.floorbeat.in).
   const alertsApp = isAlertsAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.ALERTS_APP_HOST);
+  // The FloorBeat app's address, the dashboard on a phone (dashboard.floorbeat.in).
+  const dashboardApp = !alertsApp && isDashboardAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.DASHBOARD_APP_HOST);
 
-  const legacyTarget = hostFactory || alertsApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
+  const legacyTarget = hostFactory || alertsApp || dashboardApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
     if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
       return internalHostBlockResponse();
@@ -120,6 +125,7 @@ export async function middleware(req: NextRequest) {
   ].join('; ');
 
   const requestHeaders = new Headers(req.headers);
+  requestHeaders.delete(PLAIN_LINKS_HEADER);   // ours to set (the dashboard app), never the browser's
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('content-security-policy', csp);
 
@@ -216,6 +222,42 @@ export async function middleware(req: NextRequest) {
     }
     const page = pathname === '/' || /^\/alerts\/?$/.test(pathname) ? '' : pathname;   // /alerts is the inbox too
     return securedRewrite(`/alerts-app${page}`);
+  }
+
+  // FloorBeat, the dashboard as a phone app (dashboard.floorbeat.in): one address for every factory.
+  // Signed out, the address asked for shows the sign-in in place (an email and a password; which
+  // factory is asked only when they fit more than one). Signed in, it is the person's own factory at
+  // plain addresses, as at a factory's own address: / its overview, /alerts, /machines/… (served from
+  // /factories/<id>/… inside, the factory being the one the session is at). Our staff belong to no
+  // factory: they pick one and use its long addresses.
+  if (dashboardApp) {
+    if (/^\/dashboard-app(\/|$)/.test(pathname)) return redirectTo('/');
+    if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
+    const long = pathname.match(/^\/(f|factories)\/([^/]+)(\/.*)?$/);
+    const authPage = /^\/(login|signup|forgot-password)\/?$/.test(pathname);
+    if (!identity) {
+      if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+      // An address of the sign-in pages of a factory, or the console: the app's own sign-in, at /.
+      if (authPage || long?.[1] === 'f' || pathname.startsWith('/internal')) return redirectTo('/');
+      return securedRewrite('/dashboard-app/login');
+    }
+    if (authPage || pathname.startsWith('/internal')) return redirectTo('/');
+    if (isStaffRole(identity.role)) {
+      if (long?.[1] === 'factories') return secured();
+      return pathname === '/' ? securedRewrite('/dashboard-app/factories') : redirectTo('/');
+    }
+    const plant = identity.factoryId;
+    if (!plant) return securedRewrite('/dashboard-app/login');
+    if (long) {
+      const same = decodeSegment(long[2]).toLowerCase() === plant.toLowerCase();
+      const url = req.nextUrl.clone();
+      url.pathname = same && long[1] === 'factories' ? (long[3] ?? '/') : '/';
+      if (!same) url.search = '';
+      return NextResponse.redirect(url);
+    }
+    if (/^\/team(\/|$)/.test(pathname) && identity.role !== 'admin') return redirectTo('/');
+    requestHeaders.set(PLAIN_LINKS_HEADER, '1');
+    return securedRewrite(`/factories/${plant}${pathname === '/' ? '' : pathname}`);
   }
 
   // A factory's own address (<factory>.floorbeat.in): that factory alone, at plain addresses —

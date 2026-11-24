@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { FactoryBrandingCard } from '@/components/admin/factory-branding-card';
-import { FactoryDisplayEditor } from '@/components/admin/factory-display-editor';
+import { FactoryBarEditor, FactoryDisplayEditor } from '@/components/admin/factory-display-editor';
 import { PageHeader } from '@/components/layout/internal-shell';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { api } from '@/lib/api';
@@ -57,6 +57,11 @@ export default function InternalFeaturesPage() {
           factory={factory}
           pages={catalogQuery.data?.pages ?? []}
         />
+        <FactoryBarEditor
+          key={`bar-${factory.factory_id}`}
+          factory={factory}
+          pages={catalogQuery.data?.pages ?? []}
+        />
       </div>
     );
   }
@@ -65,7 +70,7 @@ export default function InternalFeaturesPage() {
     <>
       <PageHeader
         title="Pages & branding"
-        description="Per factory: logo and colour, and which dashboard pages and parts it shows"
+        description="Per factory: logo and colour, which dashboard pages and parts it shows, and the phone's bottom bar"
       />
       <div className="p-4 sm:p-6 lg:p-8">{body}</div>
     </>

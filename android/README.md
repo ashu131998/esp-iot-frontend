@@ -86,3 +86,40 @@ adb shell am broadcast -a floorbeat.alerts.DEBUG_PUSH -p in.floorbeat.alerts \
 Firebase Messaging 25.1 and later register a phone by its Firebase Installation ID (on in the manifest,
 `firebase_messaging_installation_id_enabled`); the older registration tokens are deprecated, so the app
 reports its FID through `onRegistered` and the server sends to `message.fid`.
+
+# FloorBeat for Android (the dashboard app)
+
+A second app in this project: module `dashboard/`, package `in.floorbeat.dashboard`, version 1.0.0.
+It is the factory's dashboard as an app. Its screens are dashboard.floorbeat.in, shown in the phone's
+own web view: one address for every factory, the person's own factory once signed in
+(`src/middleware.ts`, `src/lib/dashboard-app.ts`). An iPhone gets the same from its Home Screen
+(`public/dashboard-app.webmanifest`). It shows no notifications: alerts ring from FloorBeat Alerts.
+
+- **Sign-in:** an email and a password. Which factory is asked in a next step, only when they fit
+  accounts at more than one (`src/components/auth/sign-in-steps.tsx`, shared with FloorBeat Alerts).
+- **The back button:** an open form or menu closes first (the page holds the button:
+  `holdBackOnce` in `src/lib/alerts-app/native.ts`), then back through the pages, then the app goes
+  to the background (`AppLinks.back`).
+- **Links** to dashboard.floorbeat.in open in the app (App Links; `public/.well-known/assetlinks.json`
+  lists the package with the same signing key as FloorBeat Alerts). A site, a phone number or an email
+  address opens outside it.
+- **No network:** the app's own offline screen. The sign-in is kept between starts.
+- **The bottom bar** is the dashboard's own, set per factory by our staff (staff console, Pages &
+  branding, "Phone bottom bar").
+- **The icon:** the brand's mark on the dashboard's dark blue with its pulse in orange, so the two
+  apps are told apart (`res/drawable/ic_launcher_foreground.xml`; the web's copy is
+  `src/components/dashboard-app/app-mark.tsx`).
+
+```sh
+./gradlew :dashboard:testDebugUnitTest                              # the pure rules: AppLinks
+./gradlew :dashboard:assembleRelease :dashboard:bundleRelease       # dashboard-release.apk and .aab
+```
+
+A test build against a server on the computer running the emulator:
+`./gradlew :dashboard:assembleDebug -PdashboardUrl=http://10.0.2.2:3105`, with the dashboard's dev
+server started with `DASHBOARD_APP_HOST=10.0.2.2` (that address is then the app's).
+
+Releasing: raise `versionCode` and `versionName` in `dashboard/build.gradle.kts`, build with the
+signing key in place (`keystore.properties`, above; it needs no Firebase file), and copy
+`dashboard/build/outputs/apk/release/dashboard-release.apk` to
+`marketing/public/downloads/floorbeat-dashboard.apk` (the download on floorbeat.in/app).

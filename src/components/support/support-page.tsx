@@ -109,12 +109,14 @@ export function SupportPage({ factoryId }: { factoryId: string }) {
   const { tickets, sees_all: seesAll } = query.data;
   const { open, solved } = splitTickets(tickets);
   const sum = ticketSummary(tickets);
-  const raise = isInternalStaff ? undefined : (
-    <Button onClick={() => setRaising(true)} className="gap-1.5">
+  const raiseButton = (className: string) => (
+    <Button onClick={() => setRaising(true)} className={cn('gap-1.5', className)}>
       <Plus className="h-4 w-4" />
       {t('Raise a ticket')}
     </Button>
   );
+  // Beside the first sentence from sm up; on a phone, under it at full width (the sentence keeps its line).
+  const raise = isInternalStaff ? undefined : raiseButton('hidden sm:inline-flex');
 
   return (
     <div className="space-y-6">
@@ -130,6 +132,8 @@ export function SupportPage({ factoryId }: { factoryId: string }) {
       ) : (
         <SummaryCard tone="good" title={t('No open tickets')} subtitle={t('Raise a ticket whenever something is wrong.')} action={raise} />
       )}
+
+      {!isInternalStaff && raiseButton('h-11 w-full sm:hidden')}
 
       {isInternalStaff && (
         <p className="px-1 text-sm text-muted">{t('Our staff answer these on the staff console (Support).')}</p>

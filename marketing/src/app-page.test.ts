@@ -22,6 +22,13 @@ describe('floorbeat.in/app', () => {
     expect(html).not.toContain('in Chrome and choose');
   });
 
+  it('offers the dashboard app too: its Android download and its address for an iPhone', () => {
+    expect(html).toContain('href="/downloads/floorbeat-dashboard.apk"');
+    expect(html).toContain('href="https://dashboard.floorbeat.in/"');
+    expect(html).toContain('FloorBeat, the dashboard app');
+    expect(html.indexOf('floorbeat-alerts.apk')).toBeLessThan(html.indexOf('floorbeat-dashboard.apk'));   // alerts first: the page is theirs
+  });
+
   it('says what the app does and where to get help', () => {
     for (const must of ['Machine stopped', 'Shift reminders', 'Hindi and Gujarati', 'Send a test', 'support@floorbeat.in', 'Team page']) {
       expect(html, must).toContain(must);

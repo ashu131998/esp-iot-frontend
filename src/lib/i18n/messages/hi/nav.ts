@@ -27,6 +27,8 @@ export const nav: Messages = {
   'More pages': 'और पेज',
   'Monitor': 'निगरानी',
   'Manage': 'प्रबंधन',
+  'Help': 'मदद',
+  'Support': 'सहायता',
   'Signed in': 'साइन इन',
   'More': 'और',
   'Menu': 'मेनू',

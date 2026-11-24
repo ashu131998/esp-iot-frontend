@@ -146,3 +146,15 @@ export function holdBack(handler: () => void): () => void {
     if (index >= 0) backHandlers.splice(index, 1);
   };
 }
+
+/**
+ * As holdBack, for something that closes for good on the back button (a sheet, a menu): the hold ends
+ * the moment it is used, so a second press straight after is never taken by what has just closed.
+ */
+export function holdBackOnce(handler: () => void): () => void {
+  const release = holdBack(() => {
+    release();
+    handler();
+  });
+  return release;
+}

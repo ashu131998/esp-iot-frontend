@@ -61,7 +61,7 @@ export function displayOf(
   return { ...LEGACY_DEFAULTS, ...(factory?.features ?? {}) };
 }
 
-/** Factory pages in menu order. Team sits before Compliance and is always shown. */
+/** Factory pages in menu order. Team (before Compliance) and Support (last) are always shown. */
 export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'overview', label: 'Overview' },
   { slug: 'results', label: 'Results' },
@@ -82,7 +82,11 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'wifi', label: 'WiFi' },
   { slug: 'team', label: 'Team' },
   { slug: 'compliance', label: 'Compliance' },
+  { slug: 'support', label: 'Support' },
 ];
+
+/** Pages every factory has, whatever our staff switch: its people and asking us for help. */
+const ALWAYS_SHOWN: ReadonlySet<string> = new Set(['team', 'support']);
 
 /**
  * Pages only for people who can change the factory (its admins and our super admin). None since 2026-11: the
@@ -100,11 +104,20 @@ export const MANAGE_PAGES: ReadonlySet<string> = new Set([
   'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
 ]);
 
-/** The sidebar's groups in menu order: what people read (Monitor), then what they set up (Manage); an empty one left out. */
-export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): Array<{ key: 'monitor' | 'manage'; tabs: T[] }> {
-  const groups: Array<{ key: 'monitor' | 'manage'; tabs: T[] }> = [
-    { key: 'monitor', tabs: tabs.filter((tab) => !MANAGE_PAGES.has(tab.slug)) },
+/** The pages for getting help: the sidebar lists them last, under Help. */
+export const HELP_PAGES: ReadonlySet<string> = new Set(['support']);
+
+export type SidebarGroupKey = 'monitor' | 'manage' | 'help';
+
+/**
+ * The sidebar's groups in menu order: what people read (Monitor), what they set up (Manage), then
+ * asking us for help (Help); an empty one left out.
+ */
+export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): Array<{ key: SidebarGroupKey; tabs: T[] }> {
+  const groups: Array<{ key: SidebarGroupKey; tabs: T[] }> = [
+    { key: 'monitor', tabs: tabs.filter((tab) => !MANAGE_PAGES.has(tab.slug) && !HELP_PAGES.has(tab.slug)) },
     { key: 'manage', tabs: tabs.filter((tab) => MANAGE_PAGES.has(tab.slug)) },
+    { key: 'help', tabs: tabs.filter((tab) => HELP_PAGES.has(tab.slug)) },
   ];
   return groups.filter((g) => g.tabs.length > 0);
 }
@@ -115,7 +128,7 @@ export function factoryTabs(
   display: Display | null | undefined,
 ): Array<{ slug: string; label: string; href: string }> {
   const base = `/factories/${factoryId}`;
-  return FACTORY_PAGES.filter((p) => p.slug === 'team' || isShown(display, p.slug)).map((p) => ({
+  return FACTORY_PAGES.filter((p) => ALWAYS_SHOWN.has(p.slug) || isShown(display, p.slug)).map((p) => ({
     slug: p.slug,
     label: p.label,
     href: p.slug === 'overview' ? base : `${base}/${p.slug}`,

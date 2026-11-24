@@ -2,7 +2,8 @@
  * Links to a factory's pages. Inside the app they live at /factories/<id>/…; at the factory's own
  * address (<id>.floorbeat.in) the address already says which factory, so the same page is plain:
  * /factories/factory-01/energy is /energy there, /factories/factory-01 is /. The middleware serves
- * the plain address and sends the long one to it.
+ * the plain address and sends the long one to it. The same holds in the FloorBeat app
+ * (dashboard.floorbeat.in), where the factory is the one the person is signed in at.
  */
 export function plainFactoryHref(href: string): string {
   const m = /^\/factories\/[^/?#]+(.*)$/.exec(href);
@@ -11,6 +12,13 @@ export function plainFactoryHref(href: string): string {
   if (!rest) return '/';
   return rest.startsWith('/') ? rest : `/${rest}`;   // "?tab=x" → "/?tab=x"
 }
+
+/**
+ * A request header the middleware sets where a factory's pages are served at plain addresses without
+ * the address naming the factory: the FloorBeat app (dashboard.floorbeat.in), the factory being the one
+ * the person is signed in at. The browser's own copy of it is dropped.
+ */
+export const PLAIN_LINKS_HEADER = 'x-fb-plain-links';
 
 const asIs = (href: string) => href;
 

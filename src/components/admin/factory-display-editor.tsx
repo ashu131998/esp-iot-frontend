@@ -5,7 +5,8 @@ import { useState } from 'react';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { resolveDisplay, type DisplayPage } from '@/lib/display';
+import { FACTORY_PAGES, factoryTabs, resolveDisplay, type DisplayPage } from '@/lib/display';
+import { BOTTOM_BAR_FULL, BOTTOM_BAR_SIZE, barPages, barPatch, bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import type { Factory } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -142,6 +143,80 @@ export function FactoryDisplayEditor({
             </li>
           );
         })}
+      </ul>
+    </Card>
+  );
+}
+
+/**
+ * Staff screen: which of the factory's pages sit on the phone's bottom bar (the dashboard on a phone,
+ * and the FloorBeat app). Up to four show beside "More", which holds the factory's other pages; five
+ * when they are all of its pages. A change saves every page's place at once, so the bar is exactly
+ * what this screen shows.
+ */
+export function FactoryBarEditor({ factory, pages }: { factory: Factory; pages: DisplayPage[] }) {
+  const qc = useQueryClient();
+  const factoryId = factory.factory_id;
+  const [error, setError] = useState<string | null>(null);
+  const display = factory.display ?? resolveDisplay(pages, factory.features);
+  const menu = factoryTabs(factoryId, display);   // the pages this factory has on, in menu order
+  const chosen = new Set(barPages(menu, display).map((t) => t.slug));
+  const bar = bottomBarTabs(menu, display);
+  const more = moreTabs(menu, display);
+  const waiting = [...chosen].filter((slug) => !bar.some((t) => t.slug === slug));
+
+  const mutation = useMutation({
+    mutationFn: (change: { slug: string; on: boolean }) =>
+      api.adminUpdateFactoryFeatures(factoryId, barPatch(FACTORY_PAGES, menu, display, change)),
+    onMutate: () => setError(null),
+    onSuccess: (data) => {
+      // The server's own answer straight into the cache (the list is read from the replica, which lags).
+      qc.setQueryData<{ factories: Factory[] }>(['admin-factories'], (prev) =>
+        prev
+          ? {
+              ...prev,
+              factories: prev.factories.map((f) =>
+                f.factory_id === data.factory_id
+                  ? { ...f, features: data.features, display: data.display ?? resolveDisplay(pages, data.features) }
+                  : f,
+              ),
+            }
+          : prev,
+      );
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  return (
+    <Card className="p-6">
+      <CardHeader
+        title="Phone bottom bar"
+        description={`Which pages sit on the bottom bar of the dashboard on a phone and of the FloorBeat app. Up to ${BOTTOM_BAR_SIZE} show beside "More", which holds the factory's other pages (${BOTTOM_BAR_FULL} when they are all of its pages). A page that is switched off above is not listed.`}
+      />
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <span className="text-muted">On phones now: </span>
+        <span className="font-medium text-foreground">
+          {[...bar.map((t) => shortLabel(t)), ...(more.length > 0 ? [`More (${more.length})`] : [])].join(' · ') || 'More only'}
+        </span>
+      </p>
+      {waiting.length > 0 && (
+        <p className="mt-2 text-xs text-amber-700">
+          Only {BOTTOM_BAR_SIZE} fit beside &quot;More&quot;: {waiting.map((slug) => menu.find((t) => t.slug === slug)?.label ?? slug).join(', ')} {waiting.length === 1 ? 'is' : 'are'} behind &quot;More&quot; until another page leaves the bar.
+        </p>
+      )}
+      <ul className="mt-3 divide-y">
+        {menu.map((tab) => (
+          <li key={tab.slug} className="flex items-center justify-between gap-4 py-2.5">
+            <span className="text-sm text-foreground">{tab.label}</span>
+            <Switch
+              label={`${tab.label} on the bottom bar`}
+              checked={chosen.has(tab.slug)}
+              disabled={mutation.isPending}
+              onChange={(on) => mutation.mutate({ slug: tab.slug, on })}
+            />
+          </li>
+        ))}
       </ul>
     </Card>
   );

@@ -6,7 +6,7 @@ import { getFactoryConfig } from '@/lib/factory-config';
 import { displayOf, factoryTabs } from '@/lib/display';
 import { getT } from '@/lib/i18n/server';
 import { sortByMachineName } from '@/lib/machine-sort';
-import { onFactoryAddress } from '@/lib/server/factory-links';
+import { onDashboardApp, onFactoryAddress } from '@/lib/server/factory-links';
 import { factoryHrefFor } from '@/lib/factory-links';
 import { DEFAULT_SHIFTS } from '@/lib/shifts';
 
@@ -39,8 +39,9 @@ export async function FactoryShellLoader({
 
   // Pages and sections our staff switched for this factory (lib/display.ts).
   const display = displayOf(factory);
-  // At the factory's own address (<id>.floorbeat.in) its links are plain: /energy, not /factories/<id>/energy.
+  // At the factory's own address (<id>.floorbeat.in), and in the FloorBeat app, its links are plain: /energy, not /factories/<id>/energy.
   const plainLinks = await onFactoryAddress(factoryId);
+  const sharedAddress = await onDashboardApp();
   const link = factoryHrefFor(plainLinks);
 
   return (
@@ -51,6 +52,7 @@ export async function FactoryShellLoader({
       shifts={shifts}
       tabs={factoryTabs(factoryId, display).map((tab) => ({ ...tab, href: link(tab.href) }))}
       plainLinks={plainLinks}
+      sharedAddress={sharedAddress}
       branding={factory.branding}
       description={`${factory.location ?? ''} · ${tn(machineCount, '{count} machine', '{count} machines')} · ${shiftLabel}`}
       refs={{

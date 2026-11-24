@@ -12,6 +12,7 @@ import { useFactoryRefs, useShown } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import { overviewFigures } from '@/lib/overview-figures';
 import { overviewQueryKey } from '@/lib/overview-queries';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange,
@@ -61,7 +62,7 @@ export function FactoryOverviewStatCards({
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           api.availability(factoryId, apiRange, { signal }),
         refetchInterval,
-        staleTime: 0,
+        staleTime: JUST_FETCHED_MS,
       },
       energyOn
         ? {
@@ -69,7 +70,7 @@ export function FactoryOverviewStatCards({
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.energy(factoryId, apiRange, { signal }),
           refetchInterval,
-          staleTime: 0,
+          staleTime: JUST_FETCHED_MS,
         }
         : offQuery('energy', noEnergy(factoryId)),
       productionOn
@@ -78,7 +79,7 @@ export function FactoryOverviewStatCards({
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.production(factoryId, apiRange, { signal }),
           refetchInterval,
-          staleTime: 0,
+          staleTime: JUST_FETCHED_MS,
         }
         : offQuery('production', noProduction(factoryId)),
       performanceOn
@@ -87,7 +88,7 @@ export function FactoryOverviewStatCards({
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.performance(factoryId, apiRange, { signal }),
           refetchInterval,
-          staleTime: 0,
+          staleTime: JUST_FETCHED_MS,
         }
         : offQuery('performance', noPerformance(factoryId)),
     ],

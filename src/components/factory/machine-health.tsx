@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Wrench } from 'lucide-react';
 
 import { SplitCard } from '@/components/charts/donut-chart';
 import { ServiceForm } from '@/components/factory/service-form';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { SummaryCard, TONE_DOT } from '@/components/ui/simple';
@@ -87,7 +87,7 @@ export function MachineHealth({ factoryId }: { factoryId: string }) {
               return (
                 <li key={m.machine_id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:gap-4">
                   <div className="min-w-0 sm:w-56">
-                    <Link href={link(`/factories/${factoryId}/machines/${m.machine_id}`)} className="font-medium hover:underline">{m.machine_name}</Link>
+                    <AppLink href={link(`/factories/${factoryId}/machines/${m.machine_id}`)} className="font-medium hover:underline">{m.machine_name}</AppLink>
                     <div className="text-xs text-muted">{lineName(m.line_id)}</div>
                     <div className="mt-1 flex items-center gap-2">
                       <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', TONE_BADGE[info.tone])}>{t(info.word)}</span>

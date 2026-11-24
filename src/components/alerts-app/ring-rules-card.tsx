@@ -5,10 +5,12 @@ import { BellOff } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { Select } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { alertsApi } from '@/lib/alerts-app/api';
 import {
   RING_KINDS, RING_RULES_QUERY_KEY, clockLabel, timeChoices, withChange, type RingKind, type RingRules, type RingRulesAnswer,
 } from '@/lib/alerts-app/ring-rules';
+import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +21,7 @@ import { cn } from '@/lib/utils';
  */
 export function RingRulesCard() {
   const { t } = useT();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: RING_RULES_QUERY_KEY, queryFn: ({ signal }) => alertsApi.ringRules(signal), staleTime: 60_000 });
   const [note, setNote] = useState<'saved' | 'failed' | null>(null);
@@ -41,6 +44,9 @@ export function RingRulesCard() {
   });
 
   const answer = query.data;
+  // While the rules are on their way an admin's card holds its place (a worker has none): it came in late
+  // and pushed the three sections under it down the screen (layout shift 0.27, measured 2026-11-24).
+  if (query.isPending) return user?.role === 'admin' ? <RingRulesPlaceholder /> : null;
   if (!answer?.allowed) return null;
   const { rules } = answer;
   const change = (c: Parameters<typeof withChange>[1]) => save.mutate(withChange(rules, c));
@@ -85,6 +91,27 @@ export function RingRulesCard() {
           {note === 'saved' ? t('Saved') : t('Could not save. Try again.')}
         </p>
       )}
+    </section>
+  );
+}
+
+/** The card's own headings with a bar where each switch will be: the height of the card with ringing hours off. */
+function RingRulesPlaceholder() {
+  const { t } = useT();
+  return (
+    <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100" aria-busy="true">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <BellOff className="h-4 w-4" aria-hidden="true" />
+        {t('When my phone rings')}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{t('Alerts that do not ring still come into your inbox.')}</p>
+      <div className="mt-4 space-y-3">
+        <Skeleton className="h-7 w-full" />
+      </div>
+      <h3 className="mt-5 text-xs font-medium uppercase tracking-wide text-muted">{t('What rings')}</h3>
+      <div className="mt-2 space-y-3">
+        {RING_KINDS.map((kind) => <Skeleton key={kind} className="h-7 w-full" />)}
+      </div>
     </section>
   );
 }

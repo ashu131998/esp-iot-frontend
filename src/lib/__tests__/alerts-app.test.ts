@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isIOS, isIOSSafari, isStandalone, platformOf } from '@/lib/alerts-app/install';
 import {
-  afterSignIn, appBase, appPath, asksQuestion, cameraOf, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
+  afterSignIn, appBase, appPageOf, appPath, asksQuestion, cameraOf, dayKeyOf, dayLabel, factoriesIn, groupAlerts, optionsOf, severityTone, tabActive, titleOf, typeLabel, whereLabel,
 } from '@/lib/alerts-app/model';
 import { notificationsStep, pushState, pushSupport, subscriptionBody, urlBase64ToUint8Array } from '@/lib/alerts-app/push';
 import type { MyAlert } from '@/lib/alerts-app/types';
@@ -159,6 +159,23 @@ describe('the app\'s inner addresses', () => {
     expect(tabActive('inbox', '/settings')).toBe(false);
     expect(tabActive('settings', '/alerts-app/settings')).toBe(true);
     expect(tabActive('settings', '/')).toBe(false);
+  });
+
+  it('which page an address is, so a tap can draw it at once: the inbox, the settings, one alert', () => {
+    expect(appPageOf('/')).toEqual({ page: 'inbox' });
+    expect(appPageOf('/alerts-app')).toEqual({ page: 'inbox' });
+    expect(appPageOf('/settings')).toEqual({ page: 'settings' });
+    expect(appPageOf('/alerts-app/settings')).toEqual({ page: 'settings' });
+    expect(appPageOf('/alerts/ntf-9572c59b-02b')).toEqual({ page: 'alert', id: 'ntf-9572c59b-02b' });
+    expect(appPageOf('/alerts-app/alerts/ntf-1')).toEqual({ page: 'alert', id: 'ntf-1' });
+    expect(appPageOf('/alerts/ntf-1?from=push#top')).toEqual({ page: 'alert', id: 'ntf-1' });
+    expect(appPageOf('/alerts/a%20b')).toEqual({ page: 'alert', id: 'a b' });
+  });
+
+  it('any other address is none of them (the shell then shows a skeleton)', () => {
+    for (const other of ['/alerts', '/alerts/', '/alerts/ntf-1/extra', '/settings/sound', '/login', '/install', '/alerts/%E0%A4%A', null, undefined]) {
+      expect(appPageOf(other), String(other)).toBeNull();
+    }
   });
 });
 

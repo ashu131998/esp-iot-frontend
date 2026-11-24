@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState, type CSSProperties } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
@@ -80,9 +80,9 @@ export function ForgotPasswordForm({
                 ? t('No email on your account? Ask the FloorBeat owner to set a new password for you.')
                 : t('No email on your account? Ask your factory admin to set a new password for you.')}
             </p>
-            <Link href={signIn} className="inline-block text-primary hover:underline">
+            <AppLink href={signIn} className="inline-block text-primary hover:underline">
               {t('Back to sign in')}
-            </Link>
+            </AppLink>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -101,9 +101,9 @@ export function ForgotPasswordForm({
               {sending ? t('Sending…') : t('Send me a link')}
             </Button>
             <p className="text-center text-sm text-muted">
-              <Link href={signIn} className="text-primary hover:underline">
+              <AppLink href={signIn} className="text-primary hover:underline">
                 {t('Back to sign in')}
-              </Link>
+              </AppLink>
             </p>
           </form>
         )}

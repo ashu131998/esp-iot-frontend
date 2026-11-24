@@ -1,10 +1,10 @@
 'use client';
 
 import { CheckCircle2, ChevronRight, Download, Share, Smartphone } from 'lucide-react';
-import Link from 'next/link';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { BrandMark } from '@/components/layout/brand-mark';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { ANDROID_APK_URL, APP_PAGE_URL, type AppAccess } from '@/lib/alerts-app/install';
@@ -50,10 +50,10 @@ export function InstallGuide({ access }: { access: AppAccess }) {
             <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
             {t('Installed. Open it from your Home Screen.')}
           </p>
-          <Link href={href('/settings')} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+          <AppLink href={href('/settings')} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             {t('Turn on notifications')}
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          </AppLink>
         </section>
       )}
 
@@ -73,7 +73,7 @@ export function InstallGuide({ access }: { access: AppAccess }) {
       )}
 
       <div className="flex items-center justify-between">
-        {access === 'open' ? <Link href={href('/')} className="text-sm font-medium text-primary hover:underline">{t('Open the app')}</Link> : <span />}
+        {access === 'open' ? <AppLink href={href('/')} className="text-sm font-medium text-primary hover:underline">{t('Open the app')}</AppLink> : <span />}
         <LanguageToggle compact />
       </div>
     </div>

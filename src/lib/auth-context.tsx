@@ -40,9 +40,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * `initialUser`: who the server found signed in while it drew the page (lib/server/session-user.ts):
+ * the user, or null for nobody. The page then knows from its first draw, and nothing is asked here.
+ * Left undefined, the server could not tell, and the browser asks once, as it always did.
+ */
+export function AuthProvider({ children, initialUser }: { children: React.ReactNode; initialUser?: AuthUser | null }) {
+  const known = initialUser !== undefined;
+  const [user, setUser] = useState<AuthUser | null>(initialUser ?? null);
+  const [loading, setLoading] = useState(!known);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -60,10 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (known) return;
     const controller = new AbortController();
     refresh(controller.signal).finally(() => setLoading(false));
     return () => controller.abort();
-  }, [refresh]);
+  }, [refresh, known]);
 
   const login = useCallback(async (body: Record<string, unknown>) => {
     let csrf = getCsrfFromCookie();

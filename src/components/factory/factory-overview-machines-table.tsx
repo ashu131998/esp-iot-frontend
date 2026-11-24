@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { useQueries, useSuspenseQueries } from '@tanstack/react-query';
 
+import { AppLink } from '@/components/ui/app-link';
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
@@ -23,6 +23,7 @@ import {
   filterMachinesByScope,
   useFactoryDateRange,
 } from '@/lib/use-factory-date-range';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import { expandUptimeMachines } from '@/lib/uptime-streams';
 import { formatNumber, formatPercent, formatUnits, statusLabel } from '@/lib/utils';
@@ -88,7 +89,7 @@ export function FactoryOverviewMachinesTable({
           queryFn: ({ signal }: { signal: AbortSignal }) =>
             api.availability(factoryId, apiRange, { signal }),
           refetchInterval,
-          staleTime: 0,
+          staleTime: JUST_FETCHED_MS,
         },
         energyOn
           ? {
@@ -96,7 +97,7 @@ export function FactoryOverviewMachinesTable({
             queryFn: ({ signal }: { signal: AbortSignal }) =>
               api.energy(factoryId, apiRange, { signal }),
             refetchInterval,
-            staleTime: 0,
+            staleTime: JUST_FETCHED_MS,
           }
           : offQuery('energy', noEnergy(factoryId)),
         productionOn
@@ -105,7 +106,7 @@ export function FactoryOverviewMachinesTable({
             queryFn: ({ signal }: { signal: AbortSignal }) =>
               api.production(factoryId, apiRange, { signal }),
             refetchInterval,
-            staleTime: 0,
+            staleTime: JUST_FETCHED_MS,
           }
           : offQuery('production', noProduction(factoryId)),
         {
@@ -191,12 +192,12 @@ export function FactoryOverviewMachinesTable({
                 t(statusLabel(machineStatus(uptime, avail))),
               ])}
             />
-            <Link
+            <AppLink
               href={link(`/factories/${factoryId}/configuration`)}
               className="text-sm text-primary hover:underline"
             >
               {t('Manage config')} →
-            </Link>
+            </AppLink>
           </div>
         }
       />

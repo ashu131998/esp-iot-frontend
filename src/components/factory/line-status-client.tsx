@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 
+import { AppLink } from '@/components/ui/app-link';
 import { StatCard, MachineStatusBadge, Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { MiniTimeline } from '@/components/ui/mini-timeline';
@@ -169,12 +169,12 @@ export function LineStatusClient({
                 return (
                   <TR key={machine.machine_id}>
                     <TD className="font-medium">
-                      <Link
+                      <AppLink
                         href={link(`/factories/${machine.factory_id}/machines/${machine.machine_id}`)}
                         className="hover:underline text-blue-600"
                       >
                         {machine.name}
-                      </Link>
+                      </AppLink>
                     </TD>
                     <TD>
                       <MachineStatusBadge status={status} />

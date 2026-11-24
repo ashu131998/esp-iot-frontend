@@ -2,13 +2,17 @@ import { cache } from 'react';
 
 import { internalApiFetch } from '@/lib/internal-api-fetch';
 import type {
+  AlertSettings,
   AvailabilityResponse,
   DateRangeParams,
+  DowntimeReason,
+  DowntimeReport,
   EnergyResponse,
   Factory,
   Machine,
   MachineConfiguration,
   MachineConfigProfile,
+  NotificationItem,
   PaginatedMeta,
   PaginationParams,
   PerformanceResponse,
@@ -21,7 +25,7 @@ import type {
   WorkerSchedule,
 } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
-import type { ResultsResponse, SetupProgress } from '@/lib/results';
+import type { ResultsResponse, SetupProgress, StopFollowUp } from '@/lib/results';
 import { sortByMachineName } from '@/lib/machine-sort';
 
 function qs(
@@ -183,6 +187,28 @@ export const serverApi = {
   workers: cache((factoryId: string, limit = 200, offset = 0, status?: string) =>
     serverRequest<{ factory_id: string; workers: Worker[] } & PaginatedMeta>(
       `/v1/factories/${factoryId}/workers${qs({ limit, offset, status })}`,
+    ),
+  ),
+  // The factory Alerts page's sections (lib/alerts-queries.ts): the same requests the browser makes.
+  alertSettings: cache((factoryId: string) =>
+    serverRequest<AlertSettings>(`/v1/factories/${factoryId}/alert-settings`),
+  ),
+  downtimeReports: cache((factoryId: string, limit: number) =>
+    serverRequest<{ factory_id: string; reports: DowntimeReport[] } & PaginatedMeta>(
+      `/v1/factories/${factoryId}/downtime-reports${qs({ limit })}`,
+    ),
+  ),
+  downtimeReasons: cache((factoryId: string) =>
+    serverRequest<{ reasons: DowntimeReason[] }>(`/v1/factories/${factoryId}/downtime-reasons`),
+  ),
+  stopFollowUp: cache((factoryId: string, from: string, to: string) =>
+    serverRequest<StopFollowUp>(
+      `/v1/factories/${factoryId}/stop-follow-up?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
+  ),
+  notifications: cache((factoryId: string, limit: number) =>
+    serverRequest<{ factory_id: string; notifications: NotificationItem[] } & PaginatedMeta>(
+      `/v1/factories/${factoryId}/notifications${qs({ limit })}`,
     ),
   ),
   schedules: cache((

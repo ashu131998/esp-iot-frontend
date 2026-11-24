@@ -1,14 +1,15 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Sheet } from '@/components/ui/sheet';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
 import { canTestAlerts, escalationMinutesInput, ESCALATE_OWNER_MINUTES, ESCALATE_SUPERVISOR_MINUTES, testableWorkers } from '@/lib/alert-settings';
+import { TEST_WORKERS_LIMIT, alertsQueryKeys } from '@/lib/alerts-queries';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
 import type { AlertSettings, OwnerContact } from '@/lib/types';
@@ -19,11 +20,12 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const queryClient = useQueryClient();
   const { t } = useT();
   const { data: settings } = useQuery({
-    queryKey: ['alert-settings', factoryId],
+    queryKey: alertsQueryKeys.settings(factoryId),
     queryFn: ({ signal }) => api.alertSettings(factoryId, { signal }),
   });
 
-  const [draft, setDraft] = useState<AlertSettings | null>(null);
+  // The settings come with the page (fetched on the server): the card is drawn whole on the first draw.
+  const [draft, setDraft] = useState<AlertSettings | null>(() => settings ?? null);
   const [newContact, setNewContact] = useState<OwnerContact>({ name: '', phone: '' });
   const [addingPhone, setAddingPhone] = useState(false);
   const [testPhone, setTestPhone] = useState('');
@@ -33,8 +35,8 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
   const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
 
   const { data: workersData } = useQuery({
-    queryKey: ['workers', factoryId, 'alert-test'],
-    queryFn: ({ signal }) => api.workers(factoryId, { limit: 200, status: 'active' }, { signal }),
+    queryKey: alertsQueryKeys.testWorkers(factoryId),
+    queryFn: ({ signal }) => api.workers(factoryId, { limit: TEST_WORKERS_LIMIT, status: 'active' }, { signal }),
     enabled: canTestAlerts(settings),
   });
   // With the alerts app, a test can only reach a worker who has a login for it.
@@ -53,7 +55,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         mobile_configured: settings?.mobile_configured ?? false,
         alertops_configured: settings?.alertops_configured ?? false,
       });
-      queryClient.invalidateQueries({ queryKey: ['alert-settings', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.settings(factoryId) });
     },
   });
 
@@ -67,7 +69,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
             : t('Sent — check the phone or app.')
           : t('Failed: {error}', { error: res.error }),
       );
-      queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.notifications(factoryId) });
     },
     onError: (err) => setTestResult(t('Failed: {error}', { error: err.message })),
   });
@@ -83,7 +85,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
         const err = res.results?.find((r) => r.error)?.error ?? t('Send failed');
         setTestEmailResult(t('Failed: {error}', { error: err }));
       }
-      queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.notifications(factoryId) });
     },
     onError: (err) => setTestEmailResult(t('Failed: {error}', { error: err.message })),
   });
@@ -96,7 +98,7 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
           ? t('Push sent to {name}.', { name: selectedWorker?.name ?? t('worker') })
           : t('Failed: {error}', { error: res.error ?? t('Unknown error') }),
       );
-      queryClient.invalidateQueries({ queryKey: ['notifications', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.notifications(factoryId) });
     },
     onError: (err) => setTestPushResult(t('Failed: {error}', { error: err.message })),
   });
@@ -186,9 +188,9 @@ export function MobileSettingsCard({ factoryId }: { factoryId: string }) {
               {t('Sender:')} <span className="font-mono text-foreground">{settings.board_email_from}</span>.{' '}
             </>
           )}
-          <Link href={link(`/factories/${factoryId}/shift-reports`)} className="font-medium text-primary hover:underline">
+          <AppLink href={link(`/factories/${factoryId}/shift-reports`)} className="font-medium text-primary hover:underline">
             {t('Shift reports')} →
-          </Link>
+          </AppLink>
         </p>
         {settings?.board_email_configured ? (
           <div className="flex flex-wrap items-center gap-2">

@@ -64,6 +64,9 @@ import { livePath, type LiveScope, type LiveStart, type LiveStatus } from '@/lib
 import type { ResultsResponse, ResultsSettings, SetupProgress, StopFollowUp } from '@/lib/results';
 import type { CameraEvent, CamerasResponse, CamSettings, CamSettingsBody } from '@/lib/cameras';
 import type { PeriodBody, SubscriptionPeriod, SubscriptionResponse } from '@/lib/subscriptions';
+import type {
+  NewTicket, StaffSupportTicket, StaffSupportTicketsResponse, SupportTicket, SupportTicketsResponse, TicketStatus, TicketThread,
+} from '@/lib/support';
 
 export type { ApiRequestOptions };
 
@@ -1020,6 +1023,46 @@ export const api = {
   saveFactoryWifi: (factoryId: string, networks: WifiNetwork[], options?: ApiRequestOptions) =>
     request<WifiPage>(`/v1/factories/${encodeURIComponent(factoryId)}/wifi`, {
       method: 'PUT', body: JSON.stringify({ networks }), ...options,
+    }),
+
+  /** The factory's support tickets (lib/support.ts): its admins see all of them, everyone else the ones they raised. */
+  supportTickets: (factoryId: string, options?: ApiRequestOptions) =>
+    request<SupportTicketsResponse>(`/v1/factories/${encodeURIComponent(factoryId)}/support/tickets`, options),
+
+  /** Raise a ticket: emailed to our support inbox at once. */
+  raiseSupportTicket: (factoryId: string, body: NewTicket) =>
+    request<TicketThread>(`/v1/factories/${encodeURIComponent(factoryId)}/support/tickets`, { method: 'POST', body: JSON.stringify(body) }),
+
+  supportTicket: (factoryId: string, ticketId: string, options?: ApiRequestOptions) =>
+    request<TicketThread>(`/v1/factories/${encodeURIComponent(factoryId)}/support/tickets/${encodeURIComponent(ticketId)}`, options),
+
+  /** A reply from the factory: the ticket is open again. */
+  replySupportTicket: (factoryId: string, ticketId: string, message: string) =>
+    request<TicketThread>(`/v1/factories/${encodeURIComponent(factoryId)}/support/tickets/${encodeURIComponent(ticketId)}/messages`, {
+      method: 'POST', body: JSON.stringify({ message }),
+    }),
+
+  resolveSupportTicket: (factoryId: string, ticketId: string) =>
+    request<{ ticket: SupportTicket }>(`/v1/factories/${encodeURIComponent(factoryId)}/support/tickets/${encodeURIComponent(ticketId)}/resolve`, {
+      method: 'POST', body: '{}',
+    }),
+
+  /** Every factory's tickets for our staff, waiting on us first. */
+  adminSupportTickets: (options?: ApiRequestOptions) =>
+    request<StaffSupportTicketsResponse>('/v1/admin/support/tickets', options),
+
+  adminSupportTicket: (ticketId: string, options?: ApiRequestOptions) =>
+    request<TicketThread<StaffSupportTicket>>(`/v1/admin/support/tickets/${encodeURIComponent(ticketId)}`, options),
+
+  /** Our reply (our admins): emailed to whoever raised the ticket; `resolve` marks it solved with it. */
+  adminReplySupportTicket: (ticketId: string, body: { message: string; resolve: boolean }) =>
+    request<TicketThread<StaffSupportTicket> & { emailed: boolean }>(`/v1/admin/support/tickets/${encodeURIComponent(ticketId)}/messages`, {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+
+  adminSetSupportStatus: (ticketId: string, status: TicketStatus) =>
+    request<{ ticket: StaffSupportTicket }>(`/v1/admin/support/tickets/${encodeURIComponent(ticketId)}/status`, {
+      method: 'PUT', body: JSON.stringify({ status }),
     }),
 
   /** A board's WiFi as on a phone (lib/board-wifi.ts): from ops (scope null: our super admin) or its factory's WiFi page. */

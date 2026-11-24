@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Activity, AlertTriangle, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -39,6 +39,7 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   wifi: Wifi,
   compliance: ShieldCheck,
   team: Users,
+  support: LifeBuoy,
 };
 
 export function tabIcon(slug: string): React.ComponentType<{ className?: string }> {
@@ -80,7 +81,8 @@ export function FactorySidebar({
   }, [pathname]);
 
   const visible = tabsFor(tabs, canWriteFactory);
-  const groups = sidebarGroups(visible).map((g) => ({ ...g, title: g.key === 'monitor' ? t('Monitor') : t('Manage') }));
+  const groupTitle = { monitor: t('Monitor'), manage: t('Manage'), help: t('Help') };
+  const groups = sidebarGroups(visible).map((g) => ({ ...g, title: groupTitle[g.key] }));
 
   return (
     <aside className={cn('sticky top-0 flex h-screen w-64 shrink-0 flex-col', SIDEBAR_PANEL)}>

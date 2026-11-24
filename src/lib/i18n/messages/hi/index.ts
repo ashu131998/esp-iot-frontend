@@ -15,6 +15,7 @@ import { results } from './results';
 import { maintenance } from './maintenance';
 import { sensors } from './sensors';
 import { wifi } from './wifi';
+import { support } from './support';
 
 /** Every Hindi message, by its English text. Loaded on the server only (lib/i18n/server.ts). */
 export const HI_NAMESPACES: Record<string, Messages> = {
@@ -33,6 +34,7 @@ export const HI_NAMESPACES: Record<string, Messages> = {
   results,
   cameras,
   wifi,
+  support,
 };
 
 export const hi: Messages = Object.assign({}, ...Object.values(HI_NAMESPACES));

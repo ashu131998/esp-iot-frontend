@@ -16,6 +16,7 @@ import { PlantSwitcher } from '@/components/layout/plant-switcher';
 import { holdBackOnce } from '@/lib/alerts-app/native';
 import type { Display } from '@/lib/display';
 import { bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
+import { usePrefetchPages } from '@/lib/prefetch-pages';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 import type { Shift } from '@/lib/types';
@@ -85,6 +86,8 @@ export function FactoryMobileNav({
   const bar = bottomBarTabs(tabs, display);
   const more = moreTabs(tabs, display);
   const onBar = bar.some((t) => t.href === current);
+  // The bar's other pages are fetched ahead, so a tap on one shows it at once.
+  usePrefetchPages(bar.map((t) => t.href), pathname);
 
   return (
     <>

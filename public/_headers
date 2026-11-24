@@ -1,0 +1,6 @@
+# Cloudflare serves the app's files and, unless told otherwise, has the browser ask again for each
+# one on every visit ("max-age=0, must-revalidate"). Next's built files carry a hash of their content
+# in the name (a changed file gets a new name), so a browser keeps them for good: an app start then
+# asks for none of its scripts, styles or fonts again.
+/_next/static/*
+  Cache-Control: public,max-age=31536000,immutable

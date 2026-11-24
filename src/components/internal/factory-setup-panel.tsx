@@ -1,10 +1,10 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useState } from 'react';
 
 import { AddNodeModal } from '@/components/internal/add-node-modal';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
@@ -116,12 +116,12 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
                 <Button size="sm" variant="secondary" onClick={() => setNodeModal(true)}>
                   Register node
                 </Button>
-                <Link
+                <AppLink
                   href={`/internal/nodes?factory_id=${encodeURIComponent(factoryId)}`}
                   className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50"
                 >
                   View all nodes
-                </Link>
+                </AppLink>
               </div>
             )
           }
@@ -230,12 +230,12 @@ export function FactorySetupPanel({ factoryId }: { factoryId: string }) {
                           Edit unit
                         </button>
                       )}
-                      <Link
+                      <AppLink
                         href={`/factories/${factoryId}/machines/${m.machine_id}`}
                         className="text-xs text-primary hover:underline"
                       >
                         Factory view
-                      </Link>
+                      </AppLink>
                     </div>
                   </TD>
                 </TR>

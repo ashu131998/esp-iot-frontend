@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/layout/app-shell';
+import { AppLink } from '@/components/ui/app-link';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { StatCard } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -6,7 +7,6 @@ import { ErrorState } from '@/components/ui/table';
 import { resolveDateRange } from '@/lib/date-range';
 import { serverApi } from '@/lib/server-api';
 import { formatNumber, formatPercent } from '@/lib/utils';
-import Link from 'next/link';
 import { Activity, Building2, Cpu, Radio, Zap } from 'lucide-react';
 import { internalApiFetch } from '@/lib/internal-api-fetch';
 
@@ -71,18 +71,18 @@ export default async function OverviewPage({
         <Card className="p-4">
           <CardHeader title="Internal tools" description="Setup, fleet, and platform jobs" />
           <div className="flex flex-wrap gap-3 text-sm">
-            <Link href="/internal/shift-reports" className="text-primary hover:underline">
+            <AppLink href="/internal/shift-reports" className="text-primary hover:underline">
               Email cron (shift reports)
-            </Link>
-            <Link href="/internal/factories" className="text-primary hover:underline">
+            </AppLink>
+            <AppLink href="/internal/factories" className="text-primary hover:underline">
               Factory setup
-            </Link>
-            <Link href="/internal/nodes" className="text-primary hover:underline">
+            </AppLink>
+            <AppLink href="/internal/nodes" className="text-primary hover:underline">
               Nodes
-            </Link>
-            <Link href="/internal/health" className="text-primary hover:underline">
+            </AppLink>
+            <AppLink href="/internal/health" className="text-primary hover:underline">
               System health
-            </Link>
+            </AppLink>
           </div>
         </Card>
 
@@ -127,7 +127,7 @@ export default async function OverviewPage({
           <CardHeader title="Factory Performance" description="Click a factory to view detailed metrics" />
           <div className="grid gap-4 md:grid-cols-2">
             {overview.factories.map((f) => (
-              <Link
+              <AppLink
                 key={f.factory_id}
                 href={`/factories/${f.factory_id}`}
                 className="rounded-lg border p-4 transition-colors hover:border-primary hover:bg-blue-50/30"
@@ -153,7 +153,7 @@ export default async function OverviewPage({
                     <p className="font-semibold">{f.total_units}</p>
                   </div>
                 </div>
-              </Link>
+              </AppLink>
             ))}
           </div>
         </Card>

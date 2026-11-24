@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
 import { DeviceDetailPanel } from '@/components/internal/device-detail-panel';
 import { PageHeader } from '@/components/layout/page-header';
+import { AppLink } from '@/components/ui/app-link';
 
 export default async function InternalDeviceDetailPage({
   params,
@@ -19,10 +19,10 @@ export default async function InternalDeviceDetailPage({
         title={decodedDevice}
         description={`${decodedFactory} · telemetry & raw readings`}
         actions={
-          <Link href="/internal/nodes" className="flex items-center gap-1 text-sm text-muted hover:text-foreground">
+          <AppLink href="/internal/nodes" className="flex items-center gap-1 text-sm text-muted hover:text-foreground">
             <ChevronLeft className="h-4 w-4" />
             All nodes
-          </Link>
+          </AppLink>
         }
       />
       <DeviceDetailPanel factoryId={decodedFactory} deviceId={decodedDevice} />

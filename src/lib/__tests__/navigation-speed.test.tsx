@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/alerts', useRouter: () => ({ push: () => {}, replace: () => {}, prefetch: () => {} }) }));
 
-const { PageSwap, PageSwapView, usePendingPath } = await import('@/lib/navigation-context');
+const { PageSwap, PageSwapScope, PageSwapView, useInSwapScope, usePendingPath } = await import('@/lib/navigation-context');
 const { savingData } = await import('@/lib/prefetch-pages');
 
 const ROOT = join(__dirname, '..', '..', '..');
@@ -46,7 +46,58 @@ describe('a tab tapped: its skeleton at once', () => {
   });
 });
 
+describe('a page that needs nothing from the server: shown itself at once', () => {
+  const page = <p>the page that is leaving</p>;
+  const skeleton = <p>skeleton</p>;
+
+  it('the page asked for takes the place of the skeleton, and is not marked as loading', () => {
+    const html = renderToString(<PageSwapView pending skeleton={skeleton} ahead={<p>the alert itself</p>}>{page}</PageSwapView>);
+    expect(html).toContain('data-page-ahead');
+    expect(html).toContain('the alert itself');
+    expect(html).not.toContain('data-page-skeleton');
+    expect(html).not.toContain('aria-busy');
+    expect(html).toMatch(/<div hidden="">.*the page that is leaving/);
+  });
+
+  it('an address that is none of the shell\'s pages gets the skeleton', () => {
+    for (const none of [null, undefined, false]) {
+      const html = renderToString(<PageSwapView pending skeleton={skeleton} ahead={none}>{page}</PageSwapView>);
+      expect(html).toContain('data-page-skeleton');
+      expect(html).not.toContain('data-page-ahead');
+    }
+  });
+
+  it('nothing on its way: neither, whatever is known ahead', () => {
+    const html = renderToString(<PageSwapView pending={false} skeleton={skeleton} ahead={<p>the alert itself</p>}>{page}</PageSwapView>);
+    expect(html).not.toContain('the alert itself');
+    expect(html).not.toContain('skeleton');
+  });
+});
+
+describe('where a link goes through navigate()', () => {
+  function Probe() {
+    return <span>{useInSwapScope() ? 'swapped' : 'plain'}</span>;
+  }
+  it('inside the page PageSwap wraps, and anywhere in a shell marked with PageSwapScope', () => {
+    expect(renderToString(<PageSwap skeleton={<i />}><Probe /></PageSwap>)).toContain('swapped');
+    expect(renderToString(<PageSwapScope><nav><Probe /></nav></PageSwapScope>)).toContain('swapped');
+  });
+  it('nowhere else', () => {
+    expect(renderToString(<Probe />)).toContain('plain');
+  });
+});
+
 describe('pages fetched ahead', () => {
+  it('the bottom bar\'s pages only on the screens that show the bar, the menu\'s only when the pointer rests', () => {
+    const bar = read('src/components/layout/factory-mobile-nav.tsx');
+    expect(bar).toContain("const BAR_SCREENS = '(max-width: 1023.98px)';");
+    expect(bar).toMatch(/usePrefetchPages\(bar\.map\(\(t\) => t\.href\), pathname, 1500, BAR_SCREENS\)/);
+    const menu = read('src/components/layout/factory-sidebar.tsx');
+    expect(menu).toContain('usePrefetchOnRest()');
+    expect(menu).toContain('onPointerLeave={ahead.leave}');
+    expect(menu).not.toMatch(/usePrefetchPage\(\)/);
+  });
+
   it('not for someone saving data or on a 2G link', () => {
     expect(savingData({ saveData: true })).toBe(true);
     expect(savingData({ effectiveType: '2g' })).toBe(true);

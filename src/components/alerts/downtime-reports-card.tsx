@@ -5,23 +5,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StopFollowUpTiles } from '@/components/results/stop-follow-up-tiles';
 import { Select } from '@/components/ui/input';
 import { ListEmpty, ListGroup, ListRow, SummaryCard, type Tone } from '@/components/ui/simple';
+import { DOWNTIME_REPORTS_LIMIT, FOLLOW_UP_DAYS, alertsQueryKeys, stopFollowUpWindow } from '@/lib/alerts-queries';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { humanMinutes } from '@/lib/plain-words';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { DowntimeReport } from '@/lib/types';
 import { useFactoryHref } from '@/lib/factory-links-context';
 
-/** The stop follow-up figures cover this many days back from now. */
-const FOLLOW_UP_DAYS = 7;
-
 const REFRESH_MS = 30_000;
 
-/** How long a stop lasted (or has lasted so far), in whole minutes. */
-function downMinutes(report: DowntimeReport) {
-  const end = report.resolved_at ? new Date(report.resolved_at).getTime() : Date.now();
+/**
+ * How long a stop lasted, or has lasted so far as of `asOf` (when the list was fetched), in whole
+ * minutes. As of the list, not the clock: the list is drawn once on the server and once in the browser
+ * a second later, and both must say the same; the list is fetched again every half minute.
+ */
+export function downMinutes(report: Pick<DowntimeReport, 'down_since' | 'resolved_at'>, asOf: number) {
+  const end = report.resolved_at ? new Date(report.resolved_at).getTime() : asOf;
   return Math.max(1, Math.round((end - new Date(report.down_since).getTime()) / 60000));
 }
 
@@ -31,14 +34,14 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
   const { t, tn, locale } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
 
-  const { data } = useQuery({
-    queryKey: ['downtime-reports', factoryId],
-    queryFn: ({ signal }) => api.downtimeReports(factoryId, { limit: 15 }, { signal }),
+  const { data, dataUpdatedAt } = useQuery({
+    queryKey: alertsQueryKeys.downtimeReports(factoryId),
+    queryFn: ({ signal }) => api.downtimeReports(factoryId, { limit: DOWNTIME_REPORTS_LIMIT }, { signal }),
     refetchInterval,
-    staleTime: 0,
+    staleTime: JUST_FETCHED_MS,
   });
   const { data: reasonsData } = useQuery({
-    queryKey: ['downtime-reasons', factoryId],
+    queryKey: alertsQueryKeys.downtimeReasons(factoryId),
     queryFn: ({ signal }) => api.downtimeReasons(factoryId, { signal }),
     staleTime: Infinity,
   });
@@ -47,8 +50,8 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
     mutationFn: ({ reportId, code }: { reportId: string; code: string }) =>
       api.setDowntimeReason(factoryId, reportId, { reason_code: code }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['downtime-reports', factoryId] });
-      queryClient.invalidateQueries({ queryKey: ['stop-follow-up', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.downtimeReports(factoryId) });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.stopFollowUpAll(factoryId) });
     },
   });
 
@@ -57,21 +60,17 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
   const setFixed = useMutation({
     mutationFn: (reportId: string) => api.setDowntimeFixed(factoryId, reportId, true),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['downtime-reports', factoryId] });
-      queryClient.invalidateQueries({ queryKey: ['stop-follow-up', factoryId] });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.downtimeReports(factoryId) });
+      queryClient.invalidateQueries({ queryKey: alertsQueryKeys.stopFollowUpAll(factoryId) });
     },
   });
 
   // The window moves with each refetch; the key stays put so the figures refresh in place.
   const { data: followUp } = useQuery({
-    queryKey: ['stop-follow-up', factoryId, FOLLOW_UP_DAYS],
-    queryFn: ({ signal }) => {
-      const to = new Date();
-      const from = new Date(to.getTime() - FOLLOW_UP_DAYS * 86_400_000);
-      return api.stopFollowUp(factoryId, { from: from.toISOString(), to: to.toISOString() }, { signal });
-    },
+    queryKey: alertsQueryKeys.stopFollowUp(factoryId),
+    queryFn: ({ signal }) => api.stopFollowUp(factoryId, stopFollowUpWindow(), { signal }),
     refetchInterval,
-    staleTime: 0,
+    staleTime: JUST_FETCHED_MS,
   });
 
   const reports = data?.reports ?? [];
@@ -116,7 +115,7 @@ export function DowntimeReportsCard({ factoryId }: { factoryId: string }) {
           reports.map((r) => {
             const openRow = !r.resolved_at;
             const rowTone: Tone | undefined = openRow ? 'bad' : 'good';
-            const timeLine = `${formatDateTime(r.down_since, locale)} · ${humanMinutes(downMinutes(r), t)}`;
+            const timeLine = `${formatDateTime(r.down_since, locale)} · ${humanMinutes(downMinutes(r, dataUpdatedAt), t)}`;
             const reasonLine = r.reason_label
               ? `${r.reason_label}${r.reported_by_name ? ` · ${r.reported_by_name}` : ''}`
               : null;

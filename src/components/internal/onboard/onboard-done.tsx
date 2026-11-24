@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { signInDetailsText, type SetupRequest, type SetupResponse } from '@/lib/onboarding';
@@ -108,14 +108,14 @@ export function OnboardDone({ result, onAnother }: { result: OnboardResult; onAn
 
         <h4 className="mt-6 text-sm font-semibold">Next steps</h4>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-          <Link href="/internal/boards" className="rounded-lg border p-3 text-sm hover:bg-slate-50">
+          <AppLink href="/internal/boards" className="rounded-lg border p-3 text-sm hover:bg-slate-50">
             <div className="font-medium">{claimed > 0 ? 'Its boards' : 'Claim its boards'}</div>
             <div className="text-xs text-muted">{claimed > 0 ? 'See them report in, or claim more' : 'Then match their sensors to machines'}</div>
-          </Link>
-          <Link href={`/internal/factories/${encodeURIComponent(factory.factory_id)}`} className="rounded-lg border p-3 text-sm hover:bg-slate-50">
+          </AppLink>
+          <AppLink href={`/internal/factories/${encodeURIComponent(factory.factory_id)}`} className="rounded-lg border p-3 text-sm hover:bg-slate-50">
             <div className="font-medium">Factory setup</div>
             <div className="text-xs text-muted">Lines, machines, WiFi, subscription</div>
-          </Link>
+          </AppLink>
           <a href={dashboardUrl} target="_blank" rel="noreferrer" className="rounded-lg border p-3 text-sm hover:bg-slate-50">
             <div className="font-medium">Open their dashboard ↗</div>
             <div className="truncate font-mono text-xs text-muted">{dashboardUrl.replace(/^https?:\/\//, '')}</div>

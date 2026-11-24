@@ -23,6 +23,9 @@ import type { Shift } from '@/lib/types';
 
 type Tab = { slug: string; label: string; href: string };
 
+/** The screens the bottom bar is shown on (it is `lg:hidden`). */
+const BAR_SCREENS = '(max-width: 1023.98px)';
+
 type Sheet = 'pages' | 'account';
 
 /**
@@ -86,8 +89,9 @@ export function FactoryMobileNav({
   const bar = bottomBarTabs(tabs, display);
   const more = moreTabs(tabs, display);
   const onBar = bar.some((t) => t.href === current);
-  // The bar's other pages are fetched ahead, so a tap on one shows it at once.
-  usePrefetchPages(bar.map((t) => t.href), pathname);
+  // The bar's other pages are fetched ahead, so a tap on one shows it at once: on the screens that show the bar
+  // (below Tailwind's lg), not on a computer, where this component is mounted but hidden.
+  usePrefetchPages(bar.map((t) => t.href), pathname, 1500, BAR_SCREENS);
 
   return (
     <>

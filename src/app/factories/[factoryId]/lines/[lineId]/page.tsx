@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/ui/app-link';
 import { factoryLinks } from '@/lib/server/factory-links';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
@@ -93,12 +93,12 @@ export default async function LineDetailPage({
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted">
-        <Link
+        <AppLink
           href={link(`/factories/${factoryId}/lines`)}
           className="hover:underline hover:text-foreground transition-colors"
         >
           {t('Production Lines')}
-        </Link>
+        </AppLink>
         <span>/</span>
         <span className="font-medium text-foreground">{line?.name ?? lineId}</span>
       </nav>

@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
@@ -90,9 +90,9 @@ export default function FactorySignupPage() {
           </Button>
           <p className="text-center text-sm text-muted">
             {t('Already have an account?')}{' '}
-            <Link href={`/f/${factoryId}/login`} className="text-primary hover:underline">
+            <AppLink href={`/f/${factoryId}/login`} className="text-primary hover:underline">
               {t('Sign in')}
-            </Link>
+            </AppLink>
           </p>
         </form>
       </Card>

@@ -17,10 +17,15 @@ export const SW_PATH = '/alerts-sw.js';
  * between (a slow factory network) could make it refuse without asking.
  */
 let knownKey: PushKey | null = null;
+/** The request for it while it is on its way: the app's frame and the notifications switch both ask as the app opens, and share it. */
+let keyOnItsWay: Promise<PushKey> | null = null;
 
 async function serverKey(): Promise<PushKey> {
   if (knownKey) return knownKey;
-  const key = await alertsApi.key();
+  keyOnItsWay ??= alertsApi.key().finally(() => {
+    keyOnItsWay = null;
+  });
+  const key = await keyOnItsWay;
   if (key.enabled && key.public_key) knownKey = key;
   return key;
 }
@@ -28,6 +33,7 @@ async function serverKey(): Promise<PushKey> {
 /** Tests: start again without a known key. */
 export function forgetServerKey(): void {
   knownKey = null;
+  keyOnItsWay = null;
 }
 
 /** Whether this phone can receive notifications at all (push.ts). */

@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query';
 
 import { UptimeTimeSeriesChart, type SegmentDetail } from '@/components/charts/metric-chart';
+import { AppLink } from '@/components/ui/app-link';
 import { MachineStatusBadge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
@@ -191,12 +191,12 @@ export function StatusTimelineBody({ factoryId }: { factoryId: string }) {
           <Card key={m.stream_key}>
             <CardHeader
               title={
-                <Link
+                <AppLink
                   href={link(`/factories/${factoryId}/machines/${m.machine_id}`)}
                   className="hover:text-primary hover:underline"
                 >
                   {m.machine_name}
-                </Link>
+                </AppLink>
               }
               description={machineSubtitle(operatorNames, liveSince, currentStatus)}
               action={

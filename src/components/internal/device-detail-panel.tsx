@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Badge } from '@/components/ui/badge';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -148,9 +148,9 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
             <div>
               <dt className="text-muted">Factory</dt>
               <dd>
-                <Link href={`/factories/${factoryId}`} className="font-medium text-primary hover:underline">
+                <AppLink href={`/factories/${factoryId}`} className="font-medium text-primary hover:underline">
                   {factoryId}
-                </Link>
+                </AppLink>
               </dd>
             </div>
             <div>

@@ -1,7 +1,7 @@
-import Link from 'next/link';
 
 import { SignOutButton } from '@/components/auth/sidebar-user-footer';
 import { DashboardAppMark } from '@/components/dashboard-app/app-mark';
+import { AppLink } from '@/components/ui/app-link';
 import { Card, CardHeader } from '@/components/ui/card';
 import { serverApi } from '@/lib/server-api';
 
@@ -24,13 +24,13 @@ export default async function DashboardAppFactoriesPage() {
           <ul className="divide-y rounded-xl border">
             {factories.map((f) => (
               <li key={f.factory_id}>
-                <Link href={`/factories/${f.factory_id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50">
+                <AppLink href={`/factories/${f.factory_id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50">
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-foreground">{f.name ?? f.factory_id}</span>
                     <span className="block truncate font-mono text-xs text-muted">{f.factory_id}</span>
                   </span>
                   <span aria-hidden="true" className="text-muted">›</span>
-                </Link>
+                </AppLink>
               </li>
             ))}
           </ul>

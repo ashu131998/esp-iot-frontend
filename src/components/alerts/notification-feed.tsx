@@ -3,11 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { ListEmpty, ListGroup, ListRow, SummaryCard } from '@/components/ui/simple';
+import { NOTIFICATIONS_LIMIT, alertsQueryKeys } from '@/lib/alerts-queries';
 import { api } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import type { Locale } from '@/lib/i18n/locale';
 import type { Translate } from '@/lib/i18n/translate';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import type { NotificationItem } from '@/lib/types';
 
@@ -56,10 +58,10 @@ export function NotificationFeed({ factoryId }: { factoryId: string }) {
   const { t, locale } = useT();
   const refetchInterval = useRefetchInterval(REFRESH_MS);
   const { data, isLoading } = useQuery({
-    queryKey: ['notifications', factoryId],
-    queryFn: ({ signal }) => api.notifications(factoryId, { limit: 30 }, { signal }),
+    queryKey: alertsQueryKeys.notifications(factoryId),
+    queryFn: ({ signal }) => api.notifications(factoryId, { limit: NOTIFICATIONS_LIMIT }, { signal }),
     refetchInterval,
-    staleTime: 0,
+    staleTime: JUST_FETCHED_MS,
   });
 
   const notifications = data?.notifications ?? [];

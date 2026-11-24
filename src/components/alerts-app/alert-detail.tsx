@@ -1,12 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ChevronLeft } from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AlertCameraCard } from '@/components/alerts-app/alert-camera';
 import { AlertSkeleton } from '@/components/alerts-app/skeletons';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { TONE_DOT } from '@/components/ui/simple';
 import { AlertsApiError, alertsApi } from '@/lib/alerts-app/api';
@@ -17,6 +17,17 @@ import type { AlertOption, MyAlert, MyAlertsPage } from '@/lib/alerts-app/types'
 import { formatFullDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
+
+/** The alerts this app has already told the server were read (kept with the app's query cache). */
+const readSent = new WeakMap<QueryClient, Set<string>>();
+function readSentBy(client: QueryClient): Set<string> {
+  let sent = readSent.get(client);
+  if (!sent) {
+    sent = new Set();
+    readSent.set(client, sent);
+  }
+  return sent;
+}
 
 /**
  * One alert: what happened, where and when, and the answers it asks for; a camera's, its picture and
@@ -38,18 +49,21 @@ export function AlertDetail({ id }: { id: string }) {
   });
   const alert = query.data;
 
-  // Opening the alert reads it: once per alert, without waiting.
-  const readSent = useRef<string | null>(null);
+  // Opening the alert reads it: once per alert, without waiting. The page is drawn twice when it is opened
+  // by a tap (at once by the shell, then by its own address), so "once" is kept per app, not per drawing;
+  // a send that failed is forgotten, so opening the alert again tries again.
   const { mutate: sendRead } = useMutation({
     mutationFn: () => alertsApi.markRead(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ALERTS_QUERY_KEY }),
+    onError: () => { readSentBy(queryClient).delete(id); },
   });
   useEffect(() => {
-    if (alert && !alert.read_at && readSent.current !== alert.notification_id) {
-      readSent.current = alert.notification_id;
+    const sent = readSentBy(queryClient);
+    if (alert && !alert.read_at && !sent.has(alert.notification_id)) {
+      sent.add(alert.notification_id);
       sendRead();
     }
-  }, [alert, sendRead]);
+  }, [alert, sendRead, queryClient]);
 
   const [answer, setAnswer] = useState<{ label: string; ack: string | null } | null>(null);
   const reply = useMutation({
@@ -157,9 +171,9 @@ function KindLabel({ alert }: { alert: Pick<MyAlert, 'type'> }) {
 
 function BackLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
+    <AppLink href={href} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
       <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       {label}
-    </Link>
+    </AppLink>
   );
 }

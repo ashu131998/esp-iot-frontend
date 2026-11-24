@@ -91,28 +91,73 @@ export function usePendingPath(): string | null {
   return useContext(NavContext).pendingPath;
 }
 
+/** True inside a shell whose pages PageSwap swaps: a link there goes through navigate() (components/ui/app-link.tsx). */
+const SwapScopeContext = createContext(false);
+
+/**
+ * Marks a whole shell as swapped by PageSwap, for the links that sit outside the page itself (a bottom
+ * bar): PageSwap marks the page it wraps on its own.
+ */
+export function PageSwapScope({ children }: { children: ReactNode }) {
+  return <SwapScopeContext.Provider value={true}>{children}</SwapScopeContext.Provider>;
+}
+
+export function useInSwapScope(): boolean {
+  return useContext(SwapScopeContext);
+}
+
 /**
  * Around a shell's pages: the moment another page is asked for (a tab tapped), `skeleton` takes the
  * place of the page that is leaving, from the top, and stays until the new page is in. A tap is
  * answered on its own frame, whatever the network does. The leaving page stays mounted underneath
  * (hidden), so nothing it was doing is cut short.
+ *
+ * `ahead`: for a shell whose pages need nothing from the server to draw (the alerts app: each page is
+ * one component fed by what the phone already holds), the page itself for the address asked for. It is
+ * shown in place of the skeleton, so the tap shows the real page at once and nothing has to be fetched
+ * before the tap to make that so.
  */
-export function PageSwap({ skeleton, children }: { skeleton: ReactNode; children: ReactNode }) {
-  const pending = usePendingPath() !== null;
+export function PageSwap({
+  skeleton,
+  ahead,
+  children,
+}: {
+  skeleton: ReactNode;
+  ahead?: (path: string) => ReactNode;
+  children: ReactNode;
+}) {
+  const pendingPath = usePendingPath();
+  const pending = pendingPath !== null;
   useLayoutEffect(() => {
     if (!pending) return;
     // The new page starts at its top: the window on phones, the shell's own scrolling column from lg up.
     window.scrollTo(0, 0);
     document.querySelector('[data-page-scroll]')?.scrollTo(0, 0);
   }, [pending]);
-  return <PageSwapView pending={pending} skeleton={skeleton}>{children}</PageSwapView>;
+  const known = pendingPath !== null && ahead ? ahead(pendingPath) : null;
+  return (
+    <SwapScopeContext.Provider value={true}>
+      <PageSwapView pending={pending} skeleton={skeleton} ahead={known}>{children}</PageSwapView>
+    </SwapScopeContext.Provider>
+  );
 }
 
-/** What PageSwap shows: the skeleton over the hidden page while another page is on its way. */
-export function PageSwapView({ pending, skeleton, children }: { pending: boolean; skeleton: ReactNode; children: ReactNode }) {
+/** What PageSwap shows while another page is on its way, over the hidden page: that page itself when it is known ahead, else the skeleton. */
+export function PageSwapView({
+  pending,
+  skeleton,
+  ahead = null,
+  children,
+}: {
+  pending: boolean;
+  skeleton: ReactNode;
+  ahead?: ReactNode;
+  children: ReactNode;
+}) {
+  const known = ahead !== null && ahead !== undefined && ahead !== false;
   return (
     <>
-      {pending && <div data-page-skeleton aria-busy="true">{skeleton}</div>}
+      {pending && (known ? <div data-page-ahead>{ahead}</div> : <div data-page-skeleton aria-busy="true">{skeleton}</div>)}
       <div hidden={pending}>{children}</div>
     </>
   );

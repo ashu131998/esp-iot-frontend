@@ -5,19 +5,20 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
 import { Field, Select } from '@/components/ui/input';
+import { FILTER_LINES_LIMIT, alertsQueryKeys } from '@/lib/alerts-queries';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n/context';
 import { lineLabel } from '@/lib/lines';
 
 function useLineMachineOptions(factoryId: string, lineFilter: string) {
   const linesQuery = useQuery({
-    queryKey: ['factory-lines', factoryId],
+    queryKey: alertsQueryKeys.filterLines(factoryId),
     enabled: Boolean(factoryId),
-    queryFn: ({ signal }) => api.lines(factoryId, { limit: 200, offset: 0 }, { signal }),
+    queryFn: ({ signal }) => api.lines(factoryId, { limit: FILTER_LINES_LIMIT, offset: 0 }, { signal }),
   });
 
   const machinesQuery = useQuery({
-    queryKey: ['factory-machines', factoryId, lineFilter],
+    queryKey: alertsQueryKeys.filterMachines(factoryId, lineFilter),
     enabled: Boolean(factoryId),
     queryFn: ({ signal }) =>
       api.machines(factoryId, lineFilter ? { line_id: lineFilter } : undefined, { signal }),

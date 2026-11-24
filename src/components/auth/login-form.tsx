@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type CSSProperties } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Field, Input } from '@/components/ui/input';
@@ -146,12 +146,12 @@ export function LoginForm({
             />
           </Field>
           <div className="-mt-2 flex justify-end">
-            <Link
+            <AppLink
               href={forgotPasswordPathFor(platformStaff ? null : factoryId ?? null)}
               className="text-xs text-primary hover:underline"
             >
               {t('Forgot password?')}
-            </Link>
+            </AppLink>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>

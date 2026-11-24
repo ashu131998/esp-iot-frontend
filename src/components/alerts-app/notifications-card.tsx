@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-
 import { useNotificationsRequired } from '@/components/alerts-app/notifications-gate';
 import { usePushSwitch, type SwitchState } from '@/components/alerts-app/use-push-switch';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { TONE_DOT, type Tone } from '@/components/ui/simple';
 import { useAppHref } from '@/lib/alerts-app/queries';
@@ -42,7 +41,8 @@ export function NotificationsCard({ required: forced }: { required?: boolean } =
         {t('Notifications')}
       </h2>
       <p className="mt-2 text-sm text-muted">{lines[state]}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
+      {/* While it checks, the row of buttons that follows keeps its height (one button, 36 px): nothing below moves when it comes. */}
+      <div className={cn('mt-4 flex flex-wrap gap-2', (state === 'checking' || state === 'ok') && 'min-h-9')}>
         {state === 'off' && (
           <Button onClick={enable} disabled={busy}>{busy ? t('Turning on…') : t('Turn on notifications')}</Button>
         )}
@@ -53,9 +53,9 @@ export function NotificationsCard({ required: forced }: { required?: boolean } =
           </>
         )}
         {state === 'needs-install' && (
-          <Link href={href('/install')} className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-blue-700">
+          <AppLink href={href('/install')} className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-blue-700">
             {t('Install on this phone')}
-          </Link>
+          </AppLink>
         )}
       </div>
       {note && (

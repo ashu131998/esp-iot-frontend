@@ -3,9 +3,9 @@
 import { Suspense, useMemo } from 'react';
 import { useSuspenseQuery, useQueries } from '@tanstack/react-query';
 import { Activity, AlertTriangle, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { AppLink } from '@/components/ui/app-link';
 import { api } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge, StatCard } from '@/components/ui/badge';
@@ -287,12 +287,12 @@ function AlertsDashboardBody({
                       </span>
                     </div>
                   </div>
-                  <Link
+                  <AppLink
                     href={`/factories/${alert.factoryId}/availability`}
                     className="shrink-0 text-xs font-medium text-primary hover:underline"
                   >
                     {t('View')} →
-                  </Link>
+                  </AppLink>
                 </div>
               );
             })}

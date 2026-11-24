@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, ChevronRight, Circle } from 'lucide-react';
-import Link from 'next/link';
 
+import { AppLink } from '@/components/ui/app-link';
 import { api } from '@/lib/api';
 import type { Translate } from '@/lib/i18n/translate';
 import { useT } from '@/lib/i18n/context';
@@ -89,9 +89,9 @@ export function SetupChecklistCard({ factoryId }: { factoryId: string }) {
           return (
             <li key={step.key}>
               {href ? (
-                <Link href={href} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                <AppLink href={href} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
                   {body}
-                </Link>
+                </AppLink>
               ) : (
                 <div className="flex items-center gap-3 px-5 py-3">{body}</div>
               )}

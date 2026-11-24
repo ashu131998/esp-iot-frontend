@@ -2,11 +2,11 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BellOff, ChevronRight, CircleHelp } from 'lucide-react';
-import Link from 'next/link';
 
 import { PushPrompt } from '@/components/alerts-app/push-prompt';
 import { usePushSwitch } from '@/components/alerts-app/use-push-switch';
 import { InboxSkeleton } from '@/components/alerts-app/skeletons';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { ListGroup, SummaryCard, TONE_DOT } from '@/components/ui/simple';
 import { alertsApi } from '@/lib/alerts-app/api';
@@ -103,11 +103,10 @@ function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string;
   const where = whereLabel(alert, many);
   const { title } = alertWords(alert, tr);
   return (
-    <Link
+    <AppLink
       href={href}
-      // The alert's page fetched ahead once its row is on screen: a tap shows it at once, from the inbox's own
-      // copy of the alert (alert-detail.tsx), then checks it with the server.
-      prefetch
+      // A tap shows the alert on the same frame, from the inbox's own copy of it (the shell draws the page
+      // asked for at once: shell.tsx, alert-detail.tsx), then checks it with the server. Nothing is fetched ahead.
       className={cn('flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50 active:bg-gray-100', unread && 'bg-orange-50/50')}
     >
       <span className={cn('mt-2 h-2.5 w-2.5 shrink-0 self-start rounded-full', TONE_DOT[severityTone(alert)])} />
@@ -124,6 +123,6 @@ function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string;
       </div>
       {asksQuestion(alert) && <CircleHelp className="h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />}
       <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" aria-hidden="true" />
-    </Link>
+    </AppLink>
   );
 }

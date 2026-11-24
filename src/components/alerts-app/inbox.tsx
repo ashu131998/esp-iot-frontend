@@ -6,8 +6,8 @@ import Link from 'next/link';
 
 import { PushPrompt } from '@/components/alerts-app/push-prompt';
 import { usePushSwitch } from '@/components/alerts-app/use-push-switch';
+import { InboxSkeleton } from '@/components/alerts-app/skeletons';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ListGroup, SummaryCard, TONE_DOT } from '@/components/ui/simple';
 import { alertsApi } from '@/lib/alerts-app/api';
 import { ALERTS_QUERY_KEY, asksQuestion, dayLabel, factoriesIn, groupAlerts, severityTone, whereLabel } from '@/lib/alerts-app/model';
@@ -105,6 +105,9 @@ function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string;
   return (
     <Link
       href={href}
+      // The alert's page fetched ahead once its row is on screen: a tap shows it at once, from the inbox's own
+      // copy of the alert (alert-detail.tsx), then checks it with the server.
+      prefetch
       className={cn('flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50 active:bg-gray-100', unread && 'bg-orange-50/50')}
     >
       <span className={cn('mt-2 h-2.5 w-2.5 shrink-0 self-start rounded-full', TONE_DOT[severityTone(alert)])} />
@@ -122,17 +125,5 @@ function AlertRow({ alert, href, many, locale }: { alert: MyAlert; href: string;
       {asksQuestion(alert) && <CircleHelp className="h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />}
       <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" aria-hidden="true" />
     </Link>
-  );
-}
-
-function InboxSkeleton() {
-  return (
-    <div className="space-y-5" aria-busy="true">
-      <Skeleton className="h-20 w-full rounded-2xl" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-40 w-full rounded-2xl" />
-      </div>
-    </div>
   );
 }

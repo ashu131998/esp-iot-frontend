@@ -6,14 +6,14 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { AlertCameraCard } from '@/components/alerts-app/alert-camera';
+import { AlertSkeleton } from '@/components/alerts-app/skeletons';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TONE_DOT } from '@/components/ui/simple';
 import { AlertsApiError, alertsApi } from '@/lib/alerts-app/api';
 import { ALERTS_QUERY_KEY, alertQueryKey, asksQuestion, cameraOf, optionsOf, severityTone, typeLabel } from '@/lib/alerts-app/model';
 import { alertWords, reasonWords } from '@/lib/alerts-app/view';
 import { useAppHref } from '@/lib/alerts-app/queries';
-import type { AlertOption, MyAlert } from '@/lib/alerts-app/types';
+import type { AlertOption, MyAlert, MyAlertsPage } from '@/lib/alerts-app/types';
 import { formatFullDateTime } from '@/lib/format';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,10 @@ export function AlertDetail({ id }: { id: string }) {
     queryKey: alertQueryKey(id),
     queryFn: ({ signal }) => alertsApi.alert(id, signal),
     retry: false,
+    // Opened from the inbox: shown at once from the inbox's own copy of it, then checked with the server.
+    initialData: () => queryClient.getQueryData<MyAlertsPage>(ALERTS_QUERY_KEY)?.items.find((a) => a.notification_id === id),
+    initialDataUpdatedAt: () => queryClient.getQueryState(ALERTS_QUERY_KEY)?.dataUpdatedAt,
+    staleTime: 0,
   });
   const alert = query.data;
 
@@ -60,14 +64,7 @@ export function AlertDetail({ id }: { id: string }) {
     },
   });
 
-  if (query.isPending) {
-    return (
-      <div className="space-y-4" aria-busy="true">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-44 w-full rounded-2xl" />
-      </div>
-    );
-  }
+  if (query.isPending) return <AlertSkeleton />;
   if (query.isError || !alert) {
     const gone = query.error instanceof AlertsApiError && query.error.status === 404;
     return (

@@ -21,6 +21,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   experimental: {
+    // How long the browser keeps a page it has already been given, so going back to a tab shows it at
+    // once instead of asking the server again: a page opened by a tap (dynamic) two minutes, a page
+    // fetched ahead whole (static: the bottom bar's, lib/prefetch-pages.ts) five. The numbers on a page
+    // are not held by this: each page refreshes its own data when it is older than 30 s
+    // (app/providers.tsx), and saving a change drops every kept page (router.refresh()).
+    staleTimes: { dynamic: 120, static: 300 },
     optimizePackageImports: [
       'lucide-react',
       '@tanstack/react-query',

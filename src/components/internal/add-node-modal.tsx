@@ -1,9 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -170,9 +170,9 @@ export function AddNodeModal({
             {factoryId && lines.length === 0 && (
               <p className="mt-1 text-xs text-muted">
                 No lines yet —{' '}
-                <Link href={`/internal/factories/${factoryId}`} className="text-primary hover:underline">
+                <AppLink href={`/internal/factories/${factoryId}`} className="text-primary hover:underline">
                   add a line on the factory setup page
-                </Link>
+                </AppLink>
                 .
               </p>
             )}

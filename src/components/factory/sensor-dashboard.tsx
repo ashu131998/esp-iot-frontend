@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Activity, Thermometer } from 'lucide-react';
 
 import { ApexChart, baseChartOptions, type ApexOptions } from '@/components/charts/apex';
 import { SplitCard } from '@/components/charts/donut-chart';
+import { AppLink } from '@/components/ui/app-link';
 import { Card, CardHeader } from '@/components/ui/card';
 import { SummaryCard, type Tone } from '@/components/ui/simple';
 import { PHONE_HIDDEN, TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
@@ -120,7 +120,7 @@ export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: 
                   return (
                     <TR key={r.machine_id}>
                       <TD>
-                        <Link href={link(`/factories/${factoryId}/machines/${r.machine_id}`)} className="font-medium hover:underline">{r.machine_name}</Link>
+                        <AppLink href={link(`/factories/${factoryId}/machines/${r.machine_id}`)} className="font-medium hover:underline">{r.machine_name}</AppLink>
                         {r.sensors > 1 && <span className="ml-1 text-xs text-muted">· {tn(r.sensors, '{count} sensor', '{count} sensors', { count: r.sensors })}</span>}
                       </TD>
                       <TD className={PHONE_HIDDEN}>{lineName(r.line_id)}</TD>
@@ -147,7 +147,7 @@ export function SensorDashboard({ factoryId, kind }: { factoryId: string; kind: 
                 }).join(', '),
               })}
               {' '}
-              <Link href={link(`/factories/${factoryId}/sensor-mapping`)} className="font-medium underline">{t('Sensor mapping')}</Link>
+              <AppLink href={link(`/factories/${factoryId}/sensor-mapping`)} className="font-medium underline">{t('Sensor mapping')}</AppLink>
             </p>
           )}
         </Card>

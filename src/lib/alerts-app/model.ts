@@ -156,6 +156,27 @@ export function afterSignIn(next: string | null | undefined, here: string | null
   return usable(next) ?? usable(here) ?? home;
 }
 
+/** One of the app's signed-in pages: each is a single component drawn from what the phone already holds. */
+export type AppPage = { page: 'inbox' } | { page: 'settings' } | { page: 'alert'; id: string };
+
+/**
+ * Which page an address is, so the shell can draw it the moment it is asked for (a row or a tab tapped)
+ * without waiting for the server: null for any other address.
+ */
+export function appPageOf(pathname: string | null | undefined): AppPage | null {
+  if (pathname === null || pathname === undefined) return null;
+  const p = appPath(pathname.split(/[?#]/)[0]);
+  if (p === '/') return { page: 'inbox' };
+  if (p === '/settings') return { page: 'settings' };
+  const alert = /^\/alerts\/([^/]+)$/.exec(p);
+  if (!alert) return null;
+  try {
+    return { page: 'alert', id: decodeURIComponent(alert[1]) };
+  } catch {
+    return null;
+  }
+}
+
 /** Whether a bottom-bar tab is the current page: the inbox owns "/" and every alert. */
 export function tabActive(tab: 'inbox' | 'settings', pathname: string | null | undefined): boolean {
   const p = appPath(pathname);

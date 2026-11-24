@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -21,6 +20,7 @@ import {
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
+import { AppLink } from '@/components/ui/app-link';
 import { cn } from '@/lib/utils';
 
 const platformNav = [
@@ -56,14 +56,14 @@ function SidebarContent({
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <li key={href}>
-                <Link
+                <AppLink
                   href={href}
                   onClick={onNavigate}
                   className={sidebarItemClass(active)}
                 >
                   <Icon className={sidebarIconClass(active)} />
                   {label}
-                </Link>
+                </AppLink>
               </li>
             );
           })}
@@ -76,14 +76,14 @@ function SidebarContent({
             const active = pathname.startsWith(href);
             return (
               <li key={f.factory_id}>
-                <Link
+                <AppLink
                   href={href}
                   onClick={onNavigate}
                   className={sidebarItemClass(active)}
                 >
                   <Gauge className={sidebarIconClass(active)} />
                   <span className="truncate">{f.name}</span>
-                </Link>
+                </AppLink>
               </li>
             );
           })}
@@ -192,7 +192,7 @@ export function FactoryNav({
           const Icon = icons[tab.slug] ?? Activity;
           const active = pathname === tab.href;
           return (
-            <Link
+            <AppLink
               key={tab.href}
               href={tab.href}
               className={cn(
@@ -204,7 +204,7 @@ export function FactoryNav({
             >
               <Icon className="h-4 w-4" />
               {tab.label}
-            </Link>
+            </AppLink>
           );
         })}
       </div>

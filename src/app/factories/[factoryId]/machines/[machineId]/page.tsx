@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { AppLink } from '@/components/ui/app-link';
 import { factoryLinks } from '@/lib/server/factory-links';
 import { Badge } from '@/components/ui/badge';
 import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
@@ -45,21 +45,21 @@ export default async function MachineDetailPage({
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted">
-        <Link
+        <AppLink
           href={link(`/factories/${factoryId}/lines`)}
           className="hover:underline hover:text-foreground transition-colors"
         >
           {t('Production Lines')}
-        </Link>
+        </AppLink>
         {line && (
           <>
             <span>/</span>
-            <Link
+            <AppLink
               href={link(`/factories/${factoryId}/lines/${line.line_id}`)}
               className="hover:underline hover:text-foreground transition-colors"
             >
               {line.name}
-            </Link>
+            </AppLink>
           </>
         )}
         <span>/</span>

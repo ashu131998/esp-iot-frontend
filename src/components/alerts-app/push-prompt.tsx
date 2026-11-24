@@ -1,9 +1,9 @@
 'use client';
 
 import { BellOff } from 'lucide-react';
-import Link from 'next/link';
 
 import type { SwitchState } from '@/components/alerts-app/use-push-switch';
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n/context';
 
@@ -45,9 +45,9 @@ export function PushPrompt({
         </Button>
       )}
       {state === 'needs-install' && (
-        <Link href={installHref} className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-base font-medium text-primary-foreground hover:bg-blue-700">
+        <AppLink href={installHref} className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-base font-medium text-primary-foreground hover:bg-blue-700">
           {t('Install on this phone')}
-        </Link>
+        </AppLink>
       )}
       {failed && <p className="mt-2 text-sm text-red-700" role="alert">{t('Could not turn on notifications. Try again.')}</p>}
     </section>

@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 
 import { AddNodeModal } from '@/components/internal/add-node-modal';
+import { AppLink } from '@/components/ui/app-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
@@ -262,17 +262,17 @@ function NodesFleetInner() {
                 {nodes.map((d) => (
                   <TR key={`${d.factory_id}:${d.device_id}`}>
                     <TD>
-                      <Link
+                      <AppLink
                         href={nodeHref(d.factory_id, d.device_id)}
                         className="font-mono text-xs text-primary hover:underline"
                       >
                         {d.device_id}
-                      </Link>
+                      </AppLink>
                     </TD>
                     <TD>
-                      <Link href={`/factories/${d.factory_id}`} className="text-sm hover:underline">
+                      <AppLink href={`/factories/${d.factory_id}`} className="text-sm hover:underline">
                         {d.factory_id}
-                      </Link>
+                      </AppLink>
                     </TD>
                     <TD className="font-mono text-xs">{d.line_id}</TD>
                     <TD>
@@ -281,13 +281,13 @@ function NodesFleetInner() {
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {(d.machines ?? []).map((m) => (
-                            <Link
+                            <AppLink
                               key={m.machine_id}
                               href={`/factories/${d.factory_id}/machines/${m.machine_id}`}
                               className="text-xs text-primary hover:underline"
                             >
                               {m.name ?? m.machine_id}
-                            </Link>
+                            </AppLink>
                           ))}
                         </div>
                       )}
@@ -309,12 +309,12 @@ function NodesFleetInner() {
                     <TD><StatusText cell={queue(d.beat)} /></TD>
                     <TD><StatusText cell={supply(d.beat)} /></TD>
                     <TD>
-                      <Link
+                      <AppLink
                         href={nodeHref(d.factory_id, d.device_id, 'sensors')}
                         className="text-xs text-primary hover:underline"
                       >
                         Sensors
-                      </Link>
+                      </AppLink>
                     </TD>
                   </TR>
                 ))}

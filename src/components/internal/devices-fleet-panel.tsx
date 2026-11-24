@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Badge } from '@/components/ui/badge';
 import { ExportCsvButton } from '@/components/ui/export-csv-button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -169,17 +169,17 @@ function FleetInner() {
                 {devices.map((d) => (
                   <TR key={`${d.factory_id}:${d.device_id}`}>
                     <TD>
-                      <Link
+                      <AppLink
                         href={deviceHref(d.factory_id, d.device_id)}
                         className="font-mono text-xs text-primary hover:underline"
                       >
                         {d.device_id}
-                      </Link>
+                      </AppLink>
                     </TD>
                     <TD>
-                      <Link href={`/factories/${d.factory_id}`} className="text-sm hover:underline">
+                      <AppLink href={`/factories/${d.factory_id}`} className="text-sm hover:underline">
                         {d.factory_id}
-                      </Link>
+                      </AppLink>
                     </TD>
                     <TD className="font-mono text-xs">{d.line_id}</TD>
                     <TD>{d.device_type}</TD>

@@ -114,6 +114,25 @@ describe('turning notifications on', () => {
   });
 });
 
+describe('the server\'s key as the app opens', () => {
+  it('the frame and the notifications switch ask together and share one request', async () => {
+    iphone({ permission: 'granted', subscribed: true });
+    const [, state] = await Promise.all([keepSubscriptionFresh(), currentState()]);
+    expect(state).toBe('on');
+    expect(api.key).toHaveBeenCalledTimes(1);
+    await currentState();   // and once known it is not asked for again
+    expect(api.key).toHaveBeenCalledTimes(1);
+  });
+
+  it('a request that failed is not kept: the next look asks again', async () => {
+    iphone({ permission: 'granted', subscribed: true });
+    api.key.mockRejectedValueOnce(new Error('offline'));
+    expect(await currentState()).toBe('server-off');
+    expect(await currentState()).toBe('on');
+    expect(api.key).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('every open, and turning off (an iPhone: web push, not the Android app)', () => {
   it('a phone set up sends its subscription again; turning off unsubscribes it and tells the server', async () => {
     iphone({ permission: 'granted', subscribed: true });

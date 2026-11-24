@@ -11,6 +11,7 @@ import { useT } from '@/lib/i18n/context';
 import { overviewQueryKey } from '@/lib/overview-queries';
 import { lineEnergySlices, machineEnergySlices, runShareSlices, timeSplitSlices } from '@/lib/pie-slices';
 import { humanMinutes, periodPhrase } from '@/lib/plain-words';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { useRefetchInterval } from '@/lib/refresh-context';
 import {
   factoryMetricsApiRange, factoryScopeQueryKey, filterMachinesByScope, useFactoryDateRange,
@@ -40,7 +41,7 @@ export function OverviewRunSplit({ factoryId, from, to }: { factoryId: string; f
     queryKey: overviewQueryKey('availability', factoryId, { from, to, lineId, machineId }),
     queryFn: ({ signal }) => api.availability(factoryId, apiRange, { signal }),
     refetchInterval,
-    staleTime: 0,
+    staleTime: JUST_FETCHED_MS,
   });
   const machines = filterMachinesByScope(data.machines, { machineId, lineId });
   if (machines.length < 2) return null;

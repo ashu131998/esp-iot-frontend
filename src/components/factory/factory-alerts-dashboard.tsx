@@ -3,18 +3,19 @@
 import { Suspense, useMemo } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { LineMachineAlertFilters } from '@/components/alerts/alert-scope-filters';
+import { AppLink } from '@/components/ui/app-link';
 import { api } from '@/lib/api';
 import { StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { machineInAlertScope } from '@/lib/alert-machine-scope';
-import { dashboardNow } from '@/lib/date-range';
+import { alertsMachinesWindow, alertsQueryKeys } from '@/lib/alerts-queries';
 import { useFactoryRefsOptional } from '@/lib/factory-refs-context';
 import { useT } from '@/lib/i18n/context';
 import type { Translate } from '@/lib/i18n/translate';
 import { humanMinutes } from '@/lib/plain-words';
+import { JUST_FETCHED_MS } from '@/lib/query-freshness';
 import { cn } from '@/lib/utils';
 import { useRefetchInterval, useSetRefreshInfo } from '@/lib/refresh-context';
 import { lineLabel } from '@/lib/lines';
@@ -75,16 +76,13 @@ function FactoryAlertsDashboardInner({ factoryId }: { factoryId: string }) {
     router.replace(link(`/factories/${factoryId}/alerts?${next.toString()}`));
   }
 
+  // The page fetched this on the server under the same key (lib/alerts-queries.ts): it is here on the first draw.
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    queryKey: ['availability-factory-alerts', factoryId, maxDate],
-    queryFn: ({ signal }) => {
-      // The last 24 hours, ending at the end of what this viewer may see (an ended subscription).
-      const end = dashboardNow(maxDate);
-      const from = new Date(end.getTime() - 24 * 60 * 60 * 1000).toISOString();
-      return api.availability(factoryId, { from, to: end.toISOString() }, { signal });
-    },
+    queryKey: alertsQueryKeys.machines(factoryId, maxDate),
+    // The last 24 hours, ending at the end of what this viewer may see (an ended subscription).
+    queryFn: ({ signal }) => api.availability(factoryId, alertsMachinesWindow(maxDate), { signal }),
     refetchInterval,
-    staleTime: 0,
+    staleTime: JUST_FETCHED_MS,
   });
 
   useSetRefreshInfo(dataUpdatedAt, REFRESH_SEC);
@@ -211,7 +209,7 @@ function AlertGroup({
       </div>
       <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
         {alerts.map((alert) => (
-          <Link
+          <AppLink
             key={alert.id}
             href={link(`/factories/${factoryId}/machines/${alert.machineId}`)}
             className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50 active:bg-gray-100"
@@ -235,7 +233,7 @@ function AlertGroup({
               </span>
             )}
             <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
-          </Link>
+          </AppLink>
         ))}
       </div>
     </section>

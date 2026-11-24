@@ -1,10 +1,10 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { AppLink } from '@/components/ui/app-link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/input';
@@ -267,9 +267,9 @@ export function StaffTicketBody({ ticketId, canAnswer }: { ticketId: string; can
               <dd>
                 {ticket.factory_name} <span className="font-mono text-xs text-muted">{ticket.factory_id}</span>
                 <span className="block text-xs">
-                  <Link href={`/factories/${ticket.factory_id}`} className="text-primary hover:underline">Dashboard</Link>
+                  <AppLink href={`/factories/${ticket.factory_id}`} className="text-primary hover:underline">Dashboard</AppLink>
                   {' · '}
-                  <Link href={`/internal/factories/${ticket.factory_id}`} className="text-primary hover:underline">Factory in the console</Link>
+                  <AppLink href={`/internal/factories/${ticket.factory_id}`} className="text-primary hover:underline">Factory in the console</AppLink>
                 </span>
               </dd>
             </div>
@@ -307,7 +307,7 @@ export function StaffTicketBody({ ticketId, canAnswer }: { ticketId: string; can
                   <li key={u.board_id} className="flex items-start gap-2">
                     <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', u.online ? TONE_DOT.good : TONE_DOT.bad)} />
                     <span>
-                      <Link href={`/internal/devices/${ticket.factory_id}/${u.board_id}`} className="font-mono text-primary hover:underline">{u.board_id}</Link>
+                      <AppLink href={`/internal/devices/${ticket.factory_id}/${u.board_id}`} className="font-mono text-primary hover:underline">{u.board_id}</AppLink>
                       {': '}
                       {unitText(u, context.at)}
                     </span>

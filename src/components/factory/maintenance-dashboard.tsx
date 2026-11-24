@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { MachineHealth } from '@/components/factory/machine-health';
 import { SensorDashboard } from '@/components/factory/sensor-dashboard';
 import { ServiceLog } from '@/components/factory/service-log';
+import { AppLink } from '@/components/ui/app-link';
 import { ChartSkeleton, StatGridSkeleton } from '@/components/ui/page-skeletons';
 import { QuerySuspense } from '@/components/ui/query-suspense';
 import { useShown } from '@/lib/factory-refs-context';
@@ -47,7 +47,7 @@ export function MaintenanceDashboard({ factoryId }: { factoryId: string }) {
       {tabs.length > 1 && (
         <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label={t('Predictive maintenance')}>
           {tabs.map((x) => (
-            <Link
+            <AppLink
               key={x.key}
               href={hrefFor(x.key)}
               scroll={false}
@@ -58,7 +58,7 @@ export function MaintenanceDashboard({ factoryId }: { factoryId: string }) {
               )}
             >
               {t(x.label)}
-            </Link>
+            </AppLink>
           ))}
         </nav>
       )}

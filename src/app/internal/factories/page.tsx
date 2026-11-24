@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { ArrowRight, Building2, MapPin } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/app-shell';
 import { SubscriptionBadge } from '@/components/internal/subscription-badge';
+import { AppLink } from '@/components/ui/app-link';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/table';
@@ -69,18 +69,18 @@ export default async function FactoriesPage() {
               </div>
             </dl>
             <div className="mt-4 flex flex-col gap-2">
-              <Link
+              <AppLink
                 href={`/internal/factories/${f.factory_id}`}
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
               >
                 Setup (lines & machines) <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
+              </AppLink>
+              <AppLink
                 href={`/factories/${f.factory_id}`}
                 className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary hover:underline"
               >
                 Factory dashboard
-              </Link>
+              </AppLink>
             </div>
           </Card>
         ))}

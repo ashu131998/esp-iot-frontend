@@ -1,6 +1,6 @@
 import { CheckCircle2, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
 
+import { AppLink } from '@/components/ui/app-link';
 import { cn } from '@/lib/utils';
 
 /**
@@ -184,9 +184,9 @@ export function ListRow({
   );
   const cls = 'flex items-center gap-3 px-4 py-3.5';
   return href ? (
-    <Link href={href} className={cn(cls, 'transition-colors hover:bg-gray-50 active:bg-gray-100')}>
+    <AppLink href={href} className={cn(cls, 'transition-colors hover:bg-gray-50 active:bg-gray-100')}>
       {body}
-    </Link>
+    </AppLink>
   ) : (
     <div className={cls}>{body}</div>
   );

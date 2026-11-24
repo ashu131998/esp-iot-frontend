@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -26,8 +25,11 @@ import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { PageHeader } from '@/components/layout/page-header';
 import { SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
+import { AppLink } from '@/components/ui/app-link';
+import { PlatformPageSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/lib/auth-context';
 import { visibleInternalNav } from '@/lib/internal-nav';
+import { PageSwap, PageSwapScope } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -67,7 +69,7 @@ function InternalSidebar({ onNavigate }: { onNavigate?: () => void }) {
             const Icon = NAV_ICONS[href];
             return (
               <li key={href}>
-                <Link
+                <AppLink
                   href={href}
                   onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
@@ -75,7 +77,7 @@ function InternalSidebar({ onNavigate }: { onNavigate?: () => void }) {
                 >
                   {Icon && <Icon className={sidebarIconClass(active)} />}
                   <span className="truncate">{label}</span>
-                </Link>
+                </AppLink>
               </li>
             );
           })}
@@ -94,32 +96,36 @@ export function InternalShell({ children }: { children: React.ReactNode }) {
     setOpen(false);
   }, [pathname]);
 
+  // The menu and every row link go through navigate() (PageSwapScope): the next page's skeleton shows at once.
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className={cn('hidden h-screen w-64 shrink-0 flex-col lg:flex', SIDEBAR_PANEL)}>
-        <InternalSidebar />
-      </aside>
-      {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close menu" onClick={() => setOpen(false)} />
-          <aside className={cn('relative flex h-full w-64 flex-col shadow-xl', SIDEBAR_PANEL)}>
-            <button type="button" aria-label="Close menu" className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-white/[0.06] hover:text-white" onClick={() => setOpen(false)}>
-              <X className="h-5 w-5" />
+    <PageSwapScope>
+      <div className="flex h-screen overflow-hidden">
+        <aside className={cn('hidden h-screen w-64 shrink-0 flex-col lg:flex', SIDEBAR_PANEL)}>
+          <InternalSidebar />
+        </aside>
+        {open && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close menu" onClick={() => setOpen(false)} />
+            <aside className={cn('relative flex h-full w-64 flex-col shadow-xl', SIDEBAR_PANEL)}>
+              <button type="button" aria-label="Close menu" className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-white/[0.06] hover:text-white" onClick={() => setOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
+              <InternalSidebar onNavigate={() => setOpen(false)} />
+            </aside>
+          </div>
+        )}
+        <main data-page-scroll className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
+          <div className="flex items-center gap-2 border-b bg-white px-4 py-2.5 lg:hidden">
+            <button type="button" onClick={() => setOpen(true)} className="rounded-md p-1 hover:bg-slate-100">
+              <Menu className="h-5 w-5" />
             </button>
-            <InternalSidebar onNavigate={() => setOpen(false)} />
-          </aside>
-        </div>
-      )}
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-none [scrollbar-gutter:stable]">
-        <div className="flex items-center gap-2 border-b bg-white px-4 py-2.5 lg:hidden">
-          <button type="button" onClick={() => setOpen(true)} className="rounded-md p-1 hover:bg-slate-100">
-            <Menu className="h-5 w-5" />
-          </button>
-          <span className="text-sm font-medium">Internal ops</span>
-        </div>
-        {children}
-      </main>
-    </div>
+            <span className="text-sm font-medium">Internal ops</span>
+          </div>
+          {/* A menu item or a row clicked: the next page's skeleton at once, nothing fetched before the click. */}
+          <PageSwap skeleton={<PlatformPageSkeleton />}>{children}</PageSwap>
+        </main>
+      </div>
+    </PageSwapScope>
   );
 }
 

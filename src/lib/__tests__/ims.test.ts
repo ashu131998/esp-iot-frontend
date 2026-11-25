@@ -177,7 +177,7 @@ describe('the stock page from the API\'s answer', () => {
       { product: { ...product, picture: { photo_id: 'ph', url: 'u', thumb_url: 'https://r2/t', taken_at: 't', taken_by: null } }, qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: '2026-11-01T05:00:00.000Z' },
       { product: { ...product, product_id: 'p2', name: 'Wall tile' }, specs: { colour: 'black', grade: 'a' }, qty: 40, unit: 'boxes', pallets: 1, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-20T05:00:00.000Z', oldest_on: '2026-11-10' },
     ],
-    totals: { rows: 2, pallets: 3, by_unit: [{ unit: 'boxes', qty: 40, pallets: 3, uncounted_pallets: 2 }] },
+    totals: { rows: 2, products: 2, pallets: 3, by_unit: [{ unit: 'boxes', qty: 40, pallets: 3, uncounted_pallets: 2 }] },
     filters: {
       specs: { finish: [{ value: 'matt', label: 'Matt', pallets: 1 }], grade: [{ value: 'a', label: 'A', pallets: 1 }], colour: [{ value: 'grey', label: 'Grey', pallets: 2 }, { value: 'black', label: 'Black', pallets: 1 }] },
       zones: [{ zone: 'Z2', pallets: 3 }],
@@ -193,7 +193,7 @@ describe('the stock page from the API\'s answer', () => {
     expect(v.rows[0]).toMatchObject({ product_id: 'p1', qty: null, specs: { colour: 'grey' }, thumb_url: 'https://r2/t', needs_count_pallets: 1, oldest_on: '2026-11-01T05:00:00.000Z' });
     expect(v.rows[1]).toMatchObject({ product_id: 'p2', qty: 40, specs: { colour: 'black', grade: 'a' }, thumb_url: null, oldest_on: '2026-11-10' });
     expect(v.rows[0].key).not.toBe(v.rows[1].key);
-    expect(v.totals).toEqual({ rows: 2, pallets: 3, by_unit: api.totals.by_unit });
+    expect(v.totals).toEqual({ rows: 2, products: 2, pallets: 3, by_unit: api.totals.by_unit });
     expect(v.next_cursor).toBe('cur-2');
   });
 

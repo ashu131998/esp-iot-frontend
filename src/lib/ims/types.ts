@@ -71,7 +71,8 @@ export interface ApiStockRow {
 /** GET …/ims/stock. A location is a row and a column (code R03-C05), with a zone if the factory uses them. */
 export interface ApiStock {
   rows: ApiStockRow[];
-  totals: { rows: number; pallets: number; by_unit: UnitTotal[] };
+  /** rows: product-and-specs lines; products: different products. */
+  totals: { rows: number; products: number; pallets: number; by_unit: UnitTotal[] };
   filters: {
     specs: Record<string, Array<{ value: string; label: string; pallets: number }>>;
     zones?: Array<{ zone: string; pallets: number }>;
@@ -132,7 +133,7 @@ export interface StockRow {
 export interface StockView {
   rows: StockRow[];
   /** For the whole filter, not only this page: one line per unit (boxes and kg are never added). */
-  totals: { rows: number; pallets: number; by_unit: UnitTotal[] };
+  totals: { rows: number; products: number; pallets: number; by_unit: UnitTotal[] };
   facets: Facet[];
   spec_fields: SpecField[];
   next_cursor: string | null;

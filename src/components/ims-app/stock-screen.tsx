@@ -126,7 +126,12 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
               ))
             )}
             {first.totals.pallets > 0 && (
-              <p className="text-sm text-muted">{tn(first.totals.pallets, 'on {count} pallet', 'on {count} pallets', { count: first.totals.pallets })}</p>
+              <p className="text-sm text-muted">
+                {tn(first.totals.pallets, 'on {count} pallet', 'on {count} pallets', { count: first.totals.pallets })}
+                {Number.isFinite(first.totals.products) && first.totals.products > 0 && (
+                  <>{' · '}{tn(first.totals.products, '{count} product', '{count} products', { count: first.totals.products })}</>
+                )}
+              </p>
             )}
           </section>
 

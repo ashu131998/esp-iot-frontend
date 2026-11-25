@@ -90,7 +90,7 @@ export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
   });
   return {
     rows,
-    totals: { rows: api.totals.rows, pallets: api.totals.pallets, by_unit: api.totals.by_unit },
+    totals: { rows: api.totals.rows, products: api.totals.products, pallets: api.totals.pallets, by_unit: api.totals.by_unit },
     facets: [...specFacets, ...place('zone', api.filters.zones), ...place('row', api.filters.rows), ...place('column', api.filters.columns), ...products],
     spec_fields: fields,
     next_cursor: api.next,

@@ -52,7 +52,7 @@ const PAGE: ApiStock = {
     { product: product('p1', 'Vitrified tile 600×600', { colour: 'grey', size: 'm' }), qty: 1240, unit: 'boxes', pallets: 14, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-01T05:00:00Z' },
     { product: product('p2', 'Wall tile 300×450', { colour: 'grey' }, { photo_id: 'ph', url: 'https://photos.example/f.jpg', thumb_url: 'https://photos.example/t.jpg', taken_at: '2026-11-20T05:00:00Z', taken_by: null }), qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: null },
   ],
-  totals: { rows: 2, pallets: 16, by_unit: [{ unit: 'boxes', qty: 1240, pallets: 16, uncounted_pallets: 2 }] },
+  totals: { rows: 2, products: 2, pallets: 16, by_unit: [{ unit: 'boxes', qty: 1240, pallets: 16, uncounted_pallets: 2 }] },
   filters: {
     specs: { colour: [{ value: 'grey', label: 'Grey', pallets: 16 }, { value: 'black', label: 'Black', pallets: 12 }] },
     zones: [{ zone: 'Z2', pallets: 9 }],
@@ -91,8 +91,7 @@ describe('available stock', () => {
     nav.search = 'spec.colour=grey&zone=Z2';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, PAGE));
     expect(html).toContain('1,240 boxes · 2 pallets not counted');
-    expect(html.replace(/<!-- -->/g, '')).toContain('on 16 pallets');
-    expect(html).not.toContain('products');
+    expect(html.replace(/<!-- -->/g, '')).toContain('on 16 pallets · 2 products');
     expect(html.replace(/<!-- -->/g, '')).toMatch(/—\s*<span[^>]*>boxes/);
     expect(html).toContain('2 not counted');
     expect(html).toContain('1 needs count');
@@ -110,7 +109,7 @@ describe('available stock', () => {
 
   it('nothing matching says so and offers to clear', () => {
     nav.search = 'spec.colour=black';
-    const empty: ApiStock = { ...PAGE, rows: [], totals: { rows: 0, pallets: 0, by_unit: [] } };
+    const empty: ApiStock = { ...PAGE, rows: [], totals: { rows: 0, products: 0, pallets: 0, by_unit: [] } };
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, empty));
     expect(html).toContain('Nothing in stock matches these filters.');
     expect(html).toContain('Clear all');

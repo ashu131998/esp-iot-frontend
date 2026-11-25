@@ -13,7 +13,7 @@
 export type MovementType = 'in' | 'move' | 'out' | 'count' | 'adjust';
 
 /** Why a quantity was fixed after a count (query-api ims.js ADJUST_REASONS). */
-export type AdjustReason = 'count_was_wrong' | 'damaged' | 'found_more' | 'went_missing' | 'other';
+export type AdjustReason = 'damaged' | 'taken_without_scan' | 'count_was_wrong' | 'missing' | 'other';
 
 export interface Movement {
   client_id: string;
@@ -64,6 +64,8 @@ export interface MovementResult {
   outcome?: 'ok' | 'rejected';
   reason?: string;
   message?: string;
+  /** ok, but older than what the pallet already had: it changed less (the pallet is marked to count). */
+  stale?: boolean;
 }
 
 /** At most this many scans go in one request. */

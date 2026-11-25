@@ -1,0 +1,30 @@
+import type { Messages } from '../../translate';
+
+/** Gujarati for FloorBeat IMS, the stock app (components/ims-app, lib/ims). Mirrors hi/ims-app.ts key for key. */
+export const ims_app: Messages = {
+  'Your factory\'s stock. Sign in with your work email.': 'તમારી ફેક્ટરીનો માલ. તમારા કામના ઈમેલથી સાઇન ઇન કરો.',
+  'FloorBeat IMS works on one factory\'s stock. Sign in with an account of that factory.': 'FloorBeat IMS એક ફેક્ટરીના માલ પર ચાલે છે. તે ફેક્ટરીના એકાઉન્ટથી સાઇન ઇન કરો.',
+  'Home': 'હોમ',
+  'Available stock': 'ઉપલબ્ધ માલ',
+  'Available now': 'હમણાં ઉપલબ્ધ',
+  'Nothing in stock': 'કોઈ માલ નથી',
+  'Nothing in stock yet.': 'હજુ કોઈ માલ નથી.',
+  'Nothing in stock matches these filters.': 'આ ફિલ્ટરથી કોઈ માલ મળ્યો નથી.',
+  'Could not load the stock.': 'માલની માહિતી લોડ થઈ શકી નથી.',
+  'Filters': 'ફિલ્ટર',
+  'Filters · {count}': 'ફિલ્ટર · {count}',
+  'Remove filter {name}': '{name} ફિલ્ટર કાઢો',
+  'Clear all': 'બધું કાઢો',
+  'Row': 'હરોળ',
+  'on {count} pallet': '{count} પેલેટ પર',
+  'on {count} pallets': '{count} પેલેટ પર',
+  '{count} pallet': '{count} પેલેટ',
+  '{count} pallets': '{count} પેલેટ',
+  '{count} product': '{count} પ્રોડક્ટ',
+  '{count} products': '{count} પ્રોડક્ટ',
+  '{count} not counted': '{count}ની ગણતરી બાકી',
+  '{count} pallet not counted': '{count} પેલેટની ગણતરી બાકી',
+  '{count} pallets not counted': '{count} પેલેટની ગણતરી બાકી',
+  'Oldest: {count} day': 'સૌથી જૂનું: {count} દિવસ',
+  'Oldest: {count} days': 'સૌથી જૂનું: {count} દિવસ',
+};

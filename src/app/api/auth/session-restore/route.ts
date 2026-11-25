@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { afterSignIn } from '@/lib/alerts-app/model';
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
-import { isAlertsAppHost, isDashboardAppHost } from '@/lib/hosts';
+import { isAlertsAppHost, isDashboardAppHost, isImsAppHost } from '@/lib/hosts';
 import {
   CSRF_COOKIE,
   REFRESH_COOKIE,
@@ -21,6 +21,10 @@ function loginFallback(req: NextRequest, next: string | null): URL {
   }
   // The FloorBeat app (dashboard.floorbeat.in) too: its sign-in shows in place at the address asked for.
   if (isDashboardAppHost(req.headers.get('host') ?? req.nextUrl.hostname, process.env.FACTORY_HOST_SUFFIX, process.env.DASHBOARD_APP_HOST)) {
+    return new URL(path, base);
+  }
+  // FloorBeat IMS (ims.floorbeat.in) as well.
+  if (isImsAppHost(req.headers.get('host') ?? req.nextUrl.hostname, process.env.FACTORY_HOST_SUFFIX, process.env.IMS_APP_HOST)) {
     return new URL(path, base);
   }
   const factoryMatch = path.match(/^\/factories\/([^/?#]+)/);

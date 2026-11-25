@@ -7,7 +7,7 @@ import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { PLAIN_LINKS_HEADER } from '@/lib/factory-links';
 import {
-  factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
+  factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, isImsAppHost, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
 } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
@@ -94,7 +94,10 @@ export async function middleware(req: NextRequest) {
   // The FloorBeat app's address, the dashboard on a phone (dashboard.floorbeat.in).
   const dashboardApp = !alertsApp && isDashboardAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.DASHBOARD_APP_HOST);
 
-  const legacyTarget = hostFactory || alertsApp || dashboardApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
+  // FloorBeat IMS, the stock app (ims.floorbeat.in).
+  const imsApp = !alertsApp && !dashboardApp && isImsAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.IMS_APP_HOST);
+
+  const legacyTarget = hostFactory || alertsApp || dashboardApp || imsApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
     if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
       return internalHostBlockResponse();
@@ -258,6 +261,25 @@ export async function middleware(req: NextRequest) {
     if (/^\/team(\/|$)/.test(pathname) && identity.role !== 'admin') return redirectTo('/');
     requestHeaders.set(PLAIN_LINKS_HEADER, '1');
     return securedRewrite(`/factories/${plant}${pathname === '/' ? '' : pathname}`);
+  }
+
+  // FloorBeat IMS, the stock app (ims.floorbeat.in): its pages at plain addresses — / the home,
+  // /stock the available stock — served from the app's /ims-app/… inside, for the person's own
+  // factory (the session's). Signed out, the address asked for shows the sign-in in place, as in
+  // the other two apps. The staff console and the dashboard's long addresses are not served here.
+  if (imsApp) {
+    const inner = pathname.match(/^\/ims-app(\/.*)?$/);
+    if (inner) return redirectTo(inner[1] ?? '/');
+    if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
+    const authPage = /^\/(login|signup|forgot-password)\/?$/.test(pathname);
+    const elsewhere = pathname === '/internal' || pathname.startsWith('/internal/') || /^\/(f|factories)(\/|$)/.test(pathname);
+    if (!identity) {
+      if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+      if (authPage || elsewhere) return redirectTo('/');
+      return securedRewrite('/ims-app/login');
+    }
+    if (authPage || elsewhere) return redirectTo('/');
+    return securedRewrite(`/ims-app${pathname === '/' ? '' : pathname}`);
   }
 
   // A factory's own address (<factory>.floorbeat.in): that factory alone, at plain addresses —

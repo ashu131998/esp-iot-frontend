@@ -2,6 +2,7 @@ import type { Messages } from '../../translate';
 
 import { alerts } from './alerts';
 import { alerts_app } from './alerts-app';
+import { ims_app } from './ims-app';
 import { auth } from './auth';
 import { cameras } from './cameras';
 import { calibration } from './calibration';
@@ -26,6 +27,7 @@ export const HI_NAMESPACES: Record<string, Messages> = {
   factory_admin,
   alerts,
   alerts_app,
+  ims_app,
   sensors,
   maintenance,
   auth,

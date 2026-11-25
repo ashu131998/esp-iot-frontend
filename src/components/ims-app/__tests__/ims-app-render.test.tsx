@@ -23,7 +23,8 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => ({ user: null, loading: false, logout: vi.fn(async () => {}), refresh: vi.fn(async () => {}) }), getClientCsrf: () => 'csrf' }));
 
 const { ImsAppShell, imsTabActive } = await import('@/components/ims-app/shell');
-const { ImsApiError, isImsOff } = await import('@/lib/ims/api');
+const { ImsApiError, isImsOff, retryImsCall, stockProblem } = await import('@/lib/ims/api');
+const { ImsCannotConnect } = await import('@/components/ims-app/cannot-connect');
 const { StockScreen } = await import('@/components/ims-app/stock-screen');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
@@ -127,6 +128,33 @@ describe('available stock', () => {
     expect(isImsOff(new ImsApiError('The IMS is not switched on for this factory', 403))).toBe(true);
     expect(isImsOff(new ImsApiError('Request failed (500)', 500))).toBe(false);
     expect(isImsOff(new Error('offline'))).toBe(false);
+    // another 403 (a disabled account) is not "switched off"
+    expect(isImsOff(new ImsApiError('Account disabled', 403))).toBe(false);
+  });
+
+  it('each problem gets its own words: off, a refused filter, no access, or worth trying again', () => {
+    expect(stockProblem(null)).toBeNull();
+    expect(stockProblem(new ImsApiError('The IMS is not switched on for this factory', 403))).toBe('off');
+    expect(stockProblem(new ImsApiError('"purple" is not a choice of Colour', 422))).toBe('filter');
+    expect(stockProblem(new ImsApiError('Account disabled', 403))).toBe('denied');
+    expect(stockProblem(new ImsApiError('Unauthorized', 401))).toBe('denied');
+    expect(stockProblem(new ImsApiError('Request failed (502)', 502))).toBe('other');
+    expect(stockProblem(new TypeError('Failed to fetch'))).toBe('other');
+  });
+
+  it('a refusal is shown at once, never asked again; a fault is asked again twice', () => {
+    expect(retryImsCall(0, new ImsApiError('off', 403))).toBe(false);
+    expect(retryImsCall(0, new ImsApiError('bad filter', 422))).toBe(false);
+    expect(retryImsCall(0, new ImsApiError('down', 502))).toBe(true);
+    expect(retryImsCall(1, new TypeError('Failed to fetch'))).toBe(true);
+    expect(retryImsCall(2, new TypeError('Failed to fetch'))).toBe(false);
+  });
+
+  it('the API not answering is said as it is, with Try again', () => {
+    const html = render(<ImsCannotConnect />);
+    expect(html).toContain('Could not reach FloorBeat.');
+    expect(html).toContain('Try again');
+    expect(html).not.toContain('Sign in with an account of that factory');
   });
 
   it('in Hindi', () => {

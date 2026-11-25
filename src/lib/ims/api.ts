@@ -13,9 +13,34 @@ export class ImsApiError extends Error {
   }
 }
 
-/** Whether an error says the IMS is not switched on for the factory (the API's 403), not a passing fault. */
+/** Whether an error says the IMS is not switched on for the factory (that 403 of the API's), not a passing fault. */
 export function isImsOff(error: unknown): boolean {
-  return error instanceof ImsApiError && error.status === 403;
+  return error instanceof ImsApiError && error.status === 403 && /not switched on/i.test(error.message);
+}
+
+/**
+ * What went wrong loading the stock, for the words on the screen:
+ *  - off: the IMS is not switched on for the factory;
+ *  - filter: the API refused the filter in the address (422: a choice or a spec that is no longer there,
+ *    say from an old bookmark);
+ *  - denied: any other refusal (a disabled account, no access to this factory);
+ *  - other: the network or the server; worth trying again.
+ */
+export function stockProblem(error: unknown): 'off' | 'filter' | 'denied' | 'other' | null {
+  if (!error) return null;
+  if (isImsOff(error)) return 'off';
+  if (error instanceof ImsApiError && error.status === 422) return 'filter';
+  if (error instanceof ImsApiError && (error.status === 401 || error.status === 403)) return 'denied';
+  return 'other';
+}
+
+/**
+ * Whether a failed call is worth asking again (TanStack Query's retry): a refusal (4xx) gives the same
+ * answer every time, so it is shown at once; a network or server fault is asked again, twice more.
+ */
+export function retryImsCall(failures: number, error: unknown): boolean {
+  if (error instanceof ImsApiError && error.status >= 400 && error.status < 500) return false;
+  return failures < 2;
 }
 
 /** The BFF address of one of a factory's IMS calls: imsPath('f1', '/stock') → /api/v1/factories/f1/ims/stock. */

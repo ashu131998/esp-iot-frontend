@@ -1,3 +1,4 @@
+import { ImsCannotConnect } from '@/components/ims-app/cannot-connect';
 import { ImsSignOut } from '@/components/ims-app/sign-out';
 import { ImsAppShell } from '@/components/ims-app/shell';
 import { getT } from '@/lib/i18n/server';
@@ -10,6 +11,8 @@ import { sessionUser } from '@/lib/server/session-user';
  */
 export default async function ImsSignedInLayout({ children }: { children: React.ReactNode }) {
   const user = await sessionUser();
+  // Not told (the API not answering): say so, never "an account without a factory".
+  if (user === undefined) return <ImsCannotConnect />;
   if (!user?.factory_id) {
     const { t } = await getT();
     return (

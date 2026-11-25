@@ -8,7 +8,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FilterSheet } from '@/components/ims-app/filter-sheet';
 import { LoadMore } from '@/components/ui/load-more';
 import { useLocale, useT } from '@/lib/i18n/context';
-import { imsApi, isImsOff } from '@/lib/ims/api';
+import { imsApi, retryImsCall, stockProblem } from '@/lib/ims/api';
 import { EMPTY_FILTER, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice, type StockFilter } from '@/lib/ims/stock-filter';
 import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
 import type { Facet, FacetKind, StockRow } from '@/lib/ims/types';
@@ -34,7 +34,8 @@ function pickedChips(filter: StockFilter, facets: Facet[]) {
  * Available stock: the total for the whole filter first (worked out by the server; pallets nobody
  * counted are said, never added in as 0), the picked filters as chips that come off with a tap, then
  * one line per product and specs with its quantity, pallets and the oldest pallet's age (FIFO). The
- * list grows as it scrolls; the filter lives in the address, so Back undoes a change.
+ * list grows as it scrolls. The filter lives in the address (a link or bookmark keeps it); a change
+ * replaces the address rather than adding a step, so Back leaves the page: a chip's ✕ undoes a filter.
  */
 export function StockScreen({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
@@ -51,6 +52,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
     queryFn: ({ signal }) => imsApi.setup(factoryId, signal),
     staleTime: 10 * 60_000,
     refetchOnWindowFocus: false,
+    retry: retryImsCall,
   });
   const stock = useInfiniteQuery({
     queryKey: ['ims-stock', factoryId, query],
@@ -59,6 +61,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
     getNextPageParam: (last) => last.next,
     placeholderData: keepPreviousData,   // a changed filter keeps the old list until the new one is here
     refetchOnWindowFocus: false,
+    retry: retryImsCall,
   });
 
   const go = useCallback((next: StockFilter) => {
@@ -69,6 +72,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
   const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
   const views = useMemo(() => (stock.data?.pages ?? []).map((p) => toStockView(p, fields)), [stock.data, fields]);
   const first = setup.data ? views[0] : undefined;
+  const problem = stockProblem(setup.error) ?? stockProblem(stock.error);
   const rows: StockRow[] = views.flatMap((v) => v.rows);
   const facets = first?.facets ?? [];
   const chips = pickedChips(filter, facets);
@@ -101,9 +105,20 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
         ))}
       </div>
 
-      {!first && (isImsOff(stock.error) || isImsOff(setup.error)) ? (
+      {!first && problem === 'off' ? (
         <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
           <p className="text-base text-foreground">{t('FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.')}</p>
+        </div>
+      ) : !first && problem === 'filter' ? (
+        <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
+          <p className="text-base text-foreground">{t('These filters can no longer be used.')}</p>
+          <button type="button" onClick={() => go(EMPTY_FILTER)} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
+            {t('Clear all')}
+          </button>
+        </div>
+      ) : !first && problem === 'denied' ? (
+        <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
+          <p className="text-base text-foreground">{t('Your account cannot see this factory\'s stock. Ask your factory admin.')}</p>
         </div>
       ) : (stock.isError || setup.isError) && !first ? (
         <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">

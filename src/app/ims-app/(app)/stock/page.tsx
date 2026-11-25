@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 /** Available stock (/stock), with its filter in the address: ?spec.colour=grey&row=R03 (lib/ims/stock-filter.ts). */
 export default async function ImsStockPage() {
   const user = await sessionUser();
+  if (user === undefined) return null;   // the layout says it could not connect
   if (!user?.factory_id) redirect('/');
   return (
     <Suspense>

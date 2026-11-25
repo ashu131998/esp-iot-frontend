@@ -33,4 +33,7 @@ export const ims_app: Messages = {
   '{count} needs count': '{count}ની ગણતરી જોઈએ',
   '{count} need count': '{count}ની ગણતરી જોઈએ',
   'FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.': 'આ ફેક્ટરી માટે FloorBeat IMS ચાલુ નથી. FloorBeat ને તે ચાલુ કરવા કહો.',
+  'These filters can no longer be used.': 'આ ફિલ્ટર હવે વાપરી શકાતા નથી.',
+  'Your account cannot see this factory\'s stock. Ask your factory admin.': 'તમારું એકાઉન્ટ આ ફેક્ટરીનો માલ જોઈ શકતું નથી. તમારા ફેક્ટરી એડમિનને પૂછો.',
+  'Could not reach FloorBeat. Check the connection and try again.': 'FloorBeat સાથે જોડાઈ શક્યા નથી. ઇન્ટરનેટ તપાસો અને ફરી પ્રયાસ કરો.',
 };

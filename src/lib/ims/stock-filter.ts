@@ -1,6 +1,6 @@
 /**
  * The available-stock filter as it is written in the page's address and in the API call:
- * `spec.colour=grey,black&spec.size=m&zone=Z2&row=R3&column=C5&product=p1&older_than_days=30`.
+ * `spec.colour=grey,black&spec.size=m&zone=Z2&row=3&column=5&product=p1&older_than_days=30`.
  * Several choices of one spec mean any of them (OR); different specs must all match (AND).
  * Keys are kept in one order, so the same filter is always the same address (and the same cache entry).
  */
@@ -8,7 +8,7 @@
 export interface StockFilter {
   /** Spec field key → the choice keys picked (any of them). */
   specs: Record<string, string[]>;
-  /** Parts of the location (any of each): zones ("Z2"), rows ("R3"), columns ("C5"). */
+  /** Parts of the location (any of each): zones ("Z2"), row numbers ("3"), column numbers ("5"). */
   zones: string[];
   rows: string[];
   columns: string[];

@@ -13,6 +13,11 @@ export class ImsApiError extends Error {
   }
 }
 
+/** Whether an error says the IMS is not switched on for the factory (the API's 403), not a passing fault. */
+export function isImsOff(error: unknown): boolean {
+  return error instanceof ImsApiError && error.status === 403;
+}
+
 /** The BFF address of one of a factory's IMS calls: imsPath('f1', '/stock') → /api/v1/factories/f1/ims/stock. */
 export function imsPath(factoryId: string, sub: string): string {
   return `/api/v1/factories/${encodeURIComponent(factoryId)}/ims${sub.startsWith('/') ? sub : `/${sub}`}`;

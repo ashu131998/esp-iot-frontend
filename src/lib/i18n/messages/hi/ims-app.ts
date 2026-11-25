@@ -35,4 +35,5 @@ export const ims_app: Messages = {
   'Product': 'प्रोडक्ट',
   '{count} needs count': '{count} की गिनती चाहिए',
   '{count} need count': '{count} की गिनती चाहिए',
+  'FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.': 'इस फ़ैक्टरी के लिए FloorBeat IMS चालू नहीं है। FloorBeat से इसे चालू करने को कहें।',
 };

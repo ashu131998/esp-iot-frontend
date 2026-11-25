@@ -4,6 +4,7 @@ import { Boxes, House } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { ImsAppMark } from '@/components/ims-app/app-mark';
+import { ImsSignOut } from '@/components/ims-app/sign-out';
 import { AppLink } from '@/components/ui/app-link';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
@@ -15,7 +16,7 @@ export function imsTabActive(tab: '/' | '/stock', pathname: string): boolean {
 }
 
 /**
- * The signed-in app's frame: a slim top bar and a bottom bar with big tabs. Scan, Count and the rest
+ * The signed-in app's frame: a slim top bar (with Sign out) and a bottom bar with big tabs. Scan, Count and the rest
  * join the bar as their screens are built.
  */
 export function ImsAppShell({ factoryName, children }: { factoryName: string | null; children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export function ImsAppShell({ factoryName, children }: { factoryName: string | n
           <ImsAppMark className="h-8 w-8" />
           <p className="text-base font-semibold text-foreground">FloorBeat IMS</p>
           {factoryName && <p className="ml-auto min-w-0 truncate text-sm text-muted">{factoryName}</p>}
+          <ImsSignOut className={factoryName ? '-mr-2' : '-mr-2 ml-auto'} />
         </div>
       </header>
 

@@ -2,15 +2,18 @@
  * How the stock figures read. A quantity nobody counted is never shown as 0: a row with no known
  * count shows "—", and a total says how many pallets it leaves out ("1,240 boxes · 2 pallets not counted").
  */
-import { formatInt } from '@/lib/format';
+import { formatUpTo } from '@/lib/format';
 import type { Locale } from '@/lib/i18n/locale';
 import type { Translator } from '@/lib/i18n/translate';
 
 import type { ApiSpecField, ApiStock, Facet, SpecField, Specs, StockRow, StockView, UnitTotal } from './types';
 
-/** A quantity for the screen: "1,240", or "—" when nobody has counted it. */
+/**
+ * A quantity for the screen: "1,240", "12.9" (kg, m and litres keep up to 3 decimals, as the server
+ * does), or "—" when nobody has counted it.
+ */
 export function qtyText(qty: number | null | undefined, locale: Locale = 'en'): string {
-  return qty === null || qty === undefined || !Number.isFinite(qty) ? '—' : formatInt(qty, locale);
+  return qty === null || qty === undefined || !Number.isFinite(qty) ? '—' : formatUpTo(qty, 3, locale);
 }
 
 /**
@@ -44,6 +47,13 @@ export function specFieldsOf(fields: ApiSpecField[] | null | undefined): SpecFie
   return (fields ?? []).map((f) => ({ key: f.key, label: f.label, options: f.options.map((o) => ({ key: o.value, label: o.label })) }));
 }
 
+/** A row or column as its labels and location codes write it (R03, C05); a zone as named. */
+export function placeLabel(kind: 'zone' | 'row' | 'column', value: unknown): string {
+  if (kind === 'zone') return String(value);
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? `${kind === 'row' ? 'R' : 'C'}${String(n).padStart(2, '0')}` : String(value);
+}
+
 /**
  * The stock page's view from the API's answer (GET …/ims/stock) and the factory's spec fields
  * (GET …/ims/setup): filter sections in the factory's order of its specs, then the location's parts
@@ -57,7 +67,7 @@ export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
     ...Object.keys(api.filters.specs).filter((k) => !known.has(k)).sort().map((k) => ({ key: k, label: k, kind: 'spec' as const, options: api.filters.specs[k] })),
   ].map((f) => ({ ...f, options: f.options.map((o) => ({ key: o.value, label: o.label, pallets: o.pallets })) }));
   const place = (kind: 'zone' | 'row' | 'column', list: Array<{ pallets: number } & Record<string, unknown>> | undefined): Facet[] =>
-    list && list.length ? [{ key: kind, label: kind, kind, options: list.map((o) => ({ key: String(o[kind]), label: String(o[kind]), pallets: o.pallets })) }] : [];
+    list && list.length ? [{ key: kind, label: kind, kind, options: list.map((o) => ({ key: String(o[kind]), label: placeLabel(kind, o[kind]), pallets: o.pallets })) }] : [];
   const products: Facet[] = api.filters.products?.length
     ? [{ key: 'product', label: 'product', kind: 'product', options: api.filters.products.map((p) => ({ key: p.product_id, label: p.name, pallets: p.pallets })) }]
     : [];
@@ -80,7 +90,7 @@ export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
   });
   return {
     rows,
-    totals: { rows: api.totals.rows ?? api.totals.products, pallets: api.totals.pallets, products: api.totals.products, by_unit: api.totals.by_unit },
+    totals: { rows: api.totals.rows, pallets: api.totals.pallets, by_unit: api.totals.by_unit },
     facets: [...specFacets, ...place('zone', api.filters.zones), ...place('row', api.filters.rows), ...place('column', api.filters.columns), ...products],
     spec_fields: fields,
     next_cursor: api.next,

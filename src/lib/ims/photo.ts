@@ -17,3 +17,17 @@ export function fitWithin(width: number, height: number, side: number): { width:
   const scale = Math.min(1, side / Math.max(width, height));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
+
+/** R2's own address for signed links (https://<account>.r2.cloudflarestorage.com/<bucket>/…), the default. */
+export const R2_ORIGIN = 'https://*.r2.cloudflarestorage.com';
+
+/**
+ * Where stock photos are shown from and uploaded to, for the page's security header: IMS_PHOTO_ORIGIN
+ * when set (a bucket behind its own address), else R2's. Only an https origin is taken; anything else
+ * falls back to R2's, so a typo never opens the page to every site.
+ */
+export function imsPhotoOrigin(configured: string | null | undefined): string {
+  const value = (configured ?? '').trim();
+  if (/^https:\/\/(\*\.)?[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value.toLowerCase();
+  return R2_ORIGIN;
+}

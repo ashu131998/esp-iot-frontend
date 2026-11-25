@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { makeTranslator } from '@/lib/i18n/translate';
-import { FULL_SIDE, THUMB_SIDE, fitWithin } from '@/lib/ims/photo';
+import { FULL_SIDE, R2_ORIGIN, THUMB_SIDE, fitWithin, imsPhotoOrigin } from '@/lib/ims/photo';
 import { applyResults, enqueue, nextBatch, queueCounts, type Movement, type Queued } from '@/lib/ims/queue';
 import { EMPTY_FILTER, isPicked, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice } from '@/lib/ims/stock-filter';
 import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
@@ -62,6 +62,11 @@ describe('stock figures: unknown is never 0', () => {
     expect(qtyText(0)).toBe('0');
     expect(qtyText(1240)).toBe('1,240');
     expect(qtyText(1234567)).toBe('12,34,567');
+    // kg, m and litres keep the server's 3 decimals: never rounded to a whole number
+    expect(qtyText(0.4)).toBe('0.4');
+    expect(qtyText(12.9)).toBe('12.9');
+    expect(qtyText(13.3)).toBe('13.3');
+    expect(qtyText(2.125)).toBe('2.125');
   });
 
   it('a total says how many pallets it leaves out', () => {
@@ -69,6 +74,7 @@ describe('stock figures: unknown is never 0', () => {
     expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }, t, tn)).toBe('1,240 boxes · 2 pallets not counted');
     expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 1 }, t, tn)).toBe('1,240 boxes · 1 pallet not counted');
     expect(unitTotalText({ unit: 'kg', qty: null, uncounted_pallets: 3 }, t, tn)).toBe('— kg · 3 pallets not counted');
+    expect(unitTotalText({ unit: 'kg', qty: 13.3, uncounted_pallets: 0 }, t, tn)).toBe('13.3 kg');
   });
 
   it('in Hindi too', () => {
@@ -97,7 +103,7 @@ describe('stock figures: unknown is never 0', () => {
 });
 
 describe('scans waiting on the phone', () => {
-  const scan = (id: string): Movement => ({ client_id: id, type: 'move', pallet: 'PLT-1', to: 'R03-C05', scanned_at: '2026-11-25T10:00:00Z' });
+  const scan = (id: string): Movement => ({ client_id: id, type: 'move', pallet: 'PLT-000001', to: 'R03-C05', scanned_at: '2026-11-25T10:00:00Z' });
 
   it('a scan is queued once, however often it is added', () => {
     let q: Queued[] = [];
@@ -107,20 +113,36 @@ describe('scans waiting on the phone', () => {
     expect(q.map((x) => x.movement.client_id)).toEqual(['a', 'b']);
   });
 
-  it('ok and duplicate leave; rejected stays with its reason; unanswered stays to send again', () => {
-    const q = [scan('a'), scan('b'), scan('c'), scan('d')].reduce<Queued[]>(enqueue, []);
+  it('ok leaves; rejected stays with its reason and the server\'s words; unanswered stays to send again', () => {
+    const q = [scan('a'), scan('c'), scan('d')].reduce<Queued[]>(enqueue, []);
     const after = applyResults(q, [
       { client_id: 'a', status: 'ok' },
-      { client_id: 'b', status: 'duplicate' },
-      { client_id: 'c', status: 'rejected', reason: 'Pallet already dispatched' },
+      { client_id: 'c', status: 'rejected', reason: 'already_stocked', message: 'This pallet is already in stock: use Move or Count' },
     ]);
-    expect(after).toEqual([{ movement: scan('c'), rejected: 'Pallet already dispatched' }, { movement: scan('d') }]);
+    expect(after).toEqual([
+      { movement: scan('c'), rejected: { reason: 'already_stocked', message: 'This pallet is already in stock: use Move or Count' } },
+      { movement: scan('d') },
+    ]);
     expect(queueCounts(after)).toEqual({ waiting: 1, rejected: 1 });
   });
 
+  it('a retry after a lost answer: a duplicate of a refused scan stays refused; of a done one, leaves', () => {
+    const q = [scan('a'), scan('b')].reduce<Queued[]>(enqueue, []);
+    const after = applyResults(q, [
+      { client_id: 'a', status: 'duplicate', outcome: 'rejected', reason: 'pallet_closed' },
+      { client_id: 'b', status: 'duplicate', outcome: 'ok' },
+    ]);
+    expect(after).toEqual([{ movement: scan('a'), rejected: { reason: 'pallet_closed', message: null } }]);
+  });
+
+  it('the server\'s ids are lower case: a phone\'s upper-case id still matches', () => {
+    const q = enqueue([], scan('ABC'));
+    expect(applyResults(q, [{ client_id: 'abc', status: 'ok' }])).toEqual([]);
+  });
+
   it('a refused scan is not sent again; the rest go oldest first, in batches', () => {
-    const q = applyResults(['a', 'b', 'c'].map(scan).reduce<Queued[]>(enqueue, []), [{ client_id: 'a', status: 'rejected', reason: '' }]);
-    expect(q[0].rejected).toBe('Refused');
+    const q = applyResults(['a', 'b', 'c'].map(scan).reduce<Queued[]>(enqueue, []), [{ client_id: 'a', status: 'rejected' }]);
+    expect(q[0].rejected).toEqual({ reason: 'refused', message: null });
     expect(nextBatch(q).map((m) => m.client_id)).toEqual(['b', 'c']);
     expect(nextBatch(q, 1).map((m) => m.client_id)).toEqual(['b']);
   });
@@ -133,6 +155,14 @@ describe('stock photos are made small on the phone', () => {
     expect(fitWithin(800, 600, FULL_SIDE)).toEqual({ width: 800, height: 600 });
     expect(fitWithin(10000, 10, THUMB_SIDE)).toEqual({ width: 320, height: 1 });
     expect(fitWithin(0, 600, FULL_SIDE)).toEqual({ width: 0, height: 0 });
+  });
+
+  it('the page lets photos come from R2, or the bucket\'s own https address; never anything looser', () => {
+    expect(imsPhotoOrigin(undefined)).toBe(R2_ORIGIN);
+    expect(imsPhotoOrigin('https://photos.example.com')).toBe('https://photos.example.com');
+    expect(imsPhotoOrigin('*')).toBe(R2_ORIGIN);
+    expect(imsPhotoOrigin('http://photos.example.com')).toBe(R2_ORIGIN);
+    expect(imsPhotoOrigin('https://photos.example.com; script-src *')).toBe(R2_ORIGIN);
   });
 });
 
@@ -147,11 +177,12 @@ describe('the stock page from the API\'s answer', () => {
       { product: { ...product, picture: { photo_id: 'ph', url: 'u', thumb_url: 'https://r2/t', taken_at: 't', taken_by: null } }, qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: '2026-11-01T05:00:00.000Z' },
       { product: { ...product, product_id: 'p2', name: 'Wall tile' }, specs: { colour: 'black', grade: 'a' }, qty: 40, unit: 'boxes', pallets: 1, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-20T05:00:00.000Z', oldest_on: '2026-11-10' },
     ],
-    totals: { products: 2, pallets: 3, by_unit: [{ unit: 'boxes', qty: 40, pallets: 3, uncounted_pallets: 2 }] },
+    totals: { rows: 2, pallets: 3, by_unit: [{ unit: 'boxes', qty: 40, pallets: 3, uncounted_pallets: 2 }] },
     filters: {
       specs: { finish: [{ value: 'matt', label: 'Matt', pallets: 1 }], grade: [{ value: 'a', label: 'A', pallets: 1 }], colour: [{ value: 'grey', label: 'Grey', pallets: 2 }, { value: 'black', label: 'Black', pallets: 1 }] },
       zones: [{ zone: 'Z2', pallets: 3 }],
-      rows: [],
+      rows: [{ row: 3, pallets: 2 }, { row: 12, pallets: 1 }],
+      columns: [],
       products: [{ product_id: 'p1', name: 'Vitrified tile', pallets: 2 }],
     },
     next: 'cur-2',
@@ -162,15 +193,17 @@ describe('the stock page from the API\'s answer', () => {
     expect(v.rows[0]).toMatchObject({ product_id: 'p1', qty: null, specs: { colour: 'grey' }, thumb_url: 'https://r2/t', needs_count_pallets: 1, oldest_on: '2026-11-01T05:00:00.000Z' });
     expect(v.rows[1]).toMatchObject({ product_id: 'p2', qty: 40, specs: { colour: 'black', grade: 'a' }, thumb_url: null, oldest_on: '2026-11-10' });
     expect(v.rows[0].key).not.toBe(v.rows[1].key);
-    expect(v.totals).toEqual({ rows: 2, pallets: 3, products: 2, by_unit: api.totals.by_unit });
+    expect(v.totals).toEqual({ rows: 2, pallets: 3, by_unit: api.totals.by_unit });
     expect(v.next_cursor).toBe('cur-2');
   });
 
   it('filter sections: the factory\'s specs in its order, then unknown specs, then the location, then products; empty ones left out', () => {
     const v = toStockView(api, fields);
-    expect(v.facets.map((f) => `${f.kind}:${f.key}`)).toEqual(['spec:colour', 'spec:grade', 'spec:finish', 'zone:zone', 'product:product']);
+    expect(v.facets.map((f) => `${f.kind}:${f.key}`)).toEqual(['spec:colour', 'spec:grade', 'spec:finish', 'zone:zone', 'row:row', 'product:product']);
     expect(v.facets[0]).toEqual({ key: 'colour', label: 'Colour', kind: 'spec', options: [{ key: 'grey', label: 'Grey', pallets: 2 }, { key: 'black', label: 'Black', pallets: 1 }] });
     expect(v.facets[3].options).toEqual([{ key: 'Z2', label: 'Z2', pallets: 3 }]);
-    expect(v.facets[4].options).toEqual([{ key: 'p1', label: 'Vitrified tile', pallets: 2 }]);
+    // rows and columns are numbers to the API (row=3) and written as on the labels (R03)
+    expect(v.facets[4].options).toEqual([{ key: '3', label: 'R03', pallets: 2 }, { key: '12', label: 'R12', pallets: 1 }]);
+    expect(v.facets[5].options).toEqual([{ key: 'p1', label: 'Vitrified tile', pallets: 2 }]);
   });
 });

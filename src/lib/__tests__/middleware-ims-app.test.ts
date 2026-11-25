@@ -28,7 +28,7 @@ async function visit(url: string, { role, factoryId = null, refresh = false }: {
   const location = res.headers.get('location');
   const rewrite = res.headers.get('x-middleware-rewrite');
   const local = (u: string) => new URL(u).href.replace(new URL(u).origin, '');
-  return { status: res.status, to: location ? local(location) : null, served: rewrite ? local(rewrite) : null };
+  return { status: res.status, to: location ? local(location) : null, served: rewrite ? local(rewrite) : null, csp: res.headers.get('content-security-policy') ?? '' };
 }
 
 beforeEach(() => {
@@ -94,5 +94,28 @@ describe('signed in', () => {
   it('elsewhere, /ims-app is not an IMS address (a factory\'s own address serves its dashboard)', async () => {
     const r = await visit('https://shree-tiles.floorbeat.in/ims-app', worker);
     expect(r.served).not.toBe('/ims-app');
+  });
+});
+
+describe('stock photos (straight from and to R2)', () => {
+  const part = (csp: string, name: string) => csp.split(';').map((p) => p.trim()).find((p) => p.startsWith(`${name} `)) ?? '';
+
+  it('the IMS app may show and upload them', async () => {
+    const { csp } = await visit(`${IMS}/stock`, worker);
+    expect(part(csp, 'img-src')).toContain('https://*.r2.cloudflarestorage.com');
+    expect(part(csp, 'connect-src')).toContain('https://*.r2.cloudflarestorage.com');
+  });
+
+  it('a bucket behind its own address, when set', async () => {
+    vi.stubEnv('IMS_PHOTO_ORIGIN', 'https://photos.example.com');
+    const { csp } = await visit(`${IMS}/stock`, worker);
+    expect(part(csp, 'img-src')).toContain('https://photos.example.com');
+    expect(part(csp, 'img-src')).not.toContain('r2.cloudflarestorage.com');
+  });
+
+  it('no other address of ours opens to them', async () => {
+    const { csp } = await visit('https://shree-tiles.floorbeat.in/', worker);
+    expect(csp).toContain('img-src');
+    expect(csp).not.toContain('r2.cloudflarestorage.com');
   });
 });

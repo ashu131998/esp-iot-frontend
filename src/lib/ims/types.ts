@@ -41,7 +41,7 @@ export interface ApiProduct {
 export interface ApiSetup {
   spec_fields: ApiSpecField[];
   products: ApiProduct[];
-  locations: Array<{ code: string; zone: string | null; row?: string | null; column?: string | null; name: string | null; active: boolean }>;
+  locations: Array<{ code: string; row: number; column: number; zone: string | null; name: string | null; active: boolean }>;
   photos_ready: boolean;
 }
 
@@ -68,15 +68,15 @@ export interface ApiStockRow {
   oldest_on?: string | null;
 }
 
-/** GET …/ims/stock. Location filters: zones today; rows and columns once the API has them. */
+/** GET …/ims/stock. A location is a row and a column (code R03-C05), with a zone if the factory uses them. */
 export interface ApiStock {
   rows: ApiStockRow[];
-  totals: { products: number; pallets: number; rows?: number; by_unit: UnitTotal[] };
+  totals: { rows: number; pallets: number; by_unit: UnitTotal[] };
   filters: {
     specs: Record<string, Array<{ value: string; label: string; pallets: number }>>;
     zones?: Array<{ zone: string; pallets: number }>;
-    rows?: Array<{ row: string; pallets: number }>;
-    columns?: Array<{ column: string; pallets: number }>;
+    rows?: Array<{ row: number; pallets: number }>;
+    columns?: Array<{ column: number; pallets: number }>;
     products?: Array<{ product_id: string; name: string; pallets: number }>;
   };
   next: string | null;
@@ -132,7 +132,7 @@ export interface StockRow {
 export interface StockView {
   rows: StockRow[];
   /** For the whole filter, not only this page: one line per unit (boxes and kg are never added). */
-  totals: { rows: number; pallets: number; products: number; by_unit: UnitTotal[] };
+  totals: { rows: number; pallets: number; by_unit: UnitTotal[] };
   facets: Facet[];
   spec_fields: SpecField[];
   next_cursor: string | null;

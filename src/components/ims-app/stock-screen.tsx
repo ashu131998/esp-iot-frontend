@@ -8,7 +8,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FilterSheet } from '@/components/ims-app/filter-sheet';
 import { LoadMore } from '@/components/ui/load-more';
 import { useLocale, useT } from '@/lib/i18n/context';
-import { imsApi } from '@/lib/ims/api';
+import { imsApi, isImsOff } from '@/lib/ims/api';
 import { EMPTY_FILTER, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice, type StockFilter } from '@/lib/ims/stock-filter';
 import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
 import type { Facet, FacetKind, StockRow } from '@/lib/ims/types';
@@ -101,7 +101,11 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
         ))}
       </div>
 
-      {(stock.isError || setup.isError) && !first ? (
+      {!first && (isImsOff(stock.error) || isImsOff(setup.error)) ? (
+        <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
+          <p className="text-base text-foreground">{t('FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.')}</p>
+        </div>
+      ) : (stock.isError || setup.isError) && !first ? (
         <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
           <p className="text-base text-foreground">{t('Could not load the stock.')}</p>
           <button type="button" onClick={() => { void setup.refetch(); void stock.refetch(); }} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
@@ -122,11 +126,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
               ))
             )}
             {first.totals.pallets > 0 && (
-              <p className="text-sm text-muted">
-                {tn(first.totals.pallets, 'on {count} pallet', 'on {count} pallets', { count: first.totals.pallets })}
-                {' · '}
-                {tn(first.totals.products, '{count} product', '{count} products', { count: first.totals.products })}
-              </p>
+              <p className="text-sm text-muted">{tn(first.totals.pallets, 'on {count} pallet', 'on {count} pallets', { count: first.totals.pallets })}</p>
             )}
           </section>
 

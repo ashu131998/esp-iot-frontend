@@ -11,6 +11,7 @@ import {
 } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
+import { imsPhotoOrigin } from '@/lib/ims/photo';
 import { liveImageOrigin } from '@/lib/live';
 
 /**
@@ -110,15 +111,18 @@ export async function middleware(req: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV !== 'production';
   const liveOrigin = liveImageOrigin({ API_PUBLIC_ORIGIN: process.env.API_PUBLIC_ORIGIN, API_INTERNAL_URL: process.env.API_INTERNAL_URL });
+  // FloorBeat IMS's stock photos are shown from, and uploaded straight to, a private R2 bucket by short
+  // signed links (lib/ims/photo.ts): its address, only on the IMS app's own address.
+  const photoOrigin = imsApp ? imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN) : null;
 
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     // A camera's live view plays straight from the API (lib/live.ts): its origin, set per environment.
-    `img-src 'self' data: blob:${liveOrigin ? ` ${liveOrigin}` : ''}`,
+    `img-src 'self' data: blob:${liveOrigin ? ` ${liveOrigin}` : ''}${photoOrigin ? ` ${photoOrigin}` : ''}`,
     `font-src 'self' data:`,
-    `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
+    `connect-src 'self'${photoOrigin ? ` ${photoOrigin}` : ''}${isDev ? ' ws: wss:' : ''}`,
     `worker-src 'self'`,   // the alerts app's service worker (public/alerts-sw.js)
     `object-src 'none'`,
     `base-uri 'self'`,

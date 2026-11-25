@@ -4,23 +4,24 @@ import { makeTranslator } from '@/lib/i18n/translate';
 import { FULL_SIDE, THUMB_SIDE, fitWithin } from '@/lib/ims/photo';
 import { applyResults, enqueue, nextBatch, queueCounts, type Movement, type Queued } from '@/lib/ims/queue';
 import { EMPTY_FILTER, isPicked, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice } from '@/lib/ims/stock-filter';
-import { ageDays, qtyText, specsText, unitTotalText } from '@/lib/ims/stock-view';
+import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
+import type { ApiStock } from '@/lib/ims/types';
 
 describe('the stock filter in the address', () => {
   it('reads specs (any of several choices), rows, products and age', () => {
-    const f = parseStockFilter(new URLSearchParams('spec.colour=grey,black&spec.size=m&row=R03&product=p1&older_than_days=30'));
-    expect(f).toEqual({ specs: { colour: ['black', 'grey'], size: ['m'] }, rows: ['R03'], products: ['p1'], olderThanDays: 30 });
+    const f = parseStockFilter(new URLSearchParams('spec.colour=grey,black&spec.size=m&zone=Z2&row=R3&column=C5&product=p1&older_than_days=30'));
+    expect(f).toEqual({ specs: { colour: ['black', 'grey'], size: ['m'] }, zones: ['Z2'], rows: ['R3'], columns: ['C5'], products: ['p1'], olderThanDays: 30 });
   });
 
   it('writes the same filter the same way whatever order it was picked in', () => {
-    const a = stockFilterQuery({ specs: { size: ['m'], colour: ['grey', 'black'] }, rows: ['R03'], products: [], olderThanDays: null });
-    const b = stockFilterQuery({ specs: { colour: ['black', 'grey'], size: ['m'] }, rows: ['R03'], products: [], olderThanDays: null });
-    expect(a).toBe('spec.colour=black,grey&spec.size=m&row=R03');
+    const a = stockFilterQuery({ ...EMPTY_FILTER, specs: { size: ['m'], colour: ['grey', 'black'] }, rows: ['R3'], columns: ['C5'] });
+    const b = stockFilterQuery({ ...EMPTY_FILTER, specs: { colour: ['black', 'grey'], size: ['m'] }, columns: ['C5'], rows: ['R3'] });
+    expect(a).toBe('spec.colour=black,grey&spec.size=m&row=R3&column=C5');
     expect(b).toBe(a);
   });
 
   it('goes round: written then read gives the same filter', () => {
-    const f = { specs: { colour: ['grey'], grade: ['a', 'b'] }, rows: ['R01', 'R02'], products: ['p 1'], olderThanDays: 7 };
+    const f = { specs: { colour: ['grey'], grade: ['a', 'b'] }, zones: ['Z1'], rows: ['R1', 'R2'], columns: [], products: ['p 1'], olderThanDays: 7 };
     expect(parseStockFilter(new URLSearchParams(stockFilterQuery(f)))).toEqual({ ...f, products: ['p 1'] });
   });
 
@@ -43,9 +44,12 @@ describe('the stock filter in the address', () => {
     const both = toggleChoice(on, colour, 'black');
     expect(both.specs.colour).toEqual(['black', 'grey']);
     expect(toggleChoice(toggleChoice(both, colour, 'grey'), colour, 'black').specs).toEqual({});
-    const row = toggleChoice(both, { key: 'row', kind: 'row' }, 'R03');
-    expect(row.rows).toEqual(['R03']);
-    expect(pickedCount({ ...row, olderThanDays: 30 })).toBe(4);
+    const row = toggleChoice(both, { key: 'row', kind: 'row' }, 'R3');
+    expect(row.rows).toEqual(['R3']);
+    const zone = toggleChoice(row, { key: 'zone', kind: 'zone' }, 'Z2');
+    expect(isPicked(zone, { key: 'zone', kind: 'zone' }, 'Z2')).toBe(true);
+    expect(toggleChoice(zone, { key: 'zone', kind: 'zone' }, 'Z2').zones).toEqual([]);
+    expect(pickedCount({ ...zone, olderThanDays: 30 })).toBe(5);
   });
 });
 
@@ -129,5 +133,44 @@ describe('stock photos are made small on the phone', () => {
     expect(fitWithin(800, 600, FULL_SIDE)).toEqual({ width: 800, height: 600 });
     expect(fitWithin(10000, 10, THUMB_SIDE)).toEqual({ width: 320, height: 1 });
     expect(fitWithin(0, 600, FULL_SIDE)).toEqual({ width: 0, height: 0 });
+  });
+});
+
+describe('the stock page from the API\'s answer', () => {
+  const fields = specFieldsOf([
+    { key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }, { value: 'black', label: 'Black' }] },
+    { key: 'grade', label: 'Grade', options: [{ value: 'a', label: 'A' }] },
+  ]);
+  const product = { product_id: 'p1', sku: 'VT-600', name: 'Vitrified tile', unit: 'boxes', tracking: 'quantity' as const, specs: { colour: 'grey' }, active: true };
+  const api: ApiStock = {
+    rows: [
+      { product: { ...product, picture: { photo_id: 'ph', url: 'u', thumb_url: 'https://r2/t', taken_at: 't', taken_by: null } }, qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: '2026-11-01T05:00:00.000Z' },
+      { product: { ...product, product_id: 'p2', name: 'Wall tile' }, specs: { colour: 'black', grade: 'a' }, qty: 40, unit: 'boxes', pallets: 1, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-20T05:00:00.000Z', oldest_on: '2026-11-10' },
+    ],
+    totals: { products: 2, pallets: 3, by_unit: [{ unit: 'boxes', qty: 40, pallets: 3, uncounted_pallets: 2 }] },
+    filters: {
+      specs: { finish: [{ value: 'matt', label: 'Matt', pallets: 1 }], grade: [{ value: 'a', label: 'A', pallets: 1 }], colour: [{ value: 'grey', label: 'Grey', pallets: 2 }, { value: 'black', label: 'Black', pallets: 1 }] },
+      zones: [{ zone: 'Z2', pallets: 3 }],
+      rows: [],
+      products: [{ product_id: 'p1', name: 'Vitrified tile', pallets: 2 }],
+    },
+    next: 'cur-2',
+  };
+
+  it('keeps unknown unknown, and takes the row\'s own specs and FIFO date when sent', () => {
+    const v = toStockView(api, fields);
+    expect(v.rows[0]).toMatchObject({ product_id: 'p1', qty: null, specs: { colour: 'grey' }, thumb_url: 'https://r2/t', needs_count_pallets: 1, oldest_on: '2026-11-01T05:00:00.000Z' });
+    expect(v.rows[1]).toMatchObject({ product_id: 'p2', qty: 40, specs: { colour: 'black', grade: 'a' }, thumb_url: null, oldest_on: '2026-11-10' });
+    expect(v.rows[0].key).not.toBe(v.rows[1].key);
+    expect(v.totals).toEqual({ rows: 2, pallets: 3, products: 2, by_unit: api.totals.by_unit });
+    expect(v.next_cursor).toBe('cur-2');
+  });
+
+  it('filter sections: the factory\'s specs in its order, then unknown specs, then the location, then products; empty ones left out', () => {
+    const v = toStockView(api, fields);
+    expect(v.facets.map((f) => `${f.kind}:${f.key}`)).toEqual(['spec:colour', 'spec:grade', 'spec:finish', 'zone:zone', 'product:product']);
+    expect(v.facets[0]).toEqual({ key: 'colour', label: 'Colour', kind: 'spec', options: [{ key: 'grey', label: 'Grey', pallets: 2 }, { key: 'black', label: 'Black', pallets: 1 }] });
+    expect(v.facets[3].options).toEqual([{ key: 'Z2', label: 'Z2', pallets: 3 }]);
+    expect(v.facets[4].options).toEqual([{ key: 'p1', label: 'Vitrified tile', pallets: 2 }]);
   });
 });

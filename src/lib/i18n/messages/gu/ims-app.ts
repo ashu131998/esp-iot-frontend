@@ -27,4 +27,9 @@ export const ims_app: Messages = {
   '{count} pallets not counted': '{count} પેલેટની ગણતરી બાકી',
   'Oldest: {count} day': 'સૌથી જૂનું: {count} દિવસ',
   'Oldest: {count} days': 'સૌથી જૂનું: {count} દિવસ',
+  'Zone': 'ઝોન',
+  'Column': 'કોલમ',
+  'Product': 'પ્રોડક્ટ',
+  '{count} needs count': '{count}ની ગણતરી જોઈએ',
+  '{count} need count': '{count}ની ગણતરી જોઈએ',
 };

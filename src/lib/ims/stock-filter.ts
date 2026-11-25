@@ -1,6 +1,6 @@
 /**
  * The available-stock filter as it is written in the page's address and in the API call:
- * `spec.colour=grey,black&spec.size=m&row=R03&product=p1&older_than_days=30`.
+ * `spec.colour=grey,black&spec.size=m&zone=Z2&row=R3&column=C5&product=p1&older_than_days=30`.
  * Several choices of one spec mean any of them (OR); different specs must all match (AND).
  * Keys are kept in one order, so the same filter is always the same address (and the same cache entry).
  */
@@ -8,15 +8,21 @@
 export interface StockFilter {
   /** Spec field key → the choice keys picked (any of them). */
   specs: Record<string, string[]>;
-  /** Location rows (any of them), e.g. "R03". */
+  /** Parts of the location (any of each): zones ("Z2"), rows ("R3"), columns ("C5"). */
+  zones: string[];
   rows: string[];
+  columns: string[];
   /** Products (any of them). */
   products: string[];
   /** Only pallets older than this many days (FIFO date). */
   olderThanDays: number | null;
 }
 
-export const EMPTY_FILTER: StockFilter = { specs: {}, rows: [], products: [], olderThanDays: null };
+export const EMPTY_FILTER: StockFilter = { specs: {}, zones: [], rows: [], columns: [], products: [], olderThanDays: null };
+
+type FacetRef = { key: string; kind: 'spec' | 'zone' | 'row' | 'column' | 'product' };
+
+const LISTS = { zone: 'zones', row: 'rows', column: 'columns', product: 'products' } as const;
 
 const KEY_RE = /^[a-z0-9_-]{1,40}$/i;
 const VALUE_RE = /^[^,]{1,60}$/;
@@ -49,7 +55,9 @@ export function parseStockFilter(params: URLSearchParams | Record<string, string
   const days = Number(get('older_than_days'));
   return {
     specs,
+    zones: list(get('zone')),
     rows: list(get('row')),
+    columns: list(get('column')),
     products: list(get('product')),
     olderThanDays: Number.isInteger(days) && days > 0 && days <= 3650 ? days : null,
   };
@@ -63,17 +71,21 @@ export function stockFilterQuery(filter: StockFilter): string {
     if (clean.length) parts.push(`${encodeURIComponent(name)}=${clean.map(encodeURIComponent).join(',')}`);
   };
   for (const key of Object.keys(filter.specs).filter((k) => KEY_RE.test(k)).sort()) add(`spec.${key}`, filter.specs[key]);
+  add('zone', filter.zones);
   add('row', filter.rows);
+  add('column', filter.columns);
   add('product', filter.products);
   if (filter.olderThanDays) parts.push(`older_than_days=${filter.olderThanDays}`);
   return parts.join('&');
 }
 
-/** A choice switched on or off for one facet (a spec field key, "row" or "product"). */
-export function toggleChoice(filter: StockFilter, facet: { key: string; kind: 'spec' | 'row' | 'product' }, choice: string): StockFilter {
+/** A choice switched on or off for one facet (a spec field, a part of the location, or the product). */
+export function toggleChoice(filter: StockFilter, facet: FacetRef, choice: string): StockFilter {
   const flip = (values: string[]) => (values.includes(choice) ? values.filter((v) => v !== choice) : [...values, choice].sort());
-  if (facet.kind === 'row') return { ...filter, rows: flip(filter.rows) };
-  if (facet.kind === 'product') return { ...filter, products: flip(filter.products) };
+  if (facet.kind !== 'spec') {
+    const name = LISTS[facet.kind];
+    return { ...filter, [name]: flip(filter[name]) };
+  }
   const next = flip(filter.specs[facet.key] ?? []);
   const specs = { ...filter.specs };
   if (next.length) specs[facet.key] = next;
@@ -82,13 +94,13 @@ export function toggleChoice(filter: StockFilter, facet: { key: string; kind: 's
 }
 
 /** Whether a choice is picked. */
-export function isPicked(filter: StockFilter, facet: { key: string; kind: 'spec' | 'row' | 'product' }, choice: string): boolean {
-  if (facet.kind === 'row') return filter.rows.includes(choice);
-  if (facet.kind === 'product') return filter.products.includes(choice);
+export function isPicked(filter: StockFilter, facet: FacetRef, choice: string): boolean {
+  if (facet.kind !== 'spec') return filter[LISTS[facet.kind]].includes(choice);
   return (filter.specs[facet.key] ?? []).includes(choice);
 }
 
 /** How many choices are picked in all (the "Filters · 3" count). */
 export function pickedCount(filter: StockFilter): number {
-  return Object.values(filter.specs).reduce((n, v) => n + v.length, 0) + filter.rows.length + filter.products.length + (filter.olderThanDays ? 1 : 0);
+  return Object.values(filter.specs).reduce((n, v) => n + v.length, 0)
+    + filter.zones.length + filter.rows.length + filter.columns.length + filter.products.length + (filter.olderThanDays ? 1 : 0);
 }

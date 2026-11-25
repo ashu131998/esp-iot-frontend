@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LocaleProvider } from '@/lib/i18n/context';
 import { hi } from '@/lib/i18n/messages/hi';
 import { stockFilterQuery, parseStockFilter } from '@/lib/ims/stock-filter';
-import type { StockPage } from '@/lib/ims/types';
+import type { ApiSetup, ApiStock } from '@/lib/ims/types';
 
 const nav = { pathname: '/stock', search: '' };
 vi.mock('next/navigation', () => ({
@@ -33,26 +33,34 @@ function render(node: ReactNode, seed: (client: QueryClient) => void = () => {},
   );
 }
 
-const FIELDS = [
-  { key: 'colour', label: 'Colour', options: [{ key: 'grey', label: 'Grey' }, { key: 'black', label: 'Black' }] },
-  { key: 'size', label: 'Size', options: [{ key: 'm', label: 'M' }] },
-];
-const PAGE: StockPage = {
+const SETUP: ApiSetup = {
+  spec_fields: [
+    { key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }, { value: 'black', label: 'Black' }] },
+    { key: 'size', label: 'Size', options: [{ value: 'm', label: 'M' }] },
+  ],
+  products: [],
+  locations: [],
+  photos_ready: true,
+};
+const product = (id: string, name: string, specs: Record<string, string>, picture: ApiStock['rows'][number]['product']['picture'] = null) =>
+  ({ product_id: id, sku: id.toUpperCase(), name, unit: 'boxes', tracking: 'quantity' as const, specs, active: true, picture });
+const PAGE: ApiStock = {
   rows: [
-    { product_id: 'p1', sku: 'VT-600', name: 'Vitrified tile 600×600', unit: 'boxes', specs: { colour: 'grey', size: 'm' }, qty: 1240, uncounted_pallets: 0, pallets: 14, oldest_on: '2026-11-01', thumb_url: null },
-    { product_id: 'p2', sku: 'WT-300', name: 'Wall tile 300×450', unit: 'boxes', specs: { colour: 'grey' }, qty: null, uncounted_pallets: 2, pallets: 2, oldest_on: null, thumb_url: 'https://photos.example/t.jpg' },
+    { product: product('p1', 'Vitrified tile 600×600', { colour: 'grey', size: 'm' }), qty: 1240, unit: 'boxes', pallets: 14, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-01T05:00:00Z' },
+    { product: product('p2', 'Wall tile 300×450', { colour: 'grey' }, { photo_id: 'ph', url: 'https://photos.example/f.jpg', thumb_url: 'https://photos.example/t.jpg', taken_at: '2026-11-20T05:00:00Z', taken_by: null }), qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: null },
   ],
-  totals: { rows: 2, pallets: 16, products: 2, by_unit: [{ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }] },
-  facets: [
-    { key: 'colour', label: 'Colour', kind: 'spec', options: [{ key: 'grey', label: 'Grey', pallets: 16 }, { key: 'black', label: 'Black', pallets: 12 }] },
-    { key: 'row', label: 'Row', kind: 'row', options: [{ key: 'R03', label: 'Row 3', pallets: 9 }] },
-  ],
-  spec_fields: FIELDS,
-  next_cursor: null,
+  totals: { products: 2, pallets: 16, by_unit: [{ unit: 'boxes', qty: 1240, pallets: 16, uncounted_pallets: 2 }] },
+  filters: {
+    specs: { colour: [{ value: 'grey', label: 'Grey', pallets: 16 }, { value: 'black', label: 'Black', pallets: 12 }] },
+    zones: [{ zone: 'Z2', pallets: 9 }],
+    products: [],
+  },
+  next: null,
 };
 
-const seedStock = (search: string, page: StockPage) => (c: QueryClient) => {
+const seedStock = (search: string, page: ApiStock) => (c: QueryClient) => {
   const query = stockFilterQuery(parseStockFilter(new URLSearchParams(search)));
+  c.setQueryData(['ims-setup', 'shree-tiles'], SETUP);
   c.setQueryData(['ims-stock', 'shree-tiles', query], { pages: [page], pageParams: [null] });
 };
 
@@ -76,26 +84,28 @@ describe('the frame', () => {
 
 describe('available stock', () => {
   it('the total says what is not counted; an uncounted line shows "—", never 0', () => {
-    nav.search = 'spec.colour=grey&row=R03';
+    nav.search = 'spec.colour=grey&zone=Z2';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, PAGE));
     expect(html).toContain('1,240 boxes · 2 pallets not counted');
     expect(html.replace(/<!-- -->/g, '')).toContain('on 16 pallets · 2 products');
     expect(html.replace(/<!-- -->/g, '')).toMatch(/—\s*<span[^>]*>boxes/);
     expect(html).toContain('2 not counted');
+    expect(html).toContain('1 needs count');
+    expect(html).toContain('https://photos.example/t.jpg');
     expect(html).toContain('Grey · M');
   });
 
   it('shows the picked filters as chips, named as the sheet names them', () => {
-    nav.search = 'spec.colour=grey&row=R03';
+    nav.search = 'spec.colour=grey&zone=Z2';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, PAGE)).replace(/<!-- -->/g, '');
     expect(html).toContain('Filters · 2');
     expect(html).toContain('Remove filter Grey');
-    expect(html).toContain('Remove filter Row 3');
+    expect(html).toContain('Remove filter Z2');
   });
 
   it('nothing matching says so and offers to clear', () => {
     nav.search = 'spec.colour=black';
-    const empty: StockPage = { ...PAGE, rows: [], totals: { rows: 0, pallets: 0, products: 0, by_unit: [] } };
+    const empty: ApiStock = { ...PAGE, rows: [], totals: { pallets: 0, products: 0, by_unit: [] } };
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, empty));
     expect(html).toContain('Nothing in stock matches these filters.');
     expect(html).toContain('Clear all');

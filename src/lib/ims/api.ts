@@ -4,7 +4,7 @@
  */
 import { fetchWithSignal } from '@/lib/request-signal';
 
-import type { StockPage } from './types';
+import type { ApiSetup, ApiStock } from './types';
 
 export class ImsApiError extends Error {
   constructor(message: string, public status: number) {
@@ -32,6 +32,8 @@ async function get<T>(url: string, signal?: AbortSignal | null): Promise<T> {
 }
 
 export const imsApi = {
+  /** Spec fields, products, locations: what the phone keeps. */
+  setup: (factoryId: string, signal?: AbortSignal | null) => get<ApiSetup>(imsPath(factoryId, '/setup'), signal),
   stock: (factoryId: string, filterQuery: string, cursor: string | null, signal?: AbortSignal | null) =>
-    get<StockPage>(stockUrl(factoryId, filterQuery, cursor), signal),
+    get<ApiStock>(stockUrl(factoryId, filterQuery, cursor), signal),
 };

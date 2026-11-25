@@ -1,6 +1,6 @@
 'use client';
 
-import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ImageOff, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
@@ -9,20 +9,24 @@ import { FilterSheet } from '@/components/ims-app/filter-sheet';
 import { LoadMore } from '@/components/ui/load-more';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { imsApi } from '@/lib/ims/api';
-import { parseStockFilter, pickedCount, stockFilterQuery, toggleChoice, type StockFilter } from '@/lib/ims/stock-filter';
-import { ageDays, qtyText, specsText, unitTotalText } from '@/lib/ims/stock-view';
-import type { Facet, StockRow } from '@/lib/ims/types';
+import { EMPTY_FILTER, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice, type StockFilter } from '@/lib/ims/stock-filter';
+import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
+import type { Facet, FacetKind, StockRow } from '@/lib/ims/types';
 import { useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
 
 /** The chips of what is picked, named as the filter sheet names them. */
 function pickedChips(filter: StockFilter, facets: Facet[]) {
-  const label = (kind: Facet['kind'], key: string, choice: string) =>
+  const label = (kind: FacetKind, key: string, choice: string) =>
     facets.find((f) => f.kind === kind && (kind !== 'spec' || f.key === key))?.options.find((o) => o.key === choice)?.label ?? choice;
+  const plain = (kind: Exclude<FacetKind, 'spec'>, values: string[]) =>
+    values.map((v) => ({ facet: { key: kind, kind }, choice: v, text: label(kind, kind, v) }));
   return [
     ...Object.entries(filter.specs).flatMap(([key, values]) => values.map((v) => ({ facet: { key, kind: 'spec' as const }, choice: v, text: label('spec', key, v) }))),
-    ...filter.rows.map((v) => ({ facet: { key: 'row', kind: 'row' as const }, choice: v, text: label('row', 'row', v) })),
-    ...filter.products.map((v) => ({ facet: { key: 'product', kind: 'product' as const }, choice: v, text: label('product', 'product', v) })),
+    ...plain('zone', filter.zones),
+    ...plain('row', filter.rows),
+    ...plain('column', filter.columns),
+    ...plain('product', filter.products),
   ];
 }
 
@@ -41,11 +45,18 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
   const query = stockFilterQuery(filter);
   const [sheet, setSheet] = useState(false);
 
+  // The factory's spec fields name the filter sections, in its own order (kept long: they rarely change).
+  const setup = useQuery({
+    queryKey: ['ims-setup', factoryId],
+    queryFn: ({ signal }) => imsApi.setup(factoryId, signal),
+    staleTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+  });
   const stock = useInfiniteQuery({
     queryKey: ['ims-stock', factoryId, query],
     queryFn: ({ pageParam, signal }) => imsApi.stock(factoryId, query, pageParam, signal),
     initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.next_cursor,
+    getNextPageParam: (last) => last.next,
     placeholderData: keepPreviousData,   // a changed filter keeps the old list until the new one is here
     refetchOnWindowFocus: false,
   });
@@ -55,10 +66,11 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
     navigate(q ? `/stock?${q}` : '/stock');
   }, [navigate]);
 
-  const first = stock.data?.pages[0];
-  const rows: StockRow[] = stock.data?.pages.flatMap((p) => p.rows) ?? [];
+  const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
+  const views = useMemo(() => (stock.data?.pages ?? []).map((p) => toStockView(p, fields)), [stock.data, fields]);
+  const first = setup.data ? views[0] : undefined;
+  const rows: StockRow[] = views.flatMap((v) => v.rows);
   const facets = first?.facets ?? [];
-  const fields = first?.spec_fields ?? [];
   const chips = pickedChips(filter, facets);
   const picked = pickedCount(filter);
 
@@ -89,10 +101,10 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
         ))}
       </div>
 
-      {stock.isError && !first ? (
+      {(stock.isError || setup.isError) && !first ? (
         <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
           <p className="text-base text-foreground">{t('Could not load the stock.')}</p>
-          <button type="button" onClick={() => void stock.refetch()} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
+          <button type="button" onClick={() => { void setup.refetch(); void stock.refetch(); }} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
             {t('Try again')}
           </button>
         </div>
@@ -122,7 +134,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
             <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-gray-100">
               <p className="text-base text-foreground">{picked > 0 ? t('Nothing in stock matches these filters.') : t('Nothing in stock yet.')}</p>
               {picked > 0 && (
-                <button type="button" onClick={() => go({ specs: {}, rows: [], products: [], olderThanDays: null })} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
+                <button type="button" onClick={() => go(EMPTY_FILTER)} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">
                   {t('Clear all')}
                 </button>
               )}
@@ -133,7 +145,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
                 const age = ageDays(r.oldest_on);
                 const specs = specsText(r.specs, fields);
                 return (
-                  <li key={`${r.product_id}:${JSON.stringify(r.specs)}`} className="flex items-center gap-3 p-3">
+                  <li key={r.key} className="flex items-center gap-3 p-3">
                     {r.thumb_url ? (
                       // eslint-disable-next-line @next/next/no-img-element -- a short-lived R2 link, not a file of ours
                       <img src={r.thumb_url} alt="" width={56} height={56} loading="lazy" className="h-14 w-14 shrink-0 rounded-xl bg-slate-100 object-cover" />
@@ -148,6 +160,9 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
                     <div className="shrink-0 text-right">
                       <p className="text-lg font-semibold text-foreground">{qtyText(r.qty, locale)} <span className="text-sm font-normal text-muted">{r.unit}</span></p>
                       <p className="text-xs text-muted">{tn(r.pallets, '{count} pallet', '{count} pallets', { count: r.pallets })}</p>
+                      {r.needs_count_pallets > 0 && (
+                        <p className="text-xs font-medium text-amber-700">{tn(r.needs_count_pallets, '{count} needs count', '{count} need count', { count: r.needs_count_pallets })}</p>
+                      )}
                       {r.uncounted_pallets > 0 && (
                         <p className="text-xs font-medium text-amber-700">{tn(r.uncounted_pallets, '{count} not counted', '{count} not counted', { count: r.uncounted_pallets })}</p>
                       )}

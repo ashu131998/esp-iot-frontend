@@ -7,10 +7,11 @@ import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { PLAIN_LINKS_HEADER } from '@/lib/factory-links';
 import {
-  factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
+  factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, isImsAppHost, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
 } from '@/lib/hosts';
 import { internalHostAllowed, internalHostBlockResponse } from '@/lib/internal-host';
 import { isStaffRole } from '@/lib/internal-auth';
+import { imsPhotoOrigin } from '@/lib/ims/photo';
 import { liveImageOrigin } from '@/lib/live';
 
 /**
@@ -94,7 +95,10 @@ export async function middleware(req: NextRequest) {
   // The FloorBeat app's address, the dashboard on a phone (dashboard.floorbeat.in).
   const dashboardApp = !alertsApp && isDashboardAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.DASHBOARD_APP_HOST);
 
-  const legacyTarget = hostFactory || alertsApp || dashboardApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
+  // FloorBeat IMS, the stock app (ims.floorbeat.in).
+  const imsApp = !alertsApp && !dashboardApp && isImsAppHost(requestHost(req), process.env.FACTORY_HOST_SUFFIX, process.env.IMS_APP_HOST);
+
+  const legacyTarget = hostFactory || alertsApp || dashboardApp || imsApp ? undefined : LEGACY_PLATFORM_REDIRECTS[pathname];
   if (legacyTarget) {
     if (legacyTarget.startsWith('/internal') && !internalHostAllowed(req)) {
       return internalHostBlockResponse();
@@ -107,15 +111,18 @@ export async function middleware(req: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV !== 'production';
   const liveOrigin = liveImageOrigin({ API_PUBLIC_ORIGIN: process.env.API_PUBLIC_ORIGIN, API_INTERNAL_URL: process.env.API_INTERNAL_URL });
+  // FloorBeat IMS's stock photos are shown from, and uploaded straight to, a private R2 bucket by short
+  // signed links (lib/ims/photo.ts): its address, only on the IMS app's own address.
+  const photoOrigin = imsApp ? imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN) : null;
 
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     // A camera's live view plays straight from the API (lib/live.ts): its origin, set per environment.
-    `img-src 'self' data: blob:${liveOrigin ? ` ${liveOrigin}` : ''}`,
+    `img-src 'self' data: blob:${liveOrigin ? ` ${liveOrigin}` : ''}${photoOrigin ? ` ${photoOrigin}` : ''}`,
     `font-src 'self' data:`,
-    `connect-src 'self'${isDev ? ' ws: wss:' : ''}`,
+    `connect-src 'self'${photoOrigin ? ` ${photoOrigin}` : ''}${isDev ? ' ws: wss:' : ''}`,
     `worker-src 'self'`,   // the alerts app's service worker (public/alerts-sw.js)
     `object-src 'none'`,
     `base-uri 'self'`,
@@ -258,6 +265,25 @@ export async function middleware(req: NextRequest) {
     if (/^\/team(\/|$)/.test(pathname) && identity.role !== 'admin') return redirectTo('/');
     requestHeaders.set(PLAIN_LINKS_HEADER, '1');
     return securedRewrite(`/factories/${plant}${pathname === '/' ? '' : pathname}`);
+  }
+
+  // FloorBeat IMS, the stock app (ims.floorbeat.in): its pages at plain addresses — / the home,
+  // /stock the available stock — served from the app's /ims-app/… inside, for the person's own
+  // factory (the session's). Signed out, the address asked for shows the sign-in in place, as in
+  // the other two apps. The staff console and the dashboard's long addresses are not served here.
+  if (imsApp) {
+    const inner = pathname.match(/^\/ims-app(\/.*)?$/);
+    if (inner) return redirectTo(inner[1] ?? '/');
+    if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
+    const authPage = /^\/(login|signup|forgot-password)\/?$/.test(pathname);
+    const elsewhere = pathname === '/internal' || pathname.startsWith('/internal/') || /^\/(f|factories)(\/|$)/.test(pathname);
+    if (!identity) {
+      if (req.cookies.get(REFRESH_COOKIE)?.value) return redirectToSessionRestore();
+      if (authPage || elsewhere) return redirectTo('/');
+      return securedRewrite('/ims-app/login');
+    }
+    if (authPage || elsewhere) return redirectTo('/');
+    return securedRewrite(`/ims-app${pathname === '/' ? '' : pathname}`);
   }
 
   // A factory's own address (<factory>.floorbeat.in): that factory alone, at plain addresses —

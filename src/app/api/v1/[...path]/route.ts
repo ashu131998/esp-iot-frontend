@@ -12,10 +12,10 @@ import {
   ACCESS_COOKIE,
   CSRF_COOKIE,
   REFRESH_COOKIE,
-  callRefresh,
   clearAuthCookies,
   internalApiBase,
   isCsrfValid,
+  refreshSession,
   setAuthCookies,
 } from '@/lib/server/bff';
 import type { TokenPair } from '@/lib/server/bff';
@@ -85,10 +85,14 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] 
 
   // Auto-refresh once on 401 (expired access token) when a refresh cookie exists.
   if (upstream.status === 401 && refresh) {
-    rotated = await callRefresh(refresh, req.signal);
-    if (rotated) {
+    const renewed = await refreshSession(refresh);
+    if (renewed.tokens) {
+      rotated = renewed.tokens;
       token = rotated.access;
       upstream = await forward(target, method, token, contentType, accept, body, req.signal);
+    } else if (!renewed.refused) {
+      // The API could not be asked (a restart): the session is kept, and the call can be tried again.
+      return NextResponse.json({ error: 'FloorBeat is not answering just now. Try again in a moment.' }, { status: 503 });
     }
   }
 

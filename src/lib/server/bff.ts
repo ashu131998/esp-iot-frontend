@@ -174,20 +174,29 @@ export function extractTokens(data: Record<string, unknown> | null | undefined):
 // whole session mid-flight (stranding in-flight useSuspenseQuery fetches on their
 // skeletons). Coalescing concurrent refreshes for the same token into one call
 // means they all share one rotation and one resulting token pair.
-const inflightRefresh = new Map<string, Promise<TokenPair | null>>();
+const inflightRefresh = new Map<string, Promise<RefreshOutcome>>();
 
-/** Rotates tokens via the backend refresh endpoint. Returns null on failure. */
-export async function callRefresh(
-  refreshToken: string,
-  // Kept for call-site compatibility but intentionally NOT forwarded: a shared
-  // refresh must not be aborted just because one caller's request was cancelled
-  // (fetchWithSignal still applies its own timeout).
-  _signal?: AbortSignal | null,
-): Promise<TokenPair | null> {
+/**
+ * What came of renewing a session:
+ *  - { tokens }: renewed;
+ *  - { refused: true }: the API said no (the refresh token is spent, revoked or unknown): the session is over;
+ *  - { refused: false }: the API could not be asked (a restart's 502/503, a timeout, the network). The
+ *    session may well be fine: it is kept, and the next request tries again. Signing everyone out
+ *    because the API was restarting for a few seconds would be the wrong answer.
+ */
+export type RefreshOutcome = { tokens: TokenPair } | { tokens: null; refused: boolean };
+
+/** Whether an answer of the refresh endpoint means "no" (the session is over) rather than "not now". */
+export function refreshRefused(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
+/** Rotates tokens via the backend refresh endpoint, telling a refusal from the API not answering. */
+export async function refreshSession(refreshToken: string): Promise<RefreshOutcome> {
   const existing = inflightRefresh.get(refreshToken);
   if (existing) return existing;
 
-  const pending = (async (): Promise<TokenPair | null> => {
+  const pending = (async (): Promise<RefreshOutcome> => {
     try {
       const res = await fetchWithSignal(`${internalApiBase()}/v1/auth/refresh`, {
         method: 'POST',
@@ -195,11 +204,12 @@ export async function callRefresh(
         body: JSON.stringify({ refresh_token: refreshToken }),
         cache: 'no-store',
       });
-      if (!res.ok) return null;
+      if (!res.ok) return { tokens: null, refused: refreshRefused(res.status) };
       const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-      return extractTokens(data);
+      const tokens = extractTokens(data);
+      return tokens ? { tokens } : { tokens: null, refused: false };
     } catch {
-      return null;
+      return { tokens: null, refused: false };
     }
   })();
 
@@ -209,4 +219,15 @@ export async function callRefresh(
   } finally {
     inflightRefresh.delete(refreshToken);
   }
+}
+
+/** Rotates tokens via the backend refresh endpoint. Returns null on failure (of either kind: see refreshSession). */
+export async function callRefresh(
+  refreshToken: string,
+  // Kept for call-site compatibility but intentionally NOT forwarded: a shared
+  // refresh must not be aborted just because one caller's request was cancelled
+  // (fetchWithSignal still applies its own timeout).
+  _signal?: AbortSignal | null,
+): Promise<TokenPair | null> {
+  return (await refreshSession(refreshToken)).tokens;
 }

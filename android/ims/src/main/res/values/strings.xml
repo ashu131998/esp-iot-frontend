@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">FloorBeat IMS</string>
+
+    <!-- No network: shown in all three languages at once (the page's language is not known without it). -->
+    <string name="offline_title" translatable="false">You are offline</string>
+    <string name="offline_title_hi" translatable="false">आप ऑफ़लाइन हैं</string>
+    <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
+    <string name="offline_text">Stock in needs the network once to open. Scans already on this phone are kept and sent later.</string>
+    <string name="offline_retry">Try again</string>
+
+    <!-- The camera refused in Android's settings. -->
+    <string name="camera_off">Allow the camera for FloorBeat IMS in the phone\'s settings to scan labels and take photos.</string>
+</resources>

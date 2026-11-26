@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="offline_text">માલ અંદર ખોલવા માટે એક વાર નેટવર્ક જોઈએ. આ ફોનમાં રાખેલા સ્કેન રહેશે અને પછી મોકલાશે.</string>
+    <string name="offline_retry">ફરી પ્રયત્ન કરો</string>
+    <string name="camera_off">લેબલ સ્કેન કરવા અને ફોટા પાડવા માટે ફોનની સેટિંગ્સમાં FloorBeat IMS ને કેમેરાની મંજૂરી આપો.</string>
+</resources>

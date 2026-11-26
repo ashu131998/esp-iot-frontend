@@ -18,5 +18,15 @@
         "FD:AC:CD:6B:D7:04:07:94:4E:77:EB:13:91:37:36:B3:21:DA:6F:D2:A6:9C:02:AA:4B:6C:71:F2:C8:FB:22:A8"
       ]
     }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.floorbeat.ims",
+      "sha256_cert_fingerprints": [
+        "FD:AC:CD:6B:D7:04:07:94:4E:77:EB:13:91:37:36:B3:21:DA:6F:D2:A6:9C:02:AA:4B:6C:71:F2:C8:FB:22:A8"
+      ]
+    }
   }
 ]

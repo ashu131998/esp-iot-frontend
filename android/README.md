@@ -123,3 +123,36 @@ Releasing: raise `versionCode` and `versionName` in `dashboard/build.gradle.kts`
 signing key in place (`keystore.properties`, above; it needs no Firebase file), and copy
 `dashboard/build/outputs/apk/release/dashboard-release.apk` to
 `marketing/public/downloads/floorbeat-dashboard.apk` (the download on floorbeat.in/app).
+
+# FloorBeat IMS for Android (the stock app)
+
+A third app: module `ims/`, package `in.floorbeat.ims`, version 1.0.0. Its screens are ims.floorbeat.in
+(`src/app/ims-app/`), shown in the phone's own web view, the same as an iPhone's Home Screen app
+(`public/ims-app.webmanifest`). It shows no notifications.
+
+- **The camera:** the page's QR scanner asks for the camera (getUserMedia); the app asks Android's
+  "Allow camera" once and then gives the page the camera only, only on ims.floorbeat.in (`PhotoPick.kt`).
+  A photo field's "Take photo" (`capture`) opens the phone's camera app, which writes into the app's
+  cache (`FileProvider`, `res/xml/photo_paths.xml`); "Choose from phone" opens the phone's picker. The
+  page makes either photo small and reads its date itself (`src/lib/ims/photo.ts`).
+- **Offline:** unsent scans and photos live in the web view's storage (local storage, IndexedDB), so
+  they stay through restarts and are sent when the network is back. Opening the app with no network at
+  all shows the offline screen (the pages come from the server); the scans already kept stay.
+- **The back button, links, the sign-in:** as the dashboard app (`AppLinks.kt`; App Links in
+  `public/.well-known/assetlinks.json`).
+- **The icon:** boxes on a pallet on IMS's deep teal, the deck in the brand's orange
+  (`res/drawable/ic_launcher_foreground.xml`; the web's copy is `src/components/ims-app/app-mark.tsx`).
+
+```sh
+./gradlew :ims:testDebugUnitTest                         # the pure rules: AppLinks, PhotoPick
+./gradlew :ims:assembleRelease :ims:bundleRelease        # ims-release.apk and .aab
+```
+
+A test build against a server on the computer running the emulator:
+`./gradlew :ims:assembleDebug -PimsUrl=http://10.0.2.2:3105`, with the dev server started with
+`IMS_APP_HOST=10.0.2.2`.
+
+Releasing: raise `versionCode` and `versionName` in `ims/build.gradle.kts`, build with the signing key
+in place (`keystore.properties`, above; no Firebase file), and copy
+`ims/build/outputs/apk/release/ims-release.apk` to `marketing/public/downloads/floorbeat-ims.apk`
+(the download on floorbeat.in/app).

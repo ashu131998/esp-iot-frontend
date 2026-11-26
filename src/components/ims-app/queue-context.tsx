@@ -92,7 +92,9 @@ export function ImsQueueProvider({ factoryId, children }: { factoryId: string; c
             }, factoryId);
             if (sentPhotos.stop) {
               setStop(sentPhotos.stop);
-              break;
+              // a scan added while the photos were being tried (a stock-in queued just after its photos)
+              // still goes now: a failing bucket never holds a stock-in back for the 30 s retry
+              if (!again.current) break;
             }
           }
         } while (again.current);

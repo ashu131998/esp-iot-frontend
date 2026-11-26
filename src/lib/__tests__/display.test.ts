@@ -65,6 +65,11 @@ describe('factoryTabs', () => {
     expect(slugs.slice(-3)).toEqual(['team', 'compliance', 'support']);
   });
 
+  it('the IMS switch (its own app, ims.floorbeat.in) is never a dashboard page, on or off', () => {
+    expect(factoryTabs('f1', { ims: true }).map((t) => t.slug)).toEqual(factoryTabs('f1', {}).map((t) => t.slug));
+    expect(factoryTabs('f1', { ims: true }).map((t) => t.slug)).not.toContain('ims');
+  });
+
   it('leaves out switched-off pages but always keeps Team and Support', () => {
     const slugs = factoryTabs('f1', { energy: false, compliance: false, team: false, support: false }).map((t) => t.slug);
     expect(slugs).not.toContain('energy');

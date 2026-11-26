@@ -39,7 +39,10 @@ export interface ApiProduct {
 
 /** GET …/ims/setup: what the phone keeps (also offline). */
 export interface ApiSetup {
+  /** The pick-lists only (what an app from before field types knows). */
   spec_fields: ApiSpecField[];
+  /** Every field a stock-in asks for, in order, with its type (lib/ims/fields.ts); missing from an older server. */
+  fields?: import('./fields').ApiField[];
   products: ApiProduct[];
   locations: ApiLocation[];
   photos_ready: boolean;

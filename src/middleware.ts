@@ -81,8 +81,10 @@ function isInternalWritePath(pathname: string): boolean {
   return (
     pathname === '/internal/onboard' ||
     pathname === '/internal/features' ||
+    pathname === '/internal/stock-details' ||
     pathname.startsWith('/internal/onboard/') ||
-    pathname.startsWith('/internal/features/')
+    pathname.startsWith('/internal/features/') ||
+    pathname.startsWith('/internal/stock-details/')
   );
 }
 

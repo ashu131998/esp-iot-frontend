@@ -1,8 +1,9 @@
 'use client';
 
-import { Camera, CheckCircle2, ChevronDown, CloudOff, ImagePlus, Search, TriangleAlert } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronDown, CloudOff, Search, TriangleAlert } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { FieldPhoto, type ReadyPhoto } from '@/components/ims-app/field-photo';
 import { QrScanner } from '@/components/ims-app/qr-scanner';
 import { waitingWords } from '@/components/ims-app/queue-bar';
 import { useImsQueue } from '@/components/ims-app/queue-context';
@@ -11,7 +12,9 @@ import { AppLink } from '@/components/ui/app-link';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { ImsApiError, imsApi, isImsOff } from '@/lib/ims/api';
 import { newClientId } from '@/lib/ims/client-id';
-import { uploadPalletPhoto } from '@/lib/ims/photo-upload';
+import { detailsOf, fieldProblems, phoneFields, stockInFields, textMax, type ApiField } from '@/lib/ims/fields';
+import { keepStockInPhotos, type PendingPhoto } from '@/lib/ims/photo-queue';
+import { uploadReadyPhoto } from '@/lib/ims/photo-upload';
 import { scanStatus } from '@/lib/ims/queue';
 import {
   checkLocation, latestProducedOn, matchProducts, offlinePalletScan, palletScanOutcome, parseQtyInput, producedOnOk,
@@ -23,7 +26,8 @@ import { cn } from '@/lib/utils';
 
 type Step = 'pallet' | 'product' | 'location' | 'details' | 'done';
 type Note = { tone: 'error' | 'info'; text: string } | null;
-type PhotoState = 'none' | 'sending' | 'sent' | 'failed';
+/** Add stock's own optional photo when the factory has no photo field (key of no field). */
+const OWN_PHOTO = '';
 
 const card = 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100';
 const input = 'h-12 w-full rounded-xl bg-white px-3 text-base text-foreground ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-primary';
@@ -37,10 +41,10 @@ const bigButton = 'h-14 w-full rounded-2xl bg-primary text-lg font-semibold text
  * Every code can be typed instead of scanned. A photo can be added when the factory's photos are set up.
  */
 export function StockInScreen({ factoryId }: { factoryId: string }) {
-  const { t } = useT();
+  const { t, tn } = useT();
   const locale = useLocale();
   const setup = useImsSetup(factoryId);
-  const { queue, add, answers, stop } = useImsQueue();
+  const { queue, add, answers, stop, addPhoto, removePhoto } = useImsQueue();
 
   const [step, setStep] = useState<Step>('pallet');
   const [pallet, setPallet] = useState<string | null>(null);
@@ -51,14 +55,24 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const [batch, setBatch] = useState('');
   const [producedOn, setProducedOn] = useState('');
   const [more, setMore] = useState(false);
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoState, setPhotoState] = useState<PhotoState>('none');
+  const [typed, setTyped] = useState<Record<string, string>>({});
+  const [photos, setPhotos] = useState<Record<string, ReadyPhoto>>({});
+  const [showProblems, setShowProblems] = useState(false);
+  const [photoCount, setPhotoCount] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [note, setNote] = useState<Note>(null);
   const [checking, setChecking] = useState(false);
   const [added, setAdded] = useState<{ clientId: string; text: string } | null>(null);
   const checkingRef = useRef(false);
 
   const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
+  const photosReady = Boolean(setup.data?.photos_ready);
+  // what Add stock asks, in the factory's order (photo fields only once the factory's photos are set up)
+  const asked = useMemo(
+    () => phoneFields(stockInFields(setup.data)).filter((f) => f.type !== 'photo' || photosReady),
+    [setup.data, photosReady],
+  );
+  const hasPhotoField = asked.some((f) => f.type === 'photo');
   const products = useMemo(() => stockableProducts(setup.data?.products ?? []), [setup.data]);
   const locations = useMemo(() => setup.data?.locations ?? [], [setup.data]);
 
@@ -139,31 +153,74 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
 
   const pickProduct = (p: ApiProduct) => {
     setProduct(p);
-    setSpecs(Object.fromEntries(fields.map((f) => [f.key, p.specs[f.key] ?? null])));
+    setSpecs(Object.fromEntries(asked.filter((f) => f.type === 'choice').map((f) => [f.key, p.specs[f.key] ?? null])));
     setNote(null);
     setStep(location ? 'details' : 'location');
   };
 
   const parsedQty = parseQtyInput(qty);
   const dateOk = producedOnOk(producedOn);
+  const problems = fieldProblems(asked, { specs, typed, photos: new Set(Object.keys(photos)) });
+  const problemText = (f: ApiField): string | null => {
+    if (!showProblems || !problems[f.key]) return null;
+    if (problems[f.key] === 'bad_number') return t('Type a number like 40 or 12.5.');
+    if (problems[f.key] === 'too_long') return t('Up to {count} characters.', { count: textMax(f) });
+    return t('This is needed.');
+  };
 
-  const submit = () => {
-    if (!pallet || !product || !location) return;
+  /**
+   * The stock-in's photos kept on the phone BEFORE the scan is queued, so a stock-in never goes out without
+   * the photos it was taken with (a required one most of all). Without IndexedDB (a private window) they are
+   * sent at once instead. Any that cannot be kept or sent: those already kept are taken back, nothing is
+   * queued, and the person is told. The photos name the stock-in (its client_id): the server counts them only
+   * once that stock-in is taken for this pallet.
+   */
+  const keepPhotos = async (palletCode: string, stockIn: string) => {
+    const pendings: PendingPhoto[] = Object.entries(photos).map(([key, ready]) => ({
+      id: newClientId(), factoryId, pallet: palletCode, field: key === OWN_PHOTO ? null : key, stockIn, source: ready.source,
+      takenAt: ready.takenAt.toISOString(), takenAtSource: ready.takenAtSource, full: ready.full, thumb: ready.thumb,
+      addedAt: new Date().toISOString(),
+    }));
+    const kept = await keepStockInPhotos(pendings, {
+      keep: addPhoto, upload: (p) => uploadReadyPhoto(factoryId, p), remove: removePhoto,
+    });
+    if (kept.ok) return { ok: true as const, count: pendings.length, keptIds: kept.keptIds };
+    return {
+      ok: false as const,
+      text: kept.reason === 'not_sent'
+        ? t('The photo could not be sent. Check the connection and try again.')
+        : t('This phone could not keep the photo. Free some space on the phone and try again.'),
+    };
+  };
+
+  const submit = async () => {
+    if (!pallet || !product || !location || saving) return;
     if (!parsedQty.ok) return say('error', t('Type a number like 40 or 12.5, or leave it empty.'));
     if (!dateOk) return say('error', t('The production date cannot be after tomorrow.'));
-    const clientId = newClientId();
-    const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn }, clientId);
-    if (!add(movement)) return say('error', t('This phone could not keep the scan. Free some space on the phone and try again.'));
-    const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
-    setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
-    if (photo && setup.data?.photos_ready) {
-      setPhotoState('sending');
-      uploadPalletPhoto(factoryId, pallet, photo).then(() => setPhotoState('sent'), () => setPhotoState('failed'));
-    } else {
-      setPhotoState('none');
+    if (Object.keys(problems).length > 0) {
+      setShowProblems(true);
+      return say('error', t('Fill in the details marked in red.'));
     }
-    setNote(null);
-    setStep('done');
+    setSaving(true);
+    try {
+      const clientId = newClientId();
+      const kept = await keepPhotos(pallet, clientId);
+      if (!kept.ok) return say('error', kept.text);
+      const details = detailsOf(asked, typed);
+      const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn, details }, clientId);
+      if (!add(movement)) {
+        // no stock-in for the photos to show on: take them back too
+        kept.keptIds.forEach(removePhoto);
+        return say('error', t('This phone could not keep the scan. Free some space on the phone and try again.'));
+      }
+      const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
+      setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
+      setPhotoCount(kept.count);
+      setNote(null);
+      setStep('done');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const nextPallet = () => {
@@ -172,7 +229,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     setQty('');
     setBatch('');
     setProducedOn('');
-    setPhoto(null);
+    setTyped({});
+    setPhotos({});
+    setShowProblems(false);
     setMore(false);
     setNote(null);
     // the product and its specs stay: a run of pallets is usually the same product
@@ -227,7 +286,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
       {step === 'details' && product && (
         <form
           className="space-y-3"
-          onSubmit={(e) => { e.preventDefault(); submit(); }}
+          onSubmit={(e) => { e.preventDefault(); void submit(); }}
         >
           <section className={card}>
             <label htmlFor="ims-qty" className="block text-base font-semibold text-foreground">{t('Quantity ({unit})', { unit: product.unit })}</label>
@@ -249,22 +308,21 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             )}
           </section>
 
-          {fields.length > 0 && (
-            <section className={cn(card, 'space-y-3')} aria-label={t('Specs')}>
-              <p className="text-base font-semibold text-foreground">{t('Specs')}</p>
-              {fields.map((f) => (
-                <div key={f.key}>
-                  <label htmlFor={`ims-spec-${f.key}`} className="block text-sm text-muted">{f.label}</label>
-                  <select
-                    id={`ims-spec-${f.key}`}
-                    value={specs[f.key] ?? ''}
-                    onChange={(e) => setSpecs((s) => ({ ...s, [f.key]: e.target.value || null }))}
-                    className={cn(input, 'mt-1')}
-                  >
-                    <option value="">—</option>
-                    {f.options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                  </select>
-                </div>
+          {asked.length > 0 && (
+            <section className={cn(card, 'space-y-3')} aria-label={t('Details')}>
+              <p className="text-base font-semibold text-foreground">{t('Details')}</p>
+              {asked.map((f) => (
+                <AskedField
+                  key={f.key}
+                  field={f}
+                  choice={specs[f.key] ?? ''}
+                  onChoice={(v) => setSpecs((x) => ({ ...x, [f.key]: v || null }))}
+                  typed={typed[f.key] ?? ''}
+                  onTyped={(v) => setTyped((x) => ({ ...x, [f.key]: v }))}
+                  photo={photos[f.key] ?? null}
+                  onPhoto={(p) => setPhotos((x) => withPhoto(x, f.key, p))}
+                  error={problemText(f)}
+                />
               ))}
             </section>
           )}
@@ -289,25 +347,20 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             )}
           </section>
 
-          {setup.data?.photos_ready && (
+          {photosReady && !hasPhotoField && (
             <section className={card}>
-              {photo ? (
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-                  <p className="min-w-0 flex-1 text-base text-foreground">{t('Photo added')}</p>
-                  <button type="button" onClick={() => setPhoto(null)} className="h-10 rounded-xl px-3 text-sm font-medium text-primary ring-1 ring-slate-300">{t('Remove')}</button>
-                </div>
-              ) : (
-                <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-base font-medium text-primary ring-1 ring-slate-300">
-                  <ImagePlus className="h-5 w-5" aria-hidden />
-                  {t('Add a photo (optional)')}
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
-                </label>
-              )}
+              <FieldPhoto
+                id="ims-own-photo"
+                label={t('Photo (optional)')}
+                required={false}
+                value={photos[OWN_PHOTO] ?? null}
+                onChange={(p) => setPhotos((x) => withPhoto(x, OWN_PHOTO, p))}
+                error={null}
+              />
             </section>
           )}
 
-          <button type="submit" disabled={!parsedQty.ok || !dateOk} className={bigButton}>{t('Add stock')}</button>
+          <button type="submit" disabled={!parsedQty.ok || !dateOk || saving} className={bigButton}>{saving ? t('Saving…') : t('Add stock')}</button>
         </form>
       )}
 
@@ -334,9 +387,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
                     ? t('Check Available stock to see it.')
                     : waitingWords(stop, t)}
             </p>
-            {photoState !== 'none' && (
+            {photoCount > 0 && (
               <p className="mt-1 text-sm text-muted">
-                {photoState === 'sending' ? t('Sending the photo…') : photoState === 'sent' ? t('Photo sent.') : t('The photo was not sent. The stock is not affected.')}
+                {tn(photoCount, 'The photo is on this phone and is sent by itself.', '{count} photos are on this phone and are sent by themselves.', { count: photoCount })}
               </p>
             )}
           </section>
@@ -458,5 +511,55 @@ function ProductStep({ products, loading, failed, onRetry, onPick, fieldsText }:
         </ul>
       )}
     </section>
+  );
+}
+
+function withPhoto(photos: Record<string, ReadyPhoto>, key: string, photo: ReadyPhoto | null): Record<string, ReadyPhoto> {
+  const next = { ...photos };
+  if (photo) next[key] = photo;
+  else delete next[key];
+  return next;
+}
+
+/** One field Add stock asks for: a pick-list, a line of text, a number or a photo. */
+function AskedField({ field, choice, onChoice, typed, onTyped, photo, onPhoto, error }: {
+  field: ApiField;
+  choice: string;
+  onChoice: (value: string) => void;
+  typed: string;
+  onTyped: (value: string) => void;
+  photo: ReadyPhoto | null;
+  onPhoto: (photo: ReadyPhoto | null) => void;
+  error: string | null;
+}) {
+  const id = `ims-field-${field.key}`;
+  const label = `${field.label}${field.type === 'number' && field.unit ? ` (${field.unit})` : ''}${field.required ? ' *' : ''}`;
+  if (field.type === 'photo') {
+    return <FieldPhoto id={id} label={field.label} required={field.required} allowLibrary={field.allow_library !== false} value={photo} onChange={onPhoto} error={error} />;
+  }
+  const bad = error ? 'ring-2 ring-red-400' : '';
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm text-muted">{label}</label>
+      {field.type === 'choice' ? (
+        <select id={id} value={choice} onChange={(e) => onChoice(e.target.value)} aria-invalid={Boolean(error)} className={cn(input, 'mt-1', bad)}>
+          <option value="">—</option>
+          {field.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <input
+          id={id}
+          value={typed}
+          onChange={(e) => onTyped(e.target.value)}
+          inputMode={field.type === 'number' ? 'decimal' : 'text'}
+          maxLength={field.type === 'text' ? textMax(field) : 20}
+          autoComplete="off"
+          enterKeyHint="next"
+          aria-invalid={Boolean(error)}
+          className={cn(input, 'mt-1', bad)}
+        />
+      )}
+      {error && <p className="mt-1 text-sm font-medium text-red-700">{error}</p>}
+    </div>
   );
 }

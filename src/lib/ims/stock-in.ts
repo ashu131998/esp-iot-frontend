@@ -144,6 +144,8 @@ export interface StockInForm {
   specs: Record<string, string | null>;
   batch: string;
   producedOn: string;
+  /** The text and number fields' answers (fields.ts detailsOf). */
+  details?: Record<string, string | number>;
 }
 
 /** The stock-in scan for the queue, with its own id so sending it twice counts once. */
@@ -159,6 +161,7 @@ export function stockInMovement(form: StockInForm, clientId: string, now: Date =
     to: form.location,
     qty: form.qty,
     ...(specs ? { specs } : {}),
+    ...(form.details && Object.keys(form.details).length > 0 ? { details: form.details } : {}),
     ...(batch ? { batch } : {}),
     ...(form.producedOn ? { produced_on: form.producedOn } : {}),
   };

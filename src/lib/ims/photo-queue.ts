@@ -70,7 +70,7 @@ export function linkRequest(p: PendingPhoto): PhotoLinkRequest {
     taken_at: p.takenAt,
     pallet: p.pallet,
     ...(p.field ? { field: p.field } : {}),
-    ...(p.stockIn ? { movement_client_id: p.stockIn } : {}),
+    ...(p.stockIn ? { stock_in: p.stockIn } : {}),
     source: p.source,
     taken_at_source: p.takenAtSource,
   };

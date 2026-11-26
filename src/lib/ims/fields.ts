@@ -47,6 +47,10 @@ export interface ApiField {
   allow_library?: boolean;
   /** Removed: not asked any more; still in setup so old pallets' values keep their labels. */
   archived?: boolean;
+  /** The server's value rules: a text's longest, a number's lowest and highest (null for other types). */
+  max_length?: number | null;
+  min?: number | null;
+  max?: number | null;
 }
 
 /** GET …/ims/spec-fields: the fields in their order, and the removed ones (kept on old pallets). */
@@ -255,6 +259,18 @@ export interface StockInAnswers {
   photos: Set<string>;
 }
 
+/** A text field's longest answer: the server's rule, else the one it has always had. */
+export const textMax = (f: ApiField): number => (typeof f.max_length === 'number' && f.max_length > 0 ? f.max_length : TEXT_MAX);
+
+/** A number typed for a field: the number, null for empty, or 'bad' (not a number, or outside the field's min and max). */
+export function fieldNumber(f: ApiField, text: string): number | null | 'bad' {
+  const n = parseNumberInput(text);
+  if (typeof n !== 'number') return n;
+  const min = typeof f.min === 'number' ? f.min : -NUMBER_MAX;
+  const max = typeof f.max === 'number' ? f.max : NUMBER_MAX;
+  return n < min || n > max ? 'bad' : n;
+}
+
 /** The stock-in's `details` (text and number fields): only those with a value. Bad numbers are left to fieldProblems. */
 export function detailsOf(fields: ApiField[], typed: Record<string, string>): Record<string, string | number> | undefined {
   const details: Record<string, string | number> = {};
@@ -262,23 +278,31 @@ export function detailsOf(fields: ApiField[], typed: Record<string, string>): Re
     const raw = typed[f.key] ?? '';
     if (f.type === 'text') {
       const v = cleanLabel(raw);
-      if (v) details[f.key] = v.slice(0, TEXT_MAX);
+      if (v) details[f.key] = v.slice(0, textMax(f));
     } else if (f.type === 'number') {
-      const n = parseNumberInput(raw);
+      const n = fieldNumber(f, raw);
       if (typeof n === 'number') details[f.key] = n;
     }
   }
   return Object.keys(details).length > 0 ? details : undefined;
 }
 
-export type FieldProblem = 'required' | 'bad_number';
+export type FieldProblem = 'required' | 'bad_number' | 'too_long';
 
-/** Each field Add stock cannot go ahead with: a required one left empty, or a number that is not one. */
+/**
+ * Each field Add stock cannot go ahead with: a required one left empty, a number that is not one (or out of
+ * the field's range), a text longer than the server keeps. Checked before the scan is queued: the server
+ * refuses the whole stock-in for one bad detail.
+ */
 export function fieldProblems(fields: ApiField[], answers: StockInAnswers): Record<string, FieldProblem> {
   const problems: Record<string, FieldProblem> = {};
   for (const f of fields) {
-    if (f.type === 'number' && parseNumberInput(answers.typed[f.key] ?? '') === 'bad') {
+    if (f.type === 'number' && fieldNumber(f, answers.typed[f.key] ?? '') === 'bad') {
       problems[f.key] = 'bad_number';
+      continue;
+    }
+    if (f.type === 'text' && cleanLabel(answers.typed[f.key] ?? '').length > textMax(f)) {
+      problems[f.key] = 'too_long';
       continue;
     }
     if (!f.required) continue;

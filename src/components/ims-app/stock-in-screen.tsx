@@ -12,7 +12,7 @@ import { AppLink } from '@/components/ui/app-link';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { ImsApiError, imsApi, isImsOff } from '@/lib/ims/api';
 import { newClientId } from '@/lib/ims/client-id';
-import { detailsOf, fieldProblems, phoneFields, stockInFields, type ApiField } from '@/lib/ims/fields';
+import { detailsOf, fieldProblems, phoneFields, stockInFields, textMax, type ApiField } from '@/lib/ims/fields';
 import type { PendingPhoto } from '@/lib/ims/photo-queue';
 import { uploadReadyPhoto } from '@/lib/ims/photo-upload';
 import { scanStatus } from '@/lib/ims/queue';
@@ -164,7 +164,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const problems = fieldProblems(asked, { specs, typed, photos: new Set(Object.keys(photos)) });
   const problemText = (f: ApiField): string | null => {
     if (!showProblems || !problems[f.key]) return null;
-    return problems[f.key] === 'bad_number' ? t('Type a number like 40 or 12.5.') : t('This is needed.');
+    if (problems[f.key] === 'bad_number') return t('Type a number like 40 or 12.5.');
+    if (problems[f.key] === 'too_long') return t('Up to {count} characters.', { count: textMax(f) });
+    return t('This is needed.');
   };
 
   /** The stock-in's photos onto the phone's photo queue (sent from there); straight up when the phone has no store. */
@@ -549,7 +551,7 @@ function AskedField({ field, choice, onChoice, typed, onTyped, photo, onPhoto, e
           value={typed}
           onChange={(e) => onTyped(e.target.value)}
           inputMode={field.type === 'number' ? 'decimal' : 'text'}
-          maxLength={field.type === 'text' ? 200 : 20}
+          maxLength={field.type === 'text' ? textMax(field) : 20}
           autoComplete="off"
           enterKeyHint="next"
           aria-invalid={Boolean(error)}

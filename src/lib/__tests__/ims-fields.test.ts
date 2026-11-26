@@ -116,6 +116,16 @@ describe('Add stock asks for the factory\'s fields', () => {
     expect(fieldProblems(fields, { specs: { grade: 'a' }, typed: { note: 'ok', weight: '' }, photos: new Set(['label_photo']) })).toEqual({});
   });
 
+  it('follows the server\'s value rules from the field: a text\'s length, a number\'s range', () => {
+    const fields = [field('note', 'text', { max_length: 5 }), field('pct', 'number', { min: 0, max: 100 }), field('w', 'number')];
+    expect(fieldProblems(fields, { specs: {}, typed: { note: 'abcdef', pct: '101', w: '1e3' }, photos: new Set() }))
+      .toEqual({ note: 'too_long', pct: 'bad_number', w: 'bad_number' });
+    expect(fieldProblems(fields, { specs: {}, typed: { note: 'abc  de', pct: '100', w: '-5' }, photos: new Set() })).toEqual({ note: 'too_long' });
+    expect(fieldProblems(fields, { specs: {}, typed: { note: 'abcde', pct: '0' }, photos: new Set() })).toEqual({});
+    // no rule sent (an older server): the limits it has always had
+    expect(fieldProblems([field('n', 'text')], { specs: {}, typed: { n: 'x'.repeat(201) }, photos: new Set() })).toEqual({ n: 'too_long' });
+  });
+
   it('puts the details on the stock-in scan', () => {
     const product: ApiProduct = { product_id: 'p1', sku: 'S', name: 'Box', unit: 'boxes', tracking: 'quantity', specs: {}, active: true };
     const m = stockInMovement({ pallet: 'PL-000001', product, location: 'R01-C01', qty: 4, specs: {}, batch: '', producedOn: '', details: { weight: 41.5 } }, 'id-1', new Date('2026-11-26T10:00:00Z'));
@@ -126,7 +136,7 @@ describe('Add stock asks for the factory\'s fields', () => {
   it('has Hindi and Gujarati for every new word on the phone', () => {
     const keys = [
       'Take photo', 'Choose from phone', 'Photo taken', 'Photo from the phone', 'Getting the photo ready…', 'This is needed.',
-      'Type a number like 40 or 12.5.', 'Fill in the details marked in red.', 'Photo (optional)', 'Details',
+      'Type a number like 40 or 12.5.', 'Fill in the details marked in red.', 'Up to {count} characters.', 'Photo (optional)', 'Details',
       'This photo could not be read. Take it again or choose another.',
       '{count} photo waiting to send', '{count} photos waiting to send', '{count} photo was not saved', '{count} photos were not saved',
     ];
@@ -228,7 +238,7 @@ describe('photos waiting on the phone', () => {
     };
     expect(await sendPhotos(store, calls, 'f1')).toEqual({ sent: 2, refused: 0, stop: null });
     expect(asked).toEqual([
-      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', movement_client_id: 'mv-1', source: 'library', taken_at_source: 'photo_info' },
+      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', stock_in: 'mv-1', source: 'library', taken_at_source: 'photo_info' },
       { photo_id: '2', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', source: 'camera', taken_at_source: 'capture' },
     ]);
     expect(put).toHaveLength(4);

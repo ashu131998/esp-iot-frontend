@@ -128,4 +128,5 @@ export const ims_app: Messages = {
   '{count} photos were not saved': '{count} फ़ोटो सेव नहीं हुईं',
   '{count} photo is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?': '{count} फ़ोटो अभी भेजी नहीं गई। यह इसी फ़ोन में रहेगी और अगले साइन इन के बाद भेजी जाएगी। साइन आउट करें?',
   '{count} photos are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?': '{count} फ़ोटो अभी भेजी नहीं गईं। ये इसी फ़ोन में रहेंगी और अगले साइन इन के बाद भेजी जाएँगी। साइन आउट करें?',
+  'Up to {count} characters.': 'अधिकतम {count} अक्षर।',
 };

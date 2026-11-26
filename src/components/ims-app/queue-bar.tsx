@@ -5,12 +5,29 @@ import { CloudOff, RefreshCw, TriangleAlert, X } from 'lucide-react';
 import { useImsQueue } from '@/components/ims-app/queue-context';
 import { useT } from '@/lib/i18n/context';
 import type { Queued } from '@/lib/ims/queue';
+import type { SendStop } from '@/lib/ims/sender';
 import { refusalWords } from '@/lib/ims/stock-in';
 
 /** A queued scan in a few words: "PL-000012 → R03-C05". */
 export function scanLine(q: Queued): string {
   const m = q.movement;
   return m.to ? `${m.pallet} → ${m.to}` : m.pallet;
+}
+
+/** Why scans still wait, in a line: the connection, unless the last try said something else. */
+export function waitingWords(stop: SendStop | null, t: (key: string) => string): string {
+  switch (stop) {
+    case 'signed_out':
+      return t('You are signed out. Sign in again to send them. They stay on this phone.');
+    case 'off':
+      return t('FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.');
+    case 'denied':
+      return t('This account cannot add stock. Sign in with an account of this factory.');
+    case 'refused':
+      return t('FloorBeat could not take these scans. They stay on this phone. Tell FloorBeat.');
+    default:
+      return t('They stay on this phone and are sent by themselves when the connection is back.');
+  }
 }
 
 /**
@@ -44,17 +61,7 @@ export function ImsQueueBar() {
               </button>
             )}
           </div>
-          <p className="mt-1 text-xs text-amber-900">
-            {stop === 'signed_out'
-              ? t('You are signed out. Sign in again to send them. They stay on this phone.')
-              : stop === 'off'
-                ? t('FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.')
-                : stop === 'denied'
-                  ? t('This account cannot add stock. Sign in with an account of this factory.')
-                  : stop === 'refused'
-                    ? t('FloorBeat could not take these scans. They stay on this phone. Tell FloorBeat.')
-                    : t('They stay on this phone and are sent by themselves when the connection is back.')}
-          </p>
+          <p className="mt-1 text-xs text-amber-900">{waitingWords(stop, t)}</p>
         </section>
       )}
 

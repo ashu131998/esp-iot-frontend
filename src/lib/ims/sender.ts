@@ -31,6 +31,8 @@ export interface SendReport {
   stale: MovementResult[];
   /** Why it stopped before the queue was empty, or null. */
   stop: SendStop | null;
+  /** Every answer the server gave, so a screen keeps what became of its scan after it leaves the phone. */
+  results: MovementResult[];
 }
 
 /** Why a failed post stopped the sending. */
@@ -50,7 +52,7 @@ export async function sendQueue(
   post: (movements: Movement[]) => Promise<MovementResult[]>,
   { batchSize, maxRounds = 20 }: { batchSize?: number; maxRounds?: number } = {},
 ): Promise<SendReport> {
-  const report: SendReport = { sent: 0, stale: [], stop: null };
+  const report: SendReport = { sent: 0, stale: [], stop: null, results: [] };
   for (let round = 0; round < maxRounds; round++) {
     const batch = nextBatch(storage.load(), batchSize);
     if (batch.length === 0) return report;
@@ -61,6 +63,13 @@ export async function sendQueue(
       report.stop = stopFor(error);
       return report;
     }
+    // an answer of another shape: nothing is taken off the phone
+    if (!Array.isArray(results)) {
+      report.stop = 'refused';
+      return report;
+    }
+    results = results.filter((r) => typeof r?.client_id === 'string');
+    report.results.push(...results);
     const before = storage.load();
     const after = applyResults(before, results);
     storage.save(after);

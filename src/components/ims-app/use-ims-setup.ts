@@ -30,7 +30,8 @@ export function useImsSetup(factoryId: string) {
     // the kept copy at once, counted as old so it is asked for again; it stays if that fails
     initialData: () => kept(factoryId),
     initialDataUpdatedAt: 0,
-    staleTime: 10 * 60_000,
+    // a product or location just set up is seen within a minute (and at once with Try again)
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: retryImsCall,
   });

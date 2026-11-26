@@ -108,4 +108,7 @@ export const ims_app: Messages = {
   'The scan was not complete.': 'સ્કેન પૂરું ન હતું.',
   'This pallet is not in the system.': 'આ પૅલેટ સિસ્ટમમાં નથી.',
   'This product is not in the system, or is no longer used.': 'આ પ્રોડક્ટ સિસ્ટમમાં નથી, અથવા હવે વપરાતો નથી.',
+  'FloorBeat could not check this label now. It is checked when the scan is sent.': 'FloorBeat હમણાં આ લેબલ તપાસી ન શક્યું. સ્કેન મોકલતી વખતે તે તપાસાશે.',
+  'Sent': 'મોકલાયું',
+  'Check Available stock to see it.': 'તે જોવા માટે ઉપલબ્ધ માલ જુઓ.',
 };

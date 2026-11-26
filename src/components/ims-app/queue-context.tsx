@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { imsApi } from '@/lib/ims/api';
-import { enqueue, queueCounts, type Movement, type MovementResult, type Queued } from '@/lib/ims/queue';
+import { answersFrom, enqueue, queueCounts, type Answer, type Movement, type MovementResult, type Queued } from '@/lib/ims/queue';
 import { loadQueue, NO_QUEUE, queueStorage, saveQueue, subscribeQueue } from '@/lib/ims/queue-store';
 import { sendQueue, type SendStop } from '@/lib/ims/sender';
 
@@ -20,6 +20,8 @@ interface ImsQueue {
   stop: SendStop | null;
   /** Taken, but a newer scan had changed the pallet already (shown once, then dismissed). */
   stale: MovementResult[];
+  /** The server's answers to scans sent from this screen, kept after they leave the phone (by client_id). */
+  answers: Record<string, Answer>;
   /** Keeps a scan on the phone and starts sending; false when the phone would not keep it. */
   add: (movement: Movement) => boolean;
   send: () => void;
@@ -42,6 +44,7 @@ export function ImsQueueProvider({ factoryId, children }: { factoryId: string; c
   const [sending, setSending] = useState(false);
   const [stop, setStop] = useState<SendStop | null>(null);
   const [stale, setStale] = useState<MovementResult[]>([]);
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const running = useRef(false);
   const again = useRef(false);
 
@@ -58,6 +61,7 @@ export function ImsQueueProvider({ factoryId, children }: { factoryId: string; c
           again.current = false;
           const report = await sendQueue(queueStorage(factoryId), (movements) => imsApi.sendMovements(factoryId, movements));
           setStop(report.stop);
+          if (report.results.length > 0) setAnswers((a) => ({ ...a, ...answersFrom(report.results) }));
           if (report.stale.length > 0) setStale((s) => [...s, ...report.stale]);
           if (report.sent > 0) void client.invalidateQueries({ queryKey: ['ims-stock', factoryId] });
           if (report.stop) break;
@@ -101,9 +105,9 @@ export function ImsQueueProvider({ factoryId, children }: { factoryId: string; c
   }, [counts.waiting, stop, send]);
 
   const value = useMemo<ImsQueue>(() => ({
-    queue, waiting: counts.waiting, rejected: counts.rejected, sending, stop: counts.waiting > 0 ? stop : null, stale,
+    queue, waiting: counts.waiting, rejected: counts.rejected, sending, stop: counts.waiting > 0 ? stop : null, stale, answers,
     add, send, remove, dismissStale: () => setStale([]),
-  }), [queue, counts.waiting, counts.rejected, sending, stop, stale, add, send, remove]);
+  }), [queue, counts.waiting, counts.rejected, sending, stop, stale, answers, add, send, remove]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

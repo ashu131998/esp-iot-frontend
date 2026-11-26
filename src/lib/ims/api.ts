@@ -62,9 +62,12 @@ async function answer<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-async function get<T>(url: string, signal?: AbortSignal | null): Promise<T> {
-  return answer<T>(await fetchWithSignal(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal }));
+async function get<T>(url: string, signal?: AbortSignal | null, timeoutMs?: number): Promise<T> {
+  return answer<T>(await fetchWithSignal(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal, timeoutMs }));
 }
+
+/** How long a label check waits: Wi-Fi up with the internet down should not hold up every pallet for 15 s. */
+export const SCAN_CHECK_MS = 6_000;
 
 /** A write: JSON in and out, with the CSRF header; given up on after `timeoutMs` (weak factory Wi-Fi). */
 async function post<T>(url: string, body: unknown, timeoutMs = 20_000): Promise<T> {
@@ -91,7 +94,7 @@ export const imsApi = {
     get<ApiStock>(stockUrl(factoryId, filterQuery, cursor), signal),
   /** What a scanned code is (a location, a pallet, a new label of ours, or none). */
   scan: (factoryId: string, code: string, signal?: AbortSignal | null) =>
-    get<ApiScan>(imsPath(factoryId, `/scan/${encodeURIComponent(code)}`), signal),
+    get<ApiScan>(imsPath(factoryId, `/scan/${encodeURIComponent(code)}`), signal, SCAN_CHECK_MS),
   /** The queued scans; one result per client_id. */
   sendMovements: async (factoryId: string, movements: Movement[]) =>
     (await post<{ results: MovementResult[] }>(imsPath(factoryId, '/movements'), { movements })).results,

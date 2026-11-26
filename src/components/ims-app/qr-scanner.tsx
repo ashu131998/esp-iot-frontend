@@ -19,12 +19,22 @@ interface BarcodeDetectorClass {
   getSupportedFormats?: () => Promise<string[]>;
 }
 
-/** The longest side of the frame the iPhone reader looks at: enough for a label held 30–60 cm away. */
-const READ_SIDE = 720;
+/**
+ * The iPhone reader looks at the middle square of the frame (where the guide box is), at the camera's
+ * own resolution up to this side: shrinking the whole frame cost about 20 cm of reach on a 50 mm label.
+ */
+const READ_SIDE = 1080;
+
+/** The middle square of a w×h frame, and the size it is read at (never larger than READ_SIDE). */
+export function readArea(w: number, h: number, max = READ_SIDE) {
+  const side = Math.min(w, h);
+  const size = Math.min(side, max);
+  return { sx: Math.round((w - side) / 2), sy: Math.round((h - side) / 2), side, size };
+}
 
 /**
  * The phone's own QR reader where it has one (Android's Chrome), else jsQR, loaded only now (iPhone
- * Safari has none): it reads a still of the camera drawn small onto a canvas.
+ * Safari has none): it reads the middle of a still of the camera, drawn onto a canvas.
  */
 async function makeDetector(): Promise<Detector> {
   const Native = (globalThis as { BarcodeDetector?: BarcodeDetectorClass }).BarcodeDetector;
@@ -47,10 +57,10 @@ async function makeDetector(): Promise<Detector> {
       const w = video.videoWidth;
       const h = video.videoHeight;
       if (!ctx || !w || !h) return null;
-      const scale = Math.min(1, READ_SIDE / Math.max(w, h));
-      canvas.width = Math.round(w * scale);
-      canvas.height = Math.round(h * scale);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const { sx, sy, side, size } = readArea(w, h);
+      canvas.width = size;
+      canvas.height = size;
+      ctx.drawImage(video, sx, sy, side, side, 0, 0, size, size);
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
       return jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
     },

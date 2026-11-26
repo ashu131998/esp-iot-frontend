@@ -4,7 +4,7 @@ import { gu } from '@/lib/i18n/messages/gu';
 import { hi } from '@/lib/i18n/messages/hi';
 import { ImsApiError } from '@/lib/ims/api';
 import { uuidFromBytes } from '@/lib/ims/client-id';
-import type { Movement, MovementResult, Queued } from '@/lib/ims/queue';
+import { answersFrom, scanStatus, type Movement, type MovementResult, type Queued } from '@/lib/ims/queue';
 import { parseKept } from '@/lib/ims/queue-store';
 import { sendQueue, stopFor, type QueueStorage } from '@/lib/ims/sender';
 import {
@@ -193,7 +193,8 @@ describe('sending the queued scans', () => {
     const posted: string[][] = [];
     const report = await sendQueue(store, async (batch) => { posted.push(batch.map((m) => m.client_id)); return batch.map(ok); }, { batchSize: 2 });
     expect(posted).toEqual([['1', '2'], ['3', '4'], ['5']]);
-    expect(report).toEqual({ sent: 5, stale: [], stop: null });
+    expect(report).toMatchObject({ sent: 5, stale: [], stop: null });
+    expect(report.results.map((r) => r.client_id)).toEqual(['1', '2', '3', '4', '5']);
     expect(store.queue).toEqual([]);
   });
 
@@ -260,5 +261,41 @@ describe('the queue kept on the phone', () => {
     expect(parseKept('not json')).toEqual([]);
     expect(parseKept('{"a":1}')).toEqual([]);
     expect(parseKept(JSON.stringify([{ movement: mv('1') }, { movement: { client_id: 3 } }, null]))).toEqual([{ movement: mv('1') }]);
+  });
+});
+
+describe('what became of a scan, on the screen that made it', () => {
+  const refused = { reason: 'already_stocked', message: 'This pallet is already in stock: use Move or Count' };
+
+  it('a refused scan stays "not added" after it is cleared off the phone (never "added")', () => {
+    const answers = answersFrom([{ client_id: 'C1', status: 'rejected', reason: 'already_stocked', message: refused.message }]);
+    const kept: Queued[] = [{ movement: mv('c1'), rejected: refused }];
+    expect(scanStatus('c1', kept, answers)).toEqual({ kind: 'refused', refusal: refused });
+    // the ✕ in the bar takes it off the phone
+    expect(scanStatus('c1', [], answers)).toEqual({ kind: 'refused', refusal: refused });
+  });
+
+  it('a duplicate of one refused the first time is refused; of one taken, added', () => {
+    const answers = answersFrom([
+      { client_id: 'c1', status: 'duplicate', outcome: 'rejected', reason: 'not_our_label' },
+      { client_id: 'c2', status: 'duplicate', outcome: 'ok' },
+    ]);
+    expect(scanStatus('c1', [], answers).kind).toBe('refused');
+    expect(scanStatus('c2', [], answers).kind).toBe('added');
+  });
+
+  it('is added only when the server said so; waiting while on the phone; unknown when it left with no answer seen', () => {
+    expect(scanStatus('c1', [], answersFrom([{ client_id: 'c1', status: 'ok' }]))).toEqual({ kind: 'added' });
+    expect(scanStatus('c1', [{ movement: mv('c1') }], {})).toEqual({ kind: 'waiting' });
+    expect(scanStatus('c1', [], {})).toEqual({ kind: 'unknown' });
+    // refused before this screen saw the answer (another tab sent it): the phone's mark says so
+    expect(scanStatus('c1', [{ movement: mv('c1'), rejected: refused }], {})).toEqual({ kind: 'refused', refusal: refused });
+  });
+
+  it('a send that answers in another shape takes nothing off the phone and does not throw', async () => {
+    const store = memory([{ movement: mv('1') }]);
+    const report = await sendQueue(store, async () => (undefined as unknown as MovementResult[]));
+    expect(report.stop).toBe('refused');
+    expect(store.queue).toEqual([{ movement: mv('1') }]);
   });
 });

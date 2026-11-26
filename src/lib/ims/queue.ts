@@ -83,7 +83,7 @@ export function nextBatch(queue: Queued[], size = BATCH_SIZE): Movement[] {
 }
 
 /** Whether the server refused the scan, now or the first time it had it. */
-function refusal(r: MovementResult): Refusal | null {
+export function refusal(r: MovementResult): Refusal | null {
   const refused = r.status === 'rejected' || (r.status === 'duplicate' && r.outcome === 'rejected');
   return refused ? { reason: r.reason || 'refused', message: r.message ?? null } : null;
 }
@@ -109,4 +109,37 @@ export function applyResults(queue: Queued[], results: MovementResult[]): Queued
 export function queueCounts(queue: Queued[]): { waiting: number; rejected: number } {
   const rejected = queue.filter((q) => q.rejected).length;
   return { waiting: queue.length - rejected, rejected };
+}
+
+/** The server's last word on a scan this phone sent: taken, or refused (and why). */
+export type Answer = { ok: true } | { ok: false; refusal: Refusal };
+
+/** The server's answers by client_id (lower case, as the server keeps them). */
+export function answersFrom(results: MovementResult[]): Record<string, Answer> {
+  const out: Record<string, Answer> = {};
+  for (const r of results) {
+    if (typeof r?.client_id !== 'string') continue;
+    const refused = refusal(r);
+    out[r.client_id.toLowerCase()] = refused ? { ok: false, refusal: refused } : { ok: true };
+  }
+  return out;
+}
+
+/**
+ * What became of one scan, for the screen that made it. The server's answer counts first, and it is
+ * kept, so taking a refused scan off the phone (the ✕ in the bar) never turns it into "added":
+ *  - added: the server took it;
+ *  - refused: the server turned it down (with why);
+ *  - waiting: on the phone, not answered yet;
+ *  - unknown: gone from the phone with no answer seen here (sent from another tab): never said to be in stock.
+ */
+export type ScanStatus = { kind: 'added' } | { kind: 'refused'; refusal: Refusal } | { kind: 'waiting' } | { kind: 'unknown' };
+
+export function scanStatus(clientId: string, queue: Queued[], answers: Record<string, Answer>): ScanStatus {
+  const answer = answers[clientId.toLowerCase()];
+  if (answer && !answer.ok) return { kind: 'refused', refusal: answer.refusal };
+  const kept = queue.find((q) => q.movement.client_id.toLowerCase() === clientId.toLowerCase());
+  if (kept?.rejected) return { kind: 'refused', refusal: kept.rejected };
+  if (answer?.ok) return { kind: 'added' };
+  return kept ? { kind: 'waiting' } : { kind: 'unknown' };
 }

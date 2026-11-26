@@ -28,7 +28,8 @@ const { ImsCannotConnect } = await import('@/components/ims-app/cannot-connect')
 const { StockScreen } = await import('@/components/ims-app/stock-screen');
 const { StockInScreen } = await import('@/components/ims-app/stock-in-screen');
 const { ImsQueueProvider } = await import('@/components/ims-app/queue-context');
-const { scanLine } = await import('@/components/ims-app/queue-bar');
+const { scanLine, waitingWords } = await import('@/components/ims-app/queue-bar');
+const { readArea } = await import('@/components/ims-app/qr-scanner');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -194,5 +195,19 @@ describe('stock in', () => {
   it('a waiting scan is named by its pallet and where it goes', () => {
     expect(scanLine({ movement: { client_id: 'c', type: 'in', pallet: 'PL-000012', to: 'R03-C05', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012 → R03-C05');
     expect(scanLine({ movement: { client_id: 'c', type: 'out', pallet: 'PL-000012', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012');
+  });
+
+  it('a waiting card says why it waits, as the bar does', () => {
+    const t = (k: string) => k;
+    expect(waitingWords(null, t)).toContain('when the connection is back');
+    expect(waitingWords('offline', t)).toContain('when the connection is back');
+    expect(waitingWords('signed_out', t)).toContain('You are signed out');
+    expect(waitingWords('denied', t)).toContain('This account cannot add stock');
+  });
+
+  it('the iPhone reader reads the middle square at the camera\'s own size, up to 1080', () => {
+    expect(readArea(1280, 720)).toEqual({ sx: 280, sy: 0, side: 720, size: 720 });
+    expect(readArea(720, 1280)).toEqual({ sx: 0, sy: 280, side: 720, size: 720 });
+    expect(readArea(3840, 2160)).toEqual({ sx: 840, sy: 0, side: 2160, size: 1080 });
   });
 });

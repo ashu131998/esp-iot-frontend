@@ -4,6 +4,7 @@ import { Camera, CheckCircle2, ChevronDown, CloudOff, ImagePlus, Search, Triangl
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { QrScanner } from '@/components/ims-app/qr-scanner';
+import { waitingWords } from '@/components/ims-app/queue-bar';
 import { useImsQueue } from '@/components/ims-app/queue-context';
 import { useImsSetup } from '@/components/ims-app/use-ims-setup';
 import { AppLink } from '@/components/ui/app-link';
@@ -11,6 +12,7 @@ import { useLocale, useT } from '@/lib/i18n/context';
 import { ImsApiError, imsApi, isImsOff } from '@/lib/ims/api';
 import { newClientId } from '@/lib/ims/client-id';
 import { uploadPalletPhoto } from '@/lib/ims/photo-upload';
+import { scanStatus } from '@/lib/ims/queue';
 import {
   checkLocation, latestProducedOn, matchProducts, offlinePalletScan, palletScanOutcome, parseQtyInput, producedOnOk,
   readCode, refusalWords, stockableProducts, stockInMovement, type PalletScan,
@@ -38,7 +40,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const { t } = useT();
   const locale = useLocale();
   const setup = useImsSetup(factoryId);
-  const { queue, add } = useImsQueue();
+  const { queue, add, answers, stop } = useImsQueue();
 
   const [step, setStep] = useState<Step>('pallet');
   const [pallet, setPallet] = useState<string | null>(null);
@@ -89,23 +91,22 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     checkingRef.current = true;
     setChecking(true);
     let outcome: PalletScan;
-    let offline = false;
+    let offline: 'connection' | 'server' | null = null;
     try {
       outcome = palletScanOutcome(await imsApi.scan(factoryId, code));
     } catch (error) {
       if (error instanceof ImsApiError && error.status === 422) outcome = { kind: 'unknown' };
       else if (error instanceof ImsApiError && error.status === 401) {
-        checkingRef.current = false;
-        setChecking(false);
         return say('error', t('You are signed out. Sign in again to add stock.'));
       } else if (isImsOff(error)) {
-        checkingRef.current = false;
-        setChecking(false);
         return say('error', t('FloorBeat IMS is not switched on for this factory. Ask FloorBeat to switch it on.'));
+      } else if (error instanceof ImsApiError && error.status >= 400 && error.status < 500) {
+        // a disabled account, another factory's, a factory that is gone: asking again changes nothing
+        return say('error', t('This account cannot add stock. Sign in with an account of this factory.'));
       } else {
-        // no connection: a label in our form goes ahead and is checked when it is sent
+        // no connection, or the server failing: a label in our form goes ahead and is checked when it is sent
         outcome = offlinePalletScan(code, locations);
-        offline = true;
+        offline = error instanceof ImsApiError ? 'server' : 'connection';
       }
     } finally {
       checkingRef.current = false;
@@ -114,7 +115,11 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     const problem = palletMessage(outcome);
     if (problem) return say('error', problem);
     setPallet(code);
-    setNote(offline ? { tone: 'info', text: t('No connection: this label is checked when the scan is sent.') } : null);
+    setNote(offline === 'connection'
+      ? { tone: 'info', text: t('No connection: this label is checked when the scan is sent.') }
+      : offline === 'server'
+        ? { tone: 'info', text: t('FloorBeat could not check this label now. It is checked when the scan is sent.') }
+        : null);
     setStep(product ? (location ? 'details' : 'location') : 'product');
   }, [factoryId, locations, location, palletMessage, product, queue, say, t]);
 
@@ -174,8 +179,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     setStep('pallet');
   };
 
-  const sent = added ? queue.find((q) => q.movement.client_id === added.clientId) : undefined;
-  const status: 'added' | 'waiting' | 'refused' = !sent ? 'added' : sent.rejected ? 'refused' : 'waiting';
+  // the server's answer is kept: clearing a refused scan from the bar never turns this card into "added"
+  const result = added ? scanStatus(added.clientId, queue, answers) : null;
+  const status = result?.kind ?? 'waiting';
 
   return (
     <div className="space-y-3">
@@ -311,20 +317,22 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             aria-live="polite"
             className={cn(
               'rounded-2xl p-4 ring-1',
-              status === 'added' ? 'bg-emerald-50 ring-emerald-200' : status === 'waiting' ? 'bg-amber-50 ring-amber-200' : 'bg-red-50 ring-red-200',
+              status === 'added' ? 'bg-emerald-50 ring-emerald-200' : status === 'refused' ? 'bg-red-50 ring-red-200' : 'bg-amber-50 ring-amber-200',
             )}
           >
             <p className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              {status === 'added' ? <CheckCircle2 className="h-6 w-6 text-emerald-600" aria-hidden /> : status === 'waiting' ? <CloudOff className="h-6 w-6 text-amber-700" aria-hidden /> : <TriangleAlert className="h-6 w-6 text-red-700" aria-hidden />}
-              {status === 'added' ? t('Added to stock') : status === 'waiting' ? t('Saved on this phone') : t('Not added')}
+              {status === 'added' ? <CheckCircle2 className="h-6 w-6 text-emerald-600" aria-hidden /> : status === 'refused' ? <TriangleAlert className="h-6 w-6 text-red-700" aria-hidden /> : <CloudOff className="h-6 w-6 text-amber-700" aria-hidden />}
+              {status === 'added' ? t('Added to stock') : status === 'refused' ? t('Not added') : status === 'waiting' ? t('Saved on this phone') : t('Sent')}
             </p>
             <p className="mt-1 font-mono text-sm text-foreground">{added.text}</p>
             <p className="mt-1 text-sm text-muted">
-              {status === 'added'
+              {result?.kind === 'added'
                 ? t('It is in Available stock now.')
-                : status === 'waiting'
-                  ? t('It is sent by itself when the connection is back.')
-                  : refusalWords(sent?.rejected, t)}
+                : result?.kind === 'refused'
+                  ? refusalWords(result.refusal, t)
+                  : result?.kind === 'unknown'
+                    ? t('Check Available stock to see it.')
+                    : waitingWords(stop, t)}
             </p>
             {photoState !== 'none' && (
               <p className="mt-1 text-sm text-muted">
@@ -415,7 +423,12 @@ function ProductStep({ products, loading, failed, onRetry, onPick, fieldsText }:
     );
   }
   if (products.length === 0) {
-    return <div className={cn(card, 'text-center text-base text-foreground')}>{t('No products are set up yet. Ask your admin to add them.')}</div>;
+    return (
+      <div className={cn(card, 'text-center')}>
+        <p className="text-base text-foreground">{t('No products are set up yet. Ask your admin to add them.')}</p>
+        <button type="button" onClick={onRetry} className="mt-3 h-12 rounded-2xl px-5 font-medium text-primary ring-1 ring-slate-300">{t('Try again')}</button>
+      </div>
+    );
   }
   return (
     <section className="space-y-3">

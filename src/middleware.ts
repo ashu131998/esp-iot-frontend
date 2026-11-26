@@ -146,7 +146,7 @@ export async function middleware(req: NextRequest) {
   };
 
   function withSecurity(res: NextResponse) {
-    applySecurityHeaders(res, csp);
+    applySecurityHeaders(res, csp, imsApp);
     if (!req.cookies.get(CSRF_COOKIE)) {
       res.cookies.set(CSRF_COOKIE, crypto.randomUUID().replace(/-/g, ''), {
         httpOnly: false,
@@ -451,15 +451,20 @@ export async function middleware(req: NextRequest) {
   return secured();
 }
 
-function applySecurityHeaders(res: NextResponse, csp: string) {
+/**
+ * What the page may use of the phone: nothing, except the camera on FloorBeat IMS's own address (it reads
+ * pallet and location QR codes, lib/ims and components/ims-app/qr-scanner.tsx), for the page itself only.
+ */
+function permissionsPolicy(camera: boolean): string {
+  return `camera=${camera ? '(self)' : '()'}, microphone=(), geolocation=(), browsing-topics=()`;
+}
+
+function applySecurityHeaders(res: NextResponse, csp: string, camera = false) {
   res.headers.set('Content-Security-Policy', csp);
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), browsing-topics=()',
-  );
+  res.headers.set('Permissions-Policy', permissionsPolicy(camera));
   res.headers.set(
     'Strict-Transport-Security',
     'max-age=63072000; includeSubDomains; preload',

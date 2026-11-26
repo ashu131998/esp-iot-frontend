@@ -31,3 +31,44 @@ export function imsPhotoOrigin(configured: string | null | undefined): string {
   if (/^https:\/\/(\*\.)?[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) return value.toLowerCase();
   return R2_ORIGIN;
 }
+
+/** Whether a JPEG fits the server's limit for its kind (full: 1 MB, list picture: 200 KB). */
+export const THUMB_MAX_BYTES = 200 * 1024;
+
+/**
+ * The picture taken, made small on the phone: a full JPEG (longest side FULL_SIDE, quality lowered
+ * until it fits MAX_BYTES) and a list picture (THUMB_SIDE). Browser only. The phone turns the picture
+ * the right way up as it draws it (EXIF orientation), so a portrait photo stays portrait.
+ */
+export async function shrinkPhoto(file: Blob): Promise<{ full: Blob; thumb: Blob }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await img.decode();
+    const draw = (side: number) => {
+      const size = fitWithin(img.naturalWidth, img.naturalHeight, side);
+      const canvas = document.createElement('canvas');
+      canvas.width = size.width;
+      canvas.height = size.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx || size.width === 0) throw new Error('The photo could not be read');
+      ctx.drawImage(img, 0, 0, size.width, size.height);
+      return canvas;
+    };
+    const jpeg = (canvas: HTMLCanvasElement, quality: number) =>
+      new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The photo could not be made smaller'))), 'image/jpeg', quality));
+    const big = draw(FULL_SIDE);
+    let full: Blob | null = null;
+    for (const quality of FULL_QUALITY) {
+      full = await jpeg(big, quality);
+      if (full.size <= MAX_BYTES) break;
+    }
+    const thumb = await jpeg(draw(THUMB_SIDE), THUMB_QUALITY);
+    if (!full || full.size > MAX_BYTES || thumb.size > THUMB_MAX_BYTES) throw new Error('The photo is too big');
+    return { full, thumb };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

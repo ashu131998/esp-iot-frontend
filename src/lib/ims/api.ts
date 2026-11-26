@@ -1,10 +1,12 @@
 /**
  * FloorBeat IMS's calls, through the BFF (/api/v1/factories/:id/ims/* → query-api /v1/factories/:id/ims/*).
- * Cookies carry the session; reads need nothing else.
+ * Cookies carry the session; reads need nothing else, writes the CSRF header.
  */
+import { csrfFromCookie } from '@/lib/csrf';
 import { fetchWithSignal } from '@/lib/request-signal';
 
-import type { ApiSetup, ApiStock } from './types';
+import type { Movement, MovementResult } from './queue';
+import type { ApiPhotoLinks, ApiPicture, ApiScan, ApiSetup, ApiStock } from './types';
 
 export class ImsApiError extends Error {
   constructor(message: string, public status: number) {
@@ -54,11 +56,35 @@ export function stockUrl(factoryId: string, filterQuery: string, cursor: string 
   return `${imsPath(factoryId, '/stock')}${params ? `?${params}` : ''}`;
 }
 
-async function get<T>(url: string, signal?: AbortSignal | null): Promise<T> {
-  const res = await fetchWithSignal(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal });
+async function answer<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new ImsApiError((data as { error?: string } | null)?.error ?? `Request failed (${res.status})`, res.status);
   return data as T;
+}
+
+async function get<T>(url: string, signal?: AbortSignal | null, timeoutMs?: number): Promise<T> {
+  return answer<T>(await fetchWithSignal(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal, timeoutMs }));
+}
+
+/** How long a label check waits: Wi-Fi up with the internet down should not hold up every pallet for 15 s. */
+export const SCAN_CHECK_MS = 6_000;
+
+/** A write: JSON in and out, with the CSRF header; given up on after `timeoutMs` (weak factory Wi-Fi). */
+async function post<T>(url: string, body: unknown, timeoutMs = 20_000): Promise<T> {
+  return answer<T>(await fetchWithSignal(url, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfFromCookie() },
+    credentials: 'same-origin',
+    cache: 'no-store',
+    body: JSON.stringify(body),
+    timeoutMs,
+  }));
+}
+
+/** A photo's JPEG straight to the bucket by its signed link (no cookies: it is not our server). */
+async function putJpeg(url: string, jpeg: Blob): Promise<void> {
+  const res = await fetchWithSignal(url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg, credentials: 'omit', timeoutMs: 60_000 });
+  if (!res.ok) throw new ImsApiError(`Upload failed (${res.status})`, res.status);
 }
 
 export const imsApi = {
@@ -66,4 +92,16 @@ export const imsApi = {
   setup: (factoryId: string, signal?: AbortSignal | null) => get<ApiSetup>(imsPath(factoryId, '/setup'), signal),
   stock: (factoryId: string, filterQuery: string, cursor: string | null, signal?: AbortSignal | null) =>
     get<ApiStock>(stockUrl(factoryId, filterQuery, cursor), signal),
+  /** What a scanned code is (a location, a pallet, a new label of ours, or none). */
+  scan: (factoryId: string, code: string, signal?: AbortSignal | null) =>
+    get<ApiScan>(imsPath(factoryId, `/scan/${encodeURIComponent(code)}`), signal, SCAN_CHECK_MS),
+  /** The queued scans; one result per client_id. */
+  sendMovements: async (factoryId: string, movements: Movement[]) =>
+    (await post<{ results: MovementResult[] }>(imsPath(factoryId, '/movements'), { movements })).results,
+  /** Upload links for a pallet's photo (made on the phone: photo_id). */
+  photoLinks: (factoryId: string, photo: { photo_id: string; taken_at: string; pallet: string }) =>
+    post<ApiPhotoLinks>(imsPath(factoryId, '/photos'), photo),
+  putJpeg,
+  photoUploaded: (factoryId: string, photoId: string) =>
+    post<ApiPicture>(imsPath(factoryId, `/photos/${encodeURIComponent(photoId)}/uploaded`), {}),
 };

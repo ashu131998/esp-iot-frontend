@@ -1,8 +1,9 @@
 'use client';
 
-import { Camera, CheckCircle2, ChevronDown, CloudOff, ImagePlus, Search, TriangleAlert } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronDown, CloudOff, Search, TriangleAlert } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { FieldPhoto, type ReadyPhoto } from '@/components/ims-app/field-photo';
 import { QrScanner } from '@/components/ims-app/qr-scanner';
 import { waitingWords } from '@/components/ims-app/queue-bar';
 import { useImsQueue } from '@/components/ims-app/queue-context';
@@ -11,7 +12,9 @@ import { AppLink } from '@/components/ui/app-link';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { ImsApiError, imsApi, isImsOff } from '@/lib/ims/api';
 import { newClientId } from '@/lib/ims/client-id';
-import { uploadPalletPhoto } from '@/lib/ims/photo-upload';
+import { detailsOf, fieldProblems, phoneFields, stockInFields, type ApiField } from '@/lib/ims/fields';
+import type { PendingPhoto } from '@/lib/ims/photo-queue';
+import { uploadReadyPhoto } from '@/lib/ims/photo-upload';
 import { scanStatus } from '@/lib/ims/queue';
 import {
   checkLocation, latestProducedOn, matchProducts, offlinePalletScan, palletScanOutcome, parseQtyInput, producedOnOk,
@@ -23,7 +26,10 @@ import { cn } from '@/lib/utils';
 
 type Step = 'pallet' | 'product' | 'location' | 'details' | 'done';
 type Note = { tone: 'error' | 'info'; text: string } | null;
-type PhotoState = 'none' | 'sending' | 'sent' | 'failed';
+/** What became of the stock-in's photos: kept on the phone to send, sent at once (no store), or lost. */
+type PhotoState = { kept: number; failed: number; sending: number };
+/** Add stock's own optional photo when the factory has no photo field (key of no field). */
+const OWN_PHOTO = '';
 
 const card = 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100';
 const input = 'h-12 w-full rounded-xl bg-white px-3 text-base text-foreground ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-primary';
@@ -37,10 +43,10 @@ const bigButton = 'h-14 w-full rounded-2xl bg-primary text-lg font-semibold text
  * Every code can be typed instead of scanned. A photo can be added when the factory's photos are set up.
  */
 export function StockInScreen({ factoryId }: { factoryId: string }) {
-  const { t } = useT();
+  const { t, tn } = useT();
   const locale = useLocale();
   const setup = useImsSetup(factoryId);
-  const { queue, add, answers, stop } = useImsQueue();
+  const { queue, add, answers, stop, addPhoto } = useImsQueue();
 
   const [step, setStep] = useState<Step>('pallet');
   const [pallet, setPallet] = useState<string | null>(null);
@@ -51,14 +57,23 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const [batch, setBatch] = useState('');
   const [producedOn, setProducedOn] = useState('');
   const [more, setMore] = useState(false);
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoState, setPhotoState] = useState<PhotoState>('none');
+  const [typed, setTyped] = useState<Record<string, string>>({});
+  const [photos, setPhotos] = useState<Record<string, ReadyPhoto>>({});
+  const [showProblems, setShowProblems] = useState(false);
+  const [photoState, setPhotoState] = useState<PhotoState>({ kept: 0, failed: 0, sending: 0 });
   const [note, setNote] = useState<Note>(null);
   const [checking, setChecking] = useState(false);
   const [added, setAdded] = useState<{ clientId: string; text: string } | null>(null);
   const checkingRef = useRef(false);
 
   const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
+  const photosReady = Boolean(setup.data?.photos_ready);
+  // what Add stock asks, in the factory's order (photo fields only once the factory's photos are set up)
+  const asked = useMemo(
+    () => phoneFields(stockInFields(setup.data)).filter((f) => f.type !== 'photo' || photosReady),
+    [setup.data, photosReady],
+  );
+  const hasPhotoField = asked.some((f) => f.type === 'photo');
   const products = useMemo(() => stockableProducts(setup.data?.products ?? []), [setup.data]);
   const locations = useMemo(() => setup.data?.locations ?? [], [setup.data]);
 
@@ -139,29 +154,63 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
 
   const pickProduct = (p: ApiProduct) => {
     setProduct(p);
-    setSpecs(Object.fromEntries(fields.map((f) => [f.key, p.specs[f.key] ?? null])));
+    setSpecs(Object.fromEntries(asked.filter((f) => f.type === 'choice').map((f) => [f.key, p.specs[f.key] ?? null])));
     setNote(null);
     setStep(location ? 'details' : 'location');
   };
 
   const parsedQty = parseQtyInput(qty);
   const dateOk = producedOnOk(producedOn);
+  const problems = fieldProblems(asked, { specs, typed, photos: new Set(Object.keys(photos)) });
+  const problemText = (f: ApiField): string | null => {
+    if (!showProblems || !problems[f.key]) return null;
+    return problems[f.key] === 'bad_number' ? t('Type a number like 40 or 12.5.') : t('This is needed.');
+  };
+
+  /** The stock-in's photos onto the phone's photo queue (sent from there); straight up when the phone has no store. */
+  const keepPhotos = async (palletCode: string) => {
+    const entries = Object.entries(photos);
+    if (entries.length === 0) return;
+    setPhotoState({ kept: 0, failed: 0, sending: entries.length });
+    let kept = 0;
+    let failed = 0;
+    for (const [key, ready] of entries) {
+      const field = key === OWN_PHOTO ? null : key;
+      const pending: PendingPhoto = {
+        id: newClientId(), factoryId, pallet: palletCode, field, source: ready.source,
+        takenAt: ready.takenAt.toISOString(), takenAtSource: ready.takenAtSource, full: ready.full, thumb: ready.thumb,
+        addedAt: new Date().toISOString(),
+      };
+      const outcome = await addPhoto(pending);
+      if (outcome === 'kept') kept++;
+      else if (outcome === 'no_store') {
+        try {
+          await uploadReadyPhoto(factoryId, pending);
+          kept++;
+        } catch {
+          failed++;
+        }
+      } else failed++;
+    }
+    setPhotoState({ kept, failed, sending: 0 });
+  };
 
   const submit = () => {
     if (!pallet || !product || !location) return;
     if (!parsedQty.ok) return say('error', t('Type a number like 40 or 12.5, or leave it empty.'));
     if (!dateOk) return say('error', t('The production date cannot be after tomorrow.'));
+    if (Object.keys(problems).length > 0) {
+      setShowProblems(true);
+      return say('error', t('Fill in the details marked in red.'));
+    }
     const clientId = newClientId();
-    const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn }, clientId);
+    const details = detailsOf(asked, typed);
+    const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn, details }, clientId);
     if (!add(movement)) return say('error', t('This phone could not keep the scan. Free some space on the phone and try again.'));
     const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
     setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
-    if (photo && setup.data?.photos_ready) {
-      setPhotoState('sending');
-      uploadPalletPhoto(factoryId, pallet, photo).then(() => setPhotoState('sent'), () => setPhotoState('failed'));
-    } else {
-      setPhotoState('none');
-    }
+    setPhotoState({ kept: 0, failed: 0, sending: 0 });
+    void keepPhotos(pallet);
     setNote(null);
     setStep('done');
   };
@@ -172,7 +221,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     setQty('');
     setBatch('');
     setProducedOn('');
-    setPhoto(null);
+    setTyped({});
+    setPhotos({});
+    setShowProblems(false);
     setMore(false);
     setNote(null);
     // the product and its specs stay: a run of pallets is usually the same product
@@ -249,22 +300,21 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             )}
           </section>
 
-          {fields.length > 0 && (
-            <section className={cn(card, 'space-y-3')} aria-label={t('Specs')}>
-              <p className="text-base font-semibold text-foreground">{t('Specs')}</p>
-              {fields.map((f) => (
-                <div key={f.key}>
-                  <label htmlFor={`ims-spec-${f.key}`} className="block text-sm text-muted">{f.label}</label>
-                  <select
-                    id={`ims-spec-${f.key}`}
-                    value={specs[f.key] ?? ''}
-                    onChange={(e) => setSpecs((s) => ({ ...s, [f.key]: e.target.value || null }))}
-                    className={cn(input, 'mt-1')}
-                  >
-                    <option value="">—</option>
-                    {f.options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                  </select>
-                </div>
+          {asked.length > 0 && (
+            <section className={cn(card, 'space-y-3')} aria-label={t('Details')}>
+              <p className="text-base font-semibold text-foreground">{t('Details')}</p>
+              {asked.map((f) => (
+                <AskedField
+                  key={f.key}
+                  field={f}
+                  choice={specs[f.key] ?? ''}
+                  onChoice={(v) => setSpecs((x) => ({ ...x, [f.key]: v || null }))}
+                  typed={typed[f.key] ?? ''}
+                  onTyped={(v) => setTyped((x) => ({ ...x, [f.key]: v }))}
+                  photo={photos[f.key] ?? null}
+                  onPhoto={(p) => setPhotos((x) => withPhoto(x, f.key, p))}
+                  error={problemText(f)}
+                />
               ))}
             </section>
           )}
@@ -289,21 +339,16 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             )}
           </section>
 
-          {setup.data?.photos_ready && (
+          {photosReady && !hasPhotoField && (
             <section className={card}>
-              {photo ? (
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-                  <p className="min-w-0 flex-1 text-base text-foreground">{t('Photo added')}</p>
-                  <button type="button" onClick={() => setPhoto(null)} className="h-10 rounded-xl px-3 text-sm font-medium text-primary ring-1 ring-slate-300">{t('Remove')}</button>
-                </div>
-              ) : (
-                <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl text-base font-medium text-primary ring-1 ring-slate-300">
-                  <ImagePlus className="h-5 w-5" aria-hidden />
-                  {t('Add a photo (optional)')}
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
-                </label>
-              )}
+              <FieldPhoto
+                id="ims-own-photo"
+                label={t('Photo (optional)')}
+                required={false}
+                value={photos[OWN_PHOTO] ?? null}
+                onChange={(p) => setPhotos((x) => withPhoto(x, OWN_PHOTO, p))}
+                error={null}
+              />
             </section>
           )}
 
@@ -334,9 +379,14 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
                     ? t('Check Available stock to see it.')
                     : waitingWords(stop, t)}
             </p>
-            {photoState !== 'none' && (
+            {photoState.kept > 0 && (
               <p className="mt-1 text-sm text-muted">
-                {photoState === 'sending' ? t('Sending the photo…') : photoState === 'sent' ? t('Photo sent.') : t('The photo was not sent. The stock is not affected.')}
+                {tn(photoState.kept, 'The photo is on this phone and is sent by itself.', '{count} photos are on this phone and are sent by themselves.', { count: photoState.kept })}
+              </p>
+            )}
+            {photoState.failed > 0 && (
+              <p className="mt-1 text-sm font-medium text-red-700">
+                {tn(photoState.failed, 'The photo could not be kept. Free some space on the phone. The stock is not affected.', '{count} photos could not be kept. Free some space on the phone. The stock is not affected.', { count: photoState.failed })}
               </p>
             )}
           </section>
@@ -458,5 +508,55 @@ function ProductStep({ products, loading, failed, onRetry, onPick, fieldsText }:
         </ul>
       )}
     </section>
+  );
+}
+
+function withPhoto(photos: Record<string, ReadyPhoto>, key: string, photo: ReadyPhoto | null): Record<string, ReadyPhoto> {
+  const next = { ...photos };
+  if (photo) next[key] = photo;
+  else delete next[key];
+  return next;
+}
+
+/** One field Add stock asks for: a pick-list, a line of text, a number or a photo. */
+function AskedField({ field, choice, onChoice, typed, onTyped, photo, onPhoto, error }: {
+  field: ApiField;
+  choice: string;
+  onChoice: (value: string) => void;
+  typed: string;
+  onTyped: (value: string) => void;
+  photo: ReadyPhoto | null;
+  onPhoto: (photo: ReadyPhoto | null) => void;
+  error: string | null;
+}) {
+  const id = `ims-field-${field.key}`;
+  const label = `${field.label}${field.required ? ' *' : ''}`;
+  if (field.type === 'photo') {
+    return <FieldPhoto id={id} label={field.label} required={field.required} value={photo} onChange={onPhoto} error={error} />;
+  }
+  const bad = error ? 'ring-2 ring-red-400' : '';
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm text-muted">{label}</label>
+      {field.type === 'choice' ? (
+        <select id={id} value={choice} onChange={(e) => onChoice(e.target.value)} aria-invalid={Boolean(error)} className={cn(input, 'mt-1', bad)}>
+          <option value="">—</option>
+          {field.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <input
+          id={id}
+          value={typed}
+          onChange={(e) => onTyped(e.target.value)}
+          inputMode={field.type === 'number' ? 'decimal' : 'text'}
+          maxLength={field.type === 'text' ? 200 : 20}
+          autoComplete="off"
+          enterKeyHint="next"
+          aria-invalid={Boolean(error)}
+          className={cn(input, 'mt-1', bad)}
+        />
+      )}
+      {error && <p className="mt-1 text-sm font-medium text-red-700">{error}</p>}
+    </div>
   );
 }

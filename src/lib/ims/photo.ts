@@ -3,11 +3,18 @@
  * page and a small one for lists. Factory Wi-Fi is weak, and the server takes at most 1 MB.
  */
 
+import { EXIF_READ_BYTES, exifTakenAt } from './exif';
+
 /** Longest side of the full picture and of the list picture, in pixels. */
 export const FULL_SIDE = 1600;
+/** Tried when FULL_SIDE does not fit at the lowest quality: smaller, not blockier. */
+export const SMALLER_SIDE = 1280;
 export const THUMB_SIDE = 320;
-/** JPEG quality for each; the full one is tried lower until it fits. */
-export const FULL_QUALITY = [0.8, 0.7, 0.6, 0.5] as const;
+/**
+ * JPEG quality for the full one, tried lower until it fits, never under 0.7: below that JPEG blocks spoil
+ * colours and edges ("grey or silver"), which next month's AI step reads (R&D and AI Engineer, 2026-11-26).
+ */
+export const FULL_QUALITY = [0.8, 0.7] as const;
 export const THUMB_QUALITY = 0.7;
 export const MAX_BYTES = 1_000_000;
 
@@ -59,11 +66,14 @@ export async function shrinkPhoto(file: Blob): Promise<{ full: Blob; thumb: Blob
     };
     const jpeg = (canvas: HTMLCanvasElement, quality: number) =>
       new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The photo could not be made smaller'))), 'image/jpeg', quality));
-    const big = draw(FULL_SIDE);
     let full: Blob | null = null;
-    for (const quality of FULL_QUALITY) {
-      full = await jpeg(big, quality);
-      if (full.size <= MAX_BYTES) break;
+    for (const side of [FULL_SIDE, SMALLER_SIDE]) {
+      const big = draw(side);
+      for (const quality of FULL_QUALITY) {
+        full = await jpeg(big, quality);
+        if (full.size <= MAX_BYTES) break;
+      }
+      if (full && full.size <= MAX_BYTES) break;
     }
     const thumb = await jpeg(draw(THUMB_SIDE), THUMB_QUALITY);
     if (!full || full.size > MAX_BYTES || thumb.size > THUMB_MAX_BYTES) throw new Error('The photo is too big');
@@ -71,4 +81,31 @@ export async function shrinkPhoto(file: Blob): Promise<{ full: Blob; thumb: Blob
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Where a photo's time is from: taken just now, the photo's own date, the file's date, or the upload. */
+export type TakenAtSource = 'taken_now' | 'photo_info' | 'file_date' | 'upload';
+
+/**
+ * When a photo was taken, read before it is made small (that drops the photo's own date). A photo just
+ * taken with the camera button is "now". One from the library: its EXIF date taken, else the file's date
+ * (on Android often when it was copied or downloaded, so less sure), else now, said to be the upload's.
+ */
+export async function photoTime(
+  file: Blob & { lastModified?: number },
+  source: 'camera' | 'library',
+  now: Date = new Date(),
+): Promise<{ takenAt: Date; takenAtSource: TakenAtSource }> {
+  if (source === 'camera') return { takenAt: now, takenAtSource: 'taken_now' };
+  try {
+    const fromPhoto = exifTakenAt(await file.slice(0, EXIF_READ_BYTES).arrayBuffer());
+    if (fromPhoto && fromPhoto.getTime() <= now.getTime() + 10 * 60_000) return { takenAt: fromPhoto, takenAtSource: 'photo_info' };
+  } catch {
+    // unreadable: the file's date, then now
+  }
+  const modified = file.lastModified;
+  if (typeof modified === 'number' && modified > Date.UTC(1990, 0, 1) && modified <= now.getTime() + 10 * 60_000) {
+    return { takenAt: new Date(modified), takenAtSource: 'file_date' };
+  }
+  return { takenAt: now, takenAtSource: 'upload' };
 }

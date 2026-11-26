@@ -5,11 +5,12 @@
 import { csrfFromCookie } from '@/lib/csrf';
 import { fetchWithSignal } from '@/lib/request-signal';
 
+import type { ApiField, ApiFieldList, editFieldBody, newFieldBody } from './fields';
 import type { Movement, MovementResult } from './queue';
 import type { ApiPhotoLinks, ApiPicture, ApiScan, ApiSetup, ApiStock } from './types';
 
 export class ImsApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public body: unknown = null) {
     super(message);
     this.name = 'ImsApiError';
   }
@@ -58,7 +59,7 @@ export function stockUrl(factoryId: string, filterQuery: string, cursor: string 
 
 async function answer<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ImsApiError((data as { error?: string } | null)?.error ?? `Request failed (${res.status})`, res.status);
+  if (!res.ok) throw new ImsApiError((data as { error?: string } | null)?.error ?? `Request failed (${res.status})`, res.status, data);
   return data as T;
 }
 
@@ -71,14 +72,21 @@ export const SCAN_CHECK_MS = 6_000;
 
 /** A write: JSON in and out, with the CSRF header; given up on after `timeoutMs` (weak factory Wi-Fi). */
 async function post<T>(url: string, body: unknown, timeoutMs = 20_000): Promise<T> {
-  return answer<T>(await fetchWithSignal(url, {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfFromCookie() },
+  return write<T>('POST', url, body, timeoutMs);
+}
+
+async function write<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body: unknown, timeoutMs = 20_000): Promise<T> {
+  const res = await fetchWithSignal(url, {
+    method,
+    // no Content-Type without a body: Fastify refuses an empty JSON body (a DELETE)
+    headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), 'X-CSRF-Token': csrfFromCookie() },
     credentials: 'same-origin',
     cache: 'no-store',
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
     timeoutMs,
-  }));
+  });
+  if (res.status === 204) return undefined as T;
+  return answer<T>(res);
 }
 
 /** A photo's JPEG straight to the bucket by its signed link (no cookies: it is not our server). */
@@ -86,6 +94,32 @@ async function putJpeg(url: string, jpeg: Blob): Promise<void> {
   const res = await fetchWithSignal(url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg, credentials: 'omit', timeoutMs: 60_000 });
   if (!res.ok) throw new ImsApiError(`Upload failed (${res.status})`, res.status);
 }
+
+/**
+ * What a photo is, for its upload links: the pallet's, and the photo field it answers (null: the stock-in's
+ * own optional photo). `source` and `taken_at_source` say how it came (taken now, or from the phone's
+ * library, and where its time is from), for next month's AI step.
+ */
+export interface PhotoLinkRequest {
+  photo_id: string;
+  taken_at: string;
+  pallet: string;
+  field?: string | null;
+  source?: 'camera' | 'library';
+  taken_at_source?: 'taken_now' | 'photo_info' | 'file_date' | 'upload';
+}
+
+/** The ops.floorbeat.in Stock details page's calls: a factory's fields, changed by our staff only. */
+export const imsFieldsApi = {
+  list: (factoryId: string, signal?: AbortSignal | null) => get<ApiFieldList>(imsPath(factoryId, '/spec-fields'), signal),
+  create: (factoryId: string, body: ReturnType<typeof newFieldBody>) => post<ApiField>(imsPath(factoryId, '/spec-fields'), body),
+  update: (factoryId: string, key: string, body: ReturnType<typeof editFieldBody>) =>
+    write<ApiField>('PUT', imsPath(factoryId, `/spec-fields/${encodeURIComponent(key)}`), body),
+  order: (factoryId: string, keys: string[]) =>
+    write<{ fields: ApiField[] }>('PUT', imsPath(factoryId, '/spec-fields/order'), { keys }),
+  remove: (factoryId: string, key: string) =>
+    write<void>('DELETE', imsPath(factoryId, `/spec-fields/${encodeURIComponent(key)}`), undefined),
+};
 
 export const imsApi = {
   /** Spec fields, products, locations: what the phone keeps. */
@@ -99,7 +133,7 @@ export const imsApi = {
   sendMovements: async (factoryId: string, movements: Movement[]) =>
     (await post<{ results: MovementResult[] }>(imsPath(factoryId, '/movements'), { movements })).results,
   /** Upload links for a pallet's photo (made on the phone: photo_id). */
-  photoLinks: (factoryId: string, photo: { photo_id: string; taken_at: string; pallet: string }) =>
+  photoLinks: (factoryId: string, photo: PhotoLinkRequest) =>
     post<ApiPhotoLinks>(imsPath(factoryId, '/photos'), photo),
   putJpeg,
   photoUploaded: (factoryId: string, photoId: string) =>

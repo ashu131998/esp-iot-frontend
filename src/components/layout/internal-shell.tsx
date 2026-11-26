@@ -6,6 +6,7 @@ import {
   Bell,
   Building2,
   CircuitBoard,
+  ClipboardList,
   HeartPulse,
   House,
   LifeBuoy,
@@ -44,6 +45,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/internal/health': HeartPulse,
   '/internal/onboard': Rocket,
   '/internal/features': Palette,
+  '/internal/stock-details': ClipboardList,
   '/internal/users': Users,
   '/internal/audit': ScrollText,
 };

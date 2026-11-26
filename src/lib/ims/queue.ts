@@ -25,6 +25,8 @@ export interface Movement {
   /** in: the product, its specs where this pallet's differ (null: one taken away), batch and production day. */
   product_id?: string;
   specs?: Record<string, string | null>;
+  /** in: the text and number fields' answers (lib/ims/fields.ts detailsOf). */
+  details?: Record<string, string | number>;
   batch?: string;
   produced_on?: string;
   /** in, move: the location's code (R03-C05). */

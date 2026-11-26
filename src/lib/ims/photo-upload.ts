@@ -1,17 +1,20 @@
 /**
- * A pallet's photo, sent while the phone is online: made small on the phone (photo.ts shrinkPhoto),
- * upload links asked for (POST …/ims/photos), both JPEGs put straight into the bucket, then the server
- * told they are there. The pallet need not be in the system yet: its stock-in may still be queued.
- * Browser only.
+ * A photo sent at once, for a phone that cannot keep it to send later (no IndexedDB: a private window).
+ * Otherwise photos go through the phone's photo queue (photo-queue.ts), which does the same steps: upload
+ * links (POST …/ims/photos), both JPEGs straight into the bucket, then "they are there". Browser only.
  */
 import { imsApi } from './api';
-import { newClientId } from './client-id';
-import { shrinkPhoto } from './photo';
+import { isAlreadyUploaded, linkRequest, type PendingPhoto } from './photo-queue';
 
-export async function uploadPalletPhoto(factoryId: string, pallet: string, file: Blob, takenAt: Date = new Date()): Promise<void> {
-  const { full, thumb } = await shrinkPhoto(file);
-  const links = await imsApi.photoLinks(factoryId, { photo_id: newClientId(), taken_at: takenAt.toISOString(), pallet });
+export async function uploadReadyPhoto(factoryId: string, photo: PendingPhoto): Promise<void> {
+  let links;
+  try {
+    links = await imsApi.photoLinks(factoryId, linkRequest(photo));
+  } catch (error) {
+    if (isAlreadyUploaded(error)) return;
+    throw error;
+  }
   if (links.uploaded) return;
-  await Promise.all([imsApi.putJpeg(links.full_put_url, full), imsApi.putJpeg(links.thumb_put_url, thumb)]);
+  await Promise.all([imsApi.putJpeg(links.full_put_url, photo.full), imsApi.putJpeg(links.thumb_put_url, photo.thumb)]);
   await imsApi.photoUploaded(factoryId, links.photo_id);
 }

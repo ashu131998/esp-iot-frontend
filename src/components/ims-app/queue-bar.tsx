@@ -37,18 +37,19 @@ export function waitingWords(stop: SendStop | null, t: (key: string) => string):
  */
 export function ImsQueueBar() {
   const { t, tn } = useT();
-  const { queue, waiting, rejected, sending, stop, stale, send, remove, dismissStale } = useImsQueue();
-  if (waiting === 0 && rejected === 0 && stale.length === 0) return null;
+  const { queue, waiting, rejected, sending, stop, stale, send, remove, dismissStale, photosWaiting, photosRefused, removePhoto } = useImsQueue();
+  if (waiting === 0 && rejected === 0 && stale.length === 0 && photosWaiting === 0 && photosRefused.length === 0) return null;
   const refused = queue.filter((q) => q.rejected);
 
   return (
     <div className="mb-3 space-y-2">
-      {waiting > 0 && (
+      {(waiting > 0 || photosWaiting > 0) && (
         <section className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200" aria-live="polite">
           <div className="flex items-center gap-3">
             <CloudOff className="h-5 w-5 shrink-0 text-amber-700" aria-hidden />
             <p className="min-w-0 flex-1 text-sm font-medium text-amber-900">
-              {tn(waiting, '{count} scan waiting to send', '{count} scans waiting to send', { count: waiting })}
+              {waiting > 0 && <span className="block">{tn(waiting, '{count} scan waiting to send', '{count} scans waiting to send', { count: waiting })}</span>}
+              {photosWaiting > 0 && <span className="block">{tn(photosWaiting, '{count} photo waiting to send', '{count} photos waiting to send', { count: photosWaiting })}</span>}
             </p>
             {stop === 'signed_out' ? (
               <button type="button" onClick={() => window.location.reload()} className="h-10 shrink-0 rounded-xl bg-white px-3 text-sm font-medium text-amber-900 ring-1 ring-amber-300">
@@ -85,6 +86,28 @@ export function ImsQueueBar() {
                 </li>
               );
             })}
+          </ul>
+        </section>
+      )}
+
+      {photosRefused.length > 0 && (
+        <section className="rounded-2xl bg-red-50 p-3 ring-1 ring-red-200" aria-live="polite">
+          <p className="flex items-center gap-2 text-sm font-semibold text-red-900">
+            <TriangleAlert className="h-5 w-5 shrink-0" aria-hidden />
+            {tn(photosRefused.length, '{count} photo was not saved', '{count} photos were not saved', { count: photosRefused.length })}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {photosRefused.map((p) => (
+              <li key={p.id} className="flex items-start gap-2 rounded-xl bg-white p-2 ring-1 ring-red-100">
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-sm font-medium text-foreground">{p.pallet}</p>
+                  <p className="text-sm text-red-900">{p.refused}</p>
+                </div>
+                <button type="button" onClick={() => removePhoto(p.id)} aria-label={t('Remove')} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted hover:bg-slate-100">
+                  <X className="h-5 w-5" aria-hidden />
+                </button>
+              </li>
+            ))}
           </ul>
         </section>
       )}

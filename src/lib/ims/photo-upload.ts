@@ -4,10 +4,16 @@
  * links (POST …/ims/photos), both JPEGs straight into the bucket, then "they are there". Browser only.
  */
 import { imsApi } from './api';
-import { linkRequest, type PendingPhoto } from './photo-queue';
+import { isAlreadyUploaded, linkRequest, type PendingPhoto } from './photo-queue';
 
 export async function uploadReadyPhoto(factoryId: string, photo: PendingPhoto): Promise<void> {
-  const links = await imsApi.photoLinks(factoryId, linkRequest(photo));
+  let links;
+  try {
+    links = await imsApi.photoLinks(factoryId, linkRequest(photo));
+  } catch (error) {
+    if (isAlreadyUploaded(error)) return;
+    throw error;
+  }
   if (links.uploaded) return;
   await Promise.all([imsApi.putJpeg(links.full_put_url, photo.full), imsApi.putJpeg(links.thumb_put_url, photo.thumb)]);
   await imsApi.photoUploaded(factoryId, links.photo_id);

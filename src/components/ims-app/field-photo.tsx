@@ -29,9 +29,9 @@ function dataUrl(blob: Blob): Promise<string> {
 
 /** Makes a picked file ready: its time read first (making it small drops the photo's own date), then shrunk. */
 export async function readyPhoto(file: File, source: 'camera' | 'library'): Promise<ReadyPhoto> {
-  const { takenAt, takenAtSource } = await photoTime(file, source);
+  const time = await photoTime(file, source);
   const { full, thumb } = await shrinkPhoto(file);
-  return { full, thumb, source, takenAt, takenAtSource, preview: await dataUrl(thumb) };
+  return { full, thumb, source: time.source, takenAt: time.takenAt, takenAtSource: time.takenAtSource, preview: await dataUrl(thumb) };
 }
 
 const pickButton = 'flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl text-base font-medium text-primary ring-1 ring-slate-300 active:bg-slate-50';

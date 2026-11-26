@@ -20,8 +20,9 @@ export function ImsSignOut({ className, withText = false }: { className?: string
 
   async function signOut() {
     const unsent = queue?.waiting ?? 0;
-    if (unsent > 0 && !window.confirm(tn(unsent, '{count} scan is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?', '{count} scans are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?', { count: unsent }))) return;
     const photos = queue?.photosWaiting ?? 0;
+    if (unsent > 0 && photos > 0 && !window.confirm(t('Scans and photos are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?'))) return;
+    if (unsent > 0 && photos === 0 && !window.confirm(tn(unsent, '{count} scan is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?', '{count} scans are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?', { count: unsent }))) return;
     if (unsent === 0 && photos > 0 && !window.confirm(tn(photos, '{count} photo is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?', '{count} photos are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?', { count: photos }))) return;
     setBusy(true);
     try {

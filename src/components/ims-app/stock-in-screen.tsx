@@ -13,7 +13,7 @@ import { useLocale, useT } from '@/lib/i18n/context';
 import { ImsApiError, imsApi, isImsOff } from '@/lib/ims/api';
 import { newClientId } from '@/lib/ims/client-id';
 import { detailsOf, fieldProblems, phoneFields, stockInFields, textMax, type ApiField } from '@/lib/ims/fields';
-import type { PendingPhoto } from '@/lib/ims/photo-queue';
+import { keepStockInPhotos, type PendingPhoto } from '@/lib/ims/photo-queue';
 import { uploadReadyPhoto } from '@/lib/ims/photo-upload';
 import { scanStatus } from '@/lib/ims/queue';
 import {
@@ -26,8 +26,6 @@ import { cn } from '@/lib/utils';
 
 type Step = 'pallet' | 'product' | 'location' | 'details' | 'done';
 type Note = { tone: 'error' | 'info'; text: string } | null;
-/** What became of the stock-in's photos: kept on the phone to send, sent at once (no store), or lost. */
-type PhotoState = { kept: number; failed: number; sending: number };
 /** Add stock's own optional photo when the factory has no photo field (key of no field). */
 const OWN_PHOTO = '';
 
@@ -46,7 +44,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
   const locale = useLocale();
   const setup = useImsSetup(factoryId);
-  const { queue, add, answers, stop, addPhoto } = useImsQueue();
+  const { queue, add, answers, stop, addPhoto, removePhoto } = useImsQueue();
 
   const [step, setStep] = useState<Step>('pallet');
   const [pallet, setPallet] = useState<string | null>(null);
@@ -60,7 +58,8 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   const [typed, setTyped] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<Record<string, ReadyPhoto>>({});
   const [showProblems, setShowProblems] = useState(false);
-  const [photoState, setPhotoState] = useState<PhotoState>({ kept: 0, failed: 0, sending: 0 });
+  const [photoCount, setPhotoCount] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [note, setNote] = useState<Note>(null);
   const [checking, setChecking] = useState(false);
   const [added, setAdded] = useState<{ clientId: string; text: string } | null>(null);
@@ -169,52 +168,59 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     return t('This is needed.');
   };
 
-  /** The stock-in's photos onto the phone's photo queue (sent from there); straight up when the phone has no store. */
+  /**
+   * The stock-in's photos kept on the phone BEFORE the scan is queued, so a stock-in never goes out without
+   * the photos it was taken with (a required one most of all). Without IndexedDB (a private window) they are
+   * sent at once instead. Any that cannot be kept or sent: those already kept are taken back, nothing is
+   * queued, and the person is told. The photos name the stock-in (its client_id): the server counts them only
+   * once that stock-in is taken for this pallet.
+   */
   const keepPhotos = async (palletCode: string, stockIn: string) => {
-    const entries = Object.entries(photos);
-    if (entries.length === 0) return;
-    setPhotoState({ kept: 0, failed: 0, sending: entries.length });
-    let kept = 0;
-    let failed = 0;
-    for (const [key, ready] of entries) {
-      const field = key === OWN_PHOTO ? null : key;
-      const pending: PendingPhoto = {
-        id: newClientId(), factoryId, pallet: palletCode, field, stockIn, source: ready.source,
-        takenAt: ready.takenAt.toISOString(), takenAtSource: ready.takenAtSource, full: ready.full, thumb: ready.thumb,
-        addedAt: new Date().toISOString(),
-      };
-      const outcome = await addPhoto(pending);
-      if (outcome === 'kept') kept++;
-      else if (outcome === 'no_store') {
-        try {
-          await uploadReadyPhoto(factoryId, pending);
-          kept++;
-        } catch {
-          failed++;
-        }
-      } else failed++;
-    }
-    setPhotoState({ kept, failed, sending: 0 });
+    const pendings: PendingPhoto[] = Object.entries(photos).map(([key, ready]) => ({
+      id: newClientId(), factoryId, pallet: palletCode, field: key === OWN_PHOTO ? null : key, stockIn, source: ready.source,
+      takenAt: ready.takenAt.toISOString(), takenAtSource: ready.takenAtSource, full: ready.full, thumb: ready.thumb,
+      addedAt: new Date().toISOString(),
+    }));
+    const kept = await keepStockInPhotos(pendings, {
+      keep: addPhoto, upload: (p) => uploadReadyPhoto(factoryId, p), remove: removePhoto,
+    });
+    if (kept.ok) return { ok: true as const, count: pendings.length, keptIds: kept.keptIds };
+    return {
+      ok: false as const,
+      text: kept.reason === 'not_sent'
+        ? t('The photo could not be sent. Check the connection and try again.')
+        : t('This phone could not keep the photo. Free some space on the phone and try again.'),
+    };
   };
 
-  const submit = () => {
-    if (!pallet || !product || !location) return;
+  const submit = async () => {
+    if (!pallet || !product || !location || saving) return;
     if (!parsedQty.ok) return say('error', t('Type a number like 40 or 12.5, or leave it empty.'));
     if (!dateOk) return say('error', t('The production date cannot be after tomorrow.'));
     if (Object.keys(problems).length > 0) {
       setShowProblems(true);
       return say('error', t('Fill in the details marked in red.'));
     }
-    const clientId = newClientId();
-    const details = detailsOf(asked, typed);
-    const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn, details }, clientId);
-    if (!add(movement)) return say('error', t('This phone could not keep the scan. Free some space on the phone and try again.'));
-    const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
-    setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
-    setPhotoState({ kept: 0, failed: 0, sending: 0 });
-    void keepPhotos(pallet, clientId);
-    setNote(null);
-    setStep('done');
+    setSaving(true);
+    try {
+      const clientId = newClientId();
+      const kept = await keepPhotos(pallet, clientId);
+      if (!kept.ok) return say('error', kept.text);
+      const details = detailsOf(asked, typed);
+      const movement = stockInMovement({ pallet, product, location, qty: parsedQty.qty, specs, batch, producedOn, details }, clientId);
+      if (!add(movement)) {
+        // no stock-in for the photos to show on: take them back too
+        kept.keptIds.forEach(removePhoto);
+        return say('error', t('This phone could not keep the scan. Free some space on the phone and try again.'));
+      }
+      const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
+      setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
+      setPhotoCount(kept.count);
+      setNote(null);
+      setStep('done');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const nextPallet = () => {
@@ -280,7 +286,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
       {step === 'details' && product && (
         <form
           className="space-y-3"
-          onSubmit={(e) => { e.preventDefault(); submit(); }}
+          onSubmit={(e) => { e.preventDefault(); void submit(); }}
         >
           <section className={card}>
             <label htmlFor="ims-qty" className="block text-base font-semibold text-foreground">{t('Quantity ({unit})', { unit: product.unit })}</label>
@@ -354,7 +360,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
             </section>
           )}
 
-          <button type="submit" disabled={!parsedQty.ok || !dateOk} className={bigButton}>{t('Add stock')}</button>
+          <button type="submit" disabled={!parsedQty.ok || !dateOk || saving} className={bigButton}>{saving ? t('Saving…') : t('Add stock')}</button>
         </form>
       )}
 
@@ -381,14 +387,9 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
                     ? t('Check Available stock to see it.')
                     : waitingWords(stop, t)}
             </p>
-            {photoState.kept > 0 && (
+            {photoCount > 0 && (
               <p className="mt-1 text-sm text-muted">
-                {tn(photoState.kept, 'The photo is on this phone and is sent by itself.', '{count} photos are on this phone and are sent by themselves.', { count: photoState.kept })}
-              </p>
-            )}
-            {photoState.failed > 0 && (
-              <p className="mt-1 text-sm font-medium text-red-700">
-                {tn(photoState.failed, 'The photo could not be kept. Free some space on the phone. The stock is not affected.', '{count} photos could not be kept. Free some space on the phone. The stock is not affected.', { count: photoState.failed })}
+                {tn(photoCount, 'The photo is on this phone and is sent by itself.', '{count} photos are on this phone and are sent by themselves.', { count: photoCount })}
               </p>
             )}
           </section>

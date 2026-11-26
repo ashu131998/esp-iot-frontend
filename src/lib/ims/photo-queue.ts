@@ -70,10 +70,28 @@ export function linkRequest(p: PendingPhoto): PhotoLinkRequest {
     taken_at: p.takenAt,
     pallet: p.pallet,
     ...(p.field ? { field: p.field } : {}),
-    ...(p.stockIn ? { stock_in: p.stockIn } : {}),
+    ...(p.stockIn ? { movement_client_id: p.stockIn } : {}),
     source: p.source,
     taken_at_source: p.takenAtSource,
   };
+}
+
+/**
+ * Whether the server said it has this photo already: a 409 with `uploaded: true` (its answer to asking for
+ * links again after "they are there" went through but its reply was lost on weak Wi-Fi).
+ */
+export function isAlreadyUploaded(error: unknown): boolean {
+  return error instanceof ImsApiError && error.status === 409 && (error.body as { uploaded?: unknown } | null)?.uploaded === true;
+}
+
+/** Upload links for a photo, or null when the server has it already. */
+async function linksOrDone(calls: PhotoCalls, factoryId: string, photo: PendingPhoto): Promise<ApiPhotoLinks | null> {
+  try {
+    return await calls.links(factoryId, linkRequest(photo));
+  } catch (error) {
+    if (isAlreadyUploaded(error)) return null;
+    throw error;
+  }
 }
 
 /**
@@ -87,8 +105,8 @@ export async function sendPhotos(store: PhotoStore, calls: PhotoCalls, factoryId
   const waiting = (await store.list(factoryId)).filter((p) => !p.refused).sort((a, b) => a.addedAt.localeCompare(b.addedAt));
   for (const photo of waiting) {
     try {
-      const links = await calls.links(factoryId, linkRequest(photo));
-      if (!links.uploaded) {
+      const links = await linksOrDone(calls, factoryId, photo);
+      if (links && !links.uploaded) {
         try {
           await Promise.all([calls.putJpeg(links.full_put_url, photo.full), calls.putJpeg(links.thumb_put_url, photo.thumb)]);
         } catch {
@@ -96,7 +114,11 @@ export async function sendPhotos(store: PhotoStore, calls: PhotoCalls, factoryId
           report.stop = 'offline';
           return report;
         }
-        await calls.uploaded(factoryId, links.photo_id);
+        try {
+          await calls.uploaded(factoryId, links.photo_id);
+        } catch (error) {
+          if (!isAlreadyUploaded(error)) throw error;
+        }
       }
       await store.remove(photo.id);
       report.sent++;
@@ -113,4 +135,41 @@ export async function sendPhotos(store: PhotoStore, calls: PhotoCalls, factoryId
     }
   }
   return report;
+}
+
+/**
+ * A stock-in's photos kept on the phone BEFORE its scan is queued (stock-in-screen.tsx), so a stock-in never
+ * goes out without the photos it was taken with. `keep` is the photo queue's add (photo-store.ts); without a
+ * store (a private window) a photo is `upload`ed at once instead. When one cannot be kept or sent, those kept
+ * already are taken back (`remove`) and nothing should be queued: 'no_space' or 'not_sent'.
+ */
+export async function keepStockInPhotos(
+  photos: PendingPhoto[],
+  calls: {
+    keep: (photo: PendingPhoto) => Promise<'kept' | 'full' | 'no_store'>;
+    upload: (photo: PendingPhoto) => Promise<void>;
+    remove: (id: string) => void;
+  },
+): Promise<{ ok: true; keptIds: string[] } | { ok: false; reason: 'no_space' | 'not_sent' }> {
+  const keptIds: string[] = [];
+  const undo = () => keptIds.forEach((id) => calls.remove(id));
+  for (const photo of photos) {
+    const outcome = await calls.keep(photo);
+    if (outcome === 'kept') {
+      keptIds.push(photo.id);
+      continue;
+    }
+    if (outcome === 'no_store') {
+      try {
+        await calls.upload(photo);
+        continue;
+      } catch {
+        undo();
+        return { ok: false, reason: 'not_sent' };
+      }
+    }
+    undo();
+    return { ok: false, reason: 'no_space' };
+  }
+  return { ok: true, keptIds };
 }

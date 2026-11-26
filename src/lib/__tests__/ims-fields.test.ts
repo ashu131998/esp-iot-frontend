@@ -9,7 +9,7 @@ import {
   phoneFields, stockInFields, valueFromLabel, type ApiField,
 } from '@/lib/ims/fields';
 import { FULL_QUALITY, photoTime } from '@/lib/ims/photo';
-import { linkRequest, photoFits, PHOTO_QUEUE_MAX_BYTES, sendPhotos, type PendingPhoto, type PhotoCalls, type PhotoStore } from '@/lib/ims/photo-queue';
+import { keepStockInPhotos, linkRequest, photoFits, PHOTO_QUEUE_MAX_BYTES, sendPhotos, type PendingPhoto, type PhotoCalls, type PhotoStore } from '@/lib/ims/photo-queue';
 import { stockInMovement } from '@/lib/ims/stock-in';
 import type { ApiPhotoLinks, ApiProduct } from '@/lib/ims/types';
 
@@ -96,6 +96,13 @@ describe('Add stock asks for the factory\'s fields', () => {
     expect(parseNumberInput('-3')).toBe(-3);
     expect(parseNumberInput('')).toBeNull();
     expect(parseNumberInput('1,5')).toBe('bad');
+    // a decimal comma is refused, never read as a bigger number
+    expect(parseNumberInput('0,75')).toBe('bad');
+    expect(parseNumberInput('12,50')).toBe('bad');
+    expect(parseNumberInput('1,50')).toBe('bad');
+    expect(parseNumberInput('1,2345')).toBe('bad');
+    expect(parseNumberInput('1,00,000')).toBe(100000);
+    expect(parseNumberInput('1,234,567.5')).toBe(1234567.5);
     expect(parseNumberInput('12 kg')).toBe('bad');
     expect(parseNumberInput('1e20')).toBe('bad');
   });
@@ -189,13 +196,21 @@ describe('when a library photo was taken', () => {
 
   it('says where the time is from: taken now, the photo, the file, or the upload', async () => {
     const now = new Date('2026-11-26T10:00:00Z');
+    const fresh = new File([jpegWithExif('2026:11:26 15:29:00', { offset: '+05:30' })], 'f.jpg');
+    expect(await photoTime(fresh, 'camera', now)).toEqual({ takenAt: now, takenAtSource: 'capture', source: 'camera' });
     const withExif = new File([jpegWithExif('2026:11:20 14:05:09', { offset: '+05:30' })], 'a.jpg', { lastModified: Date.parse('2026-11-25T00:00:00Z') });
-    expect(await photoTime(withExif, 'camera', now)).toEqual({ takenAt: now, takenAtSource: 'capture' });
-    expect(await photoTime(withExif, 'library', now)).toEqual({ takenAt: new Date('2026-11-20T08:35:09Z'), takenAtSource: 'photo_info' });
+    expect(await photoTime(withExif, 'library', now)).toEqual({ takenAt: new Date('2026-11-20T08:35:09Z'), takenAtSource: 'photo_info', source: 'library' });
     const plain = new File([new Uint8Array([1, 2, 3])], 'b.png', { lastModified: Date.parse('2026-11-25T00:00:00Z') });
-    expect(await photoTime(plain, 'library', now)).toEqual({ takenAt: new Date('2026-11-25T00:00:00Z'), takenAtSource: 'file_date' });
+    expect(await photoTime(plain, 'library', now)).toEqual({ takenAt: new Date('2026-11-25T00:00:00Z'), takenAtSource: 'file_date', source: 'library' });
+    expect(await photoTime(plain, 'camera', now)).toEqual({ takenAt: now, takenAtSource: 'capture', source: 'camera' });
     const future = new File([new Uint8Array([1])], 'c.png', { lastModified: Date.parse('2027-01-01T00:00:00Z') });
-    expect(await photoTime(future, 'library', now)).toEqual({ takenAt: now, takenAtSource: 'upload' });
+    expect(await photoTime(future, 'library', now)).toEqual({ takenAt: now, takenAtSource: 'upload', source: 'library' });
+  });
+
+  it('a "Take photo" that brings an old photo (a browser that ignores camera-only) counts as from the library', async () => {
+    const now = new Date('2026-11-26T10:00:00Z');
+    const old = new File([jpegWithExif('2026:11:20 14:05:09', { offset: '+05:30' })], 'a.jpg');
+    expect(await photoTime(old, 'camera', now)).toEqual({ takenAt: new Date('2026-11-20T08:35:09Z'), takenAtSource: 'photo_info', source: 'library' });
   });
 
   it('never makes photos blockier than JPEG quality 0.7 (AI reads colours)', () => {
@@ -238,7 +253,7 @@ describe('photos waiting on the phone', () => {
     };
     expect(await sendPhotos(store, calls, 'f1')).toEqual({ sent: 2, refused: 0, stop: null });
     expect(asked).toEqual([
-      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', stock_in: 'mv-1', source: 'library', taken_at_source: 'photo_info' },
+      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', movement_client_id: 'mv-1', source: 'library', taken_at_source: 'photo_info' },
       { photo_id: '2', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', source: 'camera', taken_at_source: 'capture' },
     ]);
     expect(put).toHaveLength(4);
@@ -246,10 +261,20 @@ describe('photos waiting on the phone', () => {
     expect(store.all.size).toBe(0);
   });
 
-  it('a photo the server has already is just taken off the phone', async () => {
+  it('a photo the server has already (its 409 "uploaded" after a lost reply) counts as sent, never as refused', async () => {
+    const already = () => new ImsApiError('This photo is uploaded already', 409, { error: 'This photo is uploaded already', uploaded: true });
     const store = memoryStore([pending('1')]);
-    const calls: PhotoCalls = { links: async () => links('1', true), putJpeg: async () => { throw new Error('no'); }, uploaded: async () => { throw new Error('no'); } };
+    const calls: PhotoCalls = { links: async () => { throw already(); }, putJpeg: async () => { throw new Error('no'); }, uploaded: async () => { throw new Error('no'); } };
     expect(await sendPhotos(store, calls, 'f1')).toEqual({ sent: 1, refused: 0, stop: null });
+    expect(store.all.size).toBe(0);
+    // the same answer to "they are there"
+    const again = memoryStore([pending('2')]);
+    expect(await sendPhotos(again, { links: async () => links('2'), putJpeg: async () => {}, uploaded: async () => { throw already(); } }, 'f1'))
+      .toEqual({ sent: 1, refused: 0, stop: null });
+    // a 409 that is not "uploaded" (another photo's id) is still refused
+    const other = memoryStore([pending('3')]);
+    expect(await sendPhotos(other, { links: async () => { throw new ImsApiError('This photo_id is another photo\'s', 409, { error: 'x' }); }, putJpeg: async () => {}, uploaded: async () => {} }, 'f1'))
+      .toEqual({ sent: 0, refused: 1, stop: null });
   });
 
   it('no connection, or the bucket failing: it stays and is tried again later', async () => {
@@ -292,5 +317,32 @@ describe('photos waiting on the phone', () => {
     expect(photoFits([], { full: blob(10), thumb: blob(1) })).toBe(true);
     expect(photoFits([{ full: { size: PHOTO_QUEUE_MAX_BYTES } as Blob, thumb: blob(0) }], { full: blob(1), thumb: blob(0) })).toBe(false);
     expect(linkRequest(pending('9', { field: null }))).not.toHaveProperty('field');
+  });
+});
+
+describe('a stock-in\'s photos are kept before its scan is queued', () => {
+  const two = [pending('1'), pending('2')];
+
+  it('all kept: the scan may go', async () => {
+    expect(await keepStockInPhotos(two, { keep: async () => 'kept', upload: async () => {}, remove: () => {} }))
+      .toEqual({ ok: true, keptIds: ['1', '2'] });
+  });
+
+  it('one the phone cannot keep: those kept are taken back and the scan must not go', async () => {
+    const removed: string[] = [];
+    const outcome = await keepStockInPhotos(two, {
+      keep: async (p) => (p.id === '2' ? 'full' : 'kept'), upload: async () => {}, remove: (id) => { removed.push(id); },
+    });
+    expect(outcome).toEqual({ ok: false, reason: 'no_space' });
+    expect(removed).toEqual(['1']);
+  });
+
+  it('no store on this phone: sent at once; if that fails, the scan must not go', async () => {
+    const sent: string[] = [];
+    expect(await keepStockInPhotos(two, { keep: async () => 'no_store', upload: async (p) => { sent.push(p.id); }, remove: () => {} }))
+      .toEqual({ ok: true, keptIds: [] });
+    expect(sent).toEqual(['1', '2']);
+    expect(await keepStockInPhotos(two, { keep: async () => 'no_store', upload: async () => { throw new TypeError('offline'); }, remove: () => {} }))
+      .toEqual({ ok: false, reason: 'not_sent' });
   });
 });

@@ -238,12 +238,19 @@ export function stockInFields(setup: Pick<ApiSetup, 'spec_fields'> & { fields?: 
 /** The fields this version of the app can ask for (audio and video are left out until the app records them). */
 export const phoneFields = (fields: ApiField[]): ApiField[] => fields.filter((f) => PHONE_TYPES.includes(f.type));
 
+/** Grouping commas as written in India (12,34,567) or abroad (1,234,567): the last group is always 3 digits. */
+const GROUPED_RE = /^-?(\d{1,2}(,\d{2})*,\d{3}|\d{1,3}(,\d{3})+)(\.\d+)?$/;
+
 /**
- * A number as typed ("12.5", "1,250", "-3"): the number, null for empty, or 'bad'. Indian grouping commas
- * are taken; a comma as the decimal point is not (1,5 is not 1.5).
+ * A number as typed ("12.5", "1,250", "-3"): the number, null for empty, or 'bad'. Commas only as grouping
+ * (1,250 · 12,34,567); a comma as a decimal point is refused, never read as a bigger number (0,75 is not 75).
  */
 export function parseNumberInput(text: string): number | null | 'bad' {
-  const value = text.trim().replace(/,(?=\d{2,3}(\D|$))/g, '');
+  let value = text.trim();
+  if (value.includes(',')) {
+    if (!GROUPED_RE.test(value)) return 'bad';
+    value = value.replace(/,/g, '');
+  }
   if (value === '') return null;
   if (!/^-?\d+(\.\d+)?$/.test(value)) return 'bad';
   const n = Number(value);

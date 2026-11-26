@@ -117,8 +117,6 @@ export const ims_app: Messages = {
   'This photo could not be read. Take it again or choose another.': 'આ ફોટો વાંચી ન શકાયો. ફરી પાડો અથવા બીજો પસંદ કરો.',
   'The photo is on this phone and is sent by itself.': 'ફોટો આ ફોનમાં છે અને આપમેળે મોકલાશે.',
   '{count} photos are on this phone and are sent by themselves.': '{count} ફોટા આ ફોનમાં છે અને આપમેળે મોકલાશે.',
-  'The photo could not be kept. Free some space on the phone. The stock is not affected.': 'ફોટો રાખી ન શકાયો. ફોનમાં થોડી જગ્યા ખાલી કરો. માલ પર તેની કોઈ અસર નથી.',
-  '{count} photos could not be kept. Free some space on the phone. The stock is not affected.': '{count} ફોટા રાખી ન શકાયા. ફોનમાં થોડી જગ્યા ખાલી કરો. માલ પર તેની કોઈ અસર નથી.',
   '{count} photo waiting to send': '{count} ફોટો મોકલવાનો બાકી',
   '{count} photos waiting to send': '{count} ફોટા મોકલવાના બાકી',
   '{count} photo was not saved': '{count} ફોટો સેવ ન થયો',
@@ -126,4 +124,7 @@ export const ims_app: Messages = {
   '{count} photo is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?': '{count} ફોટો હજી મોકલાયો નથી. તે આ ફોનમાં રહેશે અને આગલા સાઇન ઇન પછી મોકલાશે. સાઇન આઉટ કરવું છે?',
   '{count} photos are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?': '{count} ફોટા હજી મોકલાયા નથી. તે આ ફોનમાં રહેશે અને આગલા સાઇન ઇન પછી મોકલાશે. સાઇન આઉટ કરવું છે?',
   'Up to {count} characters.': 'વધુમાં વધુ {count} અક્ષર.',
+  'The photo could not be sent. Check the connection and try again.': 'ફોટો મોકલી ન શકાયો. કનેક્શન તપાસો અને ફરી પ્રયત્ન કરો.',
+  'This phone could not keep the photo. Free some space on the phone and try again.': 'આ ફોન ફોટો રાખી ન શક્યો. ફોનમાં થોડી જગ્યા ખાલી કરો અને ફરી પ્રયત્ન કરો.',
+  'Scans and photos are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?': 'સ્કેન અને ફોટા હજી મોકલાયા નથી. તે આ ફોનમાં રહેશે અને આગલા સાઇન ઇન પછી મોકલાશે. સાઇન આઉટ કરવું છે?',
 };

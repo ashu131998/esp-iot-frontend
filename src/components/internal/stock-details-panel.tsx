@@ -81,7 +81,7 @@ export function StockDetailsPanel({ factoryId }: { factoryId: string }) {
       <Card>
         <CardHeader
           title="Add stock asks for"
-          description="In this order, on the phone, after the quantity. Changes reach phones within a minute. Old pallets keep what they were saved with."
+          description="In this order, on the phone, after the quantity. Phones pick up a change the next time Stock in is opened. Old pallets keep what they were saved with."
           action={(
             <Button onClick={() => setEditing('new')} disabled={full} title={full ? `At most ${MAX_FIELDS} fields` : undefined}>
               <Plus className="mr-1.5 h-4 w-4" aria-hidden />Add field

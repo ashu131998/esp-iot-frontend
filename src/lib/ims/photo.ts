@@ -87,25 +87,39 @@ export async function shrinkPhoto(file: Blob): Promise<{ full: Blob; thumb: Blob
 export type TakenAtSource = 'capture' | 'photo_info' | 'file_date' | 'upload';
 
 /**
- * When a photo was taken, read before it is made small (that drops the photo's own date). A photo just
- * taken with the camera button is "now". One from the library: its EXIF date taken, else the file's date
+ * When a photo was taken, and how it came, read before it is made small (that drops the photo's own date).
+ * A photo just taken with the camera button is "now" (unless its own date says it is old: then it counts as
+ * from the library). One from the library: its EXIF date taken, else the file's date
  * (on Android often when it was copied or downloaded, so less sure), else now, said to be the upload's.
  */
 export async function photoTime(
   file: Blob & { lastModified?: number },
-  source: 'camera' | 'library',
+  button: 'camera' | 'library',
   now: Date = new Date(),
-): Promise<{ takenAt: Date; takenAtSource: TakenAtSource }> {
-  if (source === 'camera') return { takenAt: now, takenAtSource: 'capture' };
+): Promise<{ takenAt: Date; takenAtSource: TakenAtSource; source: 'camera' | 'library' }> {
+  let fromPhoto: Date | null = null;
   try {
-    const fromPhoto = exifTakenAt(await file.slice(0, EXIF_READ_BYTES).arrayBuffer());
-    if (fromPhoto && fromPhoto.getTime() <= now.getTime() + 10 * 60_000) return { takenAt: fromPhoto, takenAtSource: 'photo_info' };
+    fromPhoto = exifTakenAt(await file.slice(0, EXIF_READ_BYTES).arrayBuffer());
+    if (fromPhoto && fromPhoto.getTime() > now.getTime() + CLOCK_SLACK_MS) fromPhoto = null;
   } catch {
     // unreadable: the file's date, then now
   }
-  const modified = file.lastModified;
-  if (typeof modified === 'number' && modified > Date.UTC(1990, 0, 1) && modified <= now.getTime() + 10 * 60_000) {
-    return { takenAt: new Date(modified), takenAtSource: 'file_date' };
+  if (button === 'camera') {
+    // a browser that ignores "camera only" lets an old photo be picked: its own date gives it away
+    if (fromPhoto && fromPhoto.getTime() < now.getTime() - CAMERA_FRESH_MS) {
+      return { takenAt: fromPhoto, takenAtSource: 'photo_info', source: 'library' };
+    }
+    return { takenAt: now, takenAtSource: 'capture', source: 'camera' };
   }
-  return { takenAt: now, takenAtSource: 'upload' };
+  if (fromPhoto) return { takenAt: fromPhoto, takenAtSource: 'photo_info', source: 'library' };
+  const modified = file.lastModified;
+  if (typeof modified === 'number' && modified > Date.UTC(1990, 0, 1) && modified <= now.getTime() + CLOCK_SLACK_MS) {
+    return { takenAt: new Date(modified), takenAtSource: 'file_date', source: 'library' };
+  }
+  return { takenAt: now, takenAtSource: 'upload', source: 'library' };
 }
+
+/** A phone's clock may be a little ahead of the photo's. */
+const CLOCK_SLACK_MS = 10 * 60_000;
+/** A photo from the camera button whose own date is older than this was not taken just now. */
+export const CAMERA_FRESH_MS = 5 * 60_000;

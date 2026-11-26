@@ -25,6 +25,8 @@ describe('a new field on the ops Stock details page', () => {
     expect(keyFromLabel('2nd check', [])).toBe('f_2nd_check');
     expect(keyFromLabel('रंग', [])).toBe('field');
     expect(keyFromLabel('रंग', ['field'])).toBe('field_2');
+    // its own path on the server: never a key
+    expect(keyFromLabel('Order', [])).toBe('order_2');
     const long = keyFromLabel('A very long name for a field that goes on', []);
     expect(long).toMatch(/^[a-z][a-z0-9_]{0,29}$/);
   });
@@ -215,7 +217,7 @@ const links = (id: string, uploaded = false): ApiPhotoLinks => ({
 
 describe('photos waiting on the phone', () => {
   it('asks for links with the field and how the photo came, uploads both, then says they are there', async () => {
-    const store = memoryStore([pending('1'), pending('2', { field: null, source: 'camera', takenAtSource: 'capture' })]);
+    const store = memoryStore([pending('1', { stockIn: 'mv-1' }), pending('2', { field: null, source: 'camera', takenAtSource: 'capture' })]);
     const asked: unknown[] = [];
     const put: string[] = [];
     const done: string[] = [];
@@ -226,7 +228,7 @@ describe('photos waiting on the phone', () => {
     };
     expect(await sendPhotos(store, calls, 'f1')).toEqual({ sent: 2, refused: 0, stop: null });
     expect(asked).toEqual([
-      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', source: 'library', taken_at_source: 'photo_info' },
+      { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', movement_client_id: 'mv-1', source: 'library', taken_at_source: 'photo_info' },
       { photo_id: '2', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', source: 'camera', taken_at_source: 'capture' },
     ]);
     expect(put).toHaveLength(4);

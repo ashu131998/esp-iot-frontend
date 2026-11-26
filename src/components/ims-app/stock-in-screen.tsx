@@ -168,7 +168,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
   };
 
   /** The stock-in's photos onto the phone's photo queue (sent from there); straight up when the phone has no store. */
-  const keepPhotos = async (palletCode: string) => {
+  const keepPhotos = async (palletCode: string, stockIn: string) => {
     const entries = Object.entries(photos);
     if (entries.length === 0) return;
     setPhotoState({ kept: 0, failed: 0, sending: entries.length });
@@ -177,7 +177,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     for (const [key, ready] of entries) {
       const field = key === OWN_PHOTO ? null : key;
       const pending: PendingPhoto = {
-        id: newClientId(), factoryId, pallet: palletCode, field, source: ready.source,
+        id: newClientId(), factoryId, pallet: palletCode, field, stockIn, source: ready.source,
         takenAt: ready.takenAt.toISOString(), takenAtSource: ready.takenAtSource, full: ready.full, thumb: ready.thumb,
         addedAt: new Date().toISOString(),
       };
@@ -210,7 +210,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
     const amount = `${qtyText(parsedQty.qty, locale)} ${product.unit}`;
     setAdded({ clientId, text: `${pallet} · ${product.name} · ${amount} · ${location}` });
     setPhotoState({ kept: 0, failed: 0, sending: 0 });
-    void keepPhotos(pallet);
+    void keepPhotos(pallet, clientId);
     setNote(null);
     setStep('done');
   };

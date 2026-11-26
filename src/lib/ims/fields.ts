@@ -96,9 +96,16 @@ function unique(base: string, taken: Iterable<string>, max: number): string {
 export function keyFromLabel(label: string, taken: Iterable<string>): string {
   let base = slug(label).slice(0, 30).replace(/_+$/, '');
   if (!/^[a-z]/.test(base)) base = base ? `f_${base}`.slice(0, 30).replace(/_+$/, '') : 'field';
-  const key = unique(base, taken, 30);
-  return KEY_RE.test(key) ? key : unique('field', taken, 30);
+  const used = [...taken, ...RESERVED_KEYS];
+  const key = unique(base, used, 30);
+  return KEY_RE.test(key) ? key : unique('field', used, 30);
 }
+
+/**
+ * Keys a field may never have: `order` is a path of its own (PUT …/spec-fields/order), so a field called
+ * that could never be edited (Code Reviewer, 2026-11-26).
+ */
+export const RESERVED_KEYS: readonly string[] = ['order'];
 
 /** A new choice's value from its label ("Light grey" → light_grey), unique within the field. */
 export function valueFromLabel(label: string, taken: Iterable<string>): string {

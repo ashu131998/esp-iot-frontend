@@ -105,6 +105,8 @@ export interface PhotoLinkRequest {
   taken_at: string;
   pallet: string;
   field?: string | null;
+  /** The stock-in it was taken with (its client_id). */
+  movement_client_id?: string;
   source?: 'camera' | 'library';
   taken_at_source?: 'capture' | 'photo_info' | 'file_date' | 'upload';
 }

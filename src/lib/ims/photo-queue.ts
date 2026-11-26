@@ -20,6 +20,11 @@ export interface PendingPhoto {
   pallet: string;
   /** The photo field it answers, or null (Add stock's own optional photo). */
   field: string | null;
+  /**
+   * The client_id of the stock-in it was taken with: the server ties the file to that scan, so a refused
+   * stock-in's photo never lands on another load with the same label. Missing on photos kept before this.
+   */
+  stockIn?: string | null;
   source: 'camera' | 'library';
   takenAt: string;
   takenAtSource: TakenAtSource;
@@ -65,6 +70,7 @@ export function linkRequest(p: PendingPhoto): PhotoLinkRequest {
     taken_at: p.takenAt,
     pallet: p.pallet,
     ...(p.field ? { field: p.field } : {}),
+    ...(p.stockIn ? { movement_client_id: p.stockIn } : {}),
     source: p.source,
     taken_at_source: p.takenAtSource,
   };

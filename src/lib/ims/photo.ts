@@ -84,7 +84,7 @@ export async function shrinkPhoto(file: Blob): Promise<{ full: Blob; thumb: Blob
 }
 
 /** Where a photo's time is from: taken just now, the photo's own date, the file's date, or the upload. */
-export type TakenAtSource = 'taken_now' | 'photo_info' | 'file_date' | 'upload';
+export type TakenAtSource = 'capture' | 'photo_info' | 'file_date' | 'upload';
 
 /**
  * When a photo was taken, read before it is made small (that drops the photo's own date). A photo just
@@ -96,7 +96,7 @@ export async function photoTime(
   source: 'camera' | 'library',
   now: Date = new Date(),
 ): Promise<{ takenAt: Date; takenAtSource: TakenAtSource }> {
-  if (source === 'camera') return { takenAt: now, takenAtSource: 'taken_now' };
+  if (source === 'camera') return { takenAt: now, takenAtSource: 'capture' };
   try {
     const fromPhoto = exifTakenAt(await file.slice(0, EXIF_READ_BYTES).arrayBuffer());
     if (fromPhoto && fromPhoto.getTime() <= now.getTime() + 10 * 60_000) return { takenAt: fromPhoto, takenAtSource: 'photo_info' };

@@ -40,10 +40,12 @@ const pickButton = 'flex h-12 flex-1 cursor-pointer items-center justify-center 
  * A photo field on Add stock: "Take photo" opens the camera, "Choose from phone" the gallery (and files).
  * The chosen one shows small, with Remove. `error`: the field's problem to show (required and missing).
  */
-export function FieldPhoto({ id, label, required, value, onChange, error }: {
+export function FieldPhoto({ id, label, required, value, onChange, error, allowLibrary = true }: {
   id: string;
   label: string;
   required: boolean;
+  /** false: the field's photo must be taken now (the library button is not shown). */
+  allowLibrary?: boolean;
   value: ReadyPhoto | null;
   onChange: (photo: ReadyPhoto | null) => void;
   error: string | null;
@@ -93,10 +95,12 @@ export function FieldPhoto({ id, label, required, value, onChange, error }: {
             <Camera className="h-5 w-5" aria-hidden />{t('Take photo')}
             <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void pick('camera')(e)} />
           </label>
-          <label className={pickButton}>
-            <ImagePlus className="h-5 w-5" aria-hidden />{t('Choose from phone')}
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pick('library')(e)} />
-          </label>
+          {allowLibrary && (
+            <label className={pickButton}>
+              <ImagePlus className="h-5 w-5" aria-hidden />{t('Choose from phone')}
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pick('library')(e)} />
+            </label>
+          )}
         </div>
       )}
       {failed && (

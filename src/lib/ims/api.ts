@@ -106,7 +106,7 @@ export interface PhotoLinkRequest {
   pallet: string;
   field?: string | null;
   source?: 'camera' | 'library';
-  taken_at_source?: 'taken_now' | 'photo_info' | 'file_date' | 'upload';
+  taken_at_source?: 'capture' | 'photo_info' | 'file_date' | 'upload';
 }
 
 /** The ops.floorbeat.in Stock details page's calls: a factory's fields, changed by our staff only. */

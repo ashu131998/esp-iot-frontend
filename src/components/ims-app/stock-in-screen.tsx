@@ -530,9 +530,9 @@ function AskedField({ field, choice, onChoice, typed, onTyped, photo, onPhoto, e
   error: string | null;
 }) {
   const id = `ims-field-${field.key}`;
-  const label = `${field.label}${field.required ? ' *' : ''}`;
+  const label = `${field.label}${field.type === 'number' && field.unit ? ` (${field.unit})` : ''}${field.required ? ' *' : ''}`;
   if (field.type === 'photo') {
-    return <FieldPhoto id={id} label={field.label} required={field.required} value={photo} onChange={onPhoto} error={error} />;
+    return <FieldPhoto id={id} label={field.label} required={field.required} allowLibrary={field.allow_library !== false} value={photo} onChange={onPhoto} error={error} />;
   }
   const bad = error ? 'ring-2 ring-red-400' : '';
   return (

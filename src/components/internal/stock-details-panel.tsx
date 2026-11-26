@@ -11,7 +11,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { ImsApiError, imsFieldsApi, isImsOff } from '@/lib/ims/api';
 import {
-  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, MAX_FIELDS, moveKey, newFieldBody, PHONE_TYPES,
+  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, isMediaType, MAX_FIELDS, moveKey, newFieldBody, PHONE_TYPES,
   type ApiField, type ApiFieldList, type FieldDraft, type FieldType,
 } from '@/lib/ims/fields';
 
@@ -20,8 +20,8 @@ const TYPE_HELP: Record<FieldType, string> = {
   text: 'A short note typed on the phone, up to 200 characters.',
   number: 'A number typed on the phone (weight, length).',
   photo: 'Taken with the camera or chosen from the phone.',
-  audio: 'Recorded on the phone or chosen from it, up to 30 seconds.',
-  video: 'Recorded on the phone or chosen from it, up to 30 seconds.',
+  audio: 'Recorded on the phone or chosen from it: up to 30 seconds and 5 MB.',
+  video: 'Recorded on the phone or chosen from it: up to 30 seconds and 25 MB.',
 };
 
 /** Why a write was refused, with the products in the way when the server lists them (a pick-list in use). */
@@ -102,6 +102,10 @@ export function StockDetailsPanel({ factoryId }: { factoryId: string }) {
                     {f.required
                       ? <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">Required</span>
                       : <span className="text-xs text-muted">Optional</span>}
+                    {f.type === 'number' && f.unit && <span className="text-xs text-muted">in {f.unit}</span>}
+                    {isMediaType(f.type) && f.allow_library === false && (
+                      <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800">Taken now only</span>
+                    )}
                   </p>
                   <p className="mt-0.5 truncate text-sm text-muted">
                     {f.type === 'choice' ? f.options.map((o) => o.label).join(', ') : TYPE_HELP[f.type]}
@@ -242,6 +246,22 @@ function FieldSheet({ factoryId, field, takenKeys, onClose, onSaved }: {
             </Button>
             {field && <p className="text-xs text-muted">A choice that products or pallets in stock still have cannot be taken away.</p>}
           </fieldset>
+        )}
+        {draft.type === 'number' && (
+          <div>
+            <Label htmlFor="sd-unit">Unit (optional)</Label>
+            <Input id="sd-unit" value={draft.unit} maxLength={12} placeholder="kg, m, mm" onChange={(e) => set({ unit: e.target.value })} />
+            <p className="mt-1 text-xs text-muted">Shown next to the number on the phone.</p>
+          </div>
+        )}
+        {isMediaType(draft.type) && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 h-4 w-4" checked={draft.allowLibrary} onChange={(e) => set({ allowLibrary: e.target.checked })} />
+            <span>
+              <span className="font-medium text-foreground">Allow choosing from the phone</span>
+              <span className="block text-muted">Off: the {FIELD_TYPE_LABELS[draft.type].toLowerCase()} must be taken on the spot, as proof the stock is in front of the person.</span>
+            </span>
+          </label>
         )}
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5 h-4 w-4" checked={draft.required} onChange={(e) => set({ required: e.target.checked })} />

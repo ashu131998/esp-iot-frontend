@@ -41,6 +41,12 @@ export interface ApiField {
   required: boolean;
   options: FieldChoice[];
   sort: number;
+  /** A number's unit, shown next to it ("kg"); null for the others. */
+  unit?: string | null;
+  /** A photo, audio or video may be chosen from the phone's library (false: taken now only). */
+  allow_library?: boolean;
+  /** Removed: not asked any more; still in setup so old pallets' values keep their labels. */
+  archived?: boolean;
 }
 
 /** GET …/ims/spec-fields: the fields in their order, and the removed ones (kept on old pallets). */
@@ -54,6 +60,12 @@ export const MAX_CHOICES = 100;
 export const LABEL_MAX = 40;
 export const TEXT_MAX = 200;
 export const NUMBER_MAX = 1e12;
+export const UNIT_MAX = 12;
+/** The files the server keeps for a field (query-api ims-routes.js MEDIA_MAX); photos are made small to 1 MB. */
+export const MEDIA_MAX_BYTES = { audio: 5 * 1024 * 1024, video: 25 * 1024 * 1024 } as const;
+export const MEDIA_SECONDS_MAX = 30;
+export const MEDIA_TYPES: readonly FieldType[] = ['photo', 'audio', 'video'];
+export const isMediaType = (type: FieldType) => MEDIA_TYPES.includes(type);
 
 const KEY_RE = /^[a-z][a-z0-9_]{0,29}$/;
 const VALUE_RE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
@@ -108,10 +120,14 @@ export interface FieldDraft {
   type: FieldType;
   required: boolean;
   choices: ChoiceDraft[];
+  /** a number's unit ("kg"), may be empty */
+  unit: string;
+  /** a photo, audio or video: the library button shown on the phone */
+  allowLibrary: boolean;
 }
 
 export function emptyDraft(): FieldDraft {
-  return { label: '', type: 'choice', required: false, choices: [{ value: null, label: '' }] };
+  return { label: '', type: 'choice', required: false, choices: [{ value: null, label: '' }], unit: '', allowLibrary: true };
 }
 
 export function draftOf(field: ApiField): FieldDraft {
@@ -120,6 +136,8 @@ export function draftOf(field: ApiField): FieldDraft {
     type: field.type,
     required: field.required,
     choices: field.options.map((o) => ({ value: o.value, label: o.label })),
+    unit: field.unit ?? '',
+    allowLibrary: field.allow_library !== false,
   };
 }
 
@@ -132,6 +150,7 @@ export function draftProblem(draft: FieldDraft): string | null {
   if (!label) return 'Give the field a name.';
   if (label.length > LABEL_MAX) return `The name is longer than ${LABEL_MAX} characters.`;
   if (!FIELD_TYPES.includes(draft.type)) return 'Pick a type.';
+  if (draft.type === 'number' && cleanLabel(draft.unit).length > UNIT_MAX) return `The unit is longer than ${UNIT_MAX} characters.`;
   if (draft.type !== 'choice') return null;
   const labels = draft.choices.map((c) => cleanLabel(c.label)).filter(Boolean);
   if (labels.length === 0) return 'Give at least one choice.';
@@ -162,25 +181,24 @@ export function choicesToSend(choices: ChoiceDraft[]): FieldChoice[] {
   return out;
 }
 
+/** What only some types carry: a pick-list's choices, a number's unit (null: none), a file's library switch. */
+function typeParts(draft: FieldDraft) {
+  return {
+    ...(draft.type === 'choice' ? { options: choicesToSend(draft.choices) } : {}),
+    ...(draft.type === 'number' ? { unit: cleanLabel(draft.unit) || null } : {}),
+    ...(isMediaType(draft.type) ? { allow_library: draft.allowLibrary } : {}),
+  };
+}
+
 /** POST …/ims/spec-fields for a new field (it goes last). */
 export function newFieldBody(draft: FieldDraft, takenKeys: Iterable<string>) {
   const label = cleanLabel(draft.label);
-  return {
-    key: keyFromLabel(label, takenKeys),
-    label,
-    type: draft.type,
-    required: draft.required,
-    ...(draft.type === 'choice' ? { options: choicesToSend(draft.choices) } : {}),
-  };
+  return { key: keyFromLabel(label, takenKeys), label, type: draft.type, required: draft.required, ...typeParts(draft) };
 }
 
 /** PUT …/ims/spec-fields/:key for an edit (the key and type stay). */
 export function editFieldBody(draft: FieldDraft) {
-  return {
-    label: cleanLabel(draft.label),
-    required: draft.required,
-    ...(draft.type === 'choice' ? { options: choicesToSend(draft.choices) } : {}),
-  };
+  return { label: cleanLabel(draft.label), required: draft.required, ...typeParts(draft) };
 }
 
 /** The keys with one moved up (-1) or down (+1); the same list when it cannot move. */
@@ -201,7 +219,8 @@ export function moveKey(keys: string[], key: string, delta: -1 | 1): string[] {
  */
 export function stockInFields(setup: Pick<ApiSetup, 'spec_fields'> & { fields?: ApiField[] } | null | undefined): ApiField[] {
   if (!setup) return [];
-  if (Array.isArray(setup.fields)) return [...setup.fields].sort((a, b) => a.sort - b.sort);
+  // archived fields are there for old pallets' labels: not asked any more
+  if (Array.isArray(setup.fields)) return setup.fields.filter((f) => !f.archived).sort((a, b) => a.sort - b.sort);
   return (setup.spec_fields ?? []).map((f, i) => ({ key: f.key, label: f.label, type: 'choice', required: false, options: f.options, sort: i }));
 }
 

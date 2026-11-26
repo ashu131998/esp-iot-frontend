@@ -45,18 +45,23 @@ describe('a new field on the ops Stock details page', () => {
   });
 
   it('says what is wrong before the server would', () => {
-    expect(draftProblem({ label: ' ', type: 'text', required: false, choices: [] })).toBe('Give the field a name.');
-    expect(draftProblem({ label: 'Grade', type: 'choice', required: false, choices: [{ value: null, label: '' }] })).toBe('Give at least one choice.');
-    expect(draftProblem({ label: 'Grade', type: 'choice', required: false, choices: [{ value: null, label: 'A' }, { value: null, label: 'a' }] })).toBe('"a" is there twice.');
-    expect(draftProblem({ label: 'Grade', type: 'choice', required: true, choices: [{ value: null, label: 'A' }] })).toBeNull();
-    expect(draftProblem({ label: 'Photo of the label', type: 'photo', required: true, choices: [] })).toBeNull();
+    expect(draftProblem({ label: ' ', type: 'text', required: false, choices: [], unit: '', allowLibrary: true })).toBe('Give the field a name.');
+    expect(draftProblem({ label: 'Grade', type: 'choice', required: false, choices: [{ value: null, label: '' }], unit: '', allowLibrary: true })).toBe('Give at least one choice.');
+    expect(draftProblem({ label: 'Grade', type: 'choice', required: false, choices: [{ value: null, label: 'A' }, { value: null, label: 'a' }], unit: '', allowLibrary: true })).toBe('"a" is there twice.');
+    expect(draftProblem({ label: 'Grade', type: 'choice', required: true, choices: [{ value: null, label: 'A' }], unit: '', allowLibrary: true })).toBeNull();
+    expect(draftProblem({ label: 'Photo of the label', type: 'photo', required: true, choices: [], unit: '', allowLibrary: true })).toBeNull();
   });
 
-  it('sends choices only for a pick-list, and never the key or type on an edit', () => {
-    expect(newFieldBody({ label: 'Weight (kg)', type: 'number', required: true, choices: [{ value: null, label: 'x' }] }, []))
-      .toEqual({ key: 'weight_kg', label: 'Weight (kg)', type: 'number', required: true });
-    expect(editFieldBody({ label: 'Grade', type: 'choice', required: false, choices: [{ value: 'a', label: 'A' }] }))
+  it('sends choices only for a pick-list, a unit only for a number, the library switch only for a file; never the key or type on an edit', () => {
+    expect(newFieldBody({ label: 'Weight', type: 'number', required: true, choices: [{ value: null, label: 'x' }], unit: ' kg ', allowLibrary: false }, []))
+      .toEqual({ key: 'weight', label: 'Weight', type: 'number', required: true, unit: 'kg' });
+    expect(newFieldBody({ label: 'Count', type: 'number', required: false, choices: [], unit: '', allowLibrary: true }, []))
+      .toEqual({ key: 'count', label: 'Count', type: 'number', required: false, unit: null });
+    expect(newFieldBody({ label: 'Label photo', type: 'photo', required: true, choices: [], unit: 'kg', allowLibrary: false }, []))
+      .toEqual({ key: 'label_photo', label: 'Label photo', type: 'photo', required: true, allow_library: false });
+    expect(editFieldBody({ label: 'Grade', type: 'choice', required: false, choices: [{ value: 'a', label: 'A' }], unit: '', allowLibrary: true }))
       .toEqual({ label: 'Grade', required: false, options: [{ value: 'a', label: 'A' }] });
+    expect(draftProblem({ label: 'Weight', type: 'number', required: false, choices: [], unit: 'kilograms net', allowLibrary: true })).toBe('The unit is longer than 12 characters.');
   });
 
   it('moves a field up or down, and not past either end', () => {
@@ -71,6 +76,8 @@ describe('Add stock asks for the factory\'s fields', () => {
   it('in the factory\'s order; an older server (pick-lists only) still works', () => {
     const fields = [field('b', 'text', { sort: 20 }), field('a', 'choice', { sort: 10 })];
     expect(stockInFields({ spec_fields: [], fields }).map((f) => f.key)).toEqual(['a', 'b']);
+    // archived: kept for old pallets' labels, never asked
+    expect(stockInFields({ spec_fields: [], fields: [...fields, field('old', 'text', { archived: true })] }).map((f) => f.key)).toEqual(['a', 'b']);
     expect(stockInFields({ spec_fields: [{ key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }] }] }))
       .toEqual([{ key: 'colour', label: 'Colour', type: 'choice', required: false, options: [{ value: 'grey', label: 'Grey' }], sort: 0 }]);
     expect(stockInFields(null)).toEqual([]);
@@ -171,7 +178,7 @@ describe('when a library photo was taken', () => {
   it('says where the time is from: taken now, the photo, the file, or the upload', async () => {
     const now = new Date('2026-11-26T10:00:00Z');
     const withExif = new File([jpegWithExif('2026:11:20 14:05:09', { offset: '+05:30' })], 'a.jpg', { lastModified: Date.parse('2026-11-25T00:00:00Z') });
-    expect(await photoTime(withExif, 'camera', now)).toEqual({ takenAt: now, takenAtSource: 'taken_now' });
+    expect(await photoTime(withExif, 'camera', now)).toEqual({ takenAt: now, takenAtSource: 'capture' });
     expect(await photoTime(withExif, 'library', now)).toEqual({ takenAt: new Date('2026-11-20T08:35:09Z'), takenAtSource: 'photo_info' });
     const plain = new File([new Uint8Array([1, 2, 3])], 'b.png', { lastModified: Date.parse('2026-11-25T00:00:00Z') });
     expect(await photoTime(plain, 'library', now)).toEqual({ takenAt: new Date('2026-11-25T00:00:00Z'), takenAtSource: 'file_date' });
@@ -208,7 +215,7 @@ const links = (id: string, uploaded = false): ApiPhotoLinks => ({
 
 describe('photos waiting on the phone', () => {
   it('asks for links with the field and how the photo came, uploads both, then says they are there', async () => {
-    const store = memoryStore([pending('1'), pending('2', { field: null, source: 'camera', takenAtSource: 'taken_now' })]);
+    const store = memoryStore([pending('1'), pending('2', { field: null, source: 'camera', takenAtSource: 'capture' })]);
     const asked: unknown[] = [];
     const put: string[] = [];
     const done: string[] = [];
@@ -220,7 +227,7 @@ describe('photos waiting on the phone', () => {
     expect(await sendPhotos(store, calls, 'f1')).toEqual({ sent: 2, refused: 0, stop: null });
     expect(asked).toEqual([
       { photo_id: '1', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', field: 'label_photo', source: 'library', taken_at_source: 'photo_info' },
-      { photo_id: '2', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', source: 'camera', taken_at_source: 'taken_now' },
+      { photo_id: '2', taken_at: '2026-11-20T08:35:09.000Z', pallet: 'PL-000001', source: 'camera', taken_at_source: 'capture' },
     ]);
     expect(put).toHaveLength(4);
     expect(done).toEqual(['1', '2']);

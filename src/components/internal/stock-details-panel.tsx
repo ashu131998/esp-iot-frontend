@@ -24,6 +24,20 @@ const TYPE_HELP: Record<FieldType, string> = {
   video: 'Recorded on the phone or chosen from it: up to 30 seconds and 25 MB.',
 };
 
+/** A take-now-only file field's line: it must be taken on the spot. */
+const TAKEN_NOW_HELP: Partial<Record<FieldType, string>> = {
+  photo: 'Must be taken on the spot with the camera. Choosing from the phone is off.',
+  audio: 'Must be recorded on the spot, up to 30 seconds and 5 MB. Choosing from the phone is off.',
+  video: 'Must be recorded on the spot, up to 30 seconds and 25 MB. Choosing from the phone is off.',
+};
+
+/** What a field's row says under its name. */
+export function fieldHelp(f: Pick<ApiField, 'type' | 'options' | 'allow_library'>): string {
+  if (f.type === 'choice') return f.options.map((o) => o.label).join(', ');
+  if (f.allow_library === false && TAKEN_NOW_HELP[f.type]) return TAKEN_NOW_HELP[f.type] as string;
+  return TYPE_HELP[f.type];
+}
+
 /** Why a write was refused, with the products in the way when the server lists them (a pick-list in use). */
 function refusal(error: unknown): string {
   if (!(error instanceof ImsApiError)) return 'Could not reach FloorBeat. Try again.';
@@ -108,7 +122,7 @@ export function StockDetailsPanel({ factoryId }: { factoryId: string }) {
                     )}
                   </p>
                   <p className="mt-0.5 truncate text-sm text-muted">
-                    {f.type === 'choice' ? f.options.map((o) => o.label).join(', ') : TYPE_HELP[f.type]}
+                    {fieldHelp(f)}
                   </p>
                   {!PHONE_TYPES.includes(f.type) && (
                     <p className="mt-0.5 text-xs text-amber-700">The phone app asks for {FIELD_TYPE_LABELS[f.type].toLowerCase()} in its next version.</p>

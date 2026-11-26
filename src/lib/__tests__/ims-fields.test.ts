@@ -346,3 +346,13 @@ describe('a stock-in\'s photos are kept before its scan is queued', () => {
       .toEqual({ ok: false, reason: 'not_sent' });
   });
 });
+
+describe('the ops Stock details rows', () => {
+  it('a take-now-only file field says it must be taken on the spot', async () => {
+    const { fieldHelp } = await import('@/components/internal/stock-details-panel');
+    expect(fieldHelp({ type: 'photo', options: [], allow_library: true })).toBe('Taken with the camera or chosen from the phone.');
+    expect(fieldHelp({ type: 'photo', options: [], allow_library: false })).toMatch(/^Must be taken on the spot/);
+    expect(fieldHelp({ type: 'video', options: [], allow_library: false })).toMatch(/^Must be recorded on the spot/);
+    expect(fieldHelp({ type: 'choice', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] })).toBe('A, B');
+  });
+});

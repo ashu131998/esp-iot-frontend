@@ -5,7 +5,7 @@ import { hi } from '@/lib/i18n/messages/hi';
 import { ImsApiError } from '@/lib/ims/api';
 import { exifTakenAt, exifTime } from '@/lib/ims/exif';
 import {
-  choicesToSend, detailsOf, draftProblem, editFieldBody, fieldProblems, keyFromLabel, moveKey, newFieldBody, parseNumberInput,
+  choicesToSend, detailsOf, draftProblem, editFieldBody, fieldHelp, fieldProblems, keyFromLabel, moveKey, newFieldBody, parseNumberInput,
   phoneFields, stockInFields, valueFromLabel, type ApiField,
 } from '@/lib/ims/fields';
 import { FULL_QUALITY, photoTime } from '@/lib/ims/photo';
@@ -344,5 +344,14 @@ describe('a stock-in\'s photos are kept before its scan is queued', () => {
     expect(sent).toEqual(['1', '2']);
     expect(await keepStockInPhotos(two, { keep: async () => 'no_store', upload: async () => { throw new TypeError('offline'); }, remove: () => {} }))
       .toEqual({ ok: false, reason: 'not_sent' });
+  });
+});
+
+describe('the ops Stock details rows', () => {
+  it('a take-now-only file field says it must be taken on the spot', () => {
+    expect(fieldHelp({ type: 'photo', options: [], allow_library: true })).toBe('Taken with the camera or chosen from the phone.');
+    expect(fieldHelp({ type: 'photo', options: [], allow_library: false })).toMatch(/^Must be taken on the spot/);
+    expect(fieldHelp({ type: 'video', options: [], allow_library: false })).toMatch(/^Must be recorded on the spot/);
+    expect(fieldHelp({ type: 'choice', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] })).toBe('A, B');
   });
 });

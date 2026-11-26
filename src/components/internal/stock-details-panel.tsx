@@ -11,18 +11,10 @@ import { Sheet } from '@/components/ui/sheet';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { ImsApiError, imsFieldsApi, isImsOff } from '@/lib/ims/api';
 import {
-  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, isMediaType, MAX_FIELDS, moveKey, newFieldBody, PHONE_TYPES,
+  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, fieldHelp, isMediaType, MAX_FIELDS, moveKey, newFieldBody,
+  PHONE_TYPES, TYPE_HELP,
   type ApiField, type ApiFieldList, type FieldDraft, type FieldType,
 } from '@/lib/ims/fields';
-
-const TYPE_HELP: Record<FieldType, string> = {
-  choice: 'Fixed choices (Grade: A, B). Splits stock and works as a filter on Available stock.',
-  text: 'A short note typed on the phone, up to 200 characters.',
-  number: 'A number typed on the phone (weight, length).',
-  photo: 'Taken with the camera or chosen from the phone.',
-  audio: 'Recorded on the phone or chosen from it: up to 30 seconds and 5 MB.',
-  video: 'Recorded on the phone or chosen from it: up to 30 seconds and 25 MB.',
-};
 
 /** Why a write was refused, with the products in the way when the server lists them (a pick-list in use). */
 function refusal(error: unknown): string {
@@ -108,7 +100,7 @@ export function StockDetailsPanel({ factoryId }: { factoryId: string }) {
                     )}
                   </p>
                   <p className="mt-0.5 truncate text-sm text-muted">
-                    {f.type === 'choice' ? f.options.map((o) => o.label).join(', ') : TYPE_HELP[f.type]}
+                    {fieldHelp(f)}
                   </p>
                   {!PHONE_TYPES.includes(f.type) && (
                     <p className="mt-0.5 text-xs text-amber-700">The phone app asks for {FIELD_TYPE_LABELS[f.type].toLowerCase()} in its next version.</p>

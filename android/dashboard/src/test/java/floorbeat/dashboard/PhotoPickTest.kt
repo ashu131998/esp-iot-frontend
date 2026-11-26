@@ -1,4 +1,4 @@
-package floorbeat.ims
+package floorbeat.dashboard
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PhotoPickTest {
-    private val app = "https://ims.floorbeat.in"
+    private val app = "https://dashboard.floorbeat.in"
 
     @Test
     fun `Take photo opens the camera, Choose from phone the picker`() {
@@ -30,9 +30,9 @@ class PhotoPickTest {
     @Test
     fun `only the app's own pages get the camera, and never the microphone`() {
         val both = listOf(PhotoPick.VIDEO_CAPTURE, "android.webkit.resource.AUDIO_CAPTURE")
-        assertEquals(listOf(PhotoPick.VIDEO_CAPTURE), PhotoPick.cameraResources(both, "https://ims.floorbeat.in/", app))
+        assertEquals(listOf(PhotoPick.VIDEO_CAPTURE), PhotoPick.cameraResources(both, "https://dashboard.floorbeat.in/", app))
         assertEquals(emptyList<String>(), PhotoPick.cameraResources(both, "https://example.com/", app))
-        assertEquals(emptyList<String>(), PhotoPick.cameraResources(listOf("android.webkit.resource.AUDIO_CAPTURE"), "https://ims.floorbeat.in/", app))
+        assertEquals(emptyList<String>(), PhotoPick.cameraResources(listOf("android.webkit.resource.AUDIO_CAPTURE"), "https://dashboard.floorbeat.in/", app))
         assertEquals(emptyList<String>(), PhotoPick.cameraResources(both, null, app))
     }
 }

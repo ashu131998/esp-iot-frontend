@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="offline_text">माल अंदर खोलने के लिए एक बार नेटवर्क चाहिए। इस फ़ोन पर रखे स्कैन बने रहेंगे और बाद में भेजे जाएँगे।</string>
-    <string name="offline_retry">फिर से कोशिश करें</string>
-    <string name="camera_off">लेबल स्कैन करने और फ़ोटो लेने के लिए फ़ोन की सेटिंग में FloorBeat IMS को कैमरा की अनुमति दें।</string>
-</resources>

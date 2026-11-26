@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- The icon's ground: IMS's deep teal (the dashboard's is dark blue, FloorBeat Alerts' orange). -->
-    <color name="ic_launcher_background">#0F5257</color>
-</resources>

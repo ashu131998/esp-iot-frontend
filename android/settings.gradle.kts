@@ -19,8 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-// Three apps: FloorBeat Alerts (app/), FloorBeat, the dashboard (dashboard/), and FloorBeat IMS, the stock app (ims/). README.md.
+// Two apps: FloorBeat Alerts (app/) and FloorBeat, the dashboard with its Stock tab (dashboard/). README.md.
 rootProject.name = "FloorBeat Alerts"
 include(":app")
 include(":dashboard")
-include(":ims")

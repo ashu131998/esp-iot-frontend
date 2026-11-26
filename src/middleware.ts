@@ -114,8 +114,10 @@ export async function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production';
   const liveOrigin = liveImageOrigin({ API_PUBLIC_ORIGIN: process.env.API_PUBLIC_ORIGIN, API_INTERNAL_URL: process.env.API_INTERNAL_URL });
   // FloorBeat IMS's stock photos are shown from, and uploaded straight to, a private R2 bucket by short
-  // signed links (lib/ims/photo.ts): its address, only on the IMS app's own address.
-  const photoOrigin = imsApp ? imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN) : null;
+  // signed links (lib/ims/photo.ts): its address, and the camera (QR labels, photos), only on the IMS app's own
+  // address and on the dashboard's Stock tab (/ims…: the FloorBeat app, a factory's address, the long ones).
+  const imsPages = imsApp || isImsTabPath(pathname);
+  const photoOrigin = imsPages ? imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN) : null;
 
   const csp = [
     `default-src 'self'`,
@@ -148,7 +150,7 @@ export async function middleware(req: NextRequest) {
   };
 
   function withSecurity(res: NextResponse) {
-    applySecurityHeaders(res, csp, imsApp);
+    applySecurityHeaders(res, csp, imsPages);
     if (!req.cookies.get(CSRF_COOKIE)) {
       res.cookies.set(CSRF_COOKIE, crypto.randomUUID().replace(/-/g, ''), {
         httpOnly: false,
@@ -453,9 +455,15 @@ export async function middleware(req: NextRequest) {
   return secured();
 }
 
+/** The dashboard's Stock tab (FloorBeat IMS inside it): /ims… at plain addresses, /factories/<id>/ims… long. */
+export function isImsTabPath(pathname: string): boolean {
+  return /^\/(?:factories\/[^/]+\/)?ims(?:\/|$)/.test(pathname);
+}
+
 /**
- * What the page may use of the phone: nothing, except the camera on FloorBeat IMS's own address (it reads
- * pallet and location QR codes, lib/ims and components/ims-app/qr-scanner.tsx), for the page itself only.
+ * What the page may use of the phone: nothing, except the camera on FloorBeat IMS's pages (its own address and
+ * the dashboard's Stock tab: they read pallet and location QR codes, lib/ims and components/ims-app/qr-scanner.tsx),
+ * for the page itself only.
  */
 function permissionsPolicy(camera: boolean): string {
   return `camera=${camera ? '(self)' : '()'}, microphone=(), geolocation=(), browsing-topics=()`;

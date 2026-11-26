@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { alwaysShown, factoryLoginUrl, factoryOrigin, forwardTarget, lookupFactoryId, readCookie, signedInHome } from './redirect';
+import { alwaysShown, factoryLoginUrl, factoryOrigin, forwardTarget, lookupFactoryId, readCookie, shortLink, signedInHome } from './redirect';
 
 function respond(status: number, body: unknown): typeof fetch {
   return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
@@ -169,3 +169,15 @@ describe('stage and dev: their factories have addresses too (<id>.stage.floorbea
   });
 });
 
+
+describe('short links', () => {
+  it('floorbeat.in/apk goes to the apps page, in any case, with or without a slash', () => {
+    expect(shortLink('/apk')).toBe('/app');
+    expect(shortLink('/APK/')).toBe('/app');
+    expect(shortLink('/download')).toBe('/app');
+    // the files themselves and every other page are left alone
+    expect(shortLink('/downloads/floorbeat-dashboard.apk')).toBeNull();
+    expect(shortLink('/app')).toBeNull();
+    expect(shortLink('/')).toBeNull();
+  });
+});

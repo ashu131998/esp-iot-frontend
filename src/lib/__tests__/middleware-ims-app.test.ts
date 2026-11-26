@@ -132,3 +132,32 @@ describe('the camera', () => {
     expect(await visit(`${IMS}/scan`, worker)).toMatchObject({ served: '/ims-app/scan', to: null });
   });
 });
+
+describe('the dashboard\'s Stock tab (one app: IMS inside the FloorBeat app)', () => {
+  const APP = 'https://dashboard.example.com';
+  beforeEach(() => vi.stubEnv('DASHBOARD_APP_HOST', 'dashboard.example.com'));
+  const part = (csp: string, name: string) => csp.split(';').map((p) => p.trim()).find((p) => p.startsWith(`${name} `)) ?? '';
+
+  it('/ims… in the app is the person\'s own factory\'s Stock tab, one sign-in for both', async () => {
+    expect(await visit(`${APP}/ims`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims', to: null });
+    expect(await visit(`${APP}/ims/stock?row=3`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/stock?row=3', to: null });
+    expect(await visit(`${APP}/ims/scan`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/scan', to: null });
+  });
+
+  it('there it may use the camera and the photo bucket, and nowhere else in the dashboard', async () => {
+    const scan = await visit(`${APP}/ims/scan`, worker);
+    expect(scan.policy).toContain('camera=(self)');
+    expect(part(scan.csp, 'connect-src')).toContain('https://*.r2.cloudflarestorage.com');
+    expect(part(scan.csp, 'img-src')).toContain('https://*.r2.cloudflarestorage.com');
+    const overview = await visit(`${APP}/`, worker);
+    expect(overview.policy).toContain('camera=()');
+    expect(part(overview.csp, 'connect-src')).not.toContain('r2.cloudflarestorage.com');
+    // a page whose name only starts with "ims" is not the tab
+    expect((await visit(`${APP}/imsx`, worker)).policy).toContain('camera=()');
+  });
+
+  it('a factory\'s own address and the long addresses get the same', async () => {
+    expect((await visit('https://shree-tiles.floorbeat.in/ims/scan', worker)).policy).toContain('camera=(self)');
+    expect((await visit('https://shree-tiles.floorbeat.in/energy', worker)).policy).toContain('camera=()');
+  });
+});

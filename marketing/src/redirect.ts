@@ -137,3 +137,14 @@ export function forwardTarget(pathname: string, search: string, origins: Origins
   if (STAFF_PATH_RE.test(pathname)) return `${origins.STAFF_ORIGIN}${pathname}${search}`;
   return null;
 }
+
+/**
+ * Short addresses people type or are told on the phone: where each goes (floorbeat.in/apk → the apps page,
+ * which has every app's download). Any letter case, with or without a trailing slash; null for the rest.
+ */
+const SHORT_LINKS: Record<string, string> = { '/apk': '/app', '/apks': '/app', '/download': '/app', '/downloads': '/app' };
+
+export function shortLink(pathname: string): string | null {
+  const path = pathname.toLowerCase().replace(/\/+$/, '');
+  return Object.prototype.hasOwnProperty.call(SHORT_LINKS, path) ? SHORT_LINKS[path] : null;
+}

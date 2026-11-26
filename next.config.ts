@@ -24,6 +24,9 @@ const permissions = (camera: boolean) => ({
   value: `camera=${camera ? '(self)' : '()'}, microphone=(), geolocation=(), browsing-topics=()`,
 });
 
+/** The Stock tab's addresses: /ims… (the FloorBeat app, a factory's own address) and /factories/<id>/ims…. */
+const IMS_TAB_PATHS = ['/ims', '/ims/:path*', '/factories/:factoryId/ims', '/factories/:factoryId/ims/:path*'];
+
 const nextConfig: NextConfig = {
   experimental: {
     // How long the browser keeps a page it has already been given, so going back to a tab shows it at
@@ -47,6 +50,9 @@ async headers() {
       },
       { source: '/:path*', missing: [IMS_HOST], headers: [permissions(false)] },
       { source: '/:path*', has: [IMS_HOST], headers: [permissions(true)] },
+      // the dashboard's Stock tab (FloorBeat IMS inside the dashboard, middleware.ts isImsTabPath): the camera too.
+      // Later rules win for the same header, so these replace the "no camera" above on these addresses only.
+      ...IMS_TAB_PATHS.map((source) => ({ source, headers: [permissions(true)] })),
     ];
   },
 };

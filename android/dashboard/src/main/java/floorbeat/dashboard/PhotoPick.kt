@@ -1,4 +1,4 @@
-package floorbeat.ims
+package floorbeat.dashboard
 
 /** What a photo field's button asks for: the camera app (a photo taken now) or the phone's photos and files. */
 enum class Pick { CAMERA, LIBRARY }

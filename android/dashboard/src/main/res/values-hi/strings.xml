@@ -2,4 +2,7 @@
 <resources>
     <string name="offline_text">फ़ोन के नेटवर्क पर वापस आते ही आपका डैशबोर्ड दिखेगा।</string>
     <string name="offline_retry">फिर से कोशिश करें</string>
+
+    <!-- The camera refused in Android's settings (the Stock tab). -->
+    <string name="camera_off">लेबल स्कैन करने और फ़ोटो लेने के लिए फ़ोन की सेटिंग में FloorBeat को कैमरा की अनुमति दें।</string>
 </resources>

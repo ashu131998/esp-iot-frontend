@@ -11,32 +11,10 @@ import { Sheet } from '@/components/ui/sheet';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { ImsApiError, imsFieldsApi, isImsOff } from '@/lib/ims/api';
 import {
-  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, isMediaType, MAX_FIELDS, moveKey, newFieldBody, PHONE_TYPES,
+  draftOf, draftProblem, editFieldBody, emptyDraft, FIELD_TYPE_LABELS, FIELD_TYPES, fieldHelp, isMediaType, MAX_FIELDS, moveKey, newFieldBody,
+  PHONE_TYPES, TYPE_HELP,
   type ApiField, type ApiFieldList, type FieldDraft, type FieldType,
 } from '@/lib/ims/fields';
-
-const TYPE_HELP: Record<FieldType, string> = {
-  choice: 'Fixed choices (Grade: A, B). Splits stock and works as a filter on Available stock.',
-  text: 'A short note typed on the phone, up to 200 characters.',
-  number: 'A number typed on the phone (weight, length).',
-  photo: 'Taken with the camera or chosen from the phone.',
-  audio: 'Recorded on the phone or chosen from it: up to 30 seconds and 5 MB.',
-  video: 'Recorded on the phone or chosen from it: up to 30 seconds and 25 MB.',
-};
-
-/** A take-now-only file field's line: it must be taken on the spot. */
-const TAKEN_NOW_HELP: Partial<Record<FieldType, string>> = {
-  photo: 'Must be taken on the spot with the camera. Choosing from the phone is off.',
-  audio: 'Must be recorded on the spot, up to 30 seconds and 5 MB. Choosing from the phone is off.',
-  video: 'Must be recorded on the spot, up to 30 seconds and 25 MB. Choosing from the phone is off.',
-};
-
-/** What a field's row says under its name. */
-export function fieldHelp(f: Pick<ApiField, 'type' | 'options' | 'allow_library'>): string {
-  if (f.type === 'choice') return f.options.map((o) => o.label).join(', ');
-  if (f.allow_library === false && TAKEN_NOW_HELP[f.type]) return TAKEN_NOW_HELP[f.type] as string;
-  return TYPE_HELP[f.type];
-}
 
 /** Why a write was refused, with the products in the way when the server lists them (a pick-list in use). */
 function refusal(error: unknown): string {

@@ -26,6 +26,9 @@ const { ImsAppShell, imsTabActive } = await import('@/components/ims-app/shell')
 const { ImsApiError, isImsOff, retryImsCall, stockProblem } = await import('@/lib/ims/api');
 const { ImsCannotConnect } = await import('@/components/ims-app/cannot-connect');
 const { StockScreen } = await import('@/components/ims-app/stock-screen');
+const { StockInScreen } = await import('@/components/ims-app/stock-in-screen');
+const { ImsQueueProvider } = await import('@/components/ims-app/queue-context');
+const { scanLine } = await import('@/components/ims-app/queue-bar');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -69,9 +72,10 @@ const seedStock = (search: string, page: ApiStock) => (c: QueryClient) => {
 };
 
 describe('the frame', () => {
-  it('has Home and Available stock, the page\'s tab lit', () => {
+  it('has Home, Scan and Available stock, the page\'s tab lit', () => {
     nav.pathname = '/stock';
-    const html = render(<ImsAppShell factoryName="Shree Tiles"><p>page</p></ImsAppShell>);
+    const html = render(<ImsAppShell factoryId="shree-tiles" factoryName="Shree Tiles"><p>page</p></ImsAppShell>);
+    expect(html).toContain('href="/scan"');
     expect(html).toContain('FloorBeat IMS');
     expect(html).toContain('Shree Tiles');
     expect(html).toMatch(/aria-current="page"[^>]*>[\s\S]*Available stock/);
@@ -84,6 +88,8 @@ describe('the frame', () => {
     expect(imsTabActive('/', '/stock')).toBe(false);
     expect(imsTabActive('/stock', '/ims-app/stock')).toBe(true);
     expect(imsTabActive('/stock', '/stocktake')).toBe(false);
+    expect(imsTabActive('/scan', '/ims-app/scan')).toBe(true);
+    expect(imsTabActive('/scan', '/stock')).toBe(false);
   });
 });
 
@@ -162,5 +168,31 @@ describe('available stock', () => {
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock('', PAGE), hi).replace(/<!-- -->/g, '');
     expect(html).toContain('उपलब्ध माल');
     expect(html).toContain('1,240 boxes · 2 पैलेट की गिनती बाकी');
+  });
+});
+
+describe('stock in', () => {
+  const seedSetup = (c: QueryClient) => c.setQueryData(['ims-setup', 'shree-tiles'], SETUP);
+
+  it('starts at the pallet label: the camera, and the code can always be typed', () => {
+    nav.pathname = '/scan';
+    const html = render(<ImsQueueProvider factoryId="shree-tiles"><StockInScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup).replace(/<!-- -->/g, '');
+    expect(html).toContain('Stock in');
+    expect(html).toContain('Scan the pallet label');
+    expect(html).toContain('Starting the camera…');
+    expect(html).toMatch(/<video[^>]*playsInline|<video[^>]*playsinline/i);
+    expect(html).toContain('placeholder="Or type the code, e.g. PL-000001"');
+    expect(html).toContain('autoCapitalize="characters"');
+  });
+
+  it('in Hindi', () => {
+    const html = render(<ImsQueueProvider factoryId="shree-tiles"><StockInScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup, hi).replace(/<!-- -->/g, '');
+    expect(html).toContain('माल अंदर');
+    expect(html).toContain('पैलेट का लेबल स्कैन करें');
+  });
+
+  it('a waiting scan is named by its pallet and where it goes', () => {
+    expect(scanLine({ movement: { client_id: 'c', type: 'in', pallet: 'PL-000012', to: 'R03-C05', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012 → R03-C05');
+    expect(scanLine({ movement: { client_id: 'c', type: 'out', pallet: 'PL-000012', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012');
   });
 });

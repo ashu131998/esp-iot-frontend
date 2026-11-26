@@ -3,17 +3,24 @@
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 
+import { useImsQueueMaybe } from '@/components/ims-app/queue-context';
 import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
-/** Signing out of FloorBeat IMS: the app's address then shows the sign-in (middleware.ts). */
+/**
+ * Signing out of FloorBeat IMS: the app's address then shows the sign-in (middleware.ts). Scans not sent
+ * yet stay on the phone (they go after the next sign-in), so the person is asked first.
+ */
 export function ImsSignOut({ className, withText = false }: { className?: string; withText?: boolean }) {
-  const { t } = useT();
+  const { t, tn } = useT();
   const { logout } = useAuth();
+  const queue = useImsQueueMaybe();
   const [busy, setBusy] = useState(false);
 
   async function signOut() {
+    const unsent = queue?.waiting ?? 0;
+    if (unsent > 0 && !window.confirm(tn(unsent, '{count} scan is not sent yet. It stays on this phone and is sent after the next sign-in. Sign out?', '{count} scans are not sent yet. They stay on this phone and are sent after the next sign-in. Sign out?', { count: unsent }))) return;
     setBusy(true);
     try {
       await logout();

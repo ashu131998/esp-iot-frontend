@@ -41,7 +41,7 @@ export interface ApiProduct {
 export interface ApiSetup {
   spec_fields: ApiSpecField[];
   products: ApiProduct[];
-  locations: Array<{ code: string; row: number; column: number; zone: string | null; name: string | null; active: boolean }>;
+  locations: ApiLocation[];
   photos_ready: boolean;
 }
 
@@ -137,4 +137,45 @@ export interface StockView {
   facets: Facet[];
   spec_fields: SpecField[];
   next_cursor: string | null;
+}
+
+// ── scanning (GET …/ims/scan/:code, query-api ims-routes.js) ──
+
+export interface ApiLocation {
+  code: string;
+  row: number;
+  column: number;
+  zone: string | null;
+  name: string | null;
+  active: boolean;
+}
+
+export interface ApiPallet {
+  code: string;
+  product_id: string;
+  specs: Specs;
+  qty: number | null;
+  status: 'in_stock' | 'closed';
+  needs_count: boolean;
+  batch: string | null;
+  produced_on: string | null;
+  stocked_at: string | null;
+  closed_at: string | null;
+  location: { code: string; row: number | null; column: number | null; zone: string | null; name: string | null } | null;
+}
+
+/** What a QR is: a location, a pallet in the system (its card), one of our labels not used yet, or none of ours. */
+export type ApiScan =
+  | { kind: 'location'; location: ApiLocation; pallets: Array<ApiPallet & { product: ApiProduct | null }> }
+  | { kind: 'pallet'; pallet: ApiPallet; product: ApiProduct | null; photos: ApiPicture[] }
+  | { kind: 'new_pallet'; code: string }
+  | { kind: 'unknown'; code: string };
+
+/** POST …/ims/photos: where to upload the two JPEGs (links valid 15 minutes). */
+export interface ApiPhotoLinks {
+  photo_id: string;
+  full_put_url: string;
+  thumb_put_url: string;
+  expires_at: string;
+  uploaded: boolean;
 }

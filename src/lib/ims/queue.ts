@@ -22,9 +22,9 @@ export interface Movement {
   pallet: string;
   /** When it was scanned on the phone (ISO), not when it reached the server. */
   scanned_at: string;
-  /** in: the product, its specs if this pallet's differ, batch and production day. */
+  /** in: the product, its specs where this pallet's differ (null: one taken away), batch and production day. */
   product_id?: string;
-  specs?: Record<string, string>;
+  specs?: Record<string, string | null>;
   batch?: string;
   produced_on?: string;
   /** in, move: the location's code (R03-C05). */

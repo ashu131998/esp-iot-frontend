@@ -28,7 +28,7 @@ async function visit(url: string, { role, factoryId = null, refresh = false }: {
   const location = res.headers.get('location');
   const rewrite = res.headers.get('x-middleware-rewrite');
   const local = (u: string) => new URL(u).href.replace(new URL(u).origin, '');
-  return { status: res.status, to: location ? local(location) : null, served: rewrite ? local(rewrite) : null, csp: res.headers.get('content-security-policy') ?? '' };
+  return { status: res.status, to: location ? local(location) : null, served: rewrite ? local(rewrite) : null, csp: res.headers.get('content-security-policy') ?? '', policy: res.headers.get('permissions-policy') ?? '' };
 }
 
 beforeEach(() => {
@@ -117,5 +117,18 @@ describe('stock photos (straight from and to R2)', () => {
     const { csp } = await visit('https://shree-tiles.floorbeat.in/', worker);
     expect(csp).toContain('img-src');
     expect(csp).not.toContain('r2.cloudflarestorage.com');
+  });
+});
+
+describe('the camera', () => {
+  it('is allowed on the IMS\'s own address only (it reads the QR codes), for the page itself', async () => {
+    expect((await visit(`${IMS}/scan`, worker)).policy).toBe('camera=(self), microphone=(), geolocation=(), browsing-topics=()');
+    expect((await visit(`${IMS}/`)).policy).toContain('camera=(self)');
+    expect((await visit('https://shree-tiles.floorbeat.in/', worker)).policy).toContain('camera=()');
+    expect((await visit('https://dashboard.floorbeat.in/')).policy).toContain('camera=()');
+  });
+
+  it('the scan page is served from the app inside', async () => {
+    expect(await visit(`${IMS}/scan`, worker)).toMatchObject({ served: '/ims-app/scan', to: null });
   });
 });

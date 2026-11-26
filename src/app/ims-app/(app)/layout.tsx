@@ -22,5 +22,5 @@ export default async function ImsSignedInLayout({ children }: { children: React.
       </div>
     );
   }
-  return <ImsAppShell factoryName={null}>{children}</ImsAppShell>;
+  return <ImsAppShell factoryId={user.factory_id} factoryName={null}>{children}</ImsAppShell>;
 }

@@ -106,6 +106,15 @@ describe('pages fetched ahead', () => {
   });
 });
 
+describe('a sign-in page while a session is looked for', () => {
+  it('the line shown meanwhile is as tall as the form that follows, on all three sign-in pages: nothing moves when the form comes', () => {
+    const line = (file: string) => read(file).match(/<p className="([^"]*)" role="status">\{t\('Signing you in…'\)\}<\/p>/)?.[1] ?? '';
+    expect(line('src/components/auth/login-form.tsx')).toContain('min-h-[13.5rem]');          // the factory's and the staff's: 216 px
+    expect(line('src/components/dashboard-app/login-form.tsx')).toContain('min-h-[16.5rem]');  // the FloorBeat app's
+    expect(line('src/components/alerts-app/login-form.tsx')).toContain('min-h-[16.5rem]');     // the alerts app's
+  });
+});
+
 describe('what the settings say', () => {
   it('the built files, named by their content, are kept by the browser for good', () => {
     const rules = read('public/_headers').split('\n').filter((line) => line.trim() && !line.startsWith('#'));

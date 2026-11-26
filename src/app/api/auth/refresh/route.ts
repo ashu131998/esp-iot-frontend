@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   CSRF_COOKIE,
   REFRESH_COOKIE,
-  callRefresh,
+  refreshSession,
   clearAuthCookies,
   setAuthCookies,
 } from '@/lib/server/bff';
@@ -20,8 +20,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
   }
 
-  const tokens = await callRefresh(refresh);
+  const renewed = await refreshSession(refresh);
+  const tokens = renewed.tokens;
   if (!tokens) {
+    // The API not answering (a restart) is not the end of the session: the cookies stay.
+    if (!renewed.refused) return NextResponse.json({ error: 'FloorBeat is not answering just now. Try again in a moment.' }, { status: 503 });
     const res = NextResponse.json({ error: 'Refresh failed' }, { status: 401 });
     clearAuthCookies(res);
     return res;

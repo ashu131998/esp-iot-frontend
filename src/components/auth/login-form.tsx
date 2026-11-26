@@ -122,7 +122,9 @@ export function LoginForm({
         )}
         <CardHeader title={title} description={subtitle} />
         {restoring ? (
-          <p className="mt-6 text-center text-sm text-muted" role="status">{t('Signing you in…')}</p>
+          // As tall as the form that follows (216 px: two fields, the link, the button): the card does not grow, and
+          // nothing on the page moves, when the form takes its place (layout shift 0.05 before, measured 2026-11-24).
+          <p className="mt-6 flex min-h-[13.5rem] items-center justify-center text-sm text-muted" role="status">{t('Signing you in…')}</p>
         ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {/* Factory admins onboarded from /internal/onboard sign in with their email by default. */}

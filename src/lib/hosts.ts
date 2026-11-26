@@ -7,6 +7,8 @@
  *  - alerts.floorbeat.in: the FloorBeat Alerts phone app (any account; ALERTS_APP_HOST for a local run);
  *  - dashboard.floorbeat.in: the FloorBeat app, the dashboard on a phone: one address for every factory,
  *    the person's own factory once signed in (DASHBOARD_APP_HOST for a local run);
+ *  - ims.floorbeat.in: FloorBeat IMS, the stock app (pallets, locations, stock), the person's own
+ *    factory once signed in (IMS_APP_HOST for a local run);
  *  - app, ops, www, api and every stage- / dev- address: FloorBeat's own, never a factory.
  * The backend keeps the same reserved list (query-api/src/factory-host.js) for new factory IDs.
  */
@@ -20,7 +22,7 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   'sales', 'hello', 'billing', 'pay', 'payments', 'shop', 'store', 'partners',
   'cdn', 'static', 'assets', 'media', 'files', 'img', 'images', 'download', 'downloads',
   'mqtt', 'broker', 'emqx', 'ota', 'firmware', 'grafana', 'metrics', 'monitor', 'monitoring',
-  'webhook', 'webhooks', 'hooks', 'push', 'alerts', 'm', 'mobile',
+  'webhook', 'webhooks', 'hooks', 'push', 'alerts', 'ims', 'm', 'mobile',
   'dev', 'stage', 'staging', 'test', 'testing', 'sandbox', 'beta', 'preview', 'demo-app', 'localhost',
 ]);
 
@@ -134,5 +136,28 @@ export function isDashboardAppHost(hostname: string | null | undefined, suffix: 
   const named = bare(explicit ?? '');
   if (named && host === named) return true;
   const derived = dashboardAppHost(suffix);
+  return derived !== null && host === derived;
+}
+
+/** FloorBeat IMS (the stock app) lives at ims.<suffix>: ims.floorbeat.in, ims.stage.floorbeat.in. */
+export const IMS_APP_LABEL = 'ims';
+
+/** The IMS app's address for a factory-address suffix: "ims.floorbeat.in"; null without one. */
+export function imsAppHost(suffix: string | null | undefined): string | null {
+  const s = (suffix ?? '').trim().toLowerCase();
+  if (!s) return null;
+  return `${IMS_APP_LABEL}${s.startsWith('.') ? s : `.${s}`}`;
+}
+
+/**
+ * Whether this address is the IMS app's: ims.<suffix>, or the address named in IMS_APP_HOST
+ * (a local run: ims.localhost). A port does not matter.
+ */
+export function isImsAppHost(hostname: string | null | undefined, suffix: string | null | undefined, explicit?: string | null): boolean {
+  if (!hostname) return false;
+  const host = bare(hostname);
+  const named = bare(explicit ?? '');
+  if (named && host === named) return true;
+  const derived = imsAppHost(suffix);
   return derived !== null && host === derived;
 }

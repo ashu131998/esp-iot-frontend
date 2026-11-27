@@ -245,9 +245,11 @@ export async function middleware(req: NextRequest) {
   // factory: they pick one and use its long addresses.
   if (dashboardApp) {
     if (/^\/dashboard-app(\/|$)/.test(pathname)) return redirectTo('/');
-    // the alerts' screens live at /inbox here (their inner address is never shown)
+    // the alerts' screens live at /inbox here, the stock's at /ims (their inner addresses are never shown)
     const alertsInner = pathname.match(/^\/alerts-app(\/.*)?$/);
     if (alertsInner) return redirectTo(`/inbox${alertsInner[1] ?? ''}`);
+    const stockInner = pathname.match(/^\/ims-app(\/.*)?$/);
+    if (stockInner) return redirectTo(`/ims${stockInner[1] ?? ''}`);
     if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
     const long = pathname.match(/^\/(f|factories)\/([^/]+)(\/.*)?$/);
     const authPage = /^\/(login|signup|forgot-password)\/?$/.test(pathname);
@@ -267,12 +269,22 @@ export async function middleware(req: NextRequest) {
     const plant = identity.factoryId;
     if (!plant) return securedRewrite('/dashboard-app/login');
     // the app's home screen at its root (a tile for each of the person's apps), the dashboard's overview at
-    // /overview, and their alerts (the alerts app's screens) at /inbox
+    // /overview, their alerts (the alerts app's screens) at /inbox and the stock (the IMS app's) at /ims
     if (pathname === '/') return securedRewrite(`/dashboard-app/home/${encodeURIComponent(plant)}`);
     if (/^\/home\/?$/.test(pathname)) return redirectTo('/');
     if (inbox) {
       const page = !inbox[1] || inbox[1] === '/' || /^\/alerts\/?$/.test(inbox[1]) ? '' : inbox[1];   // /inbox/alerts is the inbox too
       return securedRewrite(`/alerts-app${page}`);
+    }
+    // the stock (FloorBeat IMS) is an app of its own here too, as the alerts are (the owner, 2026-11-27: "separate
+    // looking app, not inside dashboard"): its screens at /ims/add and /ims/stock, served from the IMS app's
+    // /ims-app/… inside; /ims opens on the stock, and the IMS app's own sign-in is not served
+    const stock = pathname.match(/^\/ims(\/.*)?$/);
+    if (stock) {
+      const page = stock[1] && stock[1] !== '/' ? stock[1] : '';
+      if (!page) return redirectTo('/ims/stock');
+      if (/^\/login\/?$/.test(page)) return redirectTo('/');
+      return securedRewrite(`/ims-app${page}`);
     }
     if (long) {
       const same = decodeSegment(long[2]).toLowerCase() === plant.toLowerCase();

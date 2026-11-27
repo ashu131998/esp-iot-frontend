@@ -11,12 +11,13 @@ import { imsHref, imsScreenOf } from '@/lib/ims/tab';
 import { cn } from '@/lib/utils';
 
 /**
- * FloorBeat IMS as the dashboard's Stock tab (one app: Ashutosh 2026-11-27): the IMS screens inside the
+ * FloorBeat IMS as the dashboard's Stock tab, our staff's (lib/display.ts STAFF_PAGES): the IMS screens inside the
  * factory's own frame (its sidebar, its phone bottom bar), with its two screens, Add item and Available stock, as
- * a row of tabs on top. It has no home of its own here: the FloorBeat app's home screen is where the apps are
- * picked, and the tab's own address opens Available stock (app/factories/[factoryId]/ims/page.tsx). What waits
- * on the phone to be sent is the factory frame's (factory-queue.tsx): the same scans and photos as on
- * ims.floorbeat.in, kept per factory on the phone, sent from whichever page is open.
+ * a row of tabs on top. The factory's own people have the stock as an app of its own in the FloorBeat app
+ * (dashboard.floorbeat.in/ims: components/ims-app/shell.tsx, the owner 2026-11-27). The tab's own address opens
+ * Available stock (app/factories/[factoryId]/ims/page.tsx). What waits on the phone to be sent is the factory
+ * frame's (factory-queue.tsx): the same scans and photos as on ims.floorbeat.in, kept per factory on the phone,
+ * sent from whichever page is open.
  */
 export function ImsDashboardFrame({ factoryId, children }: { factoryId: string; children: React.ReactNode }) {
   const { t } = useT();

@@ -4,7 +4,7 @@
  * these first, then menu order. Up to four sit beside "More", whose menu holds the rest (moreTabs);
  * when every page of the factory is on the bar and they fit (five), there is no "More".
  */
-import type { Display } from '@/lib/display';
+import { OFF_BAR_PAGES, type Display } from '@/lib/display';
 
 const BAR_FIRST: readonly string[] = ['overview', 'alerts', 'status-timeline', 'availability'];
 /** Pages on the bar beside "More". */
@@ -21,9 +21,10 @@ const SHORT_LABEL: Record<string, string> = {
   configuration: 'Config',
 };
 
-/** The bar's order: the main pages first, then the menu's. */
+/** The bar's order: the main pages first, then the menu's; a page that never sits on the bar left out (Alert settings). */
 function inBarOrder<T extends { slug: string }>(tabs: readonly T[]): T[] {
-  return [...BAR_FIRST.flatMap((slug) => tabs.filter((t) => t.slug === slug)), ...tabs.filter((t) => !BAR_FIRST.includes(t.slug))];
+  const can = tabs.filter((t) => !OFF_BAR_PAGES.has(t.slug));
+  return [...BAR_FIRST.flatMap((slug) => can.filter((t) => t.slug === slug)), ...can.filter((t) => !BAR_FIRST.includes(t.slug))];
 }
 
 /** Whether the factory's display says which pages are on the bar (a server from before the switches says nothing). */
@@ -59,6 +60,7 @@ export function shortLabel(tab: { slug: string; label: string }): string {
  * What the staff editor saves when one page's place changes: every page's place at once
  * ({ 'bar.<slug>': on the bar? }), so the bar is exactly what the editor showed. `pages`: every page
  * of the menu; `visible`: the ones this factory has on (a page that is off keeps the place it had).
+ * A page that never sits on the bar is not sent: the server refuses a switch it has not got.
  */
 export function barPatch(
   pages: readonly { slug: string }[],
@@ -70,6 +72,7 @@ export function barPatch(
   const chosen = barChosen(display);
   const patch: Record<string, boolean> = {};
   for (const { slug } of pages) {
+    if (OFF_BAR_PAGES.has(slug)) continue;
     const now = chosen ? display?.[`${BAR_PREFIX}${slug}`] === true : onBar.has(slug);
     patch[`${BAR_PREFIX}${slug}`] = slug === change.slug ? change.on : now;
   }

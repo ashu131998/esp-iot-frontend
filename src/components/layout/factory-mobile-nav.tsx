@@ -56,9 +56,9 @@ export function FactoryMobileNav({
 }) {
   const pathname = usePathname();
   const navigate = useNavigate();
-  const { canWriteFactory } = useAuth();
+  const { canWriteFactory, isInternalStaff } = useAuth();
   const { t } = useT();
-  const tabs = tabsFor(allTabs, canWriteFactory);
+  const tabs = tabsFor(allTabs, { canWrite: canWriteFactory, staff: isInternalStaff });
   // Both belong to the page they were set on, so arriving on another page clears them.
   const [pending, setPending] = useState<{ href: string; on: string } | null>(null);
   const [sheetOn, setSheetOn] = useState<{ on: string; sheet: Sheet } | null>(null);

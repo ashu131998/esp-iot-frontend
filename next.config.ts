@@ -15,17 +15,13 @@ const securityHeaders = [
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
 ];
 
-// What a page may use of the phone: nothing, except the camera on FloorBeat IMS's own address
-// (ims.<suffix>, or ims.localhost for a local run), where it reads pallet and location QR codes.
-// middleware.ts sets the same on the pages it serves.
-const IMS_HOST = { type: 'host' as const, value: 'ims\\..+' };
-const permissions = (camera: boolean) => ({
+// What a page may use of the phone: the camera, for the page itself only, on every page (FloorBeat IMS reads
+// pallet and location QR codes and takes stock photos, and the dashboard reaches its Stock tab without loading a
+// new page, so a page keeps the rule it was loaded with); nothing else. middleware.ts sets the same.
+const permissions = {
   key: 'Permissions-Policy',
-  value: `camera=${camera ? '(self)' : '()'}, microphone=(), geolocation=(), browsing-topics=()`,
-});
-
-/** The Stock tab's addresses: /ims… (the FloorBeat app, a factory's own address) and /factories/<id>/ims…. */
-const IMS_TAB_PATHS = ['/ims', '/ims/:path*', '/factories/:factoryId/ims', '/factories/:factoryId/ims/:path*'];
+  value: 'camera=(self), microphone=(), geolocation=(), browsing-topics=()',
+};
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -46,13 +42,8 @@ async headers() {
     return [
       {
         source: '/:path*',
-        headers: securityHeaders,
+        headers: [...securityHeaders, permissions],
       },
-      { source: '/:path*', missing: [IMS_HOST], headers: [permissions(false)] },
-      { source: '/:path*', has: [IMS_HOST], headers: [permissions(true)] },
-      // the dashboard's Stock tab (FloorBeat IMS inside the dashboard, middleware.ts isImsTabPath): the camera too.
-      // Later rules win for the same header, so these replace the "no camera" above on these addresses only.
-      ...IMS_TAB_PATHS.map((source) => ({ source, headers: [permissions(true)] })),
     ];
   },
 };

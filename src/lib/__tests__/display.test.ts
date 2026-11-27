@@ -4,17 +4,24 @@ import {
   FACTORY_PAGES,
   HELP_PAGES,
   MANAGE_PAGES,
+  OFF_BAR_PAGES,
   displayOf,
   factoryTabs,
   isShown,
   noEnergy,
   noProduction,
   offQuery,
+  pageOn,
   resolveDisplay,
   sidebarGroups,
   tabsFor,
   type DisplayPage,
 } from '@/lib/display';
+
+// who looks at the menu: a factory's admin, one of its workers, our staff
+const ADMIN = { canWrite: true, staff: false };
+const WORKER = { canWrite: false, staff: false };
+const STAFF = { canWrite: true, staff: true };
 
 const CATALOG: DisplayPage[] = [
   {
@@ -82,15 +89,53 @@ describe('factoryTabs', () => {
 
   it('Support is for everyone of the factory', () => {
     const tabs = factoryTabs('f1', {});
-    expect(tabsFor(tabs, false).map((t) => t.slug)).toContain('support');
+    expect(tabsFor(tabs, WORKER).map((t) => t.slug)).toContain('support');
     expect(tabs.at(-1)).toEqual({ slug: 'support', label: 'Support', href: '/factories/f1/support' });
   });
 
   it('shows WiFi to everyone of the factory: workers connect boards there (the passwords stay with its admins)', () => {
     const tabs = factoryTabs('f1', {});
-    expect(tabsFor(tabs, true).map((t) => t.slug)).toContain('wifi');
-    expect(tabsFor(tabs, false).map((t) => t.slug)).toContain('wifi');
-    expect(tabsFor(tabs, false)).toHaveLength(tabs.length);
+    expect(tabsFor(tabs, ADMIN).map((t) => t.slug)).toContain('wifi');
+    expect(tabsFor(tabs, WORKER).map((t) => t.slug)).toContain('wifi');
+  });
+
+  it('the factory\'s people have no Alerts and no Stock tab: those are apps of their own on FloorBeat\'s home screen (2026-11-27)', () => {
+    const tabs = factoryTabs('f1', { ims: true });
+    for (const who of [ADMIN, WORKER]) {
+      const slugs = tabsFor(tabs, who).map((t) => t.slug);
+      expect(slugs).not.toContain('alerts');
+      expect(slugs).not.toContain('ims');
+    }
+    // our staff keep both: how they see a factory's alerts and stock (they have no home screen of apps)
+    const staff = tabsFor(tabs, STAFF).map((t) => t.slug);
+    expect(staff).toContain('alerts');
+    expect(staff).toContain('ims');
+    expect(tabsFor(tabs, STAFF)).toHaveLength(tabs.length);
+    // the rest is everyone's
+    expect(tabsFor(tabs, WORKER).map((t) => t.slug)).toEqual(tabs.map((t) => t.slug).filter((s) => !['alerts', 'ims', 'alert-settings'].includes(s)));
+  });
+
+  it('Alert settings: the factory\'s admins and our staff, under Manage', () => {
+    const tabs = factoryTabs('f1', {});
+    expect(tabs.find((t) => t.slug === 'alert-settings')).toEqual({ slug: 'alert-settings', label: 'Alert settings', href: '/factories/f1/alert-settings' });
+    expect(tabsFor(tabs, ADMIN).map((t) => t.slug)).toContain('alert-settings');
+    expect(tabsFor(tabs, STAFF).map((t) => t.slug)).toContain('alert-settings');
+    expect(tabsFor(tabs, WORKER).map((t) => t.slug)).not.toContain('alert-settings');
+    expect(MANAGE_PAGES.has('alert-settings')).toBe(true);
+  });
+
+  it('Alert settings is there while the Alerts page and one of its two sections are switched on', () => {
+    const has = (display: Record<string, boolean>) => factoryTabs('f1', display).some((t) => t.slug === 'alert-settings');
+    expect(pageOn({}, 'alert-settings')).toBe(true);
+    expect(has({ alerts: false })).toBe(false);
+    expect(has({ 'alerts.mobile': false })).toBe(true);
+    expect(has({ 'alerts.downtime': false })).toBe(true);
+    expect(has({ 'alerts.mobile': false, 'alerts.downtime': false })).toBe(false);
+    // the Alerts page's other sections do not count
+    expect(has({ 'alerts.machines': false, 'alerts.feed': false })).toBe(true);
+    // and it never sits on the phone's bottom bar: the server has no switch for it
+    expect(OFF_BAR_PAGES.has('alert-settings')).toBe(true);
+    expect(OFF_BAR_PAGES.has('alerts')).toBe(false);
   });
 
   it('links Overview to the factory root and other pages below it', () => {
@@ -153,7 +198,7 @@ describe('sidebarGroups: what people read (Monitor), then what they set up (Mana
       'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'cameras', 'performance', 'production', 'quality', 'ims',
     ]);
     expect(groups[1].tabs.map((p) => p.slug)).toEqual([
-      'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
+      'lines', 'configuration', 'scheduling', 'shift-reports', 'alert-settings', 'sensor-mapping', 'wifi', 'team', 'compliance',
     ]);
     expect(groups[2].tabs.map((p) => p.slug)).toEqual(['support']);
     expect(groups.flatMap((g) => g.tabs)).toHaveLength(FACTORY_PAGES.length);

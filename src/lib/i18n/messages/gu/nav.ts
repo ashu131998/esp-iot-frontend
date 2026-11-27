@@ -18,6 +18,7 @@ export const nav: Messages = {
   'Config': 'કૉન્ફિગ',
   'Scheduling': 'શેડ્યૂલ',
   'Shift reports': 'શિફ્ટ રિપોર્ટ',
+  'Alert settings': 'એલર્ટ સેટિંગ',
   'Reports': 'રિપોર્ટ',
   'Sensor mapping': 'સેન્સર મેપિંગ',
   'Sensors': 'સેન્સર',

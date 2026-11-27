@@ -80,6 +80,8 @@ describe('setupStepHref', () => {
     expect(setupStepHref('mapped', 'mill-01')).toBe('/factories/mill-01/sensor-mapping');
     expect(setupStepHref('live', 'mill-01')).toBe('/factories/mill-01/status-timeline');
     expect(setupStepHref('reports', 'mill-01')).toBe('/factories/mill-01/shift-reports');
+    // who gets the stop alerts: Alert settings, under Manage (the Alerts tab is our staff's since 2026-11-27)
+    expect(setupStepHref('alerts', 'mill-01')).toBe('/factories/mill-01/alert-settings');
     expect(setupStepHref('value', 'mill-01')).toBe('/factories/mill-01/results?settings=1');
     expect(setupStepHref('first_shift', 'mill-01')).toBeNull();
   });

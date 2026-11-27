@@ -134,18 +134,18 @@ describe('the camera', () => {
   });
 });
 
-describe('the dashboard\'s Stock tab (one app: IMS inside the FloorBeat app)', () => {
+describe('the FloorBeat app\'s Stock (IMS as an app of its own inside it, 2026-11-27)', () => {
   const APP = 'https://dashboard.example.com';
   beforeEach(() => vi.stubEnv('DASHBOARD_APP_HOST', 'dashboard.example.com'));
   const part = (csp: string, name: string) => csp.split(';').map((p) => p.trim()).find((p) => p.startsWith(`${name} `)) ?? '';
 
-  it('/ims… in the app is the person\'s own factory\'s Stock tab, one sign-in for both', async () => {
-    expect(await visit(`${APP}/ims`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims', to: null });
-    expect(await visit(`${APP}/ims/stock?row=3`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/stock?row=3', to: null });
-    expect(await visit(`${APP}/ims/scan`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/scan', to: null });
+  it('/ims… in the app is the IMS app\'s screens for the person\'s own factory, one sign-in for both', async () => {
+    expect(await visit(`${APP}/ims`, worker)).toMatchObject({ to: '/ims/stock', served: null });
+    expect(await visit(`${APP}/ims/stock?row=3`, worker)).toMatchObject({ served: '/ims-app/stock?row=3', to: null });
+    expect(await visit(`${APP}/ims/add`, worker)).toMatchObject({ served: '/ims-app/add', to: null });
   });
 
-  it('Overview, opened first, already allows what the Stock tab needs (tabs change without a new page)', async () => {
+  it('the home screen, opened first, already allows what Stock needs (the app moves there without a new page)', async () => {
     const overview = await visit(`${APP}/`, worker);
     expect(overview.policy).toContain('camera=(self)');
     expect(overview.policy).toContain('microphone=()');

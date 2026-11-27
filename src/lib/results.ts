@@ -188,7 +188,7 @@ export function setupStepHref(key: SetupStepKey, factoryId: string): string | nu
     case 'live':
       return `${base}/status-timeline`;
     case 'alerts':
-      return `${base}/alerts`;
+      return `${base}/alert-settings`;   // who gets the stop alerts, and how (the factory's admins: Manage)
     case 'reports':
       return `${base}/shift-reports`;
     case 'value':

@@ -23,7 +23,8 @@ describe('the phone bottom bar, per factory', () => {
     const html = render({ ...bar('overview', 'alerts', 'support'), compliance: false, cameras: false });
     expect(html).toContain('Phone bottom bar');
     expect(html).toContain('On phones now: ');
-    expect(html).toContain('Overview · Alerts · Support · More (15)');
+    // the bar of the factory's people: Alerts is our staff's tab (theirs is the FloorBeat app's Alerts)
+    expect(html).toContain('Overview · Support · More (16)');
     expect(switched(html, 'Overview')).toBe(true);
     expect(switched(html, 'Support')).toBe(true);
     expect(switched(html, 'Results')).toBe(false);
@@ -32,15 +33,23 @@ describe('the phone bottom bar, per factory', () => {
     expect(html).not.toContain('behind &quot;More&quot; until');
   });
 
+  it('no switch for our staff\'s Alerts and Stock tabs, nor for Alert settings (never on the bar)', () => {
+    const html = render({ ...bar('overview'), ims: true });
+    expect(html).toContain('aria-label="Overview on the bottom bar"');
+    expect(html).not.toContain('aria-label="Alerts on the bottom bar"');
+    expect(html).not.toContain('aria-label="Stock on the bottom bar"');
+    expect(html).not.toContain('aria-label="Alert settings on the bottom bar"');
+  });
+
   it('more than four chosen: the ones that wait behind More are named', () => {
     const html = render(bar('overview', 'alerts', 'results', 'energy', 'team', 'support'));
-    expect(html).toContain('Overview · Alerts · Results · Energy · More (16)');
-    expect(html).toContain('Only 4 fit beside &quot;More&quot;: Team, Support are behind &quot;More&quot;');
+    expect(html).toContain('Overview · Results · Energy · Team · More (16)');
+    expect(html).toContain('Only 4 fit beside &quot;More&quot;: Support is behind &quot;More&quot;');
   });
 
   it('a factory nobody set a bar for: the first four', () => {
     const html = render({ compliance: false, cameras: false });
-    expect(html).toContain('Overview · Alerts · Timeline · Availability · More (14)');
+    expect(html).toContain('Overview · Timeline · Availability · Results · More (14)');
     expect(switched(html, 'Availability')).toBe(true);
   });
 

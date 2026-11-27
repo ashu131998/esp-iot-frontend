@@ -79,9 +79,13 @@ export function stockFilterQuery(filter: StockFilter): string {
   return parts.join('&');
 }
 
-/** A choice switched on or off for one facet (a spec field, a part of the location, or the product). */
+/**
+ * A choice switched on or off for one facet (an item's field, a part of the location, or the item). A field is one
+ * item's: changing the items picked lets go of the fields picked (the server takes them only with one item).
+ */
 export function toggleChoice(filter: StockFilter, facet: FacetRef, choice: string): StockFilter {
   const flip = (values: string[]) => (values.includes(choice) ? values.filter((v) => v !== choice) : [...values, choice].sort());
+  if (facet.kind === 'product') return { ...filter, products: flip(filter.products), specs: {} };
   if (facet.kind !== 'spec') {
     const name = LISTS[facet.kind];
     return { ...filter, [name]: flip(filter[name]) };

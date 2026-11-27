@@ -5,7 +5,7 @@
 import { csrfFromCookie } from '@/lib/csrf';
 import { fetchWithSignal } from '@/lib/request-signal';
 
-import type { ApiField, ApiFieldList, editFieldBody, newFieldBody } from './fields';
+import type { ApiField, ApiItem, ApiItemList, editFieldBody, newFieldBody } from './fields';
 import type { Movement, MovementResult } from './queue';
 import type { ApiPhotoLinks, ApiPicture, ApiScan, ApiSetup, ApiStock } from './types';
 
@@ -111,20 +111,28 @@ export interface PhotoLinkRequest {
   taken_at_source?: 'capture' | 'photo_info' | 'file_date' | 'upload';
 }
 
-/** The ops.floorbeat.in Stock details page's calls: a factory's fields, changed by our staff only. */
-export const imsFieldsApi = {
-  list: (factoryId: string, signal?: AbortSignal | null) => get<ApiFieldList>(imsPath(factoryId, '/spec-fields'), signal),
-  create: (factoryId: string, body: ReturnType<typeof newFieldBody>) => post<ApiField>(imsPath(factoryId, '/spec-fields'), body),
-  update: (factoryId: string, key: string, body: ReturnType<typeof editFieldBody>) =>
-    write<ApiField>('PUT', imsPath(factoryId, `/spec-fields/${encodeURIComponent(key)}`), body),
-  order: (factoryId: string, keys: string[]) =>
-    write<{ fields: ApiField[] }>('PUT', imsPath(factoryId, '/spec-fields/order'), { keys }),
-  remove: (factoryId: string, key: string) =>
-    write<void>('DELETE', imsPath(factoryId, `/spec-fields/${encodeURIComponent(key)}`), undefined),
+/** An item's address under the factory's IMS. */
+const itemPath = (factoryId: string, productId: string, sub = '') => imsPath(factoryId, `/items/${encodeURIComponent(productId)}${sub}`);
+
+/** The ops.floorbeat.in Stock items page's calls: a factory's items and each item's fields, changed by our staff only. */
+export const imsItemsApi = {
+  list: (factoryId: string, signal?: AbortSignal | null) => get<ApiItemList>(imsPath(factoryId, '/items'), signal),
+  create: (factoryId: string, body: { name: string; unit: string; sku?: string | null }) =>
+    post<Omit<ApiItem, 'removed'>>(imsPath(factoryId, '/items'), body),
+  update: (factoryId: string, productId: string, body: { name?: string; unit?: string; sku?: string | null; active?: boolean }) =>
+    write<Omit<ApiItem, 'removed'>>('PUT', itemPath(factoryId, productId), body),
+  createField: (factoryId: string, productId: string, body: ReturnType<typeof newFieldBody>) =>
+    post<ApiField>(itemPath(factoryId, productId, '/fields'), body),
+  updateField: (factoryId: string, productId: string, key: string, body: ReturnType<typeof editFieldBody>) =>
+    write<ApiField>('PUT', itemPath(factoryId, productId, `/fields/${encodeURIComponent(key)}`), body),
+  orderFields: (factoryId: string, productId: string, keys: string[]) =>
+    write<{ fields: ApiField[] }>('PUT', itemPath(factoryId, productId, '/fields/order'), { keys }),
+  removeField: (factoryId: string, productId: string, key: string) =>
+    write<void>('DELETE', itemPath(factoryId, productId, `/fields/${encodeURIComponent(key)}`), undefined),
 };
 
 export const imsApi = {
-  /** Spec fields, products, locations: what the phone keeps. */
+  /** The items with their fields, and the locations: what the phone keeps. */
   setup: (factoryId: string, signal?: AbortSignal | null) => get<ApiSetup>(imsPath(factoryId, '/setup'), signal),
   stock: (factoryId: string, filterQuery: string, cursor: string | null, signal?: AbortSignal | null) =>
     get<ApiStock>(stockUrl(factoryId, filterQuery, cursor), signal),

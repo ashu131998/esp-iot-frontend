@@ -20,7 +20,7 @@ export const INTERNAL_NAV: InternalNavItem[] = [
   { href: '/internal/health', label: 'System health' },
   { href: '/internal/onboard', label: 'Onboard', writeOnly: true },
   { href: '/internal/features', label: 'Pages & branding', writeOnly: true },
-  { href: '/internal/stock-details', label: 'Stock details', writeOnly: true },
+  { href: '/internal/stock-items', label: 'Stock items', writeOnly: true },
   { href: '/internal/users', label: 'Users' },
   { href: '/internal/audit', label: 'Audit log', ownerOnly: true },
 ];

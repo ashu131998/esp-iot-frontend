@@ -8,20 +8,21 @@ import { EMPTY_FILTER, isPicked, toggleChoice, type StockFilter } from '@/lib/im
 import type { Facet } from '@/lib/ims/types';
 import { cn } from '@/lib/utils';
 
-/** A filter section's title: the factory's own word for a spec; ours for the location's parts and the product. */
+/** A filter section's title: the item's own word for its field; ours for the location's parts and the item. */
 function facetTitle(facet: Facet, t: (key: string) => string): string {
   if (facet.kind === 'zone') return t('Zone');
   if (facet.kind === 'row') return t('Row');
   if (facet.kind === 'column') return t('Column');
-  if (facet.kind === 'product') return t('Product');
+  if (facet.kind === 'product') return t('Item');
   return facet.label;
 }
 
 /**
- * The "Filters" sheet: one section per spec the factory set up, then the parts of the location (zone, row, column) and the products. Big chips, no typing.
- * Each chip says how many in-stock pallets it would leave (the server counts each spec without its own
- * pick, so the other colours stay there to switch to). The choice is applied when the sheet closes
- * with "Show".
+ * The "Filters" sheet: one section per pick-list of the item picked (the stock page's item chips pick it), then the
+ * parts of the location (zone, row, column), where records have one. Big chips, no typing. Each chip says how many
+ * entries in stock it would leave (the server counts each field without its own pick, so the other colours stay
+ * there to switch to). With all items showing, it says to pick one for its details. The choice is applied when the
+ * sheet closes with "Show".
  */
 export function FilterSheet({ facets, filter, onApply, onClose }: {
   facets: Facet[];
@@ -35,6 +36,7 @@ export function FilterSheet({ facets, filter, onApply, onClose }: {
   return (
     <Sheet title={t('Filters')} onClose={onClose}>
       <div className="space-y-5">
+        {filter.products.length !== 1 && <p className="text-sm text-muted">{t('Pick one item above to filter by its details.')}</p>}
         {facets.filter((f) => f.options.length > 0).map((facet) => (
           <section key={`${facet.kind}:${facet.key}`}>
             <h3 className="mb-2 text-sm font-semibold text-foreground">{facetTitle(facet, t)}</h3>

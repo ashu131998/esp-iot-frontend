@@ -69,17 +69,17 @@ describe('stock figures: unknown is never 0', () => {
     expect(qtyText(2.125)).toBe('2.125');
   });
 
-  it('a total says how many pallets it leaves out', () => {
+  it('a total says how many entries it leaves out', () => {
     expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 0 }, t, tn)).toBe('1,240 boxes');
-    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }, t, tn)).toBe('1,240 boxes · 2 pallets not counted');
-    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 1 }, t, tn)).toBe('1,240 boxes · 1 pallet not counted');
-    expect(unitTotalText({ unit: 'kg', qty: null, uncounted_pallets: 3 }, t, tn)).toBe('— kg · 3 pallets not counted');
+    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }, t, tn)).toBe('1,240 boxes · 2 entries not counted');
+    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 1 }, t, tn)).toBe('1,240 boxes · 1 entry not counted');
+    expect(unitTotalText({ unit: 'kg', qty: null, uncounted_pallets: 3 }, t, tn)).toBe('— kg · 3 entries not counted');
     expect(unitTotalText({ unit: 'kg', qty: 13.3, uncounted_pallets: 0 }, t, tn)).toBe('13.3 kg');
   });
 
   it('in Hindi too', () => {
-    const hi = makeTranslator({ '{count} pallets not counted': '{count} पैलेट की गिनती बाकी' }, 'hi');
-    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }, hi.t, hi.tn, 'hi')).toBe('1,240 boxes · 2 पैलेट की गिनती बाकी');
+    const hi = makeTranslator({ '{count} entries not counted': '{count} एंट्री की गिनती बाकी' }, 'hi');
+    expect(unitTotalText({ unit: 'boxes', qty: 1240, uncounted_pallets: 2 }, hi.t, hi.tn, 'hi')).toBe('1,240 boxes · 2 एंट्री की गिनती बाकी');
   });
 
   it('specs read in the factory\'s own words and order', () => {
@@ -171,7 +171,7 @@ describe('the stock page from the API\'s answer', () => {
     { key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }, { value: 'black', label: 'Black' }] },
     { key: 'grade', label: 'Grade', options: [{ value: 'a', label: 'A' }] },
   ]);
-  const product = { product_id: 'p1', sku: 'VT-600', name: 'Vitrified tile', unit: 'boxes', tracking: 'quantity' as const, specs: { colour: 'grey' }, active: true };
+  const product = { product_id: 'p1', sku: 'VT-600', name: 'Vitrified tile', unit: 'boxes', tracking: 'quantity' as const, specs: { colour: 'grey' }, active: true, fields: [] };
   const api: ApiStock = {
     rows: [
       { product: { ...product, picture: { photo_id: 'ph', url: 'u', thumb_url: 'https://r2/t', taken_at: 't', taken_by: null } }, qty: null, unit: 'boxes', pallets: 2, uncounted_pallets: 2, needs_count_pallets: 1, oldest_stocked_at: '2026-11-01T05:00:00.000Z' },
@@ -197,13 +197,13 @@ describe('the stock page from the API\'s answer', () => {
     expect(v.next_cursor).toBe('cur-2');
   });
 
-  it('filter sections: the factory\'s specs in its order, then unknown specs, then the location, then products; empty ones left out', () => {
+  it('filter sections: the items first, then the picked item\'s fields in its order, then unknown ones, then the location; empty ones left out', () => {
     const v = toStockView(api, fields);
-    expect(v.facets.map((f) => `${f.kind}:${f.key}`)).toEqual(['spec:colour', 'spec:grade', 'spec:finish', 'zone:zone', 'row:row', 'product:product']);
-    expect(v.facets[0]).toEqual({ key: 'colour', label: 'Colour', kind: 'spec', options: [{ key: 'grey', label: 'Grey', pallets: 2 }, { key: 'black', label: 'Black', pallets: 1 }] });
-    expect(v.facets[3].options).toEqual([{ key: 'Z2', label: 'Z2', pallets: 3 }]);
+    expect(v.facets.map((f) => `${f.kind}:${f.key}`)).toEqual(['product:product', 'spec:colour', 'spec:grade', 'spec:finish', 'zone:zone', 'row:row']);
+    expect(v.facets[0].options).toEqual([{ key: 'p1', label: 'Vitrified tile', pallets: 2 }]);
+    expect(v.facets[1]).toEqual({ key: 'colour', label: 'Colour', kind: 'spec', options: [{ key: 'grey', label: 'Grey', pallets: 2 }, { key: 'black', label: 'Black', pallets: 1 }] });
+    expect(v.facets[4].options).toEqual([{ key: 'Z2', label: 'Z2', pallets: 3 }]);
     // rows and columns are numbers to the API (row=3) and written as on the labels (R03)
-    expect(v.facets[4].options).toEqual([{ key: '3', label: 'R03', pallets: 2 }, { key: '12', label: 'R12', pallets: 1 }]);
-    expect(v.facets[5].options).toEqual([{ key: 'p1', label: 'Vitrified tile', pallets: 2 }]);
+    expect(v.facets[5].options).toEqual([{ key: '3', label: 'R03', pallets: 2 }, { key: '12', label: 'R12', pallets: 1 }]);
   });
 });

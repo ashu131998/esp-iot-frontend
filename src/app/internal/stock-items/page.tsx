@@ -3,15 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { StockDetailsPanel } from '@/components/internal/stock-details-panel';
+import { StockItemsPanel } from '@/components/internal/stock-items-panel';
 import { PageHeader } from '@/components/layout/internal-shell';
 import { TableSkeleton } from '@/components/ui/page-skeletons';
 import { api } from '@/lib/api';
 import { displayOf } from '@/lib/display';
 import { queryShowsTableLoading } from '@/lib/query-table-loading';
 
-/** Per factory with the IMS on: the details Add stock asks for in the stock app. Our staff only. */
-export default function InternalStockDetailsPage() {
+/** Per factory with the IMS on: its items, then each item's fields (what adding it asks for). Our staff only. */
+export default function InternalStockItemsPage() {
   const factoriesQuery = useQuery({
     queryKey: ['admin-factories'],
     queryFn: ({ signal }) => api.adminFactories({ signal }),
@@ -46,7 +46,7 @@ export default function InternalStockDetailsPage() {
           </select>
         </label>
         {/* key: each factory starts with its own sheets closed */}
-        <StockDetailsPanel key={factory.factory_id} factoryId={factory.factory_id} />
+        <StockItemsPanel key={factory.factory_id} factoryId={factory.factory_id} />
       </div>
     );
   }
@@ -54,8 +54,8 @@ export default function InternalStockDetailsPage() {
   return (
     <>
       <PageHeader
-        title="Stock details"
-        description="Per factory: what the IMS app asks for when stock is added (pick-lists, text, numbers, photos, audio, video)"
+        title="Stock items"
+        description="Per factory: its items, and for each item what the phone asks when it is added (pick-lists, text, numbers, photos, audio, video)"
       />
       <div className="p-4 sm:p-6 lg:p-8">{body}</div>
     </>

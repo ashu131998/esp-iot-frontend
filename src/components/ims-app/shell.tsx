@@ -1,6 +1,6 @@
 'use client';
 
-import { Boxes, House, ScanLine } from 'lucide-react';
+import { Boxes, House, PackagePlus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { ImsAppMark } from '@/components/ims-app/app-mark';
@@ -12,7 +12,7 @@ import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 
 /** The page a bottom-bar tab stands for (plain addresses: /, /stock…), served from /ims-app/… inside. */
-export function imsTabActive(tab: '/' | '/scan' | '/stock', pathname: string): boolean {
+export function imsTabActive(tab: '/' | '/add' | '/stock', pathname: string): boolean {
   const path = pathname.replace(/^\/ims-app(?=\/|$)/, '') || '/';
   return tab === '/' ? path === '/' : path === tab || path.startsWith(`${tab}/`);
 }
@@ -27,7 +27,7 @@ export function ImsAppShell({ factoryId, factoryName, children }: { factoryId: s
   const pathname = usePathname();
   const tabs = [
     { to: '/' as const, label: t('Home'), Icon: House },
-    { to: '/scan' as const, label: t('Scan QR'), Icon: ScanLine },
+    { to: '/add' as const, label: t('Add item'), Icon: PackagePlus },
     { to: '/stock' as const, label: t('Available stock'), Icon: Boxes },
   ];
 

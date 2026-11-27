@@ -1,6 +1,6 @@
 'use client';
 
-import { Boxes, House, ScanLine } from 'lucide-react';
+import { Boxes, House, PackagePlus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { ImsLinksProvider } from '@/components/ims-app/ims-links';
@@ -23,7 +23,7 @@ export function ImsDashboardFrame({ factoryId, children }: { factoryId: string; 
   const active = imsScreenOf(pathname, base);
   const tabs = [
     { to: '/' as const, label: t('Home'), Icon: House },
-    { to: '/scan' as const, label: t('Scan QR'), Icon: ScanLine },
+    { to: '/add' as const, label: t('Add item'), Icon: PackagePlus },
     { to: '/stock' as const, label: t('Available stock'), Icon: Boxes },
   ];
 

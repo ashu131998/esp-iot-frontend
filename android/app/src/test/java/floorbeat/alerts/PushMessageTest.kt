@@ -18,7 +18,7 @@ class PushMessageTest {
     fun aStopRingsTheAlarmInThePersonsLanguageAndOpensItsAlert() {
         val m = PushMessage.from(down)!!
         assertEquals("ntf-1", m.id)
-        assertEquals("/alerts/ntf-1", m.path)
+        assertEquals("/inbox/alerts/ntf-1", m.path)   // its page in the app's inbox
         assertTrue(m.asks)
         assertEquals(Ring.ALARM, m.ring)
         assertEquals("Loom 3 रुक गई", m.words("hi").title)
@@ -54,7 +54,7 @@ class PushMessageTest {
         assertNull(PushMessage.from(emptyMap()))
         val bare = PushMessage.from(mapOf("notification_id" to "ntf-9"))!!
         assertEquals("FloorBeat Alerts", bare.title)
-        assertEquals("/alerts/ntf-9", bare.path)
-        assertEquals("/", PushMessage.from(mapOf("title" to "Test", "url" to "/"))!!.path)
+        assertEquals("/inbox/alerts/ntf-9", bare.path)
+        assertEquals("/inbox", PushMessage.from(mapOf("title" to "Test", "url" to "/"))!!.path)
     }
 }

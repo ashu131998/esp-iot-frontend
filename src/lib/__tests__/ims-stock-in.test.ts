@@ -8,13 +8,51 @@ import { answersFrom, scanStatus, type Movement, type MovementResult, type Queue
 import { parseKept } from '@/lib/ims/queue-store';
 import { sendQueue, stopFor, type QueueStorage } from '@/lib/ims/sender';
 import {
-  REFUSAL_TEXT, checkLocation, isPalletLabelCode, latestProducedOn, matchProducts, offlinePalletScan, palletScanOutcome,
+  REFUSAL_TEXT, addItemMovement, checkLocation, isItemCode, isPalletLabelCode, itemCode, latestProducedOn, matchProducts, offlinePalletScan, palletScanOutcome,
   parseQtyInput, producedOnOk, readCode, refusalWords, specsChange, stockInMovement, stockableProducts,
 } from '@/lib/ims/stock-in';
 import type { ApiLocation, ApiPallet, ApiProduct } from '@/lib/ims/types';
 
 const product = (id: string, name: string, extra: Partial<ApiProduct> = {}): ApiProduct => ({
-  product_id: id, sku: `SKU-${id}`, name, unit: 'boxes', tracking: 'quantity', specs: {}, active: true, ...extra,
+  product_id: id, sku: `SKU-${id}`, name, unit: 'boxes', tracking: 'quantity', specs: {}, active: true, fields: [], ...extra,
+});
+
+describe('an item added with no QR', () => {
+  const ID = '0b9f3c1e-5d2a-4c8b-9e7f-1a2b3c4d5e6f';
+
+  it('names its record from its own id, as the server checks it (query-api ims.js itemCode)', () => {
+    expect(itemCode(ID)).toBe('IT-0B9F3C1E5D2A4C8B');
+    expect(itemCode(ID.toUpperCase())).toBe('IT-0B9F3C1E5D2A4C8B');
+    expect(itemCode('not-a-uuid')).toBeNull();
+    expect(itemCode(uuidFromBytes(new Uint8Array(16).fill(255)))).toMatch(/^IT-[0-9A-F]{16}$/);
+    // a code our QR rules read, never one of our pallet labels
+    expect(readCode(itemCode(ID))).toBe(itemCode(ID));
+    expect(isPalletLabelCode(itemCode(ID) as string)).toBe(false);
+    expect(isItemCode('IT-0B9F3C1E5D2A4C8B')).toBe(true);
+    for (const other of ['PL-000012', 'R03-C05', 'IT-0B9F', 'it-0b9f3c1e5d2a4c8b']) expect(isItemCode(other)).toBe(false);
+  });
+
+  it('the add: the item, its quantity (or none yet), its picks and its details, and no location', () => {
+    const fabric = product('p1', 'Fabric roll', { unit: 'm' });
+    const m = addItemMovement({ product: fabric, qty: 42.5, specs: { colour: 'grey', grade: null }, details: { gsm: 120 } }, ID, new Date('2026-11-27T10:00:00Z'));
+    expect(m).toEqual({
+      client_id: ID, type: 'in', pallet: 'IT-0B9F3C1E5D2A4C8B', scanned_at: '2026-11-27T10:00:00.000Z', product_id: 'p1', qty: 42.5,
+      specs: { colour: 'grey' }, details: { gsm: 120 },
+    });
+    expect(m).not.toHaveProperty('to');
+    const bare = addItemMovement({ product: fabric, qty: null, specs: {} }, ID);
+    expect(bare).toMatchObject({ qty: null });
+    expect(bare).not.toHaveProperty('specs');
+    expect(bare).not.toHaveProperty('details');
+    expect(() => addItemMovement({ product: fabric, qty: 1, specs: {} }, 'not-a-uuid')).toThrow('UUID');
+  });
+
+  it('items with no SKU are listed and found by name', () => {
+    const items = [product('p2', 'Yarn cone', { sku: null }), product('p1', 'Fabric roll', { sku: null }), product('p3', 'Bale', { active: false })];
+    expect(stockableProducts(items).map((p) => p.name)).toEqual(['Fabric roll', 'Yarn cone']);
+    expect(matchProducts(items, 'yarn').map((p) => p.product_id)).toEqual(['p2']);
+    expect(matchProducts(items, 'null')).toEqual([]);   // a missing SKU is not the word "null"
+  });
 });
 const loc = (code: string, active = true): ApiLocation => ({ code, row: 1, column: 1, zone: null, name: null, active });
 const LOCATIONS = [loc('R01-C01'), loc('R01-C02', false)];

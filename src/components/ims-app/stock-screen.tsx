@@ -10,6 +10,7 @@ import { useImsHref } from '@/components/ims-app/ims-links';
 import { LoadMore } from '@/components/ui/load-more';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { imsApi, retryImsCall, stockProblem } from '@/lib/ims/api';
+import { itemChoiceFields } from '@/lib/ims/fields';
 import { EMPTY_FILTER, parseStockFilter, pickedCount, stockFilterQuery, toggleChoice, type StockFilter } from '@/lib/ims/stock-filter';
 import { ageDays, qtyText, specFieldsOf, specsText, toStockView, unitTotalText } from '@/lib/ims/stock-view';
 import type { Facet, FacetKind, StockRow } from '@/lib/ims/types';
@@ -27,16 +28,16 @@ function pickedChips(filter: StockFilter, facets: Facet[]) {
     ...plain('zone', filter.zones),
     ...plain('row', filter.rows),
     ...plain('column', filter.columns),
-    ...plain('product', filter.products),
   ];
 }
 
 /**
- * Available stock: the total for the whole filter first (worked out by the server; pallets nobody
- * counted are said, never added in as 0), the picked filters as chips that come off with a tap, then
- * one line per product and specs with its quantity, pallets and the oldest pallet's age (FIFO). The
- * list grows as it scrolls. The filter lives in the address (a link or bookmark keeps it); a change
- * replaces the address rather than adding a step, so Back leaves the page: a chip's ✕ undoes a filter.
+ * Available stock: the items as a row of chips (All, then each item with stock), the total for the whole filter
+ * (worked out by the server; entries nobody counted are said, never added in as 0), the picked filters as chips
+ * that come off with a tap, then one line per item and its pick-list values with its quantity, entries and the
+ * oldest entry's age (FIFO). Each item has its own fields, so Filters offers the picked item's (and the place's,
+ * where records have one). The list grows as it scrolls. The filter lives in the address (a link or bookmark keeps
+ * it); a change replaces the address rather than adding a step, so Back leaves the page.
  */
 export function StockScreen({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
@@ -48,7 +49,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
   const query = stockFilterQuery(filter);
   const [sheet, setSheet] = useState(false);
 
-  // The factory's spec fields name the filter sections, in its own order (kept long: they rarely change).
+  // The items and their fields name the chips and the filter sections, in their own order (kept long: they rarely change).
   const setup = useQuery({
     queryKey: ['ims-setup', factoryId],
     queryFn: ({ signal }) => imsApi.setup(factoryId, signal),
@@ -71,24 +72,58 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
     navigate(imsLink(q ? `/stock?${q}` : '/stock'));
   }, [imsLink, navigate]);
 
-  const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
+  const items = useMemo(() => new Map((setup.data?.products ?? []).map((p) => [p.product_id, p])), [setup.data]);
+  // a field is one item's: the filters offer the picked item's, and none while all items show
+  const item = filter.products.length === 1 ? items.get(filter.products[0]) : undefined;
+  const fields = useMemo(() => specFieldsOf(itemChoiceFields(item)), [item]);
+  const fieldsOf = useCallback((productId: string) => specFieldsOf(itemChoiceFields(items.get(productId))), [items]);
   const views = useMemo(() => (stock.data?.pages ?? []).map((p) => toStockView(p, fields)), [stock.data, fields]);
   const first = setup.data ? views[0] : undefined;
   const problem = stockProblem(setup.error) ?? stockProblem(stock.error);
   const rows: StockRow[] = views.flatMap((v) => v.rows);
-  const facets = first?.facets ?? [];
+  // the items are the chips above; the sheet holds the rest
+  const facets = (first?.facets ?? []).filter((f) => f.kind !== 'product');
+  const itemChoices = (first?.facets ?? []).find((f) => f.kind === 'product')?.options ?? [];
   const chips = pickedChips(filter, facets);
-  const picked = pickedCount(filter);
+  const picked = pickedCount(filter) - filter.products.length;
+  const showItem = (productId: string | null) => go({ ...filter, products: productId ? [productId] : [], specs: {} });
 
   return (
     <div className="space-y-3">
       <h1 className="text-2xl font-semibold text-foreground">{t('Available stock')}</h1>
 
+      {itemChoices.length > 0 && (
+        <nav aria-label={t('Items')} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <button
+            type="button"
+            aria-pressed={filter.products.length === 0}
+            onClick={() => showItem(null)}
+            className={cn('h-11 shrink-0 rounded-full px-4 font-medium', filter.products.length === 0 ? 'bg-primary text-white' : 'bg-white text-foreground ring-1 ring-slate-300')}
+          >
+            {t('All items')}
+          </button>
+          {itemChoices.map((o) => {
+            const on = filter.products.length === 1 && filter.products[0] === o.key;
+            return (
+              <button
+                key={o.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => showItem(on ? null : o.key)}
+                className={cn('h-11 shrink-0 rounded-full px-4 font-medium', on ? 'bg-primary text-white' : 'bg-white text-foreground ring-1 ring-slate-300')}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <button
           type="button"
           onClick={() => setSheet(true)}
-          disabled={!first}
+          disabled={!first || facets.every((f) => f.options.length === 0)}
           className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-white px-4 font-medium ring-1 ring-slate-300 disabled:opacity-50"
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -144,9 +179,9 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
             )}
             {first.totals.pallets > 0 && (
               <p className="text-sm text-muted">
-                {tn(first.totals.pallets, 'on {count} pallet', 'on {count} pallets', { count: first.totals.pallets })}
+                {tn(first.totals.pallets, 'in {count} entry', 'in {count} entries', { count: first.totals.pallets })}
                 {Number.isFinite(first.totals.products) && first.totals.products > 0 && (
-                  <>{' · '}{tn(first.totals.products, '{count} product', '{count} products', { count: first.totals.products })}</>
+                  <>{' · '}{tn(first.totals.products, '{count} item', '{count} items', { count: first.totals.products })}</>
                 )}
               </p>
             )}
@@ -165,7 +200,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
             <ul className="divide-y divide-slate-100 rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
               {rows.map((r) => {
                 const age = ageDays(r.oldest_on);
-                const specs = specsText(r.specs, fields);
+                const specs = specsText(r.specs, fieldsOf(r.product_id));
                 return (
                   <li key={r.key} className="flex items-center gap-3 p-3">
                     {r.thumb_url ? (
@@ -181,7 +216,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-lg font-semibold text-foreground">{qtyText(r.qty, locale)} <span className="text-sm font-normal text-muted">{r.unit}</span></p>
-                      <p className="text-xs text-muted">{tn(r.pallets, '{count} pallet', '{count} pallets', { count: r.pallets })}</p>
+                      <p className="text-xs text-muted">{tn(r.pallets, '{count} entry', '{count} entries', { count: r.pallets })}</p>
                       {r.needs_count_pallets > 0 && (
                         <p className="text-xs font-medium text-amber-700">{tn(r.needs_count_pallets, '{count} needs count', '{count} need count', { count: r.needs_count_pallets })}</p>
                       )}

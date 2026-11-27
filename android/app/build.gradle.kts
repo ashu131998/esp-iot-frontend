@@ -8,8 +8,9 @@ plugins {
 // copied in from esp-intro/keys/firebase/ for a build (never committed). Without it the app runs, without push.
 if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
 
-// Where the app's pages are. A test build can point elsewhere: ./gradlew assembleDebug -PappUrl=http://10.0.2.2:3105
-val appUrl = (findProperty("appUrl") as String?)?.trimEnd('/') ?: "https://alerts.floorbeat.in"
+// Where the app's pages are: FloorBeat, one app since 3.0.0 (its alerts, dashboard and stock; the web app's
+// src/lib/dashboard-app.ts). A test build can point elsewhere: ./gradlew assembleDebug -PappUrl=http://10.0.2.2:3105
+val appUrl = (findProperty("appUrl") as String?)?.trimEnd('/') ?: "https://dashboard.floorbeat.in"
 
 // The release signing key (the same key as every earlier build, or phones refuse the update): keystore.properties,
 // written for a build from esp-intro/keys/android/ (README.md), never committed.
@@ -25,13 +26,13 @@ android {
     }
 
     defaultConfig {
-        // The package every FloorBeat Alerts install has had since 1.0.0 (the Trusted Web Activity): kept, so this
-        // build installs over it as an update.
+        // The package every FloorBeat Alerts install has had since 1.0.0 (the Trusted Web Activity): kept, so the one
+        // app installs over it as an update, and its push (Firebase knows this package) rings on through the update.
         applicationId = "in.floorbeat.alerts"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "3.0.0"
         buildConfigField("String", "APP_URL", "\"$appUrl\"")
     }
 

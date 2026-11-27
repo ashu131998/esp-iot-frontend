@@ -41,4 +41,14 @@ export const nav: Messages = {
   'Your factories': 'તમારી ફેક્ટરીઓ',
   'Could not open that factory': 'એ ફેક્ટરી ખૂલી નહીં',
   'Stock': 'માલ',
+
+  // The FloorBeat app's home screen of apps (2026-11-27): its tiles and their live lines
+  'Apps': 'ઍપ',
+  'All apps': 'બધી ઍપ',
+  'Dashboard': 'ડૅશબોર્ડ',
+  'No new alerts': 'કોઈ નવો અલર્ટ નથી',
+  'No machines yet': 'હજુ કોઈ મશીન નથી',
+  '{running} of {total} machines running': '{total} માંથી {running} મશીન ચાલુ છે',
+  'In stock: {amount}': 'માલમાં: {amount}',
+  '{count} waiting to send': '{count} મોકલવાના બાકી',
 };

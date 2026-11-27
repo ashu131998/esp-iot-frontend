@@ -26,23 +26,27 @@ export interface ApiPicture {
   taken_by: string | null;
 }
 
+/**
+ * An item: a kind of stock the factory keeps (Fabric roll, Yarn cone…), made by our staff on ops.floorbeat.in with
+ * its own fields (what adding it asks for). The API calls it a product.
+ */
 export interface ApiProduct {
   product_id: string;
-  sku: string;
+  /** Only if the factory uses SKUs. */
+  sku: string | null;
   name: string;
   unit: string;
   tracking: 'quantity' | 'serial';
   specs: Specs;
   active: boolean;
   picture?: ApiPicture | null;
+  /** Its fields in order (lib/ims/fields.ts); archived ones too, for the labels of what old records were saved with. */
+  fields: import('./fields').ApiField[];
 }
 
 /** GET …/ims/setup: what the phone keeps (also offline). */
 export interface ApiSetup {
-  /** The pick-lists only (what an app from before field types knows). */
-  spec_fields: ApiSpecField[];
-  /** Every field a stock-in asks for, in order, with its type (lib/ims/fields.ts); missing from an older server. */
-  fields?: import('./fields').ApiField[];
+  /** The items, each with its own fields. */
   products: ApiProduct[];
   locations: ApiLocation[];
   photos_ready: boolean;
@@ -77,6 +81,7 @@ export interface ApiStock {
   /** rows: product-and-specs lines; products: different products. */
   totals: { rows: number; products: number; pallets: number; by_unit: UnitTotal[] };
   filters: {
+    /** The picked item's pick-lists (only with exactly one item picked: a field is one item's). */
     specs: Record<string, Array<{ value: string; label: string; pallets: number }>>;
     zones?: Array<{ zone: string; pallets: number }>;
     rows?: Array<{ row: number; pallets: number }>;

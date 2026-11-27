@@ -1,14 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    FloorBeat Alerts for Android (README.md): the app's screens are alerts.floorbeat.in, shown in the
-    phone's own web view; notifications (Firebase), the back button, the first-start set-up and the
-    phone's settings are the app's own.
+    FloorBeat for Android (README.md): one app since 3.0.0, its alerts, its dashboard and its stock behind a home
+    screen of apps. Its screens are dashboard.floorbeat.in, shown in the phone's own web view; notifications
+    (Firebase), the camera for the stock's photos, the back button, links, the first-start set-up, the phone's
+    settings and the offline screen are the app's own. It is FloorBeat Alerts' package, so it installs over it
+    as an update and its notifications go on ringing through the update.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The stock's photo fields take pictures (the camera app; a page may also ask for the camera itself). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- A phone without a camera can still pick photos from the phone. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Android 11+: the camera app and the photo picker a photo field is handed to. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
 
     <application
         android:name=".FloorBeatApp"
@@ -25,9 +43,15 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
-            <!-- A link to alerts.floorbeat.in (an alert's address in a message) opens in the app. -->
+            <!-- A link to dashboard.floorbeat.in opens in the app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="dashboard.floorbeat.in" />
+            </intent-filter>
+            <!-- A link to the alerts' old address (an alert's address in a message already sent) opens its page in the app. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -57,6 +81,17 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Where the camera app writes a photo taken for a stock field (the app's own cache, handed to the page). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/photo_paths" />
+        </provider>
 
         <!-- FCM registers the phone by its Firebase Installation ID (the server sends to the FID). -->
         <meta-data

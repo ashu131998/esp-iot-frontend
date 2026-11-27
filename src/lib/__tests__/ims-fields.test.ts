@@ -6,7 +6,7 @@ import { ImsApiError } from '@/lib/ims/api';
 import { exifTakenAt, exifTime } from '@/lib/ims/exif';
 import {
   choicesToSend, detailsOf, draftProblem, editFieldBody, fieldHelp, fieldProblems, keyFromLabel, moveKey, newFieldBody, parseNumberInput,
-  phoneFields, stockInFields, valueFromLabel, type ApiField,
+  itemChoiceFields, itemFields, phoneFields, valueFromLabel, type ApiField,
 } from '@/lib/ims/fields';
 import { FULL_QUALITY, photoTime } from '@/lib/ims/photo';
 import { keepStockInPhotos, linkRequest, photoFits, PHOTO_QUEUE_MAX_BYTES, sendPhotos, type PendingPhoto, type PhotoCalls, type PhotoStore } from '@/lib/ims/photo-queue';
@@ -74,15 +74,17 @@ describe('a new field on the ops Stock details page', () => {
   });
 });
 
-describe('Add stock asks for the factory\'s fields', () => {
-  it('in the factory\'s order; an older server (pick-lists only) still works', () => {
+describe('adding an item asks for that item\'s own fields', () => {
+  it('in the item\'s order; archived ones only for old records\' labels; nothing for no item', () => {
     const fields = [field('b', 'text', { sort: 20 }), field('a', 'choice', { sort: 10 })];
-    expect(stockInFields({ spec_fields: [], fields }).map((f) => f.key)).toEqual(['a', 'b']);
-    // archived: kept for old pallets' labels, never asked
-    expect(stockInFields({ spec_fields: [], fields: [...fields, field('old', 'text', { archived: true })] }).map((f) => f.key)).toEqual(['a', 'b']);
-    expect(stockInFields({ spec_fields: [{ key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }] }] }))
-      .toEqual([{ key: 'colour', label: 'Colour', type: 'choice', required: false, options: [{ value: 'grey', label: 'Grey' }], sort: 0 }]);
-    expect(stockInFields(null)).toEqual([]);
+    expect(itemFields({ fields }).map((f) => f.key)).toEqual(['a', 'b']);
+    // archived: kept for old records' labels, never asked
+    expect(itemFields({ fields: [...fields, field('old', 'text', { archived: true })] }).map((f) => f.key)).toEqual(['a', 'b']);
+    expect(itemFields(null)).toEqual([]);
+    expect(itemFields({})).toEqual([]);
+    // the pick-lists name its stock rows and filters, archived ones too (old records have them)
+    expect(itemChoiceFields({ fields: [...fields, field('shade', 'choice', { archived: true })] }).map((f) => f.key)).toEqual(['a', 'shade']);
+    expect(itemChoiceFields(undefined)).toEqual([]);
   });
 
   it('leaves audio and video out until the app records them', () => {
@@ -134,7 +136,7 @@ describe('Add stock asks for the factory\'s fields', () => {
   });
 
   it('puts the details on the stock-in scan', () => {
-    const product: ApiProduct = { product_id: 'p1', sku: 'S', name: 'Box', unit: 'boxes', tracking: 'quantity', specs: {}, active: true };
+    const product: ApiProduct = { product_id: 'p1', sku: 'S', name: 'Box', unit: 'boxes', tracking: 'quantity', specs: {}, active: true, fields: [] };
     const m = stockInMovement({ pallet: 'PL-000001', product, location: 'R01-C01', qty: 4, specs: {}, batch: '', producedOn: '', details: { weight: 41.5 } }, 'id-1', new Date('2026-11-26T10:00:00Z'));
     expect(m.details).toEqual({ weight: 41.5 });
     expect(stockInMovement({ pallet: 'PL-000001', product, location: 'R01-C01', qty: 4, specs: {}, batch: '', producedOn: '', details: {} }, 'id-2')).not.toHaveProperty('details');

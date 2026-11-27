@@ -175,9 +175,15 @@ describe('short links', () => {
     expect(shortLink('/apk')).toBe('/app');
     expect(shortLink('/APK/')).toBe('/app');
     expect(shortLink('/download')).toBe('/app');
-    // the files themselves and every other page are left alone
-    expect(shortLink('/downloads/floorbeat-dashboard.apk')).toBeNull();
+    // the one app's file itself and every other page are left alone
+    expect(shortLink('/downloads/floorbeat.apk')).toBeNull();
     expect(shortLink('/app')).toBeNull();
     expect(shortLink('/')).toBeNull();
+  });
+
+  it('the two apps\' old downloads lead to the one app\'s (FloorBeat 3.0.0)', () => {
+    expect(shortLink('/downloads/floorbeat-alerts.apk')).toBe('/downloads/floorbeat.apk');
+    expect(shortLink('/downloads/floorbeat-dashboard.apk')).toBe('/downloads/floorbeat.apk');
+    expect(shortLink('/downloads/FloorBeat-Alerts.apk')).toBe('/downloads/floorbeat.apk');
   });
 });

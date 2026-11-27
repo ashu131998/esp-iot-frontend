@@ -2,7 +2,7 @@
   "id": "/",
   "name": "FloorBeat",
   "short_name": "FloorBeat",
-  "description": "Your factory's dashboard on your phone: which machines are running, what stopped and for how long.",
+  "description": "Your factory on your phone: its alerts, its dashboard and its stock, in one app.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

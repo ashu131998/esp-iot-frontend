@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">FloorBeat Alerts</string>
+    <!-- One app since 3.0.0: its alerts, its dashboard and its stock. -->
+    <string name="app_name" translatable="false">FloorBeat</string>
 
     <!-- Notification channels (Settings shows their names). A channel keeps the sound it was made with: a new sound
          needs a new id (the old one is deleted at start, Notifications.OLD_CHANNELS). v2: the FloorBeat sounds. -->
@@ -15,6 +16,9 @@
     <string name="offline_title" translatable="false">You are offline</string>
     <string name="offline_title_hi" translatable="false">आप ऑफ़लाइन हैं</string>
     <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
-    <string name="offline_text">Your alerts will show once the phone is back on the network.</string>
+    <string name="offline_text">FloorBeat will show once the phone is back on the network.</string>
     <string name="offline_retry">Try again</string>
+
+    <!-- The camera refused in Android's settings (a stock photo). -->
+    <string name="camera_off">Allow the camera for FloorBeat in the phone\'s settings to take photos.</string>
 </resources>

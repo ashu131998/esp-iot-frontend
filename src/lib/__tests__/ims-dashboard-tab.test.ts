@@ -33,14 +33,15 @@ describe('the Stock tab in the dashboard', () => {
   it('links its screens under the tab\'s address, and plain on the IMS app\'s own address', () => {
     expect(imsHref('/ims', '/')).toBe('/ims');
     expect(imsHref('/ims', '/stock?row=3')).toBe('/ims/stock?row=3');
-    expect(imsHref('/factories/f1/ims/', '/scan')).toBe('/factories/f1/ims/scan');
+    expect(imsHref('/factories/f1/ims/', '/add')).toBe('/factories/f1/ims/add');
     expect(imsHref('', '/stock')).toBe('/stock');
     expect(imsHref('', '/')).toBe('/');
   });
 
   it('knows which of its screens is open', () => {
     expect(imsScreenOf('/ims', '/ims')).toBe('/');
-    expect(imsScreenOf('/ims/scan', '/ims')).toBe('/scan');
+    expect(imsScreenOf('/ims/add', '/ims')).toBe('/add');
+    expect(imsScreenOf('/ims/scan', '/ims')).toBeNull();   // no QR for now: no Scan screen
     expect(imsScreenOf('/factories/f1/ims/stock', '/factories/f1/ims')).toBe('/stock');
     expect(imsScreenOf('/imsx', '/ims')).toBeNull();
     expect(imsScreenOf('/energy', '/ims')).toBeNull();

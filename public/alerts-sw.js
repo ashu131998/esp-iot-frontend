@@ -12,6 +12,18 @@ const ICON = '/alerts-icon-192.png';
 const BADGE = '/alerts-badge-96.png';
 const INBOX = '/';
 const APP_NAME = 'FloorBeat Alerts';
+/**
+ * Where this worker is: on alerts.floorbeat.in the alerts' pages are at its root; anywhere else it is the FloorBeat
+ * app (dashboard.floorbeat.in), where they are under /inbox. Pages, notes and messages speak of the alerts app's
+ * own paths (/alerts/<id>); only a window the worker opens or steers is given the address.
+ */
+const IN_FLOORBEAT = typeof self.location?.hostname === 'string' && !/^alerts\./.test(self.location.hostname);
+
+/** The address of one of the alerts app's pages here: "/alerts/<id>", or "/inbox/alerts/<id>" inside FloorBeat. */
+function pageAddress(url) {
+  if (!IN_FLOORBEAT) return url;
+  return url === INBOX ? '/inbox' : `/inbox${url}`;
+}
 // The same names as src/lib/alerts-app/open.ts: the page reads the note and hears the channel.
 const SETTINGS_CACHE = 'fb-alerts-settings';
 const OPEN_KEY = '/__open';
@@ -226,7 +238,7 @@ async function openAlert(url) {
   const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const page = pages.find((p) => p.focused) || pages.find((p) => p.visibilityState === 'visible') || pages[0];
   if (!page) {
-    const opened = await self.clients.openWindow(url);
+    const opened = await self.clients.openWindow(pageAddress(url));
     if (!opened) await tellPages({ type: 'open', url });
     return opened;
   }
@@ -240,7 +252,7 @@ async function openAlert(url) {
   }
   if (typeof front.navigate === 'function') {
     try {
-      const moved = await front.navigate(url);
+      const moved = await front.navigate(pageAddress(url));
       if (moved) return moved;
     } catch {
       // not steerable (not this worker's yet, or the phone refuses): the page goes itself
@@ -302,4 +314,4 @@ self.addEventListener('fetch', (event) => {
 });
 
 // For the tests.
-self.__floorbeatAlerts = { parsePush, notificationFor, targetUrl, openAlert, rememberOpen, wordsFor, readLocale };
+self.__floorbeatAlerts = { parsePush, notificationFor, targetUrl, openAlert, rememberOpen, wordsFor, readLocale, pageAddress };

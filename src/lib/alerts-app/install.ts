@@ -17,8 +17,11 @@ export type Platform = 'ios' | 'android' | 'other';
 
 /** The Android app's package (the APK, android/twa-manifest.json). */
 export const ANDROID_APP_ID = 'in.floorbeat.alerts';
-/** Where the Android app is downloaded (marketing/public/downloads), and the page that explains it. */
-export const ANDROID_APK_URL = 'https://floorbeat.in/downloads/floorbeat-alerts.apk';
+/**
+ * Where the Android app is downloaded (marketing/public/downloads), and the page that explains it. Since 3.0.0 it is
+ * FloorBeat, one app (alerts, dashboard, stock; lib/dashboard-app.ts): an update of the Alerts app, same package.
+ */
+export const ANDROID_APK_URL = 'https://floorbeat.in/downloads/floorbeat.apk';
 export const APP_PAGE_URL = 'https://floorbeat.in/app';
 
 export function isIOS(userAgent: string | null | undefined): boolean {

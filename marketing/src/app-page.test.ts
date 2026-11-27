@@ -10,23 +10,23 @@ import { describe, expect, it } from 'vitest';
 const html = readFileSync(join(__dirname, '..', 'public', 'app.html'), 'utf8');
 
 describe('floorbeat.in/app', () => {
-  it('offers the Android APK and the iPhone steps', () => {
-    expect(html).toContain('href="/downloads/floorbeat-alerts.apk"');
+  it('offers the one app: its Android APK and the iPhone steps', () => {
+    expect(html).toContain('href="/downloads/floorbeat.apk"');
     expect(html).toContain('Add to Home Screen');
-    expect(html).toContain('https://alerts.floorbeat.in/install');
-    expect(html).toContain('href="https://alerts.floorbeat.in/"');   // the app's address, never a "login" page (an iPhone not yet installed)
-    expect(html).not.toContain('alerts.floorbeat.in/login');
+    expect(html).toContain('href="https://dashboard.floorbeat.in/"');   // the app's address, never a "login" page
+    expect(html).not.toContain('dashboard.floorbeat.in/login');
+  });
+
+  it('is one app now: no separate Alerts or dashboard download, and it says it updates FloorBeat Alerts', () => {
+    expect(html).not.toContain('floorbeat-alerts.apk');
+    expect(html).not.toContain('floorbeat-dashboard.apk');
+    expect(html).not.toContain('alerts.floorbeat.in');
+    expect(html).toContain('installs over it');
+    for (const part of ['Alerts.', 'Dashboard.', 'Stock.']) expect(html, part).toContain(`<strong>${part}</strong>`);
   });
 
   it('sends Android to the APK only: the app does not open in a browser tab', () => {
     expect(html).not.toContain('in Chrome and choose');
-  });
-
-  it('offers the dashboard app too: its Android download and its address for an iPhone', () => {
-    expect(html).toContain('href="/downloads/floorbeat-dashboard.apk"');
-    expect(html).toContain('href="https://dashboard.floorbeat.in/"');
-    expect(html).toContain('FloorBeat, the dashboard app');
-    expect(html.indexOf('floorbeat-alerts.apk')).toBeLessThan(html.indexOf('floorbeat-dashboard.apk'));   // alerts first: the page is theirs
   });
 
   it('says what the app does and where to get help', () => {

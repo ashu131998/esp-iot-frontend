@@ -33,7 +33,7 @@ export function DashboardLoginForm() {
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-4 py-8">
       <Card className="w-full max-w-md p-6">
         <DashboardAppMark className="mx-auto mb-4 h-14 w-14" />
-        <CardHeader title="FloorBeat" description={t('Your factory\'s dashboard. Sign in with your work email.')} />
+        <CardHeader title="FloorBeat" description={t('Your factory\'s alerts, dashboard and stock. Sign in with your work email.')} />
         {restoring ? (
           // as tall as the form that may follow: nothing jumps when it shows
           <p className="mt-6 flex min-h-[16.5rem] items-center justify-center text-sm text-muted" role="status">{t('Signing you in…')}</p>

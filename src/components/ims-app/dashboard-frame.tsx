@@ -1,6 +1,6 @@
 'use client';
 
-import { Boxes, House, ScanLine } from 'lucide-react';
+import { Boxes, PackagePlus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { ImsLinksProvider } from '@/components/ims-app/ims-links';
@@ -12,9 +12,11 @@ import { cn } from '@/lib/utils';
 
 /**
  * FloorBeat IMS as the dashboard's Stock tab (one app: Ashutosh 2026-11-27): the IMS screens inside the
- * factory's own frame (its sidebar, its phone bottom bar), with the IMS's three screens as a row of tabs on
- * top. What waits on the phone to be sent is the factory frame's (factory-queue.tsx): the same scans and
- * photos as on ims.floorbeat.in, kept per factory on the phone, sent from whichever page is open.
+ * factory's own frame (its sidebar, its phone bottom bar), with its two screens, Add item and Available stock, as
+ * a row of tabs on top. It has no home of its own here: the FloorBeat app's home screen is where the apps are
+ * picked, and the tab's own address opens Available stock (app/factories/[factoryId]/ims/page.tsx). What waits
+ * on the phone to be sent is the factory frame's (factory-queue.tsx): the same scans and photos as on
+ * ims.floorbeat.in, kept per factory on the phone, sent from whichever page is open.
  */
 export function ImsDashboardFrame({ factoryId, children }: { factoryId: string; children: React.ReactNode }) {
   const { t } = useT();
@@ -22,8 +24,7 @@ export function ImsDashboardFrame({ factoryId, children }: { factoryId: string; 
   const base = useFactoryHref()(`/factories/${factoryId}/ims`);
   const active = imsScreenOf(pathname, base);
   const tabs = [
-    { to: '/' as const, label: t('Home'), Icon: House },
-    { to: '/scan' as const, label: t('Scan QR'), Icon: ScanLine },
+    { to: '/add' as const, label: t('Add item'), Icon: PackagePlus },
     { to: '/stock' as const, label: t('Available stock'), Icon: Boxes },
   ];
 

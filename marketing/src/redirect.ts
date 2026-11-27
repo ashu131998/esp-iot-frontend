@@ -140,9 +140,15 @@ export function forwardTarget(pathname: string, search: string, origins: Origins
 
 /**
  * Short addresses people type or are told on the phone: where each goes (floorbeat.in/apk → the apps page,
- * which has every app's download). Any letter case, with or without a trailing slash; null for the rest.
+ * which has the app's download). Any letter case, with or without a trailing slash; null for the rest.
+ * The two apps' own downloads, from before they became one app (FloorBeat 3.0.0, 2026-11-27), lead to the one
+ * app's: links to them were sent in emails and messages.
  */
-const SHORT_LINKS: Record<string, string> = { '/apk': '/app', '/apks': '/app', '/download': '/app', '/downloads': '/app' };
+const SHORT_LINKS: Record<string, string> = {
+  '/apk': '/app', '/apks': '/app', '/download': '/app', '/downloads': '/app',
+  '/downloads/floorbeat-alerts.apk': '/downloads/floorbeat.apk',
+  '/downloads/floorbeat-dashboard.apk': '/downloads/floorbeat.apk',
+};
 
 export function shortLink(pathname: string): string | null {
   const path = pathname.toLowerCase().replace(/\/+$/, '');

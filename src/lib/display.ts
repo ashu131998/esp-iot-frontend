@@ -81,8 +81,6 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'configuration', label: 'Configuration' },
   { slug: 'scheduling', label: 'Scheduling' },
   { slug: 'shift-reports', label: 'Shift reports' },
-  // the Alerts page's settings, for the factory's admins (PART_PAGES)
-  { slug: 'alert-settings', label: 'Alert settings' },
   { slug: 'sensor-mapping', label: 'Sensor mapping' },
   { slug: 'wifi', label: 'WiFi' },
   { slug: 'team', label: 'Team' },
@@ -94,16 +92,17 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
 const ALWAYS_SHOWN: ReadonlySet<string> = new Set(['team', 'support']);
 
 /**
- * Pages only for people who can change the factory (its admins and our super admin): Alert settings. (The WiFi
- * page is for everyone of the factory since 2026-11: workers connect boards; the passwords stay with its admins.)
+ * Pages only for people who can change the factory (its admins and our super admin). None since 2026-11: the
+ * WiFi page is for everyone of the factory (workers connect boards; the passwords stay with its admins).
  */
-const ADMIN_PAGES: readonly string[] = ['alert-settings'];
+const ADMIN_PAGES: readonly string[] = [];
 
 /**
  * Pages only our staff have as tabs of the dashboard: for the factory's own people the alerts and the stock are
  * apps of their own on FloorBeat's home screen (the owner, 2026-11-27: "no alert tab is necessary inside dashboard
- * of factory users"; Stock "separate looking app, not inside dashboard"). Our staff have no home screen of apps:
- * these tabs are how they see a factory's alerts and stock.
+ * of factory users"; Stock "separate looking app, not inside dashboard"), the factory's alert settings in the
+ * Alerts' Settings, for its admins ("it should also be there in alerts only"). Our staff keep these tabs: the
+ * Alerts page holds a factory's alerts and its alert settings.
  */
 const STAFF_PAGES: ReadonlySet<string> = new Set(['alerts', 'ims']);
 
@@ -117,7 +116,7 @@ export function tabsFor<T extends { slug: string }>(tabs: readonly T[], who: Men
 
 /** The pages people set the factory up with: the sidebar lists them under Manage, the rest under Monitor. */
 export const MANAGE_PAGES: ReadonlySet<string> = new Set([
-  'lines', 'configuration', 'scheduling', 'shift-reports', 'alert-settings', 'sensor-mapping', 'wifi', 'team', 'compliance',
+  'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',
 ]);
 
 /** The pages for getting help: the sidebar lists them last, under Help. */
@@ -145,23 +144,8 @@ export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): A
  */
 export const APP_PAGES: ReadonlySet<string> = new Set(['ims']);
 
-/**
- * Pages made of another page's sections, which the server's catalog (query-api display.js) does not know: Alert
- * settings holds the Alerts page's settings, who gets push alerts and how and the downtime reasons (the owner,
- * 2026-11-27: under Manage once the Alerts tab left the factory's people). The Alerts switch and those sections
- * say whether it is there; the server has no bottom-bar switch for it (OFF_BAR_PAGES).
- */
-const PART_PAGES: Readonly<Record<string, { page: string; sections: readonly string[] }>> = {
-  'alert-settings': { page: 'alerts', sections: ['alerts.mobile', 'alerts.downtime'] },
-};
-
-/** Pages that never sit on the phone's bottom bar: the server has no `bar.<page>` switch for them (it refuses one). */
-export const OFF_BAR_PAGES: ReadonlySet<string> = new Set(Object.keys(PART_PAGES));
-
 /** Whether a page of the factory is on: an app page only when switched on, the rest unless switched off. */
 export function pageOn(display: Display | null | undefined, slug: string): boolean {
-  const part = PART_PAGES[slug];
-  if (part) return pageOn(display, part.page) && part.sections.some((key) => isShown(display, key));
   return APP_PAGES.has(slug) ? display?.[slug] === true : isShown(display, slug);
 }
 

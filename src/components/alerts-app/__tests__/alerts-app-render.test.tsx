@@ -224,6 +224,52 @@ describe('the settings', () => {
   });
 });
 
+describe('the factory\'s alert settings, in the Alerts\' Settings for its admins (2026-11-27: "in alerts only")', () => {
+  const ON = { alerts: true, 'alerts.mobile': true, 'alerts.downtime': true };
+  const seed = (display: Record<string, boolean>) => (c: QueryClient) => {
+    c.setQueryData(PLANTS_QUERY_KEY, { plants: [{ factory_id: 'mill', name: 'Shree Mills' }], current: 'mill' });
+    c.setQueryData(['alerts-app-factory', 'mill'], { factory_id: 'mill', name: 'Shree Mills', display });
+  };
+  const asAdmin = (draw: () => string) => {
+    const before = { user: auth.user };
+    Object.assign(auth, { canWriteFactory: true, user: { ...auth.user, role: 'admin' } });
+    try {
+      return draw();
+    } finally {
+      Object.assign(auth, { canWriteFactory: undefined, user: before.user });
+    }
+  };
+
+  it('an admin: who gets push alerts and how, and the downtime reasons, under "Alert settings"', () => {
+    const html = asAdmin(() => render(<AlertsSettings />, seed(ON)));
+    expect(html).toContain('>Alert settings</h2>');
+    expect(html).toContain('Loading mobile settings…');   // the factory's mobile alert settings, on their way
+    expect(html).toContain('Recent stops');                // the downtime reasons
+    // the person's own settings stay
+    expect(html).toContain('Notifications');
+    expect(html).toContain('Sign out');
+  });
+
+  it('a worker: none of it', () => {
+    const html = render(<AlertsSettings />, seed(ON));
+    expect(html).not.toContain('Alert settings');
+    expect(html).not.toContain('Recent stops');
+  });
+
+  it('what our staff switched off for the factory stays off', () => {
+    expect(asAdmin(() => render(<AlertsSettings />, seed({ ...ON, alerts: false })))).not.toContain('Alert settings');
+    const noMobile = asAdmin(() => render(<AlertsSettings />, seed({ ...ON, 'alerts.mobile': false })));
+    expect(noMobile).toContain('Recent stops');
+    expect(noMobile).not.toContain('Loading mobile settings…');
+    expect(asAdmin(() => render(<AlertsSettings />, seed({ ...ON, 'alerts.mobile': false, 'alerts.downtime': false })))).not.toContain('Alert settings');
+  });
+
+  it('nothing until the factory\'s switches are known', () => {
+    const html = asAdmin(() => render(<AlertsSettings />, (c) => c.setQueryData(PLANTS_QUERY_KEY, { plants: [{ factory_id: 'mill', name: 'Shree Mills' }], current: 'mill' })));
+    expect(html).not.toContain('Alert settings');
+  });
+});
+
 describe('signing in', () => {
   it('asks for the work email and the password, and renews a session first', () => {
     const html = render(<AppLoginForm />);

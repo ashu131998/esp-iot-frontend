@@ -59,12 +59,9 @@ describe('the windows', () => {
   });
 });
 
-describe('the pages and their sections go by the same names and sizes', () => {
-  // the Alerts page (our staff's: machines, the alerts sent) and Alert settings (who gets them, the downtime reasons)
-  const pages = {
-    alerts: read('app/factories/[factoryId]/alerts/page.tsx'),
-    settings: read('app/factories/[factoryId]/alert-settings/page.tsx'),
-  };
+describe('the page and its sections go by the same names and sizes', () => {
+  // the Alerts page (our staff's): machines, who gets alerts and how, the downtime reasons, the alerts sent
+  const pages = { alerts: read('app/factories/[factoryId]/alerts/page.tsx') };
   const page = pages.alerts;
   const sections = {
     machines: read('components/factory/factory-alerts-dashboard.tsx'),
@@ -77,8 +74,8 @@ describe('the pages and their sections go by the same names and sizes', () => {
   it('each name is used on both sides, and none is spelled out by hand any more', () => {
     const uses: Array<[string, keyof typeof sections, keyof typeof pages]> = [
       ['machines', 'machines', 'alerts'], ['filterLines', 'filters', 'alerts'], ['filterMachines', 'filters', 'alerts'],
-      ['settings', 'settings', 'settings'], ['testWorkers', 'settings', 'settings'],
-      ['downtimeReports', 'downtime', 'settings'], ['downtimeReasons', 'downtime', 'settings'], ['stopFollowUp', 'downtime', 'settings'],
+      ['settings', 'settings', 'alerts'], ['testWorkers', 'settings', 'alerts'],
+      ['downtimeReports', 'downtime', 'alerts'], ['downtimeReasons', 'downtime', 'alerts'], ['stopFollowUp', 'downtime', 'alerts'],
       ['notifications', 'feed', 'alerts'],
     ];
     for (const [name, section, on] of uses) {
@@ -95,13 +92,13 @@ describe('the pages and their sections go by the same names and sizes', () => {
   it('the sizes and windows too', () => {
     expect(DOWNTIME_REPORTS_LIMIT).toBe(15);
     expect(NOTIFICATIONS_LIMIT).toBe(30);
-    expect(pages.settings).toContain('serverApi.downtimeReports(factoryId, DOWNTIME_REPORTS_LIMIT)');
+    expect(page).toContain('serverApi.downtimeReports(factoryId, DOWNTIME_REPORTS_LIMIT)');
     expect(sections.downtime).toContain('api.downtimeReports(factoryId, { limit: DOWNTIME_REPORTS_LIMIT }');
     expect(page).toContain('serverApi.notifications(factoryId, NOTIFICATIONS_LIMIT)');
     expect(sections.feed).toContain('api.notifications(factoryId, { limit: NOTIFICATIONS_LIMIT }');
     expect(page).toContain('alertsMachinesWindow(maxDate)');
     expect(sections.machines).toContain('alertsMachinesWindow(maxDate)');
-    expect(pages.settings).toContain('stopFollowUpWindow()');
+    expect(page).toContain('stopFollowUpWindow()');
     expect(sections.downtime).toContain('stopFollowUpWindow()');
   });
 

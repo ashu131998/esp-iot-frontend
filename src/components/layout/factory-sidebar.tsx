@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Activity, AlertTriangle, BellRing, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LayoutGrid, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LayoutGrid, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -10,7 +10,7 @@ import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { SIDEBAR_CARD, SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
 import { AppLink } from '@/components/ui/app-link';
 import { useAuth } from '@/lib/auth-context';
-import { APP_HOME } from '@/lib/dashboard-app';
+import { APP_HOME, staffAppsHref } from '@/lib/dashboard-app';
 import { sidebarGroups, tabsFor } from '@/lib/display';
 import { useSharedAddress } from '@/lib/factory-links-context';
 import { currentShiftWindow } from '@/lib/shifts';
@@ -40,7 +40,6 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   configuration: Cog,
   scheduling: CalendarClock,
   'shift-reports': FileText,
-  'alert-settings': BellRing,
   'sensor-mapping': Cable,
   wifi: Wifi,
   compliance: ShieldCheck,
@@ -104,10 +103,10 @@ export function FactorySidebar({
         <PlantSwitcher factoryId={factoryId} factoryName={factoryName} subtitle={location ?? factoryId} tone="dark" />
       </div>
 
-      {/* in the FloorBeat app (a computer's browser too): back to its home screen of apps */}
+      {/* in the FloorBeat app (a computer's browser too): back to its home screen of apps (our staff: this factory's) */}
       {inFloorBeat && (
         <div className="px-3 pb-2">
-          <AppLink href={APP_HOME} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/[0.06] hover:text-white">
+          <AppLink href={isInternalStaff ? staffAppsHref(factoryId) : APP_HOME} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/[0.06] hover:text-white">
             <LayoutGrid className="h-4 w-4" aria-hidden />{t('All apps')}
           </AppLink>
         </div>

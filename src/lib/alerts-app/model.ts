@@ -128,16 +128,19 @@ export function whereLabel(alert: Pick<MyAlert, 'machine_name' | 'factory_name'>
 
 /**
  * Where the app's pages are. On its own address (alerts.floorbeat.in) the pages are at plain
- * addresses ("/", "/settings"); opened at the app's inner address (a local run without the host:
+ * addresses ("/", "/settings"); inside the FloorBeat app (dashboard.floorbeat.in) under /inbox
+ * ("/inbox", "/inbox/settings"); opened at the app's inner address (a local run without the host:
  * /alerts-app/settings) they stay under /alerts-app. The pathname tells which.
  */
-export function appBase(pathname: string | null | undefined): '' | '/alerts-app' {
-  return /^\/alerts-app(\/|$)/.test(pathname ?? '') ? '/alerts-app' : '';
+export function appBase(pathname: string | null | undefined): '' | '/alerts-app' | '/inbox' {
+  const p = pathname ?? '';
+  if (/^\/inbox(\/|$)/.test(p)) return '/inbox';
+  return /^\/alerts-app(\/|$)/.test(p) ? '/alerts-app' : '';
 }
 
-/** The pathname without the app's inner prefix: "/alerts-app/settings" → "/settings". */
+/** The pathname without the app's inner prefix: "/alerts-app/settings", "/inbox/settings" → "/settings". */
 export function appPath(pathname: string | null | undefined): string {
-  const p = (pathname ?? '/').replace(/^\/alerts-app(?=\/|$)/, '');
+  const p = (pathname ?? '/').replace(/^\/(alerts-app|inbox)(?=\/|$)/, '');
   return p === '' ? '/' : p;
 }
 

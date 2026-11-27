@@ -66,11 +66,11 @@ describe('the FloorBeat app\'s sign-in page', () => {
   it('its own mark and name; a session is renewed first', () => {
     const html = render(<DashboardLoginForm />);
     expect(html).toContain('FloorBeat');
-    expect(html).toContain('Your factory&#x27;s dashboard. Sign in with your work email.');
+    expect(html).toContain('Your factory&#x27;s alerts, dashboard and stock. Sign in with your work email.');
     expect(html).toContain('Signing you in…');   // the renewal runs first; the form shows once it fails
     expect(html).toContain('#0f172a');            // the dashboard app's dark mark, not the alerts app's orange one
     expect(html).toContain('floorbeat.in/privacy');
-    expect(render(<DashboardLoginForm />, hi)).toContain('आपकी फ़ैक्टरी का डैशबोर्ड। अपने काम के ईमेल से साइन इन करें।');
+    expect(render(<DashboardLoginForm />, hi)).toContain('आपकी फ़ैक्टरी के अलर्ट, डैशबोर्ड और माल। अपने काम के ईमेल से साइन इन करें।');
   });
 
   it('the mark: the brand\'s ring in white, its pulse in orange, on dark blue', () => {

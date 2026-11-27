@@ -161,6 +161,19 @@ describe('the app\'s inner addresses', () => {
     expect(tabActive('settings', '/')).toBe(false);
   });
 
+  it('inside the FloorBeat app the alerts\' screens are under /inbox, links included', () => {
+    expect(appBase('/inbox')).toBe('/inbox');
+    expect(appBase('/inbox/alerts/ntf-1')).toBe('/inbox');
+    expect(appBase('/inboxes')).toBe('');
+    expect(appPath('/inbox')).toBe('/');
+    expect(appPath('/inbox/settings')).toBe('/settings');
+    expect(tabActive('inbox', '/inbox')).toBe(true);
+    expect(tabActive('inbox', '/inbox/alerts/ntf-1')).toBe(true);
+    expect(tabActive('settings', '/inbox/settings')).toBe(true);
+    expect(appPageOf('/inbox/alerts/ntf-1')).toEqual({ page: 'alert', id: 'ntf-1' });
+    expect(appPageOf('/inbox')).toEqual({ page: 'inbox' });
+  });
+
   it('which page an address is, so a tap can draw it at once: the inbox, the settings, one alert', () => {
     expect(appPageOf('/')).toEqual({ page: 'inbox' });
     expect(appPageOf('/alerts-app')).toEqual({ page: 'inbox' });

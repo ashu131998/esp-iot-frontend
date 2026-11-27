@@ -4,7 +4,7 @@
  * addresses). Pure: the IMS screens link through imsHref (components/ims-app/ims-links.tsx).
  */
 
-/** An IMS address ('/', '/stock', '/stock?row=3', '/scan') under the screens' base. */
+/** An IMS address ('/', '/stock', '/stock?row=3', '/add') under the screens' base. */
 export function imsHref(base: string, to: string): string {
   const b = base.replace(/\/+$/, '');
   if (!b) return to || '/';
@@ -12,13 +12,13 @@ export function imsHref(base: string, to: string): string {
   return to.startsWith('?') ? `${b}${to}` : `${b}${to.startsWith('/') ? to : `/${to}`}`;
 }
 
-/** Which of the Stock tab's screens an address is: '/', '/scan' or '/stock' under the tab's base; null for none. */
-export function imsScreenOf(pathname: string, base: string): '/' | '/scan' | '/stock' | null {
+/** Which of the Stock tab's screens an address is: '/', '/add' or '/stock' under the tab's base; null for none. */
+export function imsScreenOf(pathname: string, base: string): '/' | '/add' | '/stock' | null {
   const b = base.replace(/\/+$/, '');
   if (pathname !== b && !pathname.startsWith(`${b}/`)) return null;
   const path = pathname.slice(b.length) || '/';
   if (path === '/') return '/';
-  if (path === '/scan' || path.startsWith('/scan/')) return '/scan';
+  if (path === '/add' || path.startsWith('/add/')) return '/add';
   if (path === '/stock' || path.startsWith('/stock/')) return '/stock';
   return null;
 }

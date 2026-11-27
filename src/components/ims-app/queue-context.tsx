@@ -14,6 +14,8 @@ import { sendQueue, type SendStop } from '@/lib/ims/sender';
 const RETRY_MS = 30_000;
 
 interface ImsQueue {
+  /** The factory whose scans these are. */
+  factoryId: string;
   queue: Queued[];
   waiting: number;
   rejected: number;
@@ -156,10 +158,10 @@ export function ImsQueueProvider({ factoryId, children }: { factoryId: string; c
   }, [anyWaiting, stop, send]);
 
   const value = useMemo<ImsQueue>(() => ({
-    queue, waiting: counts.waiting, rejected: counts.rejected, sending, stop: anyWaiting > 0 ? stop : null, stale, answers,
+    factoryId, queue, waiting: counts.waiting, rejected: counts.rejected, sending, stop: anyWaiting > 0 ? stop : null, stale, answers,
     add, send, remove, dismissStale: () => setStale([]),
     photosWaiting, photosRefused, addPhoto, removePhoto,
-  }), [queue, counts.waiting, counts.rejected, sending, stop, anyWaiting, stale, answers, add, send, remove, photosWaiting, photosRefused, addPhoto, removePhoto]);
+  }), [factoryId, queue, counts.waiting, counts.rejected, sending, stop, anyWaiting, stale, answers, add, send, remove, photosWaiting, photosRefused, addPhoto, removePhoto]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

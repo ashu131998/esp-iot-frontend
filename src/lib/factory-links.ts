@@ -5,12 +5,21 @@
  * the plain address and sends the long one to it. The same holds in the FloorBeat app
  * (dashboard.floorbeat.in), where the factory is the one the person is signed in at.
  */
-export function plainFactoryHref(href: string): string {
+export function plainFactoryHref(href: string, overview = '/'): string {
   const m = /^\/factories\/[^/?#]+(.*)$/.exec(href);
   if (!m) return href;
   const rest = m[1];
-  if (!rest) return '/';
-  return rest.startsWith('/') ? rest : `/${rest}`;   // "?tab=x" → "/?tab=x"
+  if (!rest) return overview;
+  if (rest.startsWith('/')) return rest;
+  return overview === '/' ? `/${rest}` : `${overview}${rest}`;   // "?tab=x" → "/?tab=x" (the app: "/overview?tab=x")
+}
+
+/**
+ * In the FloorBeat app (dashboard.floorbeat.in) the root is the app's home screen of tiles, so the factory's
+ * overview is /overview there (dashboard-app.ts APP_OVERVIEW); its other pages are plain as at its own address.
+ */
+export function appFactoryHref(href: string): string {
+  return plainFactoryHref(href, '/overview');
 }
 
 /**
@@ -22,7 +31,13 @@ export const PLAIN_LINKS_HEADER = 'x-fb-plain-links';
 
 const asIs = (href: string) => href;
 
-/** The links of a page: plain at the factory's own address, as they are anywhere else (stable functions). */
-export function factoryHrefFor(plain: boolean): (href: string) => string {
-  return plain ? plainFactoryHref : asIs;
+const plainAtRoot = (href: string) => plainFactoryHref(href);
+
+/**
+ * The links of a page: plain at the factory's own address (`plain`), and in the FloorBeat app too, there with the
+ * overview at /overview (`app`); as they are anywhere else (stable functions).
+ */
+export function factoryHrefFor(plain: boolean, app = false): (href: string) => string {
+  if (!plain) return asIs;
+  return app ? appFactoryHref : plainAtRoot;
 }

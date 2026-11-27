@@ -17,13 +17,13 @@ export function qtyText(qty: number | null | undefined, locale: Locale = 'en'): 
 }
 
 /**
- * One unit's total, in words: "1,240 boxes", "1,240 boxes · 2 pallets not counted",
- * "— boxes · 3 pallets not counted" (nothing counted yet). The unit is the factory's own word, shown as typed.
+ * One unit's total, in words: "1,240 boxes", "1,240 boxes · 2 entries not counted",
+ * "— boxes · 3 entries not counted" (nothing counted yet). The unit is the item's own word.
  */
 export function unitTotalText(total: UnitTotal, t: Translator['t'], tn: Translator['tn'], locale: Locale = 'en'): string {
   const amount = `${qtyText(total.qty, locale)} ${total.unit}`;
   if (total.uncounted_pallets <= 0) return amount;
-  const left = tn(total.uncounted_pallets, '{count} pallet not counted', '{count} pallets not counted', { count: total.uncounted_pallets });
+  const left = tn(total.uncounted_pallets, '{count} entry not counted', '{count} entries not counted', { count: total.uncounted_pallets });
   return `${amount} · ${left}`;
 }
 
@@ -42,7 +42,7 @@ export function ageDays(iso: string | null | undefined, now: Date = new Date()):
   return Math.max(0, Math.floor((now.getTime() - at) / 86_400_000));
 }
 
-/** The spec fields as the screens use them (a choice's `value` is its key). */
+/** An item's pick-lists as the screens use them (a choice's `value` is its key). */
 export function specFieldsOf(fields: ApiSpecField[] | null | undefined): SpecField[] {
   return (fields ?? []).map((f) => ({ key: f.key, label: f.label, options: f.options.map((o) => ({ key: o.value, label: o.label })) }));
 }
@@ -55,10 +55,10 @@ export function placeLabel(kind: 'zone' | 'row' | 'column', value: unknown): str
 }
 
 /**
- * The stock page's view from the API's answer (GET …/ims/stock) and the factory's spec fields
- * (GET …/ims/setup): filter sections in the factory's order of its specs, then the location's parts
- * and the products; each line keyed by product and specs; the FIFO date the server's, else the
- * oldest stock-in. Words for the location's parts ("Zone", "Row", "Column") are the screen's.
+ * The stock page's view from the API's answer (GET …/ims/stock) and the picked item's pick-lists (none when no
+ * item, or more than one, is picked: a field is one item's): filter sections of the items first, then that item's
+ * fields in its order, then the location's parts; each line keyed by item and specs; the FIFO date the server's,
+ * else the oldest stock-in. Words for the location's parts ("Zone", "Row", "Column") are the screen's.
  */
 export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
   const known = new Set(fields.map((f) => f.key));
@@ -76,7 +76,7 @@ export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
     return {
       key: `${r.product.product_id}:${Object.keys(specs).sort().map((k) => `${k}=${specs[k]}`).join('&')}`,
       product_id: r.product.product_id,
-      sku: r.product.sku,
+      sku: r.product.sku ?? '',
       name: r.product.name,
       unit: r.unit ?? r.product.unit,
       specs,
@@ -91,7 +91,7 @@ export function toStockView(api: ApiStock, fields: SpecField[]): StockView {
   return {
     rows,
     totals: { rows: api.totals.rows, products: api.totals.products, pallets: api.totals.pallets, by_unit: api.totals.by_unit },
-    facets: [...specFacets, ...place('zone', api.filters.zones), ...place('row', api.filters.rows), ...place('column', api.filters.columns), ...products],
+    facets: [...products, ...specFacets, ...place('zone', api.filters.zones), ...place('row', api.filters.rows), ...place('column', api.filters.columns)],
     spec_fields: fields,
     next_cursor: api.next,
   };

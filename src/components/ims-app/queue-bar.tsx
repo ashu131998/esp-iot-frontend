@@ -3,14 +3,24 @@
 import { CloudOff, RefreshCw, TriangleAlert, X } from 'lucide-react';
 
 import { useImsQueue } from '@/components/ims-app/queue-context';
-import { useT } from '@/lib/i18n/context';
+import { keptImsSetup } from '@/components/ims-app/use-ims-setup';
+import { useLocale, useT } from '@/lib/i18n/context';
+import type { Locale } from '@/lib/i18n/locale';
 import type { Queued } from '@/lib/ims/queue';
 import type { SendStop } from '@/lib/ims/sender';
-import { refusalWords } from '@/lib/ims/stock-in';
+import { isItemCode, refusalWords } from '@/lib/ims/stock-in';
+import { qtyText } from '@/lib/ims/stock-view';
 
-/** A queued scan in a few words: "PL-000012 → R03-C05". */
-export function scanLine(q: Queued): string {
+/**
+ * A queued scan in a few words: an item added with no QR by its item and quantity ("Fabric roll · 40"), a label's
+ * scan by its codes ("PL-000012 → R03-C05"). `nameOf`: an item's name from its id (null when not known).
+ */
+export function scanLine(q: Queued, nameOf: (productId: string) => string | null = () => null, locale: Locale = 'en'): string {
   const m = q.movement;
+  if (m.type === 'in' && isItemCode(m.pallet)) {
+    const name = (m.product_id && nameOf(m.product_id)) || m.product_id || '';
+    return `${name} · ${qtyText(m.qty ?? null, locale)}`;
+  }
   return m.to ? `${m.pallet} → ${m.to}` : m.pallet;
 }
 
@@ -37,9 +47,18 @@ export function waitingWords(stop: SendStop | null, t: (key: string) => string):
  */
 export function ImsQueueBar() {
   const { t, tn } = useT();
-  const { queue, waiting, rejected, sending, stop, stale, send, remove, dismissStale, photosWaiting, photosRefused, removePhoto } = useImsQueue();
+  const locale = useLocale();
+  const { factoryId, queue, waiting, rejected, sending, stop, stale, send, remove, dismissStale, photosWaiting, photosRefused, removePhoto } = useImsQueue();
   if (waiting === 0 && rejected === 0 && stale.length === 0 && photosWaiting === 0 && photosRefused.length === 0) return null;
   const refused = queue.filter((q) => q.rejected);
+  // the items' names from the phone's saved copy (no network call: this bar is on every page)
+  const names = new Map((keptImsSetup(factoryId)?.products ?? []).map((p) => [p.product_id, p.name]));
+  const nameOf = (id: string) => names.get(id) ?? null;
+  /** A refused photo by the add it was taken with, when that is still on the phone; else its record's code. */
+  const photoLine = (p: { pallet: string; stockIn?: string | null }) => {
+    const owner = p.stockIn ? queue.find((q) => q.movement.client_id === p.stockIn) : undefined;
+    return owner ? scanLine(owner, nameOf, locale) : p.pallet;
+  };
 
   return (
     <div className="mb-3 space-y-2">
@@ -77,7 +96,7 @@ export function ImsQueueBar() {
               return (
                 <li key={q.movement.client_id} className="flex items-start gap-2 rounded-xl bg-white p-2 ring-1 ring-red-100">
                   <div className="min-w-0 flex-1">
-                    <p className="font-mono text-sm font-medium text-foreground">{scanLine(q)}</p>
+                    <p className="text-sm font-medium text-foreground">{scanLine(q, nameOf, locale)}</p>
                     <p className="text-sm text-red-900">{refusalWords(q.rejected, t)}</p>
                   </div>
                   <button type="button" onClick={() => remove(q.movement.client_id)} aria-label={t('Remove')} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted hover:bg-slate-100">
@@ -100,7 +119,7 @@ export function ImsQueueBar() {
             {photosRefused.map((p) => (
               <li key={p.id} className="flex items-start gap-2 rounded-xl bg-white p-2 ring-1 ring-red-100">
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm font-medium text-foreground">{p.pallet}</p>
+                  <p className="text-sm font-medium text-foreground">{photoLine(p)}</p>
                   <p className="text-sm text-red-900">{p.refused}</p>
                 </div>
                 <button type="button" onClick={() => removePhoto(p.id)} aria-label={t('Remove')} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted hover:bg-slate-100">

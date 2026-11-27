@@ -1,6 +1,6 @@
 'use client';
 
-import { Boxes, ScanLine } from 'lucide-react';
+import { Boxes, PackagePlus } from 'lucide-react';
 
 import { useImsHref } from '@/components/ims-app/ims-links';
 import { AppLink } from '@/components/ui/app-link';
@@ -14,9 +14,9 @@ export function ImsHome() {
   const imsLink = useImsHref();
   return (
     <div className="grid gap-3">
-      <AppLink href={imsLink('/scan')} className={big}>
-        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"><ScanLine className="h-7 w-7" /></span>
-        {t('Stock in')}
+      <AppLink href={imsLink('/add')} className={big}>
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"><PackagePlus className="h-7 w-7" /></span>
+        {t('Add item')}
       </AppLink>
       <AppLink href={imsLink('/stock')} className={big}>
         <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Boxes className="h-7 w-7" /></span>

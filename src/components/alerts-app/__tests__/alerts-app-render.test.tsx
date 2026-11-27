@@ -265,7 +265,7 @@ describe('installing (what the app\'s address shows where the app does not open)
     const html = render(<InstallGuide access="get-android-app" />);
     expect(html).toContain('Get the FloorBeat Alerts app');
     expect(html).toContain('On Android, alerts come in the FloorBeat Alerts app, not in the browser.');
-    expect(html).toContain('href="https://floorbeat.in/downloads/floorbeat-alerts.apk"');
+    expect(html).toContain('href="https://floorbeat.in/downloads/floorbeat.apk"');   // the one app (FloorBeat 3.0.0)
     expect(html).toContain('Already installed? Open FloorBeat Alerts from your apps.');
     expect(html).toContain('href="https://floorbeat.in/app#android"');
     expect(html).not.toContain('Home Screen');

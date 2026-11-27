@@ -42,7 +42,7 @@ export async function FactoryShellLoader({
   // At the factory's own address (<id>.floorbeat.in), and in the FloorBeat app, its links are plain: /energy, not /factories/<id>/energy.
   const plainLinks = await onFactoryAddress(factoryId);
   const sharedAddress = await onDashboardApp();
-  const link = factoryHrefFor(plainLinks);
+  const link = factoryHrefFor(plainLinks, sharedAddress);
 
   return (
     <FactoryShell

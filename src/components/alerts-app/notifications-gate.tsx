@@ -9,7 +9,7 @@ import { usePushSwitch } from '@/components/alerts-app/use-push-switch';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/ui/language-toggle';
-import { phoneHere, type Phone } from '@/lib/alerts-app/access-client';
+import { installedHere, phoneHere, type Phone } from '@/lib/alerts-app/access-client';
 import { callNative, inNativeApp, onNativeEvent } from '@/lib/alerts-app/native';
 import { notificationsStep, type NotificationsStep } from '@/lib/alerts-app/push';
 import { subscribedHere } from '@/lib/alerts-app/push-client';
@@ -31,11 +31,14 @@ export function useNotificationsRequired(): boolean {
  * On a phone (the iPhone's Home Screen app, the Android app: the same screens) the signed-in app
  * opens only once the phone rings (lib/alerts-app/push.ts notificationsStep); until then it shows
  * how to turn notifications on. It comes right after sign-in: the phone is registered for that
- * person's alerts.
+ * person's alerts. `installedOnly` (the FloorBeat app, which a phone's browser opens too): only the
+ * installed app is held back; a browser tab opens as it is.
  */
-export function NotificationsGate({ children }: { children: ReactNode }) {
+export function NotificationsGate({ children, installedOnly = false }: { children: ReactNode; installedOnly?: boolean }) {
   const phone = usePhone();
-  return phone ? <RingFirst phone={phone}>{children}</RingFirst> : <>{children}</>;
+  const installed = useSyncExternalStore(noSubscription, installedHere, () => false);
+  if (!phone || (installedOnly && !installed)) return <>{children}</>;
+  return <RingFirst phone={phone}>{children}</RingFirst>;
 }
 
 function RingFirst({ phone, children }: { phone: Phone; children: ReactNode }) {

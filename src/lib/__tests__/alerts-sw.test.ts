@@ -13,12 +13,13 @@ const code = readFileSync(join(__dirname, '..', '..', '..', 'public', 'alerts-sw
 
 type Listener = (event: Record<string, unknown>) => unknown;
 
-function boot(windows: Array<Record<string, unknown>> = []) {
+function boot(windows: Array<Record<string, unknown>> = [], hostname = 'alerts.floorbeat.in') {
   const listeners = new Map<string, Listener>();
   const shown: Array<{ title: string; options: Record<string, unknown> }> = [];
   const opened: string[] = [];
   const subscribe = vi.fn(async () => ({ toJSON: () => ({ endpoint: 'https://push.example/new', keys: { p256dh: 'p2', auth: 'a2' } }) }));
   const self = {
+    location: { hostname },
     addEventListener: (name: string, fn: Listener) => listeners.set(name, fn),
     skipWaiting: vi.fn(async () => {}),
     registration: {
@@ -161,6 +162,25 @@ describe('a tap on the notification', () => {
     await fire('notificationclick', { notification: n });
     expect(n.close).toHaveBeenCalled();
     expect(opened).toEqual(['/alerts/ntf-1']);
+  });
+
+  it('inside the FloorBeat app (any address but alerts.*), the alert opens at its address there: /inbox/alerts/<id>', async () => {
+    const { opened, fire, stored } = boot([], 'dashboard.floorbeat.in');
+    await fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(opened).toEqual(['/inbox/alerts/ntf-1']);
+    // the note keeps the alerts app's own path: the page puts it under /inbox itself
+    expect(JSON.parse(await stored.get('/__open')!.text())).toMatchObject({ url: '/alerts/ntf-1' });
+    const page = { navigate: vi.fn(async () => page), focus: vi.fn(async () => page), postMessage: vi.fn() };
+    const open = boot([page], 'dashboard.floorbeat.in');
+    await open.fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(page.navigate).toHaveBeenCalledWith('/inbox/alerts/ntf-1');
+    const inbox = boot([], 'dashboard.localhost');
+    await inbox.fire('notificationclick', { notification: notification('/') });
+    expect(inbox.opened).toEqual(['/inbox']);
+    // and on alerts.floorbeat.in, at its root as ever
+    const plain = boot([], 'alerts.floorbeat.in');
+    await plain.fire('notificationclick', { notification: notification('/alerts/ntf-1') });
+    expect(plain.opened).toEqual(['/alerts/ntf-1']);
   });
 
   it('brings an open window to the alert instead', async () => {

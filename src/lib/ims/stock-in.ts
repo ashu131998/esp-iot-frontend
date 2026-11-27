@@ -1,8 +1,9 @@
 /**
- * Stock in: a new pallet put into stock (Scan → pallet label → product → location → quantity). Pure
- * functions for the screen (components/ims-app/stock-in-screen.tsx): what a scanned QR says, whether a
- * location is the factory's, the quantity typed, and the scan sent to POST …/ims/movements (the server
- * checks all of it again: query-api ims.js parseMovement and applyMovement).
+ * Adding stock. Today an item is added with no QR (Ashutosh, 2026-11-27: "i dont want qr right now, just adding a
+ * item"): pick the item, fill in its fields and the quantity (components/ims-app/add-item-screen.tsx). The
+ * record's name is made here from the add's own id (itemCode), so the add and its photos work with no
+ * connection. The QR helpers (readCode, the pallet label and location checks) stay for when labels come back.
+ * Pure functions; the server checks all of it again (query-api ims.js parseMovement and applyMovement).
  */
 import { todayKey } from '@/lib/format';
 
@@ -78,19 +79,57 @@ export function checkLocation(code: string, locations: ApiLocation[]): LocationC
   return isPalletLabelCode(code) ? 'pallet_label' : 'unknown';
 }
 
-/** The products a pallet can be stocked in as: those in use, by name. */
+/** The items stock can be added as: those in use, by name. */
 export function stockableProducts(products: ApiProduct[]): ApiProduct[] {
-  return products.filter((p) => p.active).sort((a, b) => a.name.localeCompare(b.name) || a.sku.localeCompare(b.sku));
+  return products.filter((p) => p.active).sort((a, b) => a.name.localeCompare(b.name) || (a.sku ?? '').localeCompare(b.sku ?? ''));
 }
 
-/** Products whose name or SKU has the words typed (any order, any case). */
+/** Items whose name or SKU has the words typed (any order, any case). */
 export function matchProducts(products: ApiProduct[], search: string): ApiProduct[] {
   const words = search.toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return products;
   return products.filter((p) => {
-    const text = `${p.name} ${p.sku}`.toLowerCase();
+    const text = `${p.name} ${p.sku ?? ''}`.toLowerCase();
     return words.every((w) => text.includes(w));
   });
+}
+
+/** A record added with no QR is named IT- and the first 16 hex digits of its add's id (query-api ims.js itemCode). */
+export const ITEM_CODE_PREFIX = 'IT-';
+
+/** The name of the record an add makes, from its client_id (a UUID made on the phone); null for anything else. */
+export function itemCode(clientId: string): string | null {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) return null;
+  return `${ITEM_CODE_PREFIX}${clientId.replace(/-/g, '').slice(0, 16).toUpperCase()}`;
+}
+
+/** Whether a record's code is one an add with no QR made (IT-…), not a pallet label of ours. */
+export const isItemCode = (code: string): boolean => /^IT-[0-9A-F]{16}$/.test(code);
+
+export interface AddItemForm {
+  product: ApiProduct;
+  qty: number | null;
+  /** The item's pick-lists' answers (null: none picked). */
+  specs: Record<string, string | null>;
+  /** The text and number fields' answers (fields.ts detailsOf). */
+  details?: Record<string, string | number>;
+}
+
+/** An item added (no QR): the scan for the queue, named by its own id, so sending it twice counts once. */
+export function addItemMovement(form: AddItemForm, clientId: string, now: Date = new Date()): Movement {
+  const code = itemCode(clientId);
+  if (!code) throw new Error('An add needs a UUID client_id');
+  const specs = Object.fromEntries(Object.entries(form.specs).filter(([, v]) => v)) as Record<string, string>;
+  return {
+    client_id: clientId,
+    type: 'in',
+    pallet: code,
+    scanned_at: now.toISOString(),
+    product_id: form.product.product_id,
+    qty: form.qty,
+    ...(Object.keys(specs).length > 0 ? { specs } : {}),
+    ...(form.details && Object.keys(form.details).length > 0 ? { details: form.details } : {}),
+  };
 }
 
 export const QTY_MAX = 1e9;
@@ -176,7 +215,7 @@ export const REFUSAL_TEXT: Record<string, string> = {
   invalid: 'The scan was not complete.',
   no_such_pallet: 'This pallet is not in the system.',
   no_such_location: 'This location is not in the system.',
-  no_such_product: 'This product is not in the system, or is no longer used.',
+  no_such_product: 'This item is not in the system, or is no longer used.',
   pallet_closed: 'This pallet label was used before and is closed. Use a new label.',
   already_stocked: 'This pallet is already in stock. Use Move instead.',
   not_our_label: 'This is not one of our pallet labels. Use a label from the sheet.',

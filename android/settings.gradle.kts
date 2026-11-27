@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-// Two apps: FloorBeat Alerts (app/) and FloorBeat, the dashboard with its Stock tab (dashboard/). README.md.
-rootProject.name = "FloorBeat Alerts"
+// One app: FloorBeat (app/), its alerts, dashboard and stock, since 3.0.0 (it was FloorBeat Alerts, beside a dashboard
+// app of its own until 2026-11-27). README.md.
+rootProject.name = "FloorBeat"
 include(":app")
-include(":dashboard")

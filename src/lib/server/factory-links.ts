@@ -21,5 +21,5 @@ export async function onDashboardApp(): Promise<boolean> {
 
 /** Server pages' links to this factory's pages (see factory-links.ts). */
 export async function factoryLinks(factoryId: string): Promise<(href: string) => string> {
-  return factoryHrefFor(await onFactoryAddress(factoryId));
+  return factoryHrefFor(await onFactoryAddress(factoryId), await onDashboardApp());
 }

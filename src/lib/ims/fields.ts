@@ -1,16 +1,15 @@
 /**
- * The details a stock-in asks for, set per factory by our staff on ops.floorbeat.in (Stock details page,
- * components/internal/stock-details-panel.tsx) and asked on the phone at Add stock (stock-in-screen.tsx).
- * The server's rules are query-api ims.js parseSpecField / parseDetails / missingFields; these mirror them so
- * a form never sends what the server would refuse.
+ * What adding an item asks for: each item's own fields, set by our staff on ops.floorbeat.in (Stock items page,
+ * components/internal/stock-items-panel.tsx: first the item's name, then its fields) and asked on the phone when
+ * the item is added (add-item-screen.tsx). The server's rules are query-api ims.js parseSpecField /
+ * parseDetails / missingFields; these mirror them so a form never sends what the server would refuse.
  *
- *  - choice (pick-list): the pallet's specs; it splits stock rows and filters Available stock.
- *  - text, number: the pallet's `details`.
- *  - photo, audio, video: files kept with the pallet and the field.
+ *  - choice (pick-list): the record's specs; it splits stock rows and filters Available stock (within its item).
+ *  - text, number: the record's `details`.
+ *  - photo, audio, video: files kept with the record and the field.
  *
- * A field's key and type are fixed once made (old pallets are saved with them); removing one only hides it.
+ * A field's key and type are fixed once made (old records are saved with them); removing one only hides it.
  */
-import type { ApiSetup } from './types';
 
 export const FIELD_TYPES = ['choice', 'text', 'number', 'photo', 'audio', 'video'] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -25,7 +24,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   video: 'Video',
 };
 
-/** What each type is, on the ops Stock details page (staff console: English only). */
+/** What each type is, on the ops Stock items page (staff console: English only). */
 export const TYPE_HELP: Record<FieldType, string> = {
   choice: 'Fixed choices (Grade: A, B). Splits stock and works as a filter on Available stock.',
   text: 'A short note typed on the phone, up to 200 characters.',
@@ -57,7 +56,7 @@ export interface FieldChoice {
   label: string;
 }
 
-/** A field as GET …/ims/setup (`fields`) and GET …/ims/spec-fields send it. */
+/** A field of an item, as GET …/ims/setup and GET …/ims/items send it. */
 export interface ApiField {
   key: string;
   label: string;
@@ -77,11 +76,24 @@ export interface ApiField {
   max?: number | null;
 }
 
-/** GET …/ims/spec-fields: the fields in their order, and the removed ones (kept on old pallets). */
-export interface ApiFieldList {
+/** One item on ops.floorbeat.in (GET …/ims/items): its fields in order, and the removed ones (kept on old records). */
+export interface ApiItem {
+  product_id: string;
+  name: string;
+  unit: string;
+  sku: string | null;
+  active: boolean;
   fields: ApiField[];
   removed: ApiField[];
 }
+
+export interface ApiItemList {
+  items: ApiItem[];
+}
+
+/** What an item's quantity counts (query-api ims.js UNITS). */
+export const UNITS = ['pcs', 'kg', 'm', 'litres', 'boxes', 'sets', 'rolls'] as const;
+export const ITEM_NAME_MAX = 80;
 
 export const MAX_FIELDS = 20;
 export const MAX_CHOICES = 100;
@@ -248,16 +260,14 @@ export function moveKey(keys: string[], key: string, delta: -1 | 1): string[] {
 
 // ── on the phone (Add stock) ──
 
-/**
- * The fields Add stock asks for, in order. A server from before field types sends only `spec_fields`
- * (pick-lists); the phone's kept copy of setup may be from then too.
- */
-export function stockInFields(setup: Pick<ApiSetup, 'spec_fields'> & { fields?: ApiField[] } | null | undefined): ApiField[] {
-  if (!setup) return [];
-  // archived fields are there for old pallets' labels: not asked any more
-  if (Array.isArray(setup.fields)) return setup.fields.filter((f) => !f.archived).sort((a, b) => a.sort - b.sort);
-  return (setup.spec_fields ?? []).map((f, i) => ({ key: f.key, label: f.label, type: 'choice', required: false, options: f.options, sort: i }));
+/** What adding an item asks for, in order: its fields still on its list (archived ones are only for old records' labels). */
+export function itemFields(item: { fields?: ApiField[] | null } | null | undefined): ApiField[] {
+  return (item?.fields ?? []).filter((f) => !f.archived).sort((a, b) => a.sort - b.sort);
 }
+
+/** An item's pick-lists, archived ones too (for labels): what splits its stock rows and filters them. */
+export const itemChoiceFields = (item: { fields?: ApiField[] | null } | null | undefined): ApiField[] =>
+  (item?.fields ?? []).filter((f) => f.type === 'choice');
 
 /** The fields this version of the app can ask for (audio and video are left out until the app records them). */
 export const phoneFields = (fields: ApiField[]): ApiField[] => fields.filter((f) => PHONE_TYPES.includes(f.type));

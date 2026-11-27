@@ -86,10 +86,13 @@ const CHECKS = [
   { part: 'app', name: 'dashboard app, a page asked for while signed out', url: `${DASHBOARD}/alerts`, status: 200, endsAt: `${DASHBOARD}/alerts`, contains: 'Sign in with your work email' },
   { part: 'app', name: 'dashboard app old sign-in link', url: `${DASHBOARD}/login`, status: 200, firstHop: `${DASHBOARD}/`, endsAt: `${DASHBOARD}/` },
   { part: 'app', name: 'dashboard app manifest', url: `${DASHBOARD}/dashboard-app.webmanifest`, status: 200, contains: '"FloorBeat"' },
-  { part: 'app', name: 'dashboard app Android asset link', url: `${DASHBOARD}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.dashboard' },
-  { part: 'site', name: 'app download page', url: `${SITE}/app`, status: 200, contains: 'Download for Android' },
-  { part: 'site', name: 'Android APK download', url: `${SITE}/downloads/floorbeat-alerts.apk`, status: 200 },
-  { part: 'site', name: 'dashboard app APK download', url: `${SITE}/downloads/floorbeat-dashboard.apk`, status: 200 },
+  { part: 'app', name: 'dashboard app Android asset link (the one app, FloorBeat 3.0.0)', url: `${DASHBOARD}/.well-known/assetlinks.json`, status: 200, contains: 'in.floorbeat.alerts' },
+  { part: 'app', name: 'the app\'s alerts while signed out', url: `${DASHBOARD}/inbox`, status: 200, endsAt: `${DASHBOARD}/inbox`, contains: 'Sign in with your work email' },
+  { part: 'site', name: 'app download page', url: `${SITE}/app`, status: 200, contains: 'Download FloorBeat for Android' },
+  { part: 'site', name: 'Android APK download (the one app)', url: `${SITE}/downloads/floorbeat.apk`, status: 200 },
+  // the two apps' downloads from before they became one, in emails and messages already sent
+  { part: 'site', name: 'old Alerts APK link', url: `${SITE}/downloads/floorbeat-alerts.apk`, firstHop: `${SITE}/downloads/floorbeat.apk`, status: 200 },
+  { part: 'site', name: 'old dashboard app APK link', url: `${SITE}/downloads/floorbeat-dashboard.apk`, firstHop: `${SITE}/downloads/floorbeat.apk`, status: 200 },
 ];
 
 function verdict(check, got) {

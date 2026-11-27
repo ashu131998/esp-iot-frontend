@@ -183,5 +183,5 @@ export const alerts_app: Messages = {
   'Shift reminders': 'शिफ़्ट की याद',
   'Could not save. Try again.': 'सहेजा नहीं जा सका। फिर से कोशिश करें।',
   // the FloorBeat app's sign-in (components/dashboard-app/login-form.tsx)
-  "Your factory's dashboard. Sign in with your work email.": 'आपकी फ़ैक्टरी का डैशबोर्ड। अपने काम के ईमेल से साइन इन करें।',
+  "Your factory's alerts, dashboard and stock. Sign in with your work email.": 'आपकी फ़ैक्टरी के अलर्ट, डैशबोर्ड और माल। अपने काम के ईमेल से साइन इन करें।',
 };

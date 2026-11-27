@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { BellRing, Settings as SettingsIcon } from 'lucide-react';
+import { BellRing, LayoutGrid, Settings as SettingsIcon } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -11,9 +11,10 @@ import { AlertsSettings } from '@/components/alerts-app/settings';
 import { InboxSkeleton } from '@/components/alerts-app/skeletons';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { AppLink } from '@/components/ui/app-link';
-import { ALERTS_QUERY_KEY, appPageOf, appPath, tabActive } from '@/lib/alerts-app/model';
+import { ALERTS_QUERY_KEY, appBase, appPageOf, appPath, tabActive } from '@/lib/alerts-app/model';
 import { followAlerts, keepSubscriptionFresh, setBadge } from '@/lib/alerts-app/push-client';
 import { useAppHref, useMyAlerts } from '@/lib/alerts-app/queries';
+import { APP_HOME } from '@/lib/dashboard-app';
 import { useT } from '@/lib/i18n/context';
 import { PageSwap, PageSwapScope, useNavigate } from '@/lib/navigation-context';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,8 @@ export function AlertsAppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const alerts = useMyAlerts();
   const unread = alerts.data?.unread ?? 0;
+  // inside the FloorBeat app (/inbox): its Alerts, with the way back to the app's home screen
+  const inFloorBeat = appBase(pathname) === '/inbox';
 
   // A push refreshes the inbox; a tapped notification opens its alert, whatever the phone did with
   // the tap (lib/alerts-app/open.ts).
@@ -66,8 +69,14 @@ export function AlertsAppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="mx-auto flex h-14 max-w-lg items-center gap-3 px-4">
-            <BrandMark className="h-8 w-8" />
-            <p className="text-base font-semibold text-foreground">{t('FloorBeat Alerts')}</p>
+            {inFloorBeat ? (
+              <AppLink href={APP_HOME} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-slate-100">
+                <LayoutGrid className="h-5 w-5" aria-hidden />
+              </AppLink>
+            ) : (
+              <BrandMark className="h-8 w-8" />
+            )}
+            <p className="text-base font-semibold text-foreground">{inFloorBeat ? t('Alerts') : t('FloorBeat Alerts')}</p>
             {unread > 0 && (
               <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white" aria-label={t('{count} unread', { count: unread })}>
                 {unread}

@@ -26,13 +26,12 @@ const { ImsAppShell, imsTabActive } = await import('@/components/ims-app/shell')
 const { ImsApiError, isImsOff, retryImsCall, stockProblem } = await import('@/lib/ims/api');
 const { ImsCannotConnect } = await import('@/components/ims-app/cannot-connect');
 const { StockScreen } = await import('@/components/ims-app/stock-screen');
-const { StockInScreen } = await import('@/components/ims-app/stock-in-screen');
+const { AddItemScreen } = await import('@/components/ims-app/add-item-screen');
 const { ImsQueueProvider } = await import('@/components/ims-app/queue-context');
 const { scanLine, waitingWords } = await import('@/components/ims-app/queue-bar');
 const { readArea } = await import('@/components/ims-app/qr-scanner');
 const { ImsFactoryQueue } = await import('@/components/ims-app/factory-queue');
 const { ImsDashboardFrame } = await import('@/components/ims-app/dashboard-frame');
-const { ImsHome } = await import('@/components/ims-app/home');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -44,17 +43,19 @@ function render(node: ReactNode, seed: (client: QueryClient) => void = () => {},
   );
 }
 
+const COLOUR_FIELD = { key: 'colour', label: 'Colour', type: 'choice' as const, required: false, sort: 0, options: [{ value: 'grey', label: 'Grey' }, { value: 'black', label: 'Black' }] };
+const SIZE_FIELD = { key: 'size', label: 'Size', type: 'choice' as const, required: false, sort: 10, options: [{ value: 'm', label: 'M' }] };
+const product = (id: string, name: string, specs: Record<string, string>, picture: ApiStock['rows'][number]['product']['picture'] = null) =>
+  ({ product_id: id, sku: id.toUpperCase(), name, unit: 'boxes', tracking: 'quantity' as const, specs, active: true, picture, fields: [] });
+// each item with its own fields: the floor tile has a colour and a size, the wall tile only a colour
 const SETUP: ApiSetup = {
-  spec_fields: [
-    { key: 'colour', label: 'Colour', options: [{ value: 'grey', label: 'Grey' }, { value: 'black', label: 'Black' }] },
-    { key: 'size', label: 'Size', options: [{ value: 'm', label: 'M' }] },
+  products: [
+    { ...product('p1', 'Vitrified tile 600×600', {}), fields: [COLOUR_FIELD, SIZE_FIELD] },
+    { ...product('p2', 'Wall tile 300×450', {}), fields: [COLOUR_FIELD] },
   ],
-  products: [],
   locations: [],
   photos_ready: true,
 };
-const product = (id: string, name: string, specs: Record<string, string>, picture: ApiStock['rows'][number]['product']['picture'] = null) =>
-  ({ product_id: id, sku: id.toUpperCase(), name, unit: 'boxes', tracking: 'quantity' as const, specs, active: true, picture });
 const PAGE: ApiStock = {
   rows: [
     { product: product('p1', 'Vitrified tile 600×600', { colour: 'grey', size: 'm' }), qty: 1240, unit: 'boxes', pallets: 14, uncounted_pallets: 0, needs_count_pallets: 0, oldest_stocked_at: '2026-11-01T05:00:00Z' },
@@ -64,7 +65,7 @@ const PAGE: ApiStock = {
   filters: {
     specs: { colour: [{ value: 'grey', label: 'Grey', pallets: 16 }, { value: 'black', label: 'Black', pallets: 12 }] },
     zones: [{ zone: 'Z2', pallets: 9 }],
-    products: [],
+    products: [{ product_id: 'p1', name: 'Vitrified tile 600×600', pallets: 14 }, { product_id: 'p2', name: 'Wall tile 300×450', pallets: 2 }],
   },
   next: null,
 };
@@ -76,10 +77,12 @@ const seedStock = (search: string, page: ApiStock) => (c: QueryClient) => {
 };
 
 describe('the frame', () => {
-  it('has Home, Scan and Available stock, the page\'s tab lit', () => {
+  it('has Home, Add item and Available stock, the page\'s tab lit', () => {
     nav.pathname = '/stock';
     const html = render(<ImsAppShell factoryId="shree-tiles" factoryName="Shree Tiles"><p>page</p></ImsAppShell>);
-    expect(html).toContain('href="/scan"');
+    expect(html).toContain('href="/add"');
+    expect(html).toContain('Add item');
+    expect(html).not.toContain('Scan QR');
     expect(html).toContain('FloorBeat IMS');
     expect(html).toContain('Shree Tiles');
     expect(html).toMatch(/aria-current="page"[^>]*>[\s\S]*Available stock/);
@@ -92,17 +95,17 @@ describe('the frame', () => {
     expect(imsTabActive('/', '/stock')).toBe(false);
     expect(imsTabActive('/stock', '/ims-app/stock')).toBe(true);
     expect(imsTabActive('/stock', '/stocktake')).toBe(false);
-    expect(imsTabActive('/scan', '/ims-app/scan')).toBe(true);
-    expect(imsTabActive('/scan', '/stock')).toBe(false);
+    expect(imsTabActive('/add', '/ims-app/add')).toBe(true);
+    expect(imsTabActive('/add', '/stock')).toBe(false);
   });
 });
 
 describe('available stock', () => {
   it('the total says what is not counted; an uncounted line shows "—", never 0', () => {
-    nav.search = 'spec.colour=grey&zone=Z2';
+    nav.search = 'product=p1&spec.colour=grey&zone=Z2';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, PAGE));
-    expect(html).toContain('1,240 boxes · 2 pallets not counted');
-    expect(html.replace(/<!-- -->/g, '')).toContain('on 16 pallets · 2 products');
+    expect(html).toContain('1,240 boxes · 2 entries not counted');
+    expect(html.replace(/<!-- -->/g, '')).toContain('in 16 entries · 2 items');
     expect(html.replace(/<!-- -->/g, '')).toMatch(/—\s*<span[^>]*>boxes/);
     expect(html).toContain('2 not counted');
     expect(html).toContain('1 needs count');
@@ -110,8 +113,8 @@ describe('available stock', () => {
     expect(html).toContain('Grey · M');
   });
 
-  it('shows the picked filters as chips, named as the sheet names them', () => {
-    nav.search = 'spec.colour=grey&zone=Z2';
+  it('shows the picked filters as chips, named as the sheet names them (the item is its own chip row)', () => {
+    nav.search = 'product=p1&spec.colour=grey&zone=Z2';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, PAGE)).replace(/<!-- -->/g, '');
     expect(html).toContain('Filters · 2');
     expect(html).toContain('Remove filter Grey');
@@ -119,7 +122,7 @@ describe('available stock', () => {
   });
 
   it('nothing matching says so and offers to clear', () => {
-    nav.search = 'spec.colour=black';
+    nav.search = 'product=p1&spec.colour=black';
     const empty: ApiStock = { ...PAGE, rows: [], totals: { rows: 0, products: 0, pallets: 0, by_unit: [] } };
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock(nav.search, empty));
     expect(html).toContain('Nothing in stock matches these filters.');
@@ -171,31 +174,65 @@ describe('available stock', () => {
     nav.search = '';
     const html = render(<StockScreen factoryId="shree-tiles" />, seedStock('', PAGE), hi).replace(/<!-- -->/g, '');
     expect(html).toContain('उपलब्ध माल');
-    expect(html).toContain('1,240 boxes · 2 पैलेट की गिनती बाकी');
+    expect(html).toContain('1,240 boxes · 2 एंट्री की गिनती बाकी');
+    expect(html).toContain('सभी आइटम');
+  });
+
+  it('the items are a row of chips, All first; each line\'s values in its own item\'s words', () => {
+    nav.search = '';
+    const html = render(<StockScreen factoryId="shree-tiles" />, seedStock('', PAGE)).replace(/<!-- -->/g, '');
+    expect(html).toMatch(/<nav aria-label="Items"/);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>All items</);
+    expect(html).toContain('Vitrified tile 600×600');
+    expect(html).toContain('Wall tile 300×450');
+    expect(html).toContain('Grey · M');   // the floor tile's colour and size
+    expect(html).toContain('in 16 entries');
+    expect(html).toContain('14 entries');
+    // with all items showing, no item's fields are offered: nothing to filter yet but the place
+    expect(html).not.toContain('>Colour<');
+  });
+
+  it('one item picked: its chip lit', () => {
+    nav.search = 'product=p2';
+    const html = render(<StockScreen factoryId="shree-tiles" />, seedStock('product=p2', PAGE)).replace(/<!-- -->/g, '');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Wall tile 300×450</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>All items</);
+    nav.search = '';
   });
 });
 
-describe('stock in', () => {
+describe('add item', () => {
   const seedSetup = (c: QueryClient) => c.setQueryData(['ims-setup', 'shree-tiles'], SETUP);
 
-  it('starts at the pallet label: the camera, and the code can always be typed', () => {
-    nav.pathname = '/scan';
-    const html = render(<ImsQueueProvider factoryId="shree-tiles"><StockInScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup).replace(/<!-- -->/g, '');
-    expect(html).toContain('Stock in');
-    expect(html).toContain('Scan the pallet label');
-    expect(html).toContain('Starting the camera…');
-    expect(html).toMatch(/<video[^>]*playsInline|<video[^>]*playsinline/i);
-    expect(html).toContain('placeholder="Or type the code, e.g. PL-000001"');
-    expect(html).toContain('autoCapitalize="characters"');
+  it('starts at the factory\'s items: no QR to scan, no camera', () => {
+    nav.pathname = '/add';
+    const html = render(<ImsQueueProvider factoryId="shree-tiles"><AddItemScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup).replace(/<!-- -->/g, '');
+    expect(html).toContain('Add item');
+    expect(html).toContain('Which item?');
+    expect(html).toContain('Vitrified tile 600×600');
+    expect(html).toContain('Wall tile 300×450');
+    expect(html).not.toMatch(/<video/i);
+    expect(html).not.toContain('pallet');
   });
 
   it('in Hindi', () => {
-    const html = render(<ImsQueueProvider factoryId="shree-tiles"><StockInScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup, hi).replace(/<!-- -->/g, '');
-    expect(html).toContain('माल अंदर');
-    expect(html).toContain('पैलेट का लेबल स्कैन करें');
+    const html = render(<ImsQueueProvider factoryId="shree-tiles"><AddItemScreen factoryId="shree-tiles" /></ImsQueueProvider>, seedSetup, hi).replace(/<!-- -->/g, '');
+    expect(html).toContain('आइटम जोड़ें');
+    expect(html).toContain('कौन-सा आइटम?');
   });
 
-  it('a waiting scan is named by its pallet and where it goes', () => {
+  it('a factory with no items yet is told who sets them up', () => {
+    const empty = (c: QueryClient) => c.setQueryData(['ims-setup', 'shree-tiles'], { ...SETUP, products: [] });
+    const html = render(<ImsQueueProvider factoryId="shree-tiles"><AddItemScreen factoryId="shree-tiles" /></ImsQueueProvider>, empty).replace(/<!-- -->/g, '');
+    expect(html).toContain('No items are set up yet. Ask FloorBeat to add them.');
+  });
+
+  it('a waiting add is named by its item and quantity; a label\'s scan by its codes', () => {
+    const add = { client_id: 'c', type: 'in' as const, pallet: 'IT-0B9F3C1E5D2A4C8B', product_id: 'p1', qty: 40, scanned_at: '2026-11-27T10:00:00Z' };
+    const names = (id: string) => (id === 'p1' ? 'Vitrified tile 600×600' : null);
+    expect(scanLine({ movement: add }, names)).toBe('Vitrified tile 600×600 · 40');
+    expect(scanLine({ movement: { ...add, qty: null } }, names)).toBe('Vitrified tile 600×600 · —');
+    expect(scanLine({ movement: add })).toBe('p1 · 40');   // the item not on the phone (yet): its id
     expect(scanLine({ movement: { client_id: 'c', type: 'in', pallet: 'PL-000012', to: 'R03-C05', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012 → R03-C05');
     expect(scanLine({ movement: { client_id: 'c', type: 'out', pallet: 'PL-000012', scanned_at: '2026-11-26T10:00:00Z' } })).toBe('PL-000012');
   });
@@ -225,16 +262,18 @@ describe('the dashboard\'s Stock tab (one app)', () => {
     expect(html).toContain('empty:hidden');
   });
 
-  it('the Stock screens link under the tab\'s address, with its own row of tabs', () => {
-    nav.pathname = '/factories/shree-tiles/ims/scan';
+  it('the Stock screens link under the tab\'s address, with its own row of two tabs (no home of its own)', () => {
+    nav.pathname = '/factories/shree-tiles/ims/add';
     const html = render(
       <ImsFactoryQueue factoryId="shree-tiles" on>
-        <ImsDashboardFrame factoryId="shree-tiles"><ImsHome /></ImsDashboardFrame>
+        <ImsDashboardFrame factoryId="shree-tiles"><p>add item</p></ImsDashboardFrame>
       </ImsFactoryQueue>,
     );
-    expect(html).toContain('href="/factories/shree-tiles/ims/scan"');
+    expect(html).toContain('href="/factories/shree-tiles/ims/add"');
     expect(html).toContain('href="/factories/shree-tiles/ims/stock"');
-    expect(html).toContain('href="/factories/shree-tiles/ims"');
-    expect(html).toMatch(/aria-current="page"[^>]*href="\/factories\/shree-tiles\/ims\/scan"|href="\/factories\/shree-tiles\/ims\/scan"[^>]*aria-current="page"/);
+    // the FloorBeat app's home screen is the home: no Home tab
+    expect(html).not.toContain('href="/factories/shree-tiles/ims"');
+    expect(html.match(/<a /g)?.length).toBe(2);
+    expect(html).toMatch(/aria-current="page"[^>]*href="\/factories\/shree-tiles\/ims\/add"|href="\/factories\/shree-tiles\/ims\/add"[^>]*aria-current="page"/);
   });
 });

@@ -28,7 +28,7 @@ export const INBOX_BASE = '/inbox';
 export type AppTile = 'alerts' | 'dashboard' | 'stock';
 
 /** Where each tile opens. */
-export const TILE_HREF: Record<AppTile, string> = { alerts: INBOX_BASE, dashboard: APP_OVERVIEW, stock: '/ims' };
+export const TILE_HREF: Record<AppTile, string> = { alerts: INBOX_BASE, dashboard: APP_OVERVIEW, stock: '/ims/stock' };
 
 /**
  * The tiles a person's home screen has: the alerts unless our staff switched the Alerts app off for the factory,

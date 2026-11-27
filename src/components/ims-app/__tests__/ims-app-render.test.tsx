@@ -32,7 +32,6 @@ const { scanLine, waitingWords } = await import('@/components/ims-app/queue-bar'
 const { readArea } = await import('@/components/ims-app/qr-scanner');
 const { ImsFactoryQueue } = await import('@/components/ims-app/factory-queue');
 const { ImsDashboardFrame } = await import('@/components/ims-app/dashboard-frame');
-const { ImsHome } = await import('@/components/ims-app/home');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -263,16 +262,18 @@ describe('the dashboard\'s Stock tab (one app)', () => {
     expect(html).toContain('empty:hidden');
   });
 
-  it('the Stock screens link under the tab\'s address, with its own row of tabs', () => {
+  it('the Stock screens link under the tab\'s address, with its own row of two tabs (no home of its own)', () => {
     nav.pathname = '/factories/shree-tiles/ims/add';
     const html = render(
       <ImsFactoryQueue factoryId="shree-tiles" on>
-        <ImsDashboardFrame factoryId="shree-tiles"><ImsHome /></ImsDashboardFrame>
+        <ImsDashboardFrame factoryId="shree-tiles"><p>add item</p></ImsDashboardFrame>
       </ImsFactoryQueue>,
     );
     expect(html).toContain('href="/factories/shree-tiles/ims/add"');
     expect(html).toContain('href="/factories/shree-tiles/ims/stock"');
-    expect(html).toContain('href="/factories/shree-tiles/ims"');
+    // the FloorBeat app's home screen is the home: no Home tab
+    expect(html).not.toContain('href="/factories/shree-tiles/ims"');
+    expect(html.match(/<a /g)?.length).toBe(2);
     expect(html).toMatch(/aria-current="page"[^>]*href="\/factories\/shree-tiles\/ims\/add"|href="\/factories\/shree-tiles\/ims\/add"[^>]*aria-current="page"/);
   });
 });

@@ -101,7 +101,7 @@ describe('the home screen of apps (one app: alerts, dashboard, stock)', () => {
     expect(APP_HOME).toBe('/');
     expect(APP_OVERVIEW).toBe('/overview');
     expect(INBOX_BASE).toBe('/inbox');
-    expect(TILE_HREF).toEqual({ alerts: '/inbox', dashboard: '/overview', stock: '/ims' });
+    expect(TILE_HREF).toEqual({ alerts: '/inbox', dashboard: '/overview', stock: '/ims/stock' });   // the stock opens on Available stock
   });
 
   it('a tile for each app the factory has: alerts unless switched off, the dashboard always, the stock where the IMS is on', () => {

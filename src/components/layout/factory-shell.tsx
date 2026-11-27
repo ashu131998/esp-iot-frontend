@@ -1,3 +1,4 @@
+import { ImsFactoryQueue } from '@/components/ims-app/factory-queue';
 import { FactoryMobileNav } from '@/components/layout/factory-mobile-nav';
 import { PageHeader } from '@/components/layout/page-header';
 import { SubscriptionBar } from '@/components/layout/subscription-bar';
@@ -74,8 +75,11 @@ export function FactoryShell({
           <div className="flex-1 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:pb-0">
             <FactoryRefsProvider value={refs}>
               <RefreshProvider>
-                {/* A tab tapped: its skeleton at once, until the page is in (lib/navigation-context.tsx). */}
-                <PageSwap skeleton={<FactoryPageSkeleton />}>{children}</PageSwap>
+                {/* The Stock tab's waiting scans and photos keep sending on every page (FloorBeat IMS). */}
+                <ImsFactoryQueue factoryId={factoryId} on={tabs.some((t) => t.slug === 'ims')}>
+                  {/* A tab tapped: its skeleton at once, until the page is in (lib/navigation-context.tsx). */}
+                  <PageSwap skeleton={<FactoryPageSkeleton />}>{children}</PageSwap>
+                </ImsFactoryQueue>
               </RefreshProvider>
             </FactoryRefsProvider>
           </div>

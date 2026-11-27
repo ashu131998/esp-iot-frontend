@@ -89,7 +89,7 @@ reports its FID through `onRegistered` and the server sends to `message.fid`.
 
 # FloorBeat for Android (the dashboard app)
 
-A second app in this project: module `dashboard/`, package `in.floorbeat.dashboard`, version 1.0.0.
+A second app in this project: module `dashboard/`, package `in.floorbeat.dashboard`, version 1.1.0.
 It is the factory's dashboard as an app. Its screens are dashboard.floorbeat.in, shown in the phone's
 own web view: one address for every factory, the person's own factory once signed in
 (`src/middleware.ts`, `src/lib/dashboard-app.ts`). An iPhone gets the same from its Home Screen
@@ -106,12 +106,20 @@ own web view: one address for every factory, the person's own factory once signe
 - **No network:** the app's own offline screen. The sign-in is kept between starts.
 - **The bottom bar** is the dashboard's own, set per factory by our staff (staff console, Pages &
   branding, "Phone bottom bar").
+- **The Stock tab** (FloorBeat IMS inside the dashboard: one app, Ashutosh 2026-11-27), at `/ims`, shown
+  per factory by our staff (Pages & branding: the IMS switch, and its place on the phone bottom bar). It
+  needs the camera: the page's QR scanner asks for it (getUserMedia), and the app asks Android's "Allow
+  camera" once and then gives the page the camera only, only on dashboard.floorbeat.in (`PhotoPick.kt`).
+  A photo field's "Take photo" (`capture`) opens the phone's camera app, which writes into the app's
+  cache (`FileProvider`, `res/xml/photo_paths.xml`); "Choose from phone" opens the phone's picker. The
+  page makes either photo small and reads its date itself (`src/lib/ims/photo.ts`). Unsent scans and
+  photos live in the web view's storage (local storage, IndexedDB), which the app never clears.
 - **The icon:** the brand's mark on the dashboard's dark blue with its pulse in orange, so the two
   apps are told apart (`res/drawable/ic_launcher_foreground.xml`; the web's copy is
   `src/components/dashboard-app/app-mark.tsx`).
 
 ```sh
-./gradlew :dashboard:testDebugUnitTest                              # the pure rules: AppLinks
+./gradlew :dashboard:testDebugUnitTest                              # the pure rules: AppLinks, PhotoPick
 ./gradlew :dashboard:assembleRelease :dashboard:bundleRelease       # dashboard-release.apk and .aab
 ```
 

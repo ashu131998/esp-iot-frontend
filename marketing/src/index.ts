@@ -1,4 +1,4 @@
-import { alwaysShown, factoryLoginUrl, forwardTarget, lookupFactoryId, signedInHome, type Origins } from './redirect';
+import { alwaysShown, factoryLoginUrl, forwardTarget, lookupFactoryId, shortLink, signedInHome, type Origins } from './redirect';
 
 interface Env extends Origins {
   ASSETS: Fetcher;
@@ -56,6 +56,10 @@ export default {
       url.hostname = url.hostname.slice(4);
       return Response.redirect(url.toString(), 301);
     }
+
+    // floorbeat.in/apk and the like: the apps page (before the assets: /downloads/<file>.apk is a file)
+    const short = req.method === 'GET' || req.method === 'HEAD' ? shortLink(url.pathname) : null;
+    if (short) return redirect(short);
 
     if (!isPageRequest(req, url)) return env.ASSETS.fetch(req);
 

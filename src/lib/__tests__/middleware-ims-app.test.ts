@@ -113,22 +113,43 @@ describe('stock photos (straight from and to R2)', () => {
     expect(part(csp, 'img-src')).not.toContain('r2.cloudflarestorage.com');
   });
 
-  it('no other address of ours opens to them', async () => {
+  it('every page of ours may (the dashboard reaches its Stock tab without loading a new page)', async () => {
     const { csp } = await visit('https://shree-tiles.floorbeat.in/', worker);
-    expect(csp).toContain('img-src');
-    expect(csp).not.toContain('r2.cloudflarestorage.com');
+    expect(part(csp, 'connect-src')).toContain('https://*.r2.cloudflarestorage.com');
+    expect(part(csp, 'img-src')).toContain('https://*.r2.cloudflarestorage.com');
+    // nothing looser: default-src stays our own
+    expect(part(csp, 'default-src')).toBe("default-src 'self'");
   });
 });
 
 describe('the camera', () => {
-  it('is allowed on the IMS\'s own address only (it reads the QR codes), for the page itself', async () => {
-    expect((await visit(`${IMS}/scan`, worker)).policy).toBe('camera=(self), microphone=(), geolocation=(), browsing-topics=()');
-    expect((await visit(`${IMS}/`)).policy).toContain('camera=(self)');
-    expect((await visit('https://shree-tiles.floorbeat.in/', worker)).policy).toContain('camera=()');
-    expect((await visit('https://dashboard.floorbeat.in/')).policy).toContain('camera=()');
+  it('is allowed for the page itself on every page (QR codes, stock photos), and nothing else is', async () => {
+    for (const url of [`${IMS}/scan`, `${IMS}/`, 'https://shree-tiles.floorbeat.in/', 'https://dashboard.floorbeat.in/']) {
+      expect((await visit(url, worker)).policy, url).toBe('camera=(self), microphone=(), geolocation=(), browsing-topics=()');
+    }
   });
 
   it('the scan page is served from the app inside', async () => {
     expect(await visit(`${IMS}/scan`, worker)).toMatchObject({ served: '/ims-app/scan', to: null });
+  });
+});
+
+describe('the dashboard\'s Stock tab (one app: IMS inside the FloorBeat app)', () => {
+  const APP = 'https://dashboard.example.com';
+  beforeEach(() => vi.stubEnv('DASHBOARD_APP_HOST', 'dashboard.example.com'));
+  const part = (csp: string, name: string) => csp.split(';').map((p) => p.trim()).find((p) => p.startsWith(`${name} `)) ?? '';
+
+  it('/ims… in the app is the person\'s own factory\'s Stock tab, one sign-in for both', async () => {
+    expect(await visit(`${APP}/ims`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims', to: null });
+    expect(await visit(`${APP}/ims/stock?row=3`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/stock?row=3', to: null });
+    expect(await visit(`${APP}/ims/scan`, worker)).toMatchObject({ served: '/factories/shree-tiles/ims/scan', to: null });
+  });
+
+  it('Overview, opened first, already allows what the Stock tab needs (tabs change without a new page)', async () => {
+    const overview = await visit(`${APP}/`, worker);
+    expect(overview.policy).toContain('camera=(self)');
+    expect(overview.policy).toContain('microphone=()');
+    expect(part(overview.csp, 'connect-src')).toContain('https://*.r2.cloudflarestorage.com');
+    expect(part(overview.csp, 'img-src')).toContain('https://*.r2.cloudflarestorage.com');
   });
 });

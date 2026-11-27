@@ -1,4 +1,4 @@
-package floorbeat.dashboard
+package floorbeat.alerts
 
 /** What a photo field's button asks for: the camera app (a photo taken now) or the phone's photos and files. */
 enum class Pick { CAMERA, LIBRARY }
@@ -6,7 +6,7 @@ enum class Pick { CAMERA, LIBRARY }
 /**
  * The page's file inputs and camera requests, as the app answers them. Pure: PhotoPickTest.
  *
- * The page (src/components/ims-app/field-photo.tsx) has two inputs for a photo field: "Take photo"
+ * The stock's page (src/components/ims-app/field-photo.tsx) has two inputs for a photo field: "Take photo"
  * (an image input with `capture="environment"`) and "Choose from phone" (an image input). The web view
  * hands both to the app; which one it was is told by `capture`.
  */
@@ -28,11 +28,11 @@ object PhotoPick {
     }
 
     /**
-     * The page asking for the camera (getUserMedia: the QR scanner): granted only to the app's own pages and
+     * A page asking for the camera (getUserMedia: a QR scanner, should one come back): granted only to the app's own pages and
      * only the camera (`android.webkit.resource.VIDEO_CAPTURE`); never the microphone or anything else.
      */
     fun cameraResources(resources: List<String>, pageOrigin: String?, appUrl: String): List<String> {
-        if (!AppLinks.isAppPage(pageOrigin, appUrl)) return emptyList()
+        if (!AppUrls.isAppPage(pageOrigin, appUrl)) return emptyList()
         return resources.filter { it == VIDEO_CAPTURE }
     }
 

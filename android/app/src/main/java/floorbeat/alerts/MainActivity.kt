@@ -18,7 +18,9 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -28,10 +30,12 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -41,12 +45,21 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONObject
+import java.io.File
 
 /**
- * The app's one screen: alerts.floorbeat.in in the phone's own web view (the same screens as on an
- * iPhone), with what an Android app does itself around it — the back button (AppUrls.back), a tapped
- * notification or an alerts.floorbeat.in link opening its page, other sites opening in the browser,
- * an offline screen, and the phone settings the set-up screens send the person to.
+ * The app's one screen: FloorBeat (dashboard.floorbeat.in; one app since 3.0.0, its home screen a tile for each of
+ * the person's apps: alerts, dashboard, stock) in the phone's own web view, the same screens as on an iPhone's Home
+ * Screen and in a computer's browser, with what an Android app does itself around it:
+ *  - notifications (Firebase: MessagingService, Notifications), a tapped one opening its alert (/inbox/alerts/<id>);
+ *  - the back button: an open form, menu or live view closes first, then back through the pages, then an alert to
+ *    the inbox and any other page to the home screen, then out (AppUrls.back);
+ *  - the camera for the stock: a photo field's "Take photo" opens the camera app and "Choose from phone" the phone's
+ *    picker; a page asking for the camera itself gets it after Android's "Allow camera", only the camera, only here;
+ *  - a dashboard.floorbeat.in link, or one to the alerts' old address (alerts.floorbeat.in), opening its page; other
+ *    addresses (a site, a phone number, an email) opening outside;
+ *  - an offline screen, the phone settings the set-up screens send the person to, and the sign-in and the phone's
+ *    unsent stock and photos kept between starts (cookies, local storage and IndexedDB: the app never clears them).
  */
 class MainActivity : ComponentActivity() {
     private val appUrl = BuildConfig.APP_URL
@@ -55,14 +68,40 @@ class MainActivity : ComponentActivity() {
     private lateinit var bridge: Bridge
     private var firstPageShown = false
     private var loadFailed = false
-    private var clearHistoryOnInbox = false
+    /** Where the back button sent the app (the inbox, the home screen): what was behind it is forgotten once it shows. */
+    private var clearHistoryOn: Back? = null
     private var notificationAsk: ((String) -> Unit)? = null
+
+    /** The page's file input waiting for a photo, and the camera's photo file while the camera app has it. */
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraPhoto: Uri? = null
+    /** A page's camera request (getUserMedia) waiting for Android's "Allow camera" answer. */
+    private var cameraRequest: PermissionRequest? = null
+    /** What to do once Android has answered "Allow camera". */
+    private var afterCameraAnswer: ((Boolean) -> Unit)? = null
 
     private val askPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         val state = notificationsState()
         notificationAsk?.invoke(state)
         notificationAsk = null
         bridge.event("notifications", state)
+    }
+
+    private val askCamera = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val next = afterCameraAnswer
+        afterCameraAnswer = null
+        if (!granted) Toast.makeText(this, R.string.camera_off, Toast.LENGTH_LONG).show()
+        next?.invoke(granted)
+    }
+
+    private val takePicture = registerForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val photo = cameraPhoto
+        cameraPhoto = null
+        answerFile(if (saved && photo != null) arrayOf(photo) else null)
+    }
+
+    private val pickFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        answerFile(uri?.let { arrayOf(it) })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,11 +130,16 @@ class MainActivity : ComponentActivity() {
         }
 
         bridge = Bridge(this)
+        clearOldPhotos()
         setUpWebView()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = back()
         })
-        web.loadUrl(pageFor(intent) ?: AppUrls.pageUrl(appUrl, "/"))
+        // The page it was on, should Android have stopped the app in the background (the camera app open, say);
+        // else the page a tapped notification or a link opens; else the home screen.
+        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
+            web.loadUrl(pageFor(intent) ?: AppUrls.pageUrl(appUrl, "/"))
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -107,8 +151,10 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             allowContentAccess = false
             setSupportMultipleWindows(false)
-            mediaPlaybackRequiresUserGesture = true
-            // The web app knows it is inside the app by this (and by window.FloorBeatAndroid).
+            // a page's camera preview plays as soon as the camera is allowed
+            mediaPlaybackRequiresUserGesture = false
+            // The web app knows it is inside the app by this (and by window.FloorBeatAndroid). The mark keeps the
+            // name it had before the apps became one (src/lib/alerts-app/native.ts reads it).
             userAgentString = "$userAgentString FloorBeatAlerts/${BuildConfig.VERSION_NAME} (Android)"
         }
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
@@ -119,18 +165,45 @@ class MainActivity : ComponentActivity() {
             setAcceptThirdPartyCookies(web, false)
         }
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            val origin = AppUrls.origin(appUrl) ?: "https://alerts.floorbeat.in"
+            val origin = AppUrls.origin(appUrl) ?: "https://dashboard.floorbeat.in"
             try {
                 WebViewCompat.addWebMessageListener(web, "FloorBeatAndroid", setOf(origin), bridge)
             } catch (e: IllegalArgumentException) {
                 // an address the web view will not give the bridge to: the pages run without it (and say "update")
             }
         }
-        web.webChromeClient = WebChromeClient()
+        web.webChromeClient = object : WebChromeClient() {
+            // a page asking for the camera itself (getUserMedia)
+            override fun onPermissionRequest(request: PermissionRequest) {
+                runOnUiThread { answerCameraRequest(request) }
+            }
+
+            override fun onPermissionRequestCanceled(request: PermissionRequest) {
+                if (cameraRequest == request) cameraRequest = null
+            }
+
+            // a photo field's "Take photo" or "Choose from phone"
+            override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
+                fileCallback?.onReceiveValue(null)   // an earlier one never answered: let it go
+                fileCallback = callback
+                val types = params.acceptTypes?.toList() ?: emptyList()
+                when (PhotoPick.kind(params.isCaptureEnabled, types)) {
+                    Pick.CAMERA -> withCamera { allowed -> if (allowed) openCamera() else answerFile(null) }
+                    Pick.LIBRARY -> try {
+                        pickFile.launch(PhotoPick.mimeType(types))
+                    } catch (e: ActivityNotFoundException) {
+                        answerFile(null)
+                    }
+                }
+                return true
+            }
+        }
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                if (AppUrls.isAppPage(request.url.toString(), appUrl)) return false   // the app's own page: here
-                openOutside(request.url)
+                val url = request.url.toString()
+                if (AppUrls.isAppPage(url, appUrl)) return false   // the app's own page: here
+                val page = AppUrls.linkPage(url, appUrl)            // the alerts' old address: its page here
+                if (page != null) view.loadUrl(page) else openOutside(request.url)
                 return true
             }
 
@@ -141,9 +214,14 @@ class MainActivity : ComponentActivity() {
             override fun onPageFinished(view: WebView, url: String?) {
                 firstPageShown = true
                 offline.visibility = if (loadFailed) View.VISIBLE else View.GONE
-                // Back from an alert opened straight from a notification leads to the inbox; back from the inbox closes the app.
-                if (clearHistoryOnInbox && AppUrls.isInbox(url, appUrl)) {
-                    clearHistoryOnInbox = false
+                // Sent back to the inbox or the home screen: back from there goes on up (home, then out), not round again.
+                val arrived = when (clearHistoryOn) {
+                    Back.INBOX -> AppUrls.isInbox(url, appUrl)
+                    Back.HOME -> AppUrls.isHome(url, appUrl)
+                    else -> false
+                }
+                if (arrived) {
+                    clearHistoryOn = null
                     view.clearHistory()
                 }
             }
@@ -166,11 +244,21 @@ class MainActivity : ComponentActivity() {
         Push.listener = { event, value -> bridge.event(event, value) }
     }
 
+    /** A tapped notification, or a link, while the app is open: its page. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         val page = pageFor(intent) ?: return
         if (page != web.url) web.loadUrl(page)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        try {
+            web.saveState(outState)   // the page it was on, should Android stop the app in the background
+        } catch (e: Exception) {
+            // a web view already gone (its renderer stopped): the app starts at its first page
+        }
     }
 
     override fun onResume() {
@@ -190,26 +278,26 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    /** The app page an intent opens: a tapped notification's alert, an alerts.floorbeat.in link. */
-    private fun pageFor(intent: Intent?): String? {
-        val url = intent?.data?.toString() ?: return null
-        return if (AppUrls.isAppPage(url, appUrl)) url else null
-    }
+    /** The app page an intent opens: a tapped notification's alert, a dashboard.floorbeat.in or alerts.floorbeat.in link. */
+    private fun pageFor(intent: Intent?): String? = AppUrls.linkPage(intent?.data?.toString(), appUrl)
 
-    /** The back button: the page first (an open live view closes), then AppUrls.back. */
+    /** The back button: the page first (an open form, menu or live view closes), then AppUrls.back. */
     private fun back() {
         if (offline.visibility == View.VISIBLE) return leave()
         web.evaluateJavascript("(function(){try{return !!(window.floorbeatBack && window.floorbeatBack());}catch(e){return false;}})()") { handled ->
             if (handled == "true") return@evaluateJavascript
             when (AppUrls.back(web.canGoBack(), web.url, appUrl)) {
                 Back.PAGE -> web.goBack()
-                Back.INBOX -> {
-                    clearHistoryOnInbox = true
-                    web.loadUrl(AppUrls.pageUrl(appUrl, "/"))
-                }
+                Back.INBOX -> goUp(Back.INBOX, AppUrls.INBOX)
+                Back.HOME -> goUp(Back.HOME, "/")
                 Back.EXIT -> leave()
             }
         }
+    }
+
+    private fun goUp(to: Back, path: String) {
+        clearHistoryOn = to
+        web.loadUrl(AppUrls.pageUrl(appUrl, path))
     }
 
     /** As Android 12+ does for an app's first screen: to the background, kept warm for the next open. */
@@ -223,6 +311,58 @@ class MainActivity : ComponentActivity() {
         } catch (e: ActivityNotFoundException) {
             // nothing on the phone opens it
         }
+    }
+
+    // ── the camera and photos (the stock) ─────────────────────────────────────────────────────
+
+    /** The camera for a page that asks for it: only the app's own pages, only the camera, after Android's question. */
+    private fun answerCameraRequest(request: PermissionRequest) {
+        val allowed = PhotoPick.cameraResources(request.resources.toList(), request.origin?.toString(), appUrl)
+        if (allowed.isEmpty()) return request.deny()
+        cameraRequest?.deny()
+        cameraRequest = request
+        withCamera { granted ->
+            val waiting = cameraRequest
+            cameraRequest = null
+            if (waiting == null) return@withCamera
+            if (granted) waiting.grant(allowed.toTypedArray()) else waiting.deny()
+        }
+    }
+
+    /** Runs `then` with whether the camera may be used: asks Android first when it has not been allowed yet. */
+    private fun withCamera(then: (Boolean) -> Unit) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) return then(true)
+        afterCameraAnswer = then
+        askCamera.launch(Manifest.permission.CAMERA)
+    }
+
+    /** The camera app, writing its photo into the app's cache (handed to the page, which makes it small). */
+    private fun openCamera() {
+        try {
+            val dir = File(cacheDir, "photos").apply { mkdirs() }
+            val file = File(dir, "photo-${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(this, "${packageName}.photos", file)
+            cameraPhoto = uri
+            takePicture.launch(uri)
+        } catch (e: Exception) {
+            // no camera app on the phone, or the cache could not be written
+            cameraPhoto = null
+            answerFile(null)
+        }
+    }
+
+    private fun answerFile(files: Array<Uri>?) {
+        fileCallback?.onReceiveValue(files)
+        fileCallback = null
+    }
+
+    /**
+     * Camera photos from earlier days: the page made its own small copies of them long since. Not today's: on
+     * a phone short of memory Android may restart the app while the camera app is open.
+     */
+    private fun clearOldPhotos() {
+        val dayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+        File(cacheDir, "photos").listFiles()?.filter { it.lastModified() < dayAgo }?.forEach { it.delete() }
     }
 
     // ── for the set-up screens (Bridge) ────────────────────────────────────────────────────────

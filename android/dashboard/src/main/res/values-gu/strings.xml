@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="offline_text">ફોન નેટવર્ક પર પાછો આવતાં જ તમારું ડેશબોર્ડ દેખાશે.</string>
-    <string name="offline_retry">ફરી પ્રયાસ કરો</string>
-
-    <!-- The camera refused in Android's settings (the Stock tab). -->
-    <string name="camera_off">લેબલ સ્કેન કરવા અને ફોટા પાડવા માટે ફોનની સેટિંગ્સમાં FloorBeat ને કેમેરાની મંજૂરી આપો.</string>
-</resources>

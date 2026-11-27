@@ -4,6 +4,7 @@
     <string name="channel_alarm_description">કોઈ મશીન બંધ થઈ, અથવા તેનો જવાબ કોઈએ આપ્યો નથી. અલાર્મની જેમ વાગે છે.</string>
     <string name="channel_alerts_name">અન્ય એલર્ટ</string>
     <string name="channel_alerts_description">મશીન ફરી ચાલી, શિફ્ટની યાદ અને કેમેરા.</string>
-    <string name="offline_text">ફોન નેટવર્ક પર પાછો આવતાં જ તમારા એલર્ટ દેખાશે.</string>
+    <string name="offline_text">ફોન નેટવર્ક પર પાછો આવતાં જ FloorBeat દેખાશે.</string>
     <string name="offline_retry">ફરી પ્રયાસ કરો</string>
+    <string name="camera_off">ફોટા પાડવા માટે ફોનની સેટિંગ્સમાં FloorBeat ને કેમેરાની મંજૂરી આપો.</string>
 </resources>

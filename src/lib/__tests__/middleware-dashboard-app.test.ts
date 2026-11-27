@@ -78,8 +78,11 @@ describe('signed out', () => {
 });
 
 describe('someone of a factory, signed in', () => {
-  it('the app is their own factory at plain addresses, its links marked plain', async () => {
-    expect(await visit(`${APP}/`, worker)).toMatchObject({ status: 200, to: null, served: '/factories/shree-mills', plain: '1' });
+  it('the app opens on its home screen of apps; the dashboard is their own factory at plain addresses, its links marked plain', async () => {
+    expect(await visit(`${APP}/`, worker)).toMatchObject({ status: 200, to: null, served: '/dashboard-app/home/shree-mills' });
+    expect((await visit(`${APP}/home`, worker)).to).toBe('/');   // an old link to the home screen
+    expect(await visit(`${APP}/overview`, worker)).toMatchObject({ status: 200, to: null, served: '/factories/shree-mills', plain: '1' });
+    expect((await visit(`${APP}/overview?from=2026-11-01`, worker)).served).toBe('/factories/shree-mills?from=2026-11-01');
     expect((await visit(`${APP}/alerts`, worker)).served).toBe('/factories/shree-mills/alerts');
     expect((await visit(`${APP}/machines/loom-3?from=2026-11-01`, worker)).served).toBe('/factories/shree-mills/machines/loom-3?from=2026-11-01');
     expect((await visit(`${APP}/support`, worker)).served).toBe('/factories/shree-mills/support');
@@ -87,11 +90,30 @@ describe('someone of a factory, signed in', () => {
 
   it('a long address of their factory becomes the plain one; another factory\'s, a sign-in page or the console: home', async () => {
     expect((await visit(`${APP}/factories/shree-mills/energy?x=1`, worker)).to).toBe('/energy?x=1');
-    expect((await visit(`${APP}/factories/Shree-Mills`, worker)).to).toBe('/');
+    expect((await visit(`${APP}/factories/Shree-Mills`, worker)).to).toBe('/overview');   // the overview's long address
     expect((await visit(`${APP}/factories/other-mill/energy?x=1`, worker)).to).toBe('/');
     expect((await visit(`${APP}/f/shree-mills/login`, worker)).to).toBe('/');
     for (const path of ['/login', '/signup', '/internal', '/internal/boards', '/dashboard-app/factories']) {
       expect((await visit(`${APP}${path}`, worker)).to, path).toBe('/');
+    }
+  });
+
+  it('their alerts are the alerts app\'s screens, at /inbox', async () => {
+    expect((await visit(`${APP}/inbox`, worker)).served).toBe('/alerts-app');
+    expect((await visit(`${APP}/inbox/`, worker)).served).toMatch(/^\/alerts-app\/?$/);
+    expect((await visit(`${APP}/inbox/alerts`, worker)).served).toBe('/alerts-app');
+    expect((await visit(`${APP}/inbox/alerts/ntf-1`, worker)).served).toBe('/alerts-app/alerts/ntf-1');
+    expect((await visit(`${APP}/inbox/settings`, worker)).served).toBe('/alerts-app/settings');
+    // their inner address is never shown here
+    expect((await visit(`${APP}/alerts-app/settings`, worker)).to).toBe('/inbox/settings');
+    expect((await visit(`${APP}/alerts-app`, worker)).to).toBe('/inbox');
+    // the dashboard's own Alerts page stays the dashboard's
+    expect((await visit(`${APP}/alerts`, worker)).served).toBe('/factories/shree-mills/alerts');
+  });
+
+  it('signed out, the home screen and the alerts show the app\'s sign-in in place', async () => {
+    for (const path of ['/', '/inbox', '/inbox/alerts/ntf-1', '/overview']) {
+      expect((await visit(`${APP}${path}`)).served, path).toBe('/dashboard-app/login');
     }
   });
 
@@ -106,8 +128,10 @@ describe('someone of a factory, signed in', () => {
 });
 
 describe('our staff', () => {
-  it('pick a factory at /, then use its long addresses (links not plain)', async () => {
+  it('pick a factory at /, then use its long addresses (links not plain); no home screen or alerts of their own', async () => {
     expect(await visit(`${APP}/`, staff)).toMatchObject({ status: 200, served: '/dashboard-app/factories', plain: null });
+    expect((await visit(`${APP}/inbox`, staff)).to).toBe('/');
+    expect((await visit(`${APP}/home`, staff)).to).toBe('/');
     expect(await visit(`${APP}/factories/shree-mills/alerts`, staff)).toMatchObject({ status: 200, to: null, served: null, plain: null });
     expect((await visit(`${APP}/alerts`, staff)).to).toBe('/');
     expect((await visit(`${APP}/internal/boards`, staff)).to).toBe('/');
@@ -122,7 +146,8 @@ describe('the app\'s address', () => {
     vi.stubEnv('FACTORY_HOST_SUFFIX', '');
     vi.stubEnv('DASHBOARD_APP_HOST', 'dashboard.localhost');
     vi.stubEnv('NODE_ENV', 'development');
-    expect((await visit('http://dashboard.localhost:3105/', worker)).served).toBe('/factories/shree-mills');
+    expect((await visit('http://dashboard.localhost:3105/', worker)).served).toBe('/dashboard-app/home/shree-mills');
+    expect((await visit('http://dashboard.localhost:3105/overview', worker)).served).toBe('/factories/shree-mills');
   });
 
   it('only the middleware says where links are plain: the browser\'s own header is dropped everywhere', async () => {

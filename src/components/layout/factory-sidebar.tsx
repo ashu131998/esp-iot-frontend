@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Activity, AlertTriangle, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LayoutGrid, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { SIDEBAR_CARD, SIDEBAR_HEADING, SIDEBAR_PANEL, sidebarIconClass, sidebarItemClass } from '@/components/layout/sidebar-styles';
+import { AppLink } from '@/components/ui/app-link';
 import { useAuth } from '@/lib/auth-context';
+import { APP_HOME } from '@/lib/dashboard-app';
 import { sidebarGroups, tabsFor } from '@/lib/display';
+import { useSharedAddress } from '@/lib/factory-links-context';
 import { currentShiftWindow } from '@/lib/shifts';
 import { useT } from '@/lib/i18n/context';
 import { PlantSwitcher } from '@/components/layout/plant-switcher';
@@ -83,6 +86,7 @@ export function FactorySidebar({
     setPendingHref(null);
   }, [pathname]);
 
+  const inFloorBeat = useSharedAddress();
   const visible = tabsFor(tabs, canWriteFactory);
   const groupTitle = { monitor: t('Monitor'), manage: t('Manage'), help: t('Help') };
   const groups = sidebarGroups(visible).map((g) => ({ ...g, title: groupTitle[g.key] }));
@@ -98,6 +102,15 @@ export function FactorySidebar({
         )}
         <PlantSwitcher factoryId={factoryId} factoryName={factoryName} subtitle={location ?? factoryId} tone="dark" />
       </div>
+
+      {/* in the FloorBeat app (a computer's browser too): back to its home screen of apps */}
+      {inFloorBeat && (
+        <div className="px-3 pb-2">
+          <AppLink href={APP_HOME} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/[0.06] hover:text-white">
+            <LayoutGrid className="h-4 w-4" aria-hidden />{t('All apps')}
+          </AppLink>
+        </div>
+      )}
 
       {shifts.length > 0 && (
         <div className={cn('mx-3 px-3 py-2.5', SIDEBAR_CARD)}>

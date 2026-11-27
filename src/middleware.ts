@@ -245,6 +245,9 @@ export async function middleware(req: NextRequest) {
   // factory: they pick one and use its long addresses.
   if (dashboardApp) {
     if (/^\/dashboard-app(\/|$)/.test(pathname)) return redirectTo('/');
+    // the alerts' screens live at /inbox here (their inner address is never shown)
+    const alertsInner = pathname.match(/^\/alerts-app(\/.*)?$/);
+    if (alertsInner) return redirectTo(`/inbox${alertsInner[1] ?? ''}`);
     if (pathname === '/reset-password' || pathname === '/reset-password/') return secured();
     const long = pathname.match(/^\/(f|factories)\/([^/]+)(\/.*)?$/);
     const authPage = /^\/(login|signup|forgot-password)\/?$/.test(pathname);
@@ -255,22 +258,33 @@ export async function middleware(req: NextRequest) {
       return securedRewrite('/dashboard-app/login');
     }
     if (authPage || pathname.startsWith('/internal')) return redirectTo('/');
+    const inbox = pathname.match(/^\/inbox(\/.*)?$/);
     if (isStaffRole(identity.role)) {
       if (long?.[1] === 'factories') return secured();
+      // our staff belong to no factory: no home screen of tiles and no alerts of their own here
       return pathname === '/' ? securedRewrite('/dashboard-app/factories') : redirectTo('/');
     }
     const plant = identity.factoryId;
     if (!plant) return securedRewrite('/dashboard-app/login');
+    // the app's home screen at its root (a tile for each of the person's apps), the dashboard's overview at
+    // /overview, and their alerts (the alerts app's screens) at /inbox
+    if (pathname === '/') return securedRewrite(`/dashboard-app/home/${encodeURIComponent(plant)}`);
+    if (/^\/home\/?$/.test(pathname)) return redirectTo('/');
+    if (inbox) {
+      const page = !inbox[1] || inbox[1] === '/' || /^\/alerts\/?$/.test(inbox[1]) ? '' : inbox[1];   // /inbox/alerts is the inbox too
+      return securedRewrite(`/alerts-app${page}`);
+    }
     if (long) {
       const same = decodeSegment(long[2]).toLowerCase() === plant.toLowerCase();
       const url = req.nextUrl.clone();
-      url.pathname = same && long[1] === 'factories' ? (long[3] ?? '/') : '/';
+      url.pathname = same && long[1] === 'factories' ? (long[3] ?? '/overview') : '/';
       if (!same) url.search = '';
       return NextResponse.redirect(url);
     }
     if (/^\/team(\/|$)/.test(pathname) && identity.role !== 'admin') return redirectTo('/');
     requestHeaders.set(PLAIN_LINKS_HEADER, '1');
-    return securedRewrite(`/factories/${plant}${pathname === '/' ? '' : pathname}`);
+    const page = /^\/overview\/?$/.test(pathname) ? '' : pathname;
+    return securedRewrite(`/factories/${plant}${page}`);
   }
 
   // FloorBeat IMS, the stock app (ims.floorbeat.in): its pages at plain addresses — / the home,

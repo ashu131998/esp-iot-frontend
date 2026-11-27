@@ -6,7 +6,9 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DASHBOARD_ANDROID_APP_ID, DASHBOARD_APK_URL, DASHBOARD_APP_NAME, afterDashboardSignIn } from '@/lib/dashboard-app';
+import {
+  afterDashboardSignIn, APP_HOME, APP_OVERVIEW, appTiles, DASHBOARD_ANDROID_APP_ID, DASHBOARD_APK_URL, DASHBOARD_APP_NAME, homeTarget, INBOX_BASE, inboxHref, TILE_HREF,
+} from '@/lib/dashboard-app';
 import { RESERVED_SUBDOMAINS, dashboardAppHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain } from '@/lib/hosts';
 
 const { GET } = await import('@/app/api/auth/session-restore/route');
@@ -42,10 +44,10 @@ describe('the app\'s address', () => {
     expect(isFactorySubdomain('dashboard')).toBe(false);
   });
 
-  it('the app\'s name and its Android package', () => {
+  it('the app\'s name and its Android package: the alerts app\'s, which the one app updates (its push stays)', () => {
     expect(DASHBOARD_APP_NAME).toBe('FloorBeat');
-    expect(DASHBOARD_ANDROID_APP_ID).toBe('in.floorbeat.dashboard');
-    expect(DASHBOARD_APK_URL).toBe('https://floorbeat.in/downloads/floorbeat-dashboard.apk');
+    expect(DASHBOARD_ANDROID_APP_ID).toBe('in.floorbeat.alerts');
+    expect(DASHBOARD_APK_URL).toBe('https://floorbeat.in/downloads/floorbeat.apk');
   });
 });
 
@@ -53,8 +55,8 @@ describe('once signed in', () => {
   it('the page asked for, else the address the sign-in showed at, else home', () => {
     expect(afterDashboardSignIn('/support?ticket=tkt-1', '/')).toBe('/support?ticket=tkt-1');
     expect(afterDashboardSignIn(null, '/alerts?x=1')).toBe('/alerts?x=1');
-    expect(afterDashboardSignIn(null)).toBe('/');
-    expect(afterDashboardSignIn(undefined, undefined)).toBe('/');
+    expect(afterDashboardSignIn(null)).toBe('/');   // the home screen
+    expect(afterDashboardSignIn(undefined, undefined)).toBe(APP_HOME);
   });
 
   it('never a sign-in page, the app\'s inner address or another site', () => {
@@ -91,5 +93,36 @@ describe('a session the app cannot renew', () => {
     const res = await restore('/support?ticket=tkt-1', 'esp_refresh=r-old');
     expect(res.headers.get('location')).toBe('https://dashboard.floorbeat.in/support?ticket=tkt-1');
     expect(res.headers.get('set-cookie')).toMatch(/esp_refresh=;[^,]*Max-Age=0/i);
+  });
+});
+
+describe('the home screen of apps (one app: alerts, dashboard, stock)', () => {
+  it('opens at the app\'s root; the dashboard\'s overview is /overview, the alerts /inbox, the stock /ims', () => {
+    expect(APP_HOME).toBe('/');
+    expect(APP_OVERVIEW).toBe('/overview');
+    expect(INBOX_BASE).toBe('/inbox');
+    expect(TILE_HREF).toEqual({ alerts: '/inbox', dashboard: '/overview', stock: '/ims' });
+  });
+
+  it('a tile for each app the factory has: alerts unless switched off, the dashboard always, the stock where the IMS is on', () => {
+    expect(appTiles({ ims: true })).toEqual(['alerts', 'dashboard', 'stock']);
+    expect(appTiles({})).toEqual(['alerts', 'dashboard']);   // the IMS needs an explicit on (an app page)
+    expect(appTiles(null)).toEqual(['alerts', 'dashboard']);
+    expect(appTiles({ alerts_app: false, ims: true })).toEqual(['dashboard', 'stock']);
+    expect(appTiles({ alerts_app: false, ims: false })).toEqual(['dashboard']);
+  });
+
+  it('with one app only, the home screen opens it', () => {
+    expect(homeTarget(['dashboard'])).toBe('/overview');
+    expect(homeTarget(['alerts', 'dashboard'])).toBeNull();
+    expect(homeTarget(['alerts', 'dashboard', 'stock'])).toBeNull();
+  });
+
+  it('an alert\'s page (as the alerts app names it) at its address inside the app', () => {
+    expect(inboxHref('/')).toBe('/inbox');
+    expect(inboxHref('')).toBe('/inbox');
+    expect(inboxHref('/alerts/ntf-1')).toBe('/inbox/alerts/ntf-1');
+    expect(inboxHref('/settings')).toBe('/inbox/settings');
+    expect(inboxHref('settings')).toBe('/inbox/settings');
   });
 });

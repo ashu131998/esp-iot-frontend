@@ -19,7 +19,7 @@ export function FactoryLinksProvider({ plain, shared = false, children }: { plai
 
 /** For links to this factory's pages: wrap "/factories/<id>/…" in it (plain at its own address). */
 export function useFactoryHref(): (href: string) => string {
-  return factoryHrefFor(useContext(PlainLinksContext));
+  return factoryHrefFor(useContext(PlainLinksContext), useContext(SharedAddressContext));
 }
 
 /**

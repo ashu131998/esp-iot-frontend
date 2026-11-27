@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, MoreHorizontal, X } from 'lucide-react';
+import { LayoutGrid, Menu, MoreHorizontal, X } from 'lucide-react';
 
 import { SignOutButton } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { FactoryPlatformBack } from '@/components/layout/factory-platform-back';
 import { tabIcon } from '@/components/layout/factory-sidebar';
+import { AppLink } from '@/components/ui/app-link';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
+import { APP_HOME } from '@/lib/dashboard-app';
 import { tabsFor } from '@/lib/display';
+import { useSharedAddress } from '@/lib/factory-links-context';
 import { useT } from '@/lib/i18n/context';
 import { PlantSwitcher } from '@/components/layout/plant-switcher';
 import { holdBackOnce } from '@/lib/alerts-app/native';
@@ -92,10 +95,17 @@ export function FactoryMobileNav({
   // The bar's other pages are fetched ahead, so a tap on one shows it at once: on the screens that show the bar
   // (below Tailwind's lg), not on a computer, where this component is mounted but hidden.
   usePrefetchPages(bar.map((t) => t.href), pathname, 1500, BAR_SCREENS);
+  const inFloorBeat = useSharedAddress();
 
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur lg:hidden print:hidden">
+        {/* in the FloorBeat app: back to its home screen of apps */}
+        {inFloorBeat && (
+          <AppLink href={APP_HOME} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-foreground hover:bg-slate-100">
+            <LayoutGrid className="h-5 w-5" aria-hidden />
+          </AppLink>
+        )}
         {logoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
           <img src={logoSrc} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />

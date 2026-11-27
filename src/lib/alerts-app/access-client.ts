@@ -4,7 +4,7 @@
  * storage can be off (a private tab), matchMedia missing (an old browser).
  * Tested in lib/__tests__/alerts-app-access.test.ts.
  */
-import { appAccess, fromAndroidApp, isAndroid, isAppleMobile, type AppAccess } from './install';
+import { appAccess, fromAndroidApp, isAndroid, isAppleMobile, isStandalone, type AppAccess } from './install';
 import { inNativeApp } from './native';
 
 export type Phone = 'iphone' | 'android';
@@ -19,6 +19,23 @@ export function phoneHere(): Phone | null {
   if (isAppleMobile(navigator.userAgent, navigator.maxTouchPoints)) return 'iphone';
   if (isAndroid(navigator.userAgent) || fromAndroidApp(document.referrer) || androidAppSeen()) return 'android';
   return null;
+}
+
+/**
+ * Whether this is the installed app: inside the Android app, or an iPhone's Home Screen app; false in a browser tab.
+ * Inside the FloorBeat app (dashboard.floorbeat.in, which a phone's browser opens too) only the installed app
+ * must ring before it opens (notifications-gate.tsx `installedOnly`).
+ */
+export function installedHere(): boolean {
+  if (inNativeApp()) return true;
+  try {
+    return isAppleMobile(navigator.userAgent, navigator.maxTouchPoints) && isStandalone({
+      navigatorStandalone: (navigator as Navigator & { standalone?: boolean }).standalone ?? null,
+      displayModeStandalone: window.matchMedia?.('(display-mode: standalone)').matches ?? null,
+    });
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -135,6 +135,20 @@ describe('the FloorBeat app\'s Stock: an app of its own, as its Alerts are (2026
     expect(html).toContain(hi['Available stock']);
   });
 
+  it('our staff: the factory they opened, its screens under its long address, Home its list of apps', () => {
+    nav.pathname = '/factories/shree-tiles/ims/add';
+    const html = render(
+      <ImsAppShell factoryId="shree-tiles" factoryName={null} inFloorBeat base="/factories/shree-tiles/ims" home="/factories/shree-tiles/apps"><p>page</p></ImsAppShell>,
+    );
+    expect(html).toMatch(/<a [^>]*href="\/factories\/shree-tiles\/apps"[^>]*>|<a [^>]*aria-label="Home"[^>]*href="\/factories\/shree-tiles\/apps"/);
+    expect(html).toContain('href="/factories/shree-tiles/ims/add"');
+    expect(html).toContain('href="/factories/shree-tiles/ims/stock"');
+    expect(html).not.toContain('href="/ims/');
+    expect(html).toMatch(/aria-current="page"[^>]*href="\/factories\/shree-tiles\/ims\/add"|href="\/factories\/shree-tiles\/ims\/add"[^>]*aria-current="page"/);
+    expect(imsTabActive('/stock', '/factories/shree-tiles/ims/stock', '/factories/shree-tiles/ims')).toBe(true);
+    expect(imsTabActive('/add', '/factories/shree-tiles/ims/stock', '/factories/shree-tiles/ims')).toBe(false);
+  });
+
   it('the screens inside link under /ims (a filter picked, an added item\'s "See available stock"); plain on ims.floorbeat.in', () => {
     function Probe() {
       const imsLink = useImsHref();

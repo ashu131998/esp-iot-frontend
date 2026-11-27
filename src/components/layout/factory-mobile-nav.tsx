@@ -11,7 +11,7 @@ import { tabIcon } from '@/components/layout/factory-sidebar';
 import { AppLink } from '@/components/ui/app-link';
 import { LanguageToggle } from '@/components/ui/language-toggle';
 import { useAuth } from '@/lib/auth-context';
-import { APP_HOME } from '@/lib/dashboard-app';
+import { APP_HOME, staffAppsHref } from '@/lib/dashboard-app';
 import { tabsFor } from '@/lib/display';
 import { useSharedAddress } from '@/lib/factory-links-context';
 import { useT } from '@/lib/i18n/context';
@@ -100,9 +100,9 @@ export function FactoryMobileNav({
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur lg:hidden print:hidden">
-        {/* in the FloorBeat app: back to its home screen of apps */}
+        {/* in the FloorBeat app: back to its home screen of apps (our staff: this factory's) */}
         {inFloorBeat && (
-          <AppLink href={APP_HOME} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-foreground hover:bg-slate-100">
+          <AppLink href={isInternalStaff ? staffAppsHref(factoryId) : APP_HOME} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-foreground hover:bg-slate-100">
             <LayoutGrid className="h-5 w-5" aria-hidden />
           </AppLink>
         )}

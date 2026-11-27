@@ -6,6 +6,7 @@ import { ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, SESSION_HINT_COOKIE } from 
 import { loginRedirectPath, safeNextPath } from '@/lib/auth-redirect';
 import { cfAccessBlockMessage, cfAccessOk } from '@/lib/cf-access';
 import { PLAIN_LINKS_HEADER } from '@/lib/factory-links';
+import { STAFF_FACTORY_HEADER } from '@/lib/staff-factory';
 import {
   factoryFromHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain, isImsAppHost, parseStaffHostRoles, staffHostForRole, staffRoleAllowedOnHost,
 } from '@/lib/hosts';
@@ -139,6 +140,7 @@ export async function middleware(req: NextRequest) {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.delete(PLAIN_LINKS_HEADER);   // ours to set (the dashboard app), never the browser's
+  requestHeaders.delete(STAFF_FACTORY_HEADER);   // the same
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('content-security-policy', csp);
 
@@ -262,8 +264,26 @@ export async function middleware(req: NextRequest) {
     if (authPage || pathname.startsWith('/internal')) return redirectTo('/');
     const inbox = pathname.match(/^\/inbox(\/.*)?$/);
     if (isStaffRole(identity.role)) {
-      if (long?.[1] === 'factories') return secured();
-      // our staff belong to no factory: no home screen of tiles and no alerts of their own here
+      // our staff belong to no factory: the factories at /, then a factory's home screen of apps at its long address
+      // (the owner, 2026-11-27: "in desktop too i need list of apps in the next step"), its Stock the Stock app of its
+      // own there too, its pages the dashboard's; no alerts of their own (their alerts are the factory's Alerts page)
+      if (long?.[1] === 'factories') {
+        const rest = long[3] ?? '';
+        // the pages served from the apps' own screens are told which factory (the address's; the session has none)
+        if (/^\/apps\/?$/.test(rest)) {
+          requestHeaders.set(STAFF_FACTORY_HEADER, decodeSegment(long[2]));
+          return securedRewrite(`/dashboard-app/home/${long[2]}`);
+        }
+        const stock = rest.match(/^\/ims(\/.*)?$/);
+        if (stock) {
+          const page = stock[1] && stock[1] !== '/' ? stock[1] : '';
+          if (!page) return redirectTo(`/factories/${long[2]}/ims/stock`);
+          if (/^\/login\/?$/.test(page)) return redirectTo(`/factories/${long[2]}/apps`);
+          requestHeaders.set(STAFF_FACTORY_HEADER, decodeSegment(long[2]));
+          return securedRewrite(`/ims-app${page}`);
+        }
+        return secured();
+      }
       return pathname === '/' ? securedRewrite('/dashboard-app/factories') : redirectTo('/');
     }
     const plant = identity.factoryId;
@@ -271,7 +291,8 @@ export async function middleware(req: NextRequest) {
     // the app's home screen at its root (a tile for each of the person's apps), the dashboard's overview at
     // /overview, their alerts (the alerts app's screens) at /inbox and the stock (the IMS app's) at /ims
     if (pathname === '/') return securedRewrite(`/dashboard-app/home/${encodeURIComponent(plant)}`);
-    if (/^\/home\/?$/.test(pathname)) return redirectTo('/');
+    // an old link to the home screen; our staff's address of a factory's apps (/factories/<id>/apps), theirs at /
+    if (/^\/(home|apps)\/?$/.test(pathname)) return redirectTo('/');
     if (inbox) {
       const page = !inbox[1] || inbox[1] === '/' || /^\/alerts\/?$/.test(inbox[1]) ? '' : inbox[1];   // /inbox/alerts is the inbox too
       return securedRewrite(`/alerts-app${page}`);

@@ -14,7 +14,7 @@ import { alertsApi } from '@/lib/alerts-app/api';
 import { ALERTS_QUERY_KEY } from '@/lib/alerts-app/model';
 import { followAlerts, keepSubscriptionFresh, setBadge } from '@/lib/alerts-app/push-client';
 import { api } from '@/lib/api';
-import { TILE_HREF, inboxHref, type AppTile } from '@/lib/dashboard-app';
+import { APP_HOME, TILE_HREF, inboxHref, staffTileHref, type AppTile } from '@/lib/dashboard-app';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { imsApi, retryImsCall } from '@/lib/ims/api';
 import { loadQueue, NO_QUEUE, subscribeQueue } from '@/lib/ims/queue-store';
@@ -50,22 +50,27 @@ const TILE_LOOK: Record<AppTile, { Icon: typeof BellRing; tint: string }> = {
  * the same on a phone and a computer. In the installed app it opens only once the phone rings (the alerts' own rule:
  * NotificationsGate installedOnly). A tapped notification that opened the app here still lands on its alert.
  */
-export function AppHomeScreen({ factoryId, factoryName, logoSrc, tiles }: {
+export function AppHomeScreen({ factoryId, factoryName, logoSrc, tiles, staff = false }: {
   factoryId: string;
   factoryName: string;
   logoSrc: string | null;
   tiles: AppTile[];
+  /**
+   * Our staff, for the factory they picked (lib/dashboard-app.ts staffTileHref): the apps at the factory's long
+   * addresses and the way back to the factories; no alerts of their own (no push, no unread count, no ringing gate).
+   */
+  staff?: boolean;
 }) {
-  const hasAlerts = tiles.includes('alerts');
-  const screen = <HomeTiles factoryId={factoryId} factoryName={factoryName} logoSrc={logoSrc} tiles={tiles} />;
+  const hasAlerts = tiles.includes('alerts') && !staff;
+  const screen = <HomeTiles factoryId={factoryId} factoryName={factoryName} logoSrc={logoSrc} tiles={tiles} staff={staff} />;
   return hasAlerts ? <NotificationsGate installedOnly>{screen}</NotificationsGate> : screen;
 }
 
-function HomeTiles({ factoryId, factoryName, logoSrc, tiles }: { factoryId: string; factoryName: string; logoSrc: string | null; tiles: AppTile[] }) {
+function HomeTiles({ factoryId, factoryName, logoSrc, tiles, staff }: { factoryId: string; factoryName: string; logoSrc: string | null; tiles: AppTile[]; staff: boolean }) {
   const { t } = useT();
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-4 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
-      {tiles.includes('alerts') && <AlertsWatch />}
+      {tiles.includes('alerts') && !staff && <AlertsWatch />}
       <header className="flex items-center gap-3">
         {logoSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- small same-origin logo, no optimiser on Workers
@@ -74,14 +79,21 @@ function HomeTiles({ factoryId, factoryName, logoSrc, tiles }: { factoryId: stri
           <DashboardAppMark className="h-10 w-10" />
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">FloorBeat</p>
+          {staff ? (
+            // our staff: back to the factories, to pick another
+            <AppLink href={APP_HOME} className="text-xs font-medium uppercase tracking-wide text-primary hover:underline">‹ {t('All factories')}</AppLink>
+          ) : (
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">FloorBeat</p>
+          )}
           <h1 className="truncate text-xl font-semibold text-foreground">{factoryName}</h1>
         </div>
         <SignOutButton factoryId={factoryId} className="shrink-0 text-sm text-muted hover:text-foreground" />
       </header>
 
       <nav aria-label={t('Apps')} className={cn('mt-6 grid gap-4', tiles.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
-        {tiles.map((tile) => <Tile key={tile} tile={tile} factoryId={factoryId} />)}
+        {tiles.map((tile) => (
+          <Tile key={tile} tile={tile} factoryId={factoryId} href={staff ? staffTileHref(tile, factoryId) : TILE_HREF[tile]} staff={staff} />
+        ))}
       </nav>
 
       <div className="mt-auto flex justify-center pt-10">
@@ -91,24 +103,24 @@ function HomeTiles({ factoryId, factoryName, logoSrc, tiles }: { factoryId: stri
   );
 }
 
-/** One app's tile: its icon, its name and its live line. */
-function Tile({ tile, factoryId }: { tile: AppTile; factoryId: string }) {
+/** One app's tile: its icon, its name and its live line (none for our staff's alerts: they have no inbox of their own). */
+function Tile({ tile, factoryId, href, staff }: { tile: AppTile; factoryId: string; href: string; staff: boolean }) {
   const { t } = useT();
   const { Icon, tint } = TILE_LOOK[tile];
   const name = tile === 'alerts' ? t('Alerts') : tile === 'dashboard' ? t('Dashboard') : t('Stock');
   return (
     <AppLink
-      href={TILE_HREF[tile]}
+      href={href}
       className="group flex min-h-32 items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-gray-100 transition hover:shadow-md active:scale-[0.99] md:min-h-56 md:flex-col md:items-start md:justify-between md:p-6"
     >
       <span className={cn('relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl md:h-20 md:w-20', tint)}>
         <Icon className="h-8 w-8 md:h-10 md:w-10" aria-hidden />
-        {tile === 'alerts' && <UnreadDot />}
+        {tile === 'alerts' && !staff && <UnreadDot />}
       </span>
       <span className="min-w-0 flex-1 md:flex-none">
         <span className="block text-xl font-semibold text-foreground md:text-2xl">{name}</span>
         <span className="mt-1 block min-h-5 text-sm text-muted">
-          {tile === 'alerts' ? <AlertsLine /> : tile === 'dashboard' ? <MachinesLine factoryId={factoryId} /> : <StockLine factoryId={factoryId} />}
+          {tile === 'alerts' ? (staff ? null : <AlertsLine />) : tile === 'dashboard' ? <MachinesLine factoryId={factoryId} /> : <StockLine factoryId={factoryId} />}
         </span>
       </span>
     </AppLink>

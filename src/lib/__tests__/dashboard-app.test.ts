@@ -7,8 +7,10 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  afterDashboardSignIn, APP_HOME, APP_OVERVIEW, appTiles, DASHBOARD_ANDROID_APP_ID, DASHBOARD_APK_URL, DASHBOARD_APP_NAME, homeTarget, INBOX_BASE, inboxHref, TILE_HREF,
+  afterDashboardSignIn, alertsSettingsUrl, APP_HOME, APP_OVERVIEW, appTiles, DASHBOARD_ANDROID_APP_ID, DASHBOARD_APK_URL, DASHBOARD_APP_NAME, homeTarget,
+  INBOX_BASE, INBOX_SETTINGS, inboxHref, staffAppsHref, staffTileHref, staffTiles, TILE_HREF,
 } from '@/lib/dashboard-app';
+import { imsFactoryOf } from '@/lib/staff-factory';
 import { RESERVED_SUBDOMAINS, dashboardAppHost, isAlertsAppHost, isDashboardAppHost, isFactorySubdomain } from '@/lib/hosts';
 
 const { GET } = await import('@/app/api/auth/session-restore/route');
@@ -124,5 +126,54 @@ describe('the home screen of apps (one app: alerts, dashboard, stock)', () => {
     expect(inboxHref('/alerts/ntf-1')).toBe('/inbox/alerts/ntf-1');
     expect(inboxHref('/settings')).toBe('/inbox/settings');
     expect(inboxHref('settings')).toBe('/inbox/settings');
+  });
+});
+
+describe('our staff: the factories, then a factory\'s list of apps (2026-11-27)', () => {
+  it('a factory\'s apps at its long address, where its "All apps" leads too', () => {
+    expect(staffAppsHref('shree-mills')).toBe('/factories/shree-mills/apps');
+  });
+
+  it('the tiles its own people have; the alerts only while its Alerts page is on (our staff\'s alerts are that page)', () => {
+    expect(staffTiles({ ims: true })).toEqual(['alerts', 'dashboard', 'stock']);
+    expect(staffTiles({})).toEqual(['alerts', 'dashboard']);
+    expect(staffTiles({ alerts: false, ims: true })).toEqual(['dashboard', 'stock']);
+    expect(staffTiles({ alerts_app: false })).toEqual(['dashboard']);   // as the factory's people see it
+  });
+
+  it('each tile opens the factory\'s own: its Alerts page, its dashboard, its Stock app', () => {
+    expect(staffTileHref('alerts', 'shree-mills')).toBe('/factories/shree-mills/alerts');
+    expect(staffTileHref('dashboard', 'shree-mills')).toBe('/factories/shree-mills');
+    expect(staffTileHref('stock', 'shree-mills')).toBe('/factories/shree-mills/ims/stock');
+  });
+});
+
+describe('where the factory\'s people find the alert settings (the Alerts\' Settings, 2026-11-27)', () => {
+  it('on the app\'s address, its own Alerts\' Settings; elsewhere (a factory\'s own address, an email\'s link) the app\'s', () => {
+    expect(INBOX_SETTINGS).toBe('/inbox/settings');
+    expect(alertsSettingsUrl(true, 'dashboard.floorbeat.in')).toBe('/inbox/settings');
+    expect(alertsSettingsUrl(false, 'dashboard.floorbeat.in')).toBe('https://dashboard.floorbeat.in/inbox/settings');
+    expect(alertsSettingsUrl(false, 'dashboard.stage.floorbeat.in')).toBe('https://dashboard.stage.floorbeat.in/inbox/settings');
+    expect(alertsSettingsUrl(false, null)).toBe('/inbox/settings');   // no app address known (a laptop)
+  });
+});
+
+describe('which factory the Stock app works on', () => {
+  it('a factory account\'s own, whatever the header says', () => {
+    expect(imsFactoryOf({ role: 'employee', factory_id: 'shree-mills' }, null)).toBe('shree-mills');
+    expect(imsFactoryOf({ role: 'admin', factory_id: 'shree-mills' }, 'other-mill')).toBe('shree-mills');
+  });
+
+  it('our staff: the factory their address named; none without one', () => {
+    expect(imsFactoryOf({ role: 'super_admin', factory_id: null }, 'shree-mills')).toBe('shree-mills');
+    expect(imsFactoryOf({ role: 'internal_viewer', factory_id: null }, 'shree-mills')).toBe('shree-mills');
+    expect(imsFactoryOf({ role: 'super_admin', factory_id: null }, null)).toBeNull();
+    expect(imsFactoryOf({ role: 'super_admin' }, '')).toBeNull();
+  });
+
+  it('anyone else: none', () => {
+    expect(imsFactoryOf({ role: 'employee', factory_id: null }, 'shree-mills')).toBeNull();
+    expect(imsFactoryOf(null, 'shree-mills')).toBeNull();
+    expect(imsFactoryOf(undefined, 'shree-mills')).toBeNull();
   });
 });

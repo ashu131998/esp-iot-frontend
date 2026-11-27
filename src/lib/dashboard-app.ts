@@ -47,6 +47,42 @@ export function homeTarget(tiles: readonly AppTile[]): string | null {
   return tiles.length === 1 ? TILE_HREF[tiles[0]] : null;
 }
 
+/**
+ * Our staff belong to no factory: in the app they pick one (its root lists the factories), then its home screen of
+ * apps, as its own people have it (the owner, 2026-11-27: "in desktop too i need list of apps in the next step"),
+ * at the factory's long address. Its "All apps" leads back there, not to the list.
+ */
+export function staffAppsHref(factoryId: string): string {
+  return `/factories/${encodeURIComponent(factoryId)}/apps`;
+}
+
+/**
+ * The tiles our staff get for a factory: its own people's, the alerts only while its Alerts page is on (for our staff
+ * the alerts are that page: they have no inbox of their own).
+ */
+export function staffTiles(display: Display | null | undefined): AppTile[] {
+  return appTiles(display).filter((tile) => tile !== 'alerts' || pageOn(display, 'alerts'));
+}
+
+/** Where a tile opens for our staff: the factory's Alerts page, its dashboard, its Stock (the Stock app, as its people have it). */
+export function staffTileHref(tile: AppTile, factoryId: string): string {
+  const base = `/factories/${encodeURIComponent(factoryId)}`;
+  if (tile === 'alerts') return `${base}/alerts`;
+  if (tile === 'stock') return `${base}/ims/stock`;
+  return base;
+}
+
+/** The Alerts' settings inside the app: a factory's admins have the factory's alert settings there too. */
+export const INBOX_SETTINGS = `${INBOX_BASE}/settings`;
+
+/**
+ * Where the factory's people find the alert settings (the dashboard's Alerts page is our staff's): the app's Alerts
+ * settings, here on the app's address, else at the app's address (a factory's own address: an old email's link).
+ */
+export function alertsSettingsUrl(onAppAddress: boolean, appHost: string | null | undefined): string {
+  return onAppAddress || !appHost ? INBOX_SETTINGS : `https://${appHost}${INBOX_SETTINGS}`;
+}
+
 /** An alert's page (as the alerts app names it: /, /alerts/<id>, /settings) at its address inside the app. */
 export function inboxHref(path: string): string {
   return path === '/' || path === '' ? INBOX_BASE : `${INBOX_BASE}${path.startsWith('/') ? path : `/${path}`}`;

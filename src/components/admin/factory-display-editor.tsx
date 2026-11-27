@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { Card, CardHeader } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { FACTORY_PAGES, OFF_BAR_PAGES, factoryTabs, resolveDisplay, tabsFor, type DisplayPage } from '@/lib/display';
+import { FACTORY_PAGES, factoryTabs, resolveDisplay, tabsFor, type DisplayPage } from '@/lib/display';
 import { BOTTOM_BAR_FULL, BOTTOM_BAR_SIZE, barPages, barPatch, bottomBarTabs, moreTabs, shortLabel } from '@/lib/mobile-nav';
 import type { Factory } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -153,24 +153,23 @@ export function FactoryDisplayEditor({
  * and the FloorBeat app). Up to four show beside "More", which holds the factory's other pages; five
  * when they are all of its pages. A change saves every page's place at once, so the bar is exactly
  * what this screen shows: the bar of the factory's admins (our staff's own Alerts and Stock tabs are not
- * theirs, and Alert settings never sits on the bar).
+ * theirs).
  */
 export function FactoryBarEditor({ factory, pages }: { factory: Factory; pages: DisplayPage[] }) {
   const qc = useQueryClient();
   const factoryId = factory.factory_id;
   const [error, setError] = useState<string | null>(null);
   const display = factory.display ?? resolveDisplay(pages, factory.features);
-  // the pages this factory's admins have, in menu order; the ones that can sit on the bar listed below
-  const seen = tabsFor(factoryTabs(factoryId, display), { canWrite: true, staff: false });
-  const menu = seen.filter((t) => !OFF_BAR_PAGES.has(t.slug));
-  const chosen = new Set(barPages(seen, display).map((t) => t.slug));
-  const bar = bottomBarTabs(seen, display);
-  const more = moreTabs(seen, display);
+  // the pages this factory's admins have, in menu order
+  const menu = tabsFor(factoryTabs(factoryId, display), { canWrite: true, staff: false });
+  const chosen = new Set(barPages(menu, display).map((t) => t.slug));
+  const bar = bottomBarTabs(menu, display);
+  const more = moreTabs(menu, display);
   const waiting = [...chosen].filter((slug) => !bar.some((t) => t.slug === slug));
 
   const mutation = useMutation({
     mutationFn: (change: { slug: string; on: boolean }) =>
-      api.adminUpdateFactoryFeatures(factoryId, barPatch(FACTORY_PAGES, seen, display, change)),
+      api.adminUpdateFactoryFeatures(factoryId, barPatch(FACTORY_PAGES, menu, display, change)),
     onMutate: () => setError(null),
     onSuccess: (data) => {
       // The server's own answer straight into the cache (the list is read from the replica, which lags).

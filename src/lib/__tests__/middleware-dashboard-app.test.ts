@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PLAIN_LINKS_HEADER } from '@/lib/factory-links';
+import { STAFF_FACTORY_HEADER } from '@/lib/staff-factory';
 import { middleware } from '@/middleware';
 
 /**
@@ -38,6 +39,7 @@ async function visit(url: string, { role, factoryId = null, refresh = false, hea
     served: rewrite ? local(rewrite) : null,
     // what the page is told: the header the middleware passes on, and whether the browser's own copy got through
     plain: res.headers.get(`x-middleware-request-${PLAIN_LINKS_HEADER}`),
+    staffFactory: res.headers.get(`x-middleware-request-${STAFF_FACTORY_HEADER}`),
     passed: (res.headers.get('x-middleware-override-headers') ?? '').split(','),
   };
 }
@@ -153,6 +155,38 @@ describe('our staff', () => {
     expect((await visit(`${APP}/alerts`, staff)).to).toBe('/');
     expect((await visit(`${APP}/internal/boards`, staff)).to).toBe('/');
     expect((await visit(`${APP}/f/shree-mills/login`, staff)).to).toBe('/');
+  });
+});
+
+describe('our staff, a factory picked (2026-11-27: its list of apps next, on a computer too)', () => {
+  it('its home screen of apps at /factories/<id>/apps, the factory named for the page', async () => {
+    expect(await visit(`${APP}/factories/shree-mills/apps`, staff)).toMatchObject({
+      status: 200, to: null, served: '/dashboard-app/home/shree-mills', staffFactory: 'shree-mills',
+    });
+    expect((await visit(`${APP}/factories/shree-mills/apps/`, staff)).served).toMatch(/^\/dashboard-app\/home\/shree-mills\/?$/);   // the request's slash kept
+  });
+
+  it('its Stock is the Stock app of its own, for that factory; its pages are the dashboard\'s, as before', async () => {
+    expect(await visit(`${APP}/factories/shree-mills/ims/stock?row=R03`, staff)).toMatchObject({
+      status: 200, served: '/ims-app/stock?row=R03', staffFactory: 'shree-mills',
+    });
+    expect((await visit(`${APP}/factories/shree-mills/ims/add`, staff)).served).toBe('/ims-app/add');
+    expect((await visit(`${APP}/factories/shree-mills/ims`, staff)).to).toBe('/factories/shree-mills/ims/stock');
+    expect((await visit(`${APP}/factories/shree-mills/ims/login`, staff)).to).toBe('/factories/shree-mills/apps');
+    expect(await visit(`${APP}/factories/shree-mills/energy`, staff)).toMatchObject({ status: 200, served: null, staffFactory: null });
+  });
+
+  it('the factory is named only by the middleware: never the browser\'s header, never for a factory\'s people', async () => {
+    const forged = { headers: { [STAFF_FACTORY_HEADER]: 'other-mill' } };
+    const asWorker = await visit(`${APP}/ims/stock`, { ...worker, ...forged });
+    expect(asWorker.staffFactory).toBeNull();
+    expect(asWorker.passed).not.toContain(STAFF_FACTORY_HEADER);
+    const asStaff = await visit(`${APP}/factories/shree-mills/ims/stock`, { ...staff, ...forged });
+    expect(asStaff.staffFactory).toBe('shree-mills');
+    expect((await visit(`${APP}/factories/shree-mills/energy`, { ...staff, ...forged })).passed).not.toContain(STAFF_FACTORY_HEADER);
+    // a factory's people: their own factory's apps are at /, where our staff's address of them leads
+    expect((await visit(`${APP}/factories/shree-mills/apps`, worker)).to).toBe('/apps');
+    expect((await visit(`${APP}/apps`, worker)).to).toBe('/');
   });
 });
 

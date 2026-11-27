@@ -19,10 +19,11 @@ export const IMS_IN_APP = '/ims';
 
 /**
  * The page a bottom-bar tab stands for (plain addresses: /, /stock…), served from /ims-app/… inside; in the
- * FloorBeat app the same under /ims.
+ * FloorBeat app the same under /ims, or under the screens' `base` (our staff: /factories/<id>/ims).
  */
-export function imsTabActive(tab: '/' | '/add' | '/stock', pathname: string): boolean {
-  const path = pathname.replace(/^\/(ims-app|ims)(?=\/|$)/, '') || '/';
+export function imsTabActive(tab: '/' | '/add' | '/stock', pathname: string, base = ''): boolean {
+  const under = base !== '' && (pathname === base || pathname.startsWith(`${base}/`));
+  const path = (under ? pathname.slice(base.length) : pathname.replace(/^\/(ims-app|ims)(?=\/|$)/, '')) || '/';
   return tab === '/' ? path === '/' : path === tab || path.startsWith(`${tab}/`);
 }
 
@@ -35,22 +36,29 @@ export function imsTabActive(tab: '/' | '/add' | '/stock', pathname: string): bo
  * dashboard, as its Alerts do (the owner, 2026-11-27: "similar to alerts, stock ims should also have separate
  * looking app, not inside dashboard"): the way back to the app's home screen and "Stock" on top, Add item and
  * Available stock below (the home screen is where the apps are picked: no home of its own), its screens under
- * /ims. Signing out is on the home screen there.
+ * /ims. Signing out is on the home screen there. Our staff have it for the factory they opened: its screens under
+ * `base` (/factories/<id>/ims) and Home that factory's apps (`home`).
  */
 export function ImsAppShell({
   factoryId,
   factoryName,
   inFloorBeat = false,
+  base: baseIn,
+  home = APP_HOME,
   children,
 }: {
   factoryId: string;
   factoryName: string | null;
   inFloorBeat?: boolean;
+  /** Where the screens are in the FloorBeat app (default /ims). */
+  base?: string;
+  /** Where its Home button goes in the FloorBeat app (default the app's home screen). */
+  home?: string;
   children: React.ReactNode;
 }) {
   const { t } = useT();
   const pathname = usePathname();
-  const base = inFloorBeat ? IMS_IN_APP : '';
+  const base = inFloorBeat ? (baseIn ?? IMS_IN_APP) : '';
   const tabs = [
     ...(inFloorBeat ? [] : [{ to: '/' as const, label: t('Home'), Icon: House }]),
     { to: '/add' as const, label: t('Add item'), Icon: PackagePlus },
@@ -64,7 +72,7 @@ export function ImsAppShell({
           <header className="sticky top-0 z-30 border-b bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
             <div className="mx-auto flex h-14 max-w-lg items-center gap-3 px-4">
               {inFloorBeat ? (
-                <AppLink href={APP_HOME} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-slate-100">
+                <AppLink href={home} aria-label={t('Home')} className="-ml-2 grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-slate-100">
                   <LayoutGrid className="h-5 w-5" aria-hidden />
                 </AppLink>
               ) : (
@@ -84,7 +92,7 @@ export function ImsAppShell({
           <nav aria-label={t('Main pages')} className="fixed inset-x-0 bottom-0 z-30 border-t bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
             <ul className="mx-auto flex max-w-lg">
               {tabs.map(({ to, label, Icon }) => {
-                const active = imsTabActive(to, pathname);
+                const active = imsTabActive(to, pathname, base);
                 return (
                   <li key={to} className="min-w-0 flex-1">
                     <AppLink

@@ -111,6 +111,23 @@ describe('someone of a factory, signed in', () => {
     expect((await visit(`${APP}/alerts`, worker)).served).toBe('/factories/shree-mills/alerts');
   });
 
+  it('their stock is an app of its own, the IMS app\'s screens, at /ims (2026-11-27: not inside the dashboard)', async () => {
+    expect(await visit(`${APP}/ims/stock`, worker)).toMatchObject({ status: 200, to: null, served: '/ims-app/stock', plain: null });
+    expect((await visit(`${APP}/ims/stock?row=R03`, worker)).served).toBe('/ims-app/stock?row=R03');
+    expect((await visit(`${APP}/ims/add`, owner)).served).toBe('/ims-app/add');
+    // /ims opens on the stock; the IMS app's own home and sign-in are not this app's
+    expect((await visit(`${APP}/ims`, worker)).to).toBe('/ims/stock');
+    expect((await visit(`${APP}/ims/`, worker)).to).toMatch(/^\/ims\/stock\/?$/);   // the request's slash kept, as for /inbox/
+    expect((await visit(`${APP}/ims/login`, worker)).to).toBe('/');
+    // the inner address is never shown; a long one of their factory becomes the plain one
+    expect((await visit(`${APP}/ims-app/add`, worker)).to).toBe('/ims/add');
+    expect((await visit(`${APP}/ims-app`, worker)).to).toBe('/ims');
+    expect((await visit(`${APP}/factories/shree-mills/ims/stock`, worker)).to).toBe('/ims/stock');
+    // signed out: the app's sign-in in place; our staff: no stock of their own here
+    expect((await visit(`${APP}/ims/stock`)).served).toBe('/dashboard-app/login');
+    expect((await visit(`${APP}/ims/stock`, staff)).to).toBe('/');
+  });
+
   it('signed out, the home screen and the alerts show the app\'s sign-in in place', async () => {
     for (const path of ['/', '/inbox', '/inbox/alerts/ntf-1', '/overview']) {
       expect((await visit(`${APP}${path}`)).served, path).toBe('/dashboard-app/login');

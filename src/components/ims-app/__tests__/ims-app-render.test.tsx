@@ -32,6 +32,7 @@ const { scanLine, waitingWords } = await import('@/components/ims-app/queue-bar'
 const { readArea } = await import('@/components/ims-app/qr-scanner');
 const { ImsFactoryQueue } = await import('@/components/ims-app/factory-queue');
 const { ImsDashboardFrame } = await import('@/components/ims-app/dashboard-frame');
+const { useImsHref } = await import('@/components/ims-app/ims-links');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -97,6 +98,52 @@ describe('the frame', () => {
     expect(imsTabActive('/stock', '/stocktake')).toBe(false);
     expect(imsTabActive('/add', '/ims-app/add')).toBe(true);
     expect(imsTabActive('/add', '/stock')).toBe(false);
+    // the FloorBeat app's addresses
+    expect(imsTabActive('/stock', '/ims/stock')).toBe(true);
+    expect(imsTabActive('/add', '/ims/add')).toBe(true);
+    expect(imsTabActive('/add', '/ims/stock')).toBe(false);
+    expect(imsTabActive('/stock', '/imsx/stock')).toBe(false);
+  });
+});
+
+describe('the FloorBeat app\'s Stock: an app of its own, as its Alerts are (2026-11-27)', () => {
+  it('the way back to the app\'s home screen and "Stock" on top; Add item and Available stock under /ims; no Home tab, no sign-out', () => {
+    nav.pathname = '/ims/stock';
+    const html = render(<ImsAppShell factoryId="shree-tiles" factoryName={null} inFloorBeat><p>page</p></ImsAppShell>);
+    // the home screen of apps, as the Alerts' header has it
+    expect(html).toMatch(/<a [^>]*href="\/"[^>]*aria-label="Home"|<a [^>]*aria-label="Home"[^>]*href="\/"/);
+    expect(html).toContain('>Stock</p>');
+    expect(html).not.toContain('FloorBeat IMS');
+    expect(html).toContain('href="/ims/add"');
+    expect(html).toContain('href="/ims/stock"');
+    expect(html).not.toContain('href="/add"');
+    expect(html).not.toContain('href="/stock"');
+    // two tabs and the Home link: nothing else to tap
+    expect(html.match(/<a /g)?.length).toBe(3);
+    expect(html).toMatch(/aria-current="page"[^>]*href="\/ims\/stock"|href="\/ims\/stock"[^>]*aria-current="page"/);
+    // signing out is on the home screen (as for the Alerts)
+    expect(html).not.toContain('aria-label="Sign out"');
+    // the dashboard's frame is not here: no sidebar, no dashboard bottom bar
+    expect(html).not.toContain('All apps');
+  });
+
+  it('in Hindi', () => {
+    nav.pathname = '/ims/add';
+    const html = render(<ImsAppShell factoryId="shree-tiles" factoryName={null} inFloorBeat><p>page</p></ImsAppShell>, () => {}, hi);
+    expect(html).toContain(`>${hi.Stock}</p>`);
+    expect(html).toContain(hi['Add item']);
+    expect(html).toContain(hi['Available stock']);
+  });
+
+  it('the screens inside link under /ims (a filter picked, an added item\'s "See available stock"); plain on ims.floorbeat.in', () => {
+    function Probe() {
+      const imsLink = useImsHref();
+      return <i>{`${imsLink('/stock?row=R03')}|${imsLink('/add')}`}</i>;
+    }
+    nav.pathname = '/ims/stock';
+    expect(render(<ImsAppShell factoryId="shree-tiles" factoryName={null} inFloorBeat><Probe /></ImsAppShell>)).toContain('<i>/ims/stock?row=R03|/ims/add</i>');
+    nav.pathname = '/stock';
+    expect(render(<ImsAppShell factoryId="shree-tiles" factoryName={null}><Probe /></ImsAppShell>)).toContain('<i>/stock?row=R03|/add</i>');
   });
 });
 

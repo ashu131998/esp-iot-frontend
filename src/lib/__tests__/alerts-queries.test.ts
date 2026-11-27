@@ -59,8 +59,13 @@ describe('the windows', () => {
   });
 });
 
-describe('the page and its sections go by the same names and sizes', () => {
-  const page = read('app/factories/[factoryId]/alerts/page.tsx');
+describe('the pages and their sections go by the same names and sizes', () => {
+  // the Alerts page (our staff's: machines, the alerts sent) and Alert settings (who gets them, the downtime reasons)
+  const pages = {
+    alerts: read('app/factories/[factoryId]/alerts/page.tsx'),
+    settings: read('app/factories/[factoryId]/alert-settings/page.tsx'),
+  };
+  const page = pages.alerts;
   const sections = {
     machines: read('components/factory/factory-alerts-dashboard.tsx'),
     filters: read('components/alerts/alert-scope-filters.tsx'),
@@ -70,31 +75,33 @@ describe('the page and its sections go by the same names and sizes', () => {
   };
 
   it('each name is used on both sides, and none is spelled out by hand any more', () => {
-    const uses: Array<[string, string]> = [
-      ['machines', 'machines'], ['filterLines', 'filters'], ['filterMachines', 'filters'], ['settings', 'settings'], ['testWorkers', 'settings'],
-      ['downtimeReports', 'downtime'], ['downtimeReasons', 'downtime'], ['stopFollowUp', 'downtime'], ['notifications', 'feed'],
+    const uses: Array<[string, keyof typeof sections, keyof typeof pages]> = [
+      ['machines', 'machines', 'alerts'], ['filterLines', 'filters', 'alerts'], ['filterMachines', 'filters', 'alerts'],
+      ['settings', 'settings', 'settings'], ['testWorkers', 'settings', 'settings'],
+      ['downtimeReports', 'downtime', 'settings'], ['downtimeReasons', 'downtime', 'settings'], ['stopFollowUp', 'downtime', 'settings'],
+      ['notifications', 'feed', 'alerts'],
     ];
-    for (const [name, section] of uses) {
-      expect(page, `page: ${name}`).toMatch(new RegExp(`(keys|alertsQueryKeys)\\.${name}\\(`));
-      expect(sections[section as keyof typeof sections], `${section}: ${name}`).toContain(`alertsQueryKeys.${name}(`);
+    for (const [name, section, on] of uses) {
+      expect(pages[on], `${on} page: ${name}`).toMatch(new RegExp(`(keys|alertsQueryKeys)\\.${name}\\(`));
+      expect(sections[section], `${section}: ${name}`).toContain(`alertsQueryKeys.${name}(`);
     }
     const byHand = /queryKey: \['(availability-factory-alerts|alert-settings|workers|downtime-reports|downtime-reasons|stop-follow-up|notifications|factory-lines|factory-machines)'/;
     for (const [section, source] of Object.entries(sections)) {
       expect(source, section).not.toMatch(byHand);
     }
-    expect(page).not.toMatch(/queryKey: \[/);
+    for (const [name, source] of Object.entries(pages)) expect(source, name).not.toMatch(/queryKey: \[/);
   });
 
   it('the sizes and windows too', () => {
     expect(DOWNTIME_REPORTS_LIMIT).toBe(15);
     expect(NOTIFICATIONS_LIMIT).toBe(30);
-    expect(page).toContain('serverApi.downtimeReports(factoryId, DOWNTIME_REPORTS_LIMIT)');
+    expect(pages.settings).toContain('serverApi.downtimeReports(factoryId, DOWNTIME_REPORTS_LIMIT)');
     expect(sections.downtime).toContain('api.downtimeReports(factoryId, { limit: DOWNTIME_REPORTS_LIMIT }');
     expect(page).toContain('serverApi.notifications(factoryId, NOTIFICATIONS_LIMIT)');
     expect(sections.feed).toContain('api.notifications(factoryId, { limit: NOTIFICATIONS_LIMIT }');
     expect(page).toContain('alertsMachinesWindow(maxDate)');
     expect(sections.machines).toContain('alertsMachinesWindow(maxDate)');
-    expect(page).toContain('stopFollowUpWindow()');
+    expect(pages.settings).toContain('stopFollowUpWindow()');
     expect(sections.downtime).toContain('stopFollowUpWindow()');
   });
 

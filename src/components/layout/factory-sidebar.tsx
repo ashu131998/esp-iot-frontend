@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Activity, AlertTriangle, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LayoutGrid, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LayoutGrid, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -40,6 +40,7 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   configuration: Cog,
   scheduling: CalendarClock,
   'shift-reports': FileText,
+  'alert-settings': BellRing,
   'sensor-mapping': Cable,
   wifi: Wifi,
   compliance: ShieldCheck,
@@ -87,7 +88,7 @@ export function FactorySidebar({
   }, [pathname]);
 
   const inFloorBeat = useSharedAddress();
-  const visible = tabsFor(tabs, canWriteFactory);
+  const visible = tabsFor(tabs, { canWrite: canWriteFactory, staff: isInternalStaff });
   const groupTitle = { monitor: t('Monitor'), manage: t('Manage'), help: t('Help') };
   const groups = sidebarGroups(visible).map((g) => ({ ...g, title: groupTitle[g.key] }));
 

@@ -8,4 +8,7 @@
     <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
     <string name="offline_text">Your dashboard will show once the phone is back on the network.</string>
     <string name="offline_retry">Try again</string>
+
+    <!-- The camera refused in Android's settings (the Stock tab). -->
+    <string name="camera_off">Allow the camera for FloorBeat in the phone\'s settings to scan labels and take photos.</string>
 </resources>

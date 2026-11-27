@@ -30,6 +30,9 @@ const { StockInScreen } = await import('@/components/ims-app/stock-in-screen');
 const { ImsQueueProvider } = await import('@/components/ims-app/queue-context');
 const { scanLine, waitingWords } = await import('@/components/ims-app/queue-bar');
 const { readArea } = await import('@/components/ims-app/qr-scanner');
+const { ImsFactoryQueue } = await import('@/components/ims-app/factory-queue');
+const { ImsDashboardFrame } = await import('@/components/ims-app/dashboard-frame');
+const { ImsHome } = await import('@/components/ims-app/home');
 
 function render(node: ReactNode, seed: (client: QueryClient) => void = () => {}, messages: Record<string, string> | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -209,5 +212,29 @@ describe('stock in', () => {
     expect(readArea(1280, 720)).toEqual({ sx: 280, sy: 0, side: 720, size: 720 });
     expect(readArea(720, 1280)).toEqual({ sx: 0, sy: 280, side: 720, size: 720 });
     expect(readArea(3840, 2160)).toEqual({ sx: 840, sy: 0, side: 2160, size: 1080 });
+  });
+});
+
+describe('the dashboard\'s Stock tab (one app)', () => {
+  it('the waiting scans are the factory frame\'s: on every page when IMS is on, nothing at all when it is off', () => {
+    // off: the page alone, no queue (a factory without IMS never touches the phone's stock queue)
+    expect(render(<ImsFactoryQueue factoryId="shree-tiles" on={false}><p>overview</p></ImsFactoryQueue>)).toBe('<p>overview</p>');
+    // on: the page, and an empty bar slot that takes no room while nothing waits
+    const html = render(<ImsFactoryQueue factoryId="shree-tiles" on><p>overview</p></ImsFactoryQueue>);
+    expect(html).toContain('<p>overview</p>');
+    expect(html).toContain('empty:hidden');
+  });
+
+  it('the Stock screens link under the tab\'s address, with its own row of tabs', () => {
+    nav.pathname = '/factories/shree-tiles/ims/scan';
+    const html = render(
+      <ImsFactoryQueue factoryId="shree-tiles" on>
+        <ImsDashboardFrame factoryId="shree-tiles"><ImsHome /></ImsDashboardFrame>
+      </ImsFactoryQueue>,
+    );
+    expect(html).toContain('href="/factories/shree-tiles/ims/scan"');
+    expect(html).toContain('href="/factories/shree-tiles/ims/stock"');
+    expect(html).toContain('href="/factories/shree-tiles/ims"');
+    expect(html).toMatch(/aria-current="page"[^>]*href="\/factories\/shree-tiles\/ims\/scan"|href="\/factories\/shree-tiles\/ims\/scan"[^>]*aria-current="page"/);
   });
 });

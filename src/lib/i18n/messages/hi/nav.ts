@@ -40,4 +40,5 @@ export const nav: Messages = {
   'Switch factory': 'फ़ैक्टरी बदलें',
   'Your factories': 'आपकी फ़ैक्टरियाँ',
   'Could not open that factory': 'वह फ़ैक्टरी नहीं खुली',
+  'Stock': 'माल',
 };

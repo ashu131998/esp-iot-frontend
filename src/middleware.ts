@@ -114,8 +114,12 @@ export async function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production';
   const liveOrigin = liveImageOrigin({ API_PUBLIC_ORIGIN: process.env.API_PUBLIC_ORIGIN, API_INTERNAL_URL: process.env.API_INTERNAL_URL });
   // FloorBeat IMS's stock photos are shown from, and uploaded straight to, a private R2 bucket by short
-  // signed links (lib/ims/photo.ts): its address, only on the IMS app's own address.
-  const photoOrigin = imsApp ? imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN) : null;
+  // signed links (lib/ims/photo.ts), and its screens use the camera (QR labels, photos). Allowed on EVERY page
+  // this app serves, not only /ims…: the dashboard moves between tabs without loading a new page, and a page
+  // keeps the rules it was loaded with, so a person who opened Overview and then tapped Stock would have the
+  // camera and the bucket refused (Code Reviewer, 2026-11-27). Only our own pages are served here, the phone
+  // still asks before the camera starts, and the microphone and the rest stay refused.
+  const photoOrigin = imsPhotoOrigin(process.env.IMS_PHOTO_ORIGIN);
 
   const csp = [
     `default-src 'self'`,
@@ -148,7 +152,7 @@ export async function middleware(req: NextRequest) {
   };
 
   function withSecurity(res: NextResponse) {
-    applySecurityHeaders(res, csp, imsApp);
+    applySecurityHeaders(res, csp);
     if (!req.cookies.get(CSRF_COOKIE)) {
       res.cookies.set(CSRF_COOKIE, crypto.randomUUID().replace(/-/g, ''), {
         httpOnly: false,
@@ -454,19 +458,18 @@ export async function middleware(req: NextRequest) {
 }
 
 /**
- * What the page may use of the phone: nothing, except the camera on FloorBeat IMS's own address (it reads
- * pallet and location QR codes, lib/ims and components/ims-app/qr-scanner.tsx), for the page itself only.
+ * What the page may use of the phone: the camera, for the page itself only (FloorBeat IMS reads pallet and
+ * location QR codes and takes stock photos: lib/ims, components/ims-app/qr-scanner.tsx), on every page, as the
+ * dashboard reaches its Stock tab without loading a new page; nothing else. next.config.ts sets the same.
  */
-function permissionsPolicy(camera: boolean): string {
-  return `camera=${camera ? '(self)' : '()'}, microphone=(), geolocation=(), browsing-topics=()`;
-}
+export const PERMISSIONS_POLICY = 'camera=(self), microphone=(), geolocation=(), browsing-topics=()';
 
-function applySecurityHeaders(res: NextResponse, csp: string, camera = false) {
+function applySecurityHeaders(res: NextResponse, csp: string) {
   res.headers.set('Content-Security-Policy', csp);
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('Permissions-Policy', permissionsPolicy(camera));
+  res.headers.set('Permissions-Policy', PERMISSIONS_POLICY);
   res.headers.set(
     'Strict-Transport-Security',
     'max-age=63072000; includeSubDomains; preload',

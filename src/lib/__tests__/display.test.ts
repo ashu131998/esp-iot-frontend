@@ -61,13 +61,15 @@ describe('displayOf', () => {
 describe('factoryTabs', () => {
   it('lists every page in menu order when nothing is switched off, Team before Compliance, Support last', () => {
     const slugs = factoryTabs('f1', {}).map((t) => t.slug);
-    expect(slugs).toEqual(FACTORY_PAGES.map((p) => p.slug));
+    // the Stock tab (the IMS) only when switched on
+    expect(slugs).toEqual(FACTORY_PAGES.map((p) => p.slug).filter((s) => s !== 'ims'));
     expect(slugs.slice(-3)).toEqual(['team', 'compliance', 'support']);
   });
 
-  it('the IMS switch (its own app, ims.floorbeat.in) is never a dashboard page, on or off', () => {
-    expect(factoryTabs('f1', { ims: true }).map((t) => t.slug)).toEqual(factoryTabs('f1', {}).map((t) => t.slug));
-    expect(factoryTabs('f1', { ims: true }).map((t) => t.slug)).not.toContain('ims');
+  it('the IMS is the Stock tab (one app, 2026-11-27), only when our staff switched it on', () => {
+    expect(factoryTabs('f1', { ims: true }).map((t) => t.slug)).toContain('ims');
+    expect(factoryTabs('f1', { ims: false }).map((t) => t.slug)).not.toContain('ims');
+    expect(factoryTabs('f1', {}).map((t) => t.slug)).not.toContain('ims');
   });
 
   it('leaves out switched-off pages but always keeps Team and Support', () => {
@@ -148,7 +150,7 @@ describe('sidebarGroups: what people read (Monitor), then what they set up (Mana
     const groups = sidebarGroups(FACTORY_PAGES);
     expect(groups.map((g) => g.key)).toEqual(['monitor', 'manage', 'help']);
     expect(groups[0].tabs.map((p) => p.slug)).toEqual([
-      'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'cameras', 'performance', 'production', 'quality',
+      'overview', 'results', 'status-timeline', 'availability', 'alerts', 'energy', 'maintenance', 'cameras', 'performance', 'production', 'quality', 'ims',
     ]);
     expect(groups[1].tabs.map((p) => p.slug)).toEqual([
       'lines', 'configuration', 'scheduling', 'shift-reports', 'sensor-mapping', 'wifi', 'team', 'compliance',

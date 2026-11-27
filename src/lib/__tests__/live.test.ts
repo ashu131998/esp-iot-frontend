@@ -38,14 +38,14 @@ describe('the page\'s image policy lets the live view play', () => {
     return res.headers.get('content-security-policy') ?? '';
   };
 
-  it('images from the page itself and from the API, nowhere else', async () => {
+  it('images from the page itself, the API and the stock photo bucket (the Stock tab), nowhere else', async () => {
     vi.stubEnv('JWT_ACCESS_SECRET', SECRET);
     vi.stubEnv('FACTORY_HOST_SUFFIX', '.floorbeat.in');
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('API_PUBLIC_ORIGIN', 'https://api.floorbeat.in');
-    expect(await cspOf()).toContain("img-src 'self' data: blob: https://api.floorbeat.in;");
+    expect(await cspOf()).toContain("img-src 'self' data: blob: https://api.floorbeat.in https://*.r2.cloudflarestorage.com;");
     vi.stubEnv('API_PUBLIC_ORIGIN', '');
     vi.stubEnv('API_INTERNAL_URL', '');
-    expect(await cspOf()).toContain("img-src 'self' data: blob:;");
+    expect(await cspOf()).toContain("img-src 'self' data: blob: https://*.r2.cloudflarestorage.com;");
   });
 });

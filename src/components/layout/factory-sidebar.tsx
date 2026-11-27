@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Activity, AlertTriangle, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, Boxes, Cable, CalendarClock, Camera, ClipboardCheck, Cog, Factory, FileText, Gauge, LayoutDashboard, LifeBuoy, ShieldCheck, Thermometer, Timer, TrendingUp, Users, Waves, Wifi, Workflow, Wrench, Zap } from 'lucide-react';
 
 import { SidebarUserFooter } from '@/components/auth/sidebar-user-footer';
 import { BrandMark } from '@/components/layout/brand-mark';
@@ -33,6 +33,7 @@ const tabIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   production: Factory,
   quality: ClipboardCheck,
   lines: Workflow,
+  ims: Boxes,
   configuration: Cog,
   scheduling: CalendarClock,
   'shift-reports': FileText,

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
 import { FilterSheet } from '@/components/ims-app/filter-sheet';
+import { useImsHref } from '@/components/ims-app/ims-links';
 import { LoadMore } from '@/components/ui/load-more';
 import { useLocale, useT } from '@/lib/i18n/context';
 import { imsApi, retryImsCall, stockProblem } from '@/lib/ims/api';
@@ -41,6 +42,7 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
   const locale = useLocale();
   const navigate = useNavigate();
+  const imsLink = useImsHref();
   const params = useSearchParams();
   const filter = useMemo(() => parseStockFilter(new URLSearchParams(params.toString())), [params]);
   const query = stockFilterQuery(filter);
@@ -66,8 +68,8 @@ export function StockScreen({ factoryId }: { factoryId: string }) {
 
   const go = useCallback((next: StockFilter) => {
     const q = stockFilterQuery(next);
-    navigate(q ? `/stock?${q}` : '/stock');
-  }, [navigate]);
+    navigate(imsLink(q ? `/stock?${q}` : '/stock'));
+  }, [imsLink, navigate]);
 
   const fields = useMemo(() => specFieldsOf(setup.data?.spec_fields), [setup.data]);
   const views = useMemo(() => (stock.data?.pages ?? []).map((p) => toStockView(p, fields)), [stock.data, fields]);

@@ -4,6 +4,7 @@ import { Camera, CheckCircle2, ChevronDown, CloudOff, Search, TriangleAlert } fr
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { FieldPhoto, type ReadyPhoto } from '@/components/ims-app/field-photo';
+import { useImsHref } from '@/components/ims-app/ims-links';
 import { QrScanner } from '@/components/ims-app/qr-scanner';
 import { waitingWords } from '@/components/ims-app/queue-bar';
 import { useImsQueue } from '@/components/ims-app/queue-context';
@@ -43,6 +44,7 @@ const bigButton = 'h-14 w-full rounded-2xl bg-primary text-lg font-semibold text
 export function StockInScreen({ factoryId }: { factoryId: string }) {
   const { t, tn } = useT();
   const locale = useLocale();
+  const imsLink = useImsHref();
   const setup = useImsSetup(factoryId);
   const { queue, add, answers, stop, addPhoto, removePhoto } = useImsQueue();
 
@@ -396,7 +398,7 @@ export function StockInScreen({ factoryId }: { factoryId: string }) {
           <button type="button" onClick={nextPallet} className={cn(bigButton, 'flex items-center justify-center gap-2')}>
             <Camera className="h-5 w-5" aria-hidden />{t('Next pallet')}
           </button>
-          <AppLink href="/stock" className="flex h-12 items-center justify-center rounded-2xl font-medium text-primary ring-1 ring-slate-300">{t('See available stock')}</AppLink>
+          <AppLink href={imsLink('/stock')} className="flex h-12 items-center justify-center rounded-2xl font-medium text-primary ring-1 ring-slate-300">{t('See available stock')}</AppLink>
           {product && (
             <p className="text-center text-xs text-muted">{t('The next pallet keeps {product}. Change it if needed.', { product: product.name })}</p>
           )}

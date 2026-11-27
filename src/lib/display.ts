@@ -74,6 +74,8 @@ export const FACTORY_PAGES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'performance', label: 'Performance' },
   { slug: 'production', label: 'Production' },
   { slug: 'quality', label: 'Quality' },
+  // FloorBeat IMS, the stock app, as a tab of the dashboard (Ashutosh 2026-11-27: one app)
+  { slug: 'ims', label: 'Stock' },
   { slug: 'lines', label: 'Lines' },
   { slug: 'configuration', label: 'Configuration' },
   { slug: 'scheduling', label: 'Scheduling' },
@@ -122,13 +124,25 @@ export function sidebarGroups<T extends { slug: string }>(tabs: readonly T[]): A
   return groups.filter((g) => g.tabs.length > 0);
 }
 
+/**
+ * Our other apps that are pages of the dashboard too (the IMS): shown only when the factory's display says on.
+ * A server that says nothing (one from before the IMS) never shows them. Which factories have it on, and the
+ * default for a new one, is the backend's (query-api display.js `ims`).
+ */
+export const APP_PAGES: ReadonlySet<string> = new Set(['ims']);
+
+/** Whether a page of the factory is on: an app page only when switched on, the rest unless switched off. */
+export function pageOn(display: Display | null | undefined, slug: string): boolean {
+  return APP_PAGES.has(slug) ? display?.[slug] === true : isShown(display, slug);
+}
+
 /** The factory's menu: its pages that are switched on. */
 export function factoryTabs(
   factoryId: string,
   display: Display | null | undefined,
 ): Array<{ slug: string; label: string; href: string }> {
   const base = `/factories/${factoryId}`;
-  return FACTORY_PAGES.filter((p) => ALWAYS_SHOWN.has(p.slug) || isShown(display, p.slug)).map((p) => ({
+  return FACTORY_PAGES.filter((p) => ALWAYS_SHOWN.has(p.slug) || pageOn(display, p.slug)).map((p) => ({
     slug: p.slug,
     label: p.label,
     href: p.slug === 'overview' ? base : `${base}/${p.slug}`,

@@ -1,3 +1,4 @@
+import { HydrationBoundary } from '@tanstack/react-query';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 
@@ -7,6 +8,7 @@ import { logoUrl } from '@/lib/branding';
 import { displayOf } from '@/lib/display';
 import { isInternalStaff } from '@/lib/internal-auth';
 import { serverApi } from '@/lib/server-api';
+import { alertsAhead } from '@/lib/server/alerts-ahead';
 import { sessionUser } from '@/lib/server/session-user';
 import { STAFF_FACTORY_HEADER } from '@/lib/staff-factory';
 
@@ -22,19 +24,22 @@ export const dynamic = 'force-dynamic';
  */
 export default async function AppHomePage({ params }: { params: Promise<{ factoryId: string }> }) {
   const { factoryId } = await params;
-  const [factory, user, named] = await Promise.all([
+  // our staff: the middleware names the factory they opened (from their session, even when the API is slow to say who)
+  const named = (await headers()).get(STAFF_FACTORY_HEADER);
+  const [factory, user, alerts] = await Promise.all([
     serverApi.factory(factoryId).catch(() => null),
     sessionUser(),
-    headers().then((h) => h.get(STAFF_FACTORY_HEADER)),
+    // the person's alerts with the page, asked for alongside: the Alerts tile's line at once, the inbox opened from it too
+    named === factoryId ? Promise.resolve(null) : alertsAhead(),
   ]);
   if (!factory) notFound();
-  // our staff: the middleware names the factory they opened (from their session, even when the API is slow to say who)
   const staff = named === factoryId || isInternalStaff(user);
   const display = displayOf(factory);
   const tiles = staff ? staffTiles(display) : appTiles(display);
   const only = homeTarget(tiles);
   if (only) redirect(staff ? staffTileHref(tiles[0], factoryId) : only);
-  return (
+  const ahead = !staff && tiles.includes('alerts') ? alerts : null;
+  const screen = (
     <AppHomeScreen
       factoryId={factoryId}
       factoryName={factory.name ?? factoryId}
@@ -43,4 +48,5 @@ export default async function AppHomePage({ params }: { params: Promise<{ factor
       staff={staff}
     />
   );
+  return ahead ? <HydrationBoundary state={ahead}>{screen}</HydrationBoundary> : screen;
 }

@@ -3,7 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
+import { DeviceSensorsEditor } from '@/components/sensors/device-sensors-editor';
+import { isSuperAdmin } from '@/lib/auth-types';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Sheet } from '@/components/ui/sheet';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
@@ -14,7 +15,7 @@ import { useT } from '@/lib/i18n/context';
 import { formatDate } from '@/lib/utils';
 
 export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) {
-  const { canWriteFactory } = useAuth();
+  const { canWriteFactory, user } = useAuth();
   const { t, locale } = useT();
   const lineName = useLineName();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -86,11 +87,12 @@ export function FactorySensorMappingPanel({ factoryId }: { factoryId: string }) 
 
       {activeDeviceId && selected && (
         <Sheet title={t('Configure {node}', { node: activeDeviceId })} onClose={() => setSelectedDeviceId(null)} size="lg">
-          <NodeSensorBindingsEditor
+          <DeviceSensorsEditor
             factoryId={factoryId}
             deviceId={activeDeviceId}
-            apiMode="factory"
+            mode="factory"
             canWrite={canWriteFactory}
+            canHardware={isSuperAdmin(user)}
           />
         </Sheet>
       )}

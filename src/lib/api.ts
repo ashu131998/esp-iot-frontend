@@ -2,6 +2,7 @@ import type { AdminBoard, BoardBeat, BrokerLogins } from '@/lib/board-status';
 import type { Capacity } from '@/lib/capacity';
 import type { FirmwareRelease, ReleaseSignature } from '@/lib/firmware';
 import type { BoardSettings } from '@/lib/board-settings';
+import type { SensorsDetail } from '@/lib/board-sensors';
 import type {
   ActiveAssignmentsResponse,
   AlertSettings,
@@ -309,6 +310,22 @@ export const api = {
 
   adminNodeDetail: (factoryId: string, deviceId: string, options?: ApiRequestOptions) =>
     request<NodeDetailResponse>(`/v1/admin/nodes/${factoryId}/${deviceId}`, options),
+
+  /**
+   * A device's sensors saved as one list (lib/board-sensors.ts): our staff (Nodes, Boards) or a factory's
+   * Sensor mapping. 409 when they changed since `version` was read; 422 with `problems` by row.
+   */
+  saveDeviceSensors: (
+    mode: 'admin' | 'factory',
+    factoryId: string,
+    deviceId: string,
+    body: { version: string; rows: unknown[]; thresholds?: { on_amps: number; confirm_samples: number } },
+    options?: ApiRequestOptions,
+  ) =>
+    request<{ factory_id: string; device_id: string; sensors: SensorsDetail; sent: boolean }>(
+      mode === 'admin' ? `/v1/admin/nodes/${factoryId}/${deviceId}/sensors` : `/v1/factories/${factoryId}/nodes/${deviceId}/sensors`,
+      { method: 'PUT', body: JSON.stringify(body), ...options },
+    ),
 
   adminReplaceNodeSensorBindings: (
     factoryId: string,

@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StatusBadge, StatusText } from '@/components/internal/board-status-cells';
 import { LiveSheet } from '@/components/cam/live-view';
 import { BoardWifiSheet } from '@/components/internal/board-wifi-sheet';
+import { DeviceSensorsEditor } from '@/components/sensors/device-sensors-editor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -130,33 +131,28 @@ function DefaultsWarning() {
   );
 }
 
-function SettingsEditor({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<BoardSettings>(() => board.settings ?? defaultBoardSettings());
-  const send = useMutation({
-    mutationFn: () => api.adminBoardSettings(board.board_id, draft),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BOARDS_KEY });
-      onClose();
-    },
-  });
+/**
+ * A board's sensors: the one editor of the Nodes page and the factory's Sensor mapping too (the owner,
+ * 2026-11-27: "all three places should be consistent"): its channels, what they measure and which machine
+ * each belongs to, in one list and one save; what changes on the board is sent to it with the save.
+ */
+function BoardSensorsDialog({ board, onClose }: { board: AdminBoard; onClose: () => void }) {
+  const { user } = useAuth();
   return (
     <Modal
       open
       onClose={onClose}
-      title={`Settings · ${board.board_id}`}
-      description="Sent to the board over MQTT (it keeps them across restarts and gets them again each time it connects)."
-      className="max-w-3xl"
+      title={`Sensors · ${board.board_id}`}
+      description="Its channels and the machine each one measures. What the board keeps (channels, names, calibration, on thresholds) is sent to it when you save; it gets it again each time it connects."
+      className="max-w-5xl"
     >
-      {!board.settings && <DefaultsWarning />}
-      <SettingsFields draft={draft} setDraft={setDraft} />
-      {send.isError && <p className="mt-3 text-xs text-red-700">{(send.error as Error).message}</p>}
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button disabled={settingsProblems(draft).length > 0 || send.isPending} onClick={() => send.mutate()}>
-          {send.isPending ? 'Sending…' : 'Send to board'}
-        </Button>
-      </div>
+      <DeviceSensorsEditor
+        factoryId={board.factory_id ?? ''}
+        deviceId={board.board_id}
+        mode="admin"
+        canWrite
+        canHardware={isSuperAdmin(user)}
+      />
     </Modal>
   );
 }
@@ -560,7 +556,8 @@ export function BoardsPanel() {
                               Live
                             </Button>
                           )
-                          : <Button size="sm" variant="secondary" disabled={broker !== 'ok' || b.factory_id === UNCLAIMED} onClick={() => setEditing(b)}>Settings</Button>}
+                          // machine links save without the broker; what goes to the board is refused cleanly while it is down
+                          : <Button size="sm" variant="secondary" disabled={b.factory_id === UNCLAIMED || !b.factory_id} onClick={() => setEditing(b)}>Sensors</Button>}
                         <Button
                           size="sm" variant="secondary" disabled={broker !== 'ok' || !b.settings}
                           title={b.settings ? undefined : 'Send its settings first'}
@@ -592,7 +589,7 @@ export function BoardsPanel() {
         onClaim={setClaiming} onLogin={setLoginFor} onUpdate={setUpdating}
       />
       {logins && <BrokerLoginsCard logins={logins} canChange={canChange} />}
-      {editing && <SettingsEditor board={editing} onClose={() => setEditing(null)} />}
+      {editing && <BoardSensorsDialog board={editing} onClose={() => setEditing(null)} />}
       {loginFor && <LoginConfirm board={loginFor} onClose={() => setLoginFor(null)} />}
       {updating && <UpdateDialog board={updating} onClose={() => setUpdating(null)} />}
       {claiming && <ClaimDialog board={claiming} onClose={() => setClaiming(null)} />}

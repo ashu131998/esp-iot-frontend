@@ -18,6 +18,7 @@
     <string name="offline_title_gu" translatable="false">તમે ઑફલાઇન છો</string>
     <string name="offline_text">FloorBeat will show once the phone is back on the network.</string>
     <string name="offline_retry">Try again</string>
+    <string name="offline_auto">FloorBeat tries again by itself.</string>
 
     <!-- The camera refused in Android's settings (a stock photo). -->
     <string name="camera_off">Allow the camera for FloorBeat in the phone\'s settings to take photos.</string>

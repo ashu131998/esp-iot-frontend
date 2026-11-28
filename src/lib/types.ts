@@ -1,3 +1,5 @@
+import type { SensorsDetail } from './board-sensors';
+
 export interface Shift {
   shift_id: string;
   name: string;
@@ -297,6 +299,8 @@ export interface NodeDetailResponse {
     sample_name?: string | null;
   }>;
   machines: Array<{ machine_id: string; name: string; line_id: string }>;
+  /** The one list every sensor editor shows (lib/board-sensors.ts), with the version a save is made against. */
+  sensors?: SensorsDetail | null;
 }
 
 export interface FactoryNodeSummary {

@@ -1,6 +1,6 @@
 # FloorBeat for Android
 
-One native Android app (Kotlin), package `in.floorbeat.alerts`, version 3.0.0: the factory's **alerts**,
+One native Android app (Kotlin), package `in.floorbeat.alerts`, version 3.0.1: the factory's **alerts**,
 its **dashboard** and its **stock** (FloorBeat IMS) behind a home screen with a tile for each (the owner,
 2026-11-27: "when user open that app, i want to show three apps inside it", "same in pwa and desktop").
 
@@ -13,6 +13,10 @@ Its history, which is why the package keeps the alerts' name:
 - 3.0.0: the two became one. It is the alerts app's package, so it installs over FloorBeat Alerts as an
   update and its notifications ring straight through the update (Firebase knows this package only). The
   dashboard app's camera and photo picker moved in; its module is gone.
+- 3.0.1: the offline screen shows for the network's failures only (a load cancelled for the next one,
+  ERR_ABORTED, had left it over a page that loaded) and goes by itself: the app tries again the moment the
+  phone's network is back, else after 2, 4, 8, 16 s and then every 30 s, and says what failed in small type
+  (`Offline.kt`; the owner, 2026-11-27: "im getting this even when im online").
 
 The screens are dashboard.floorbeat.in, shown in the phone's own web view (Android System WebView, no
 Chrome needed), so an iPhone (the Home Screen web app), a computer's browser and Android show the same app

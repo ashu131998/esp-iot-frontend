@@ -12,7 +12,8 @@ import { DateRangeToolbar } from '@/components/ui/date-range-toolbar';
 import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { isLiveDateParams, resolveDateRange } from '@/lib/date-range';
-import { NodeSensorBindingsEditor } from '@/components/sensors/node-sensor-bindings-editor';
+import { DeviceSensorsEditor } from '@/components/sensors/device-sensors-editor';
+import { isSuperAdmin } from '@/lib/auth-types';
 import { isInternalAdmin } from '@/lib/internal-auth';
 import { useAuth } from '@/lib/auth-context';
 import { StatGridSkeleton, TableSkeleton } from '@/components/ui/page-skeletons';
@@ -171,12 +172,19 @@ function DetailInner({ factoryId, deviceId }: { factoryId: string; deviceId: str
       )}
 
       {tab === 'sensors' && (
-        <NodeSensorBindingsEditor
-          factoryId={factoryId}
-          deviceId={deviceId}
-          apiMode="admin"
-          canWrite={canEditBindings}
-        />
+        <Card className="p-6">
+          <CardHeader
+            title={`Sensors · ${deviceId}`}
+            description="Its channels and the machine each one measures: the same list as on the Boards page and the factory's Sensor mapping."
+          />
+          <DeviceSensorsEditor
+            factoryId={factoryId}
+            deviceId={deviceId}
+            mode="admin"
+            canWrite={canEditBindings}
+            canHardware={isSuperAdmin(user)}
+          />
+        </Card>
       )}
 
       {tab === 'health' && (

@@ -6,5 +6,6 @@
     <string name="channel_alerts_description">મશીન ફરી ચાલી, શિફ્ટની યાદ અને કેમેરા.</string>
     <string name="offline_text">ફોન નેટવર્ક પર પાછો આવતાં જ FloorBeat દેખાશે.</string>
     <string name="offline_retry">ફરી પ્રયાસ કરો</string>
+    <string name="offline_auto">FloorBeat આપમેળે ફરી પ્રયાસ કરે છે.</string>
     <string name="camera_off">ફોટા પાડવા માટે ફોનની સેટિંગ્સમાં FloorBeat ને કેમેરાની મંજૂરી આપો.</string>
 </resources>

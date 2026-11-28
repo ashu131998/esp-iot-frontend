@@ -8,9 +8,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
@@ -68,6 +73,26 @@ class MainActivity : ComponentActivity() {
     private lateinit var bridge: Bridge
     private var firstPageShown = false
     private var loadFailed = false
+
+    // ── off the network: the screen says so and the app tries again by itself (Offline.kt) ──
+    private val main = Handler(Looper.getMainLooper())
+    /** How many times it has tried again since the screen showed (the wait grows: Offline.retryDelayMs). */
+    private var retryAttempt = 0
+    private val retryNow = Runnable { tryAgain() }
+    /** The page the app was opening when it failed: opened again, not the one before it. */
+    private var lastMainUrl: String? = null
+    private lateinit var offlineReason: TextView
+    /** The phone's network back (or a new one): try again at once instead of waiting. */
+    private val networkBack = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            main.post { if (isOffline()) { retryAttempt = 0; tryAgain() } }
+        }
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                main.post { if (isOffline()) { retryAttempt = 0; tryAgain() } }
+            }
+        }
+    }
     /** Where the back button sent the app (the inbox, the home screen): what was behind it is forgotten once it shows. */
     private var clearHistoryOn: Back? = null
     private var notificationAsk: ((String) -> Unit)? = null
@@ -124,6 +149,8 @@ class MainActivity : ComponentActivity() {
             WindowInsetsCompat.CONSUMED
         }
         setContentView(root)
+        // told when the phone's network comes back, to try again at once while the offline screen shows
+        runCatching { getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(networkBack) }
         WindowInsetsControllerCompat(window, root).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
@@ -209,11 +236,13 @@ class MainActivity : ComponentActivity() {
 
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 loadFailed = false
+                if (!url.isNullOrBlank() && url != "about:blank") lastMainUrl = url
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
                 firstPageShown = true
-                offline.visibility = if (loadFailed) View.VISIBLE else View.GONE
+                // failed: the screen stays (its next try was set when the failure came); loaded: it goes
+                if (loadFailed) offline.visibility = View.VISIBLE else backOnline()
                 // Sent back to the inbox or the home screen: back from there goes on up (home, then out), not round again.
                 val arrived = when (clearHistoryOn) {
                     Back.INBOX -> AppUrls.isInbox(url, appUrl)
@@ -227,9 +256,10 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame) {
+                // the network's failures only: a load cancelled for the next one (ERR_ABORTED) is not offline
+                if (request.isForMainFrame && Offline.isNetworkFailure(error.errorCode, error.description?.toString())) {
                     loadFailed = true
-                    offline.visibility = View.VISIBLE
+                    showOffline(error.description?.toString())
                 }
             }
 
@@ -265,17 +295,49 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         web.onResume()
         bridge.event("notifications", notificationsState())   // back from the phone's settings
+        // back in front while off the network: try again at once (the phone may be back on it)
+        if (isOffline()) { retryAttempt = 0; tryAgain() }
     }
 
     override fun onPause() {
+        main.removeCallbacks(retryNow)   // never trying in the background
         web.onPause()
         CookieManager.getInstance().flush()   // the sign-in kept if the phone stops the app
         super.onPause()
     }
 
     override fun onDestroy() {
+        main.removeCallbacks(retryNow)
+        runCatching { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(networkBack) }
         if (Push.listener != null) Push.listener = null
         super.onDestroy()
+    }
+
+    // ── off the network ────────────────────────────────────────────────────────────────────────
+
+    private fun isOffline() = this::offline.isInitialized && offline.visibility == View.VISIBLE
+
+    /** The offline screen, its reason in small type (what to tell us), and the next try by itself. */
+    private fun showOffline(reason: String?) {
+        offline.visibility = View.VISIBLE
+        if (!reason.isNullOrBlank()) offlineReason.text = reason
+        main.removeCallbacks(retryNow)
+        main.postDelayed(retryNow, Offline.retryDelayMs(retryAttempt++))
+    }
+
+    /** A page loaded: the screen goes and the tries stop. */
+    private fun backOnline() {
+        offline.visibility = View.GONE
+        offlineReason.text = ""
+        retryAttempt = 0
+        main.removeCallbacks(retryNow)
+    }
+
+    /** Open again the page that failed (a failure brings the screen back, with a longer wait before the next try). */
+    private fun tryAgain() {
+        main.removeCallbacks(retryNow)
+        val current = web.url?.takeIf { it.isNotBlank() && it != "about:blank" }
+        if (current != null) web.reload() else web.loadUrl(lastMainUrl ?: appUrl)
     }
 
     /** The app page an intent opens: a tapped notification's alert, a dashboard.floorbeat.in or alerts.floorbeat.in link. */
@@ -466,15 +528,24 @@ class MainActivity : ComponentActivity() {
         column.addView(line(R.string.offline_title_hi, 15f, "#64748B"))
         column.addView(line(R.string.offline_title_gu, 15f, "#64748B"))
         column.addView(line(R.string.offline_text, 15f, "#64748B"))
+        column.addView(line(R.string.offline_auto, 13f, "#64748B"))
         column.addView(Button(this).apply {
             setText(R.string.offline_retry)
             setOnClickListener {
-                offline.visibility = View.GONE
-                web.reload()
+                retryAttempt = 0
+                tryAgain()
             }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = (16 * dp).toInt()
         })
+        // what failed, in small type: what to tell us if it stays
+        offlineReason = TextView(this).apply {
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (12 * dp).toInt(), 0, 0)
+        }
+        column.addView(offlineReason)
         return column
     }
 }
